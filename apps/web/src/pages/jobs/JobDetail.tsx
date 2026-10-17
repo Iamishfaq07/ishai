@@ -57,6 +57,7 @@ import { EditEntry } from "./Tracker";
 import { JOBS_MATCHES, outreachPath } from "./paths";
 import { useJobActions } from "./useJobActions";
 import { missionPath } from "./mission";
+import { interviewPrepPath } from "./interview/links";
 
 /**
  * Jobs AI → one job: everything Orbit may show about it (the post's summary, its key facts, where it's from, the
@@ -165,6 +166,11 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
           {entry && (
             <Link to={missionPath(entry.id)} className={linkButton("secondary", "sm")}>
               Mission room <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          )}
+          {entry && entry.status !== "offer" && entry.status !== "rejected" && (
+            <Link to={interviewPrepPath(entry.id)} className={linkButton("secondary", "sm")}>
+              <Target className="h-4 w-4" aria-hidden /> Prepare for interview
             </Link>
           )}
           <TailorButton actions={actions} />

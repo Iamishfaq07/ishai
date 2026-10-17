@@ -17,6 +17,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | Screenshot → vision answer (analysed and discarded; credit spent only on success) | ✅ tested + real desktop build |
 | **Mock interviewer**: persona / type / difficulty / duration, follow-ups, spoken questions (browser TTS), review | ✅ tested + real voice path |
 | **Interview prep**: likely questions from a job description, with why / talking points / suggested answer from the resume, practised as a mock drill | ✅ tested |
+| **Interview day**: a tracked job's interview prep (round, job post, the resume version sent, likely questions, matching stories, company guide, a practice round), the copilot started with that job loaded (web `/start?application=`, the desktop's Upcoming interviews), and a wrap-up the user confirms; `sessions.application_id` links a round to its job (D64) | ✅ tested + driven in headless Chrome |
 | **Phone companion**: scan a QR code to follow the live question and answer on a phone (read-only, no sign-in, nothing captured) | ✅ tested |
 | **Story bank**: STAR stories written once (or drafted from the resume or notes), used by live answers to behavioral questions as verified facts | ✅ tested |
 | **Answer ratings**: 👍/👎 with a reason on live answers; repeated reasons become style hints in later sessions; admin satisfaction report | ✅ tested |

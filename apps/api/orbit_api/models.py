@@ -331,6 +331,10 @@ class Document(TimestampMixin, Base):
     # and re-chunked. Original binary uploads are still never stored.
     source_text: Mapped[str | None] = mapped_column(Text)
     extracted: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # structured resume/JD profile
+    # Who made it: "user" (an upload, or text the user pasted into Documents) or "orbit" (saved by Orbit itself from
+    # what the user already has in Orbit, to run a practice round or a session: a job's post, a resume version). Only
+    # the user's count against the plan's documents; Orbit's are capped on their own (documents/routes.py).
+    origin: Mapped[str] = mapped_column(String(8), default="user", server_default="user")
     chunks: Mapped[list["DocumentChunk"]] = relationship(
         back_populates="document", cascade="all, delete-orphan", passive_deletes=True
     )
@@ -391,6 +395,10 @@ class LiveSessionRow(TimestampMixin, Base):
     # Mock interviews with the camera coach on (sessions/camera.py): numbers measured on the person's own device
     # (face in frame %, facing the camera %, head movement). Never video, images or face landmarks.
     camera_metrics: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    # The tracked job this session is a round (or a practice round) for, when it was started from that job
+    # (job_portal/interview.py). Checked against the owner when set; NULL once the job leaves the tracker.
+    application_id: Mapped[str | None] = mapped_column(ForeignKey("job_applications.id", ondelete="SET NULL"),
+                                                       index=True)
 
 
 class Workspace(TimestampMixin, Base):
@@ -852,6 +860,17 @@ class JobApplication(TimestampMixin, Base):
     resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"), index=True)
     document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"), index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    # The next interview round (job_portal/interview.py): its type (hr | technical | managerial | final) and number,
+    # both set by the user; `next_at` is its date and time.
+    round_type: Mapped[str | None] = mapped_column(String(16))
+    round_number: Mapped[int | None] = mapped_column(Integer)
+    # The resume version interview prep and the copilot use: one of this job's ResumeSnapshot ids, "resume" (the
+    # linked resume as it is now), or NULL: the newest version sent, else the linked resume. Not a foreign key: a
+    # deleted snapshot just falls back to the default.
+    interview_version: Mapped[str | None] = mapped_column(String(36))
+    # The likely questions last generated for this job (Resume AI's interview prep, one credit), kept so they're paid
+    # for once: {"version_id", "generated_at", "result"} (job_portal/interview.py).
+    interview_questions: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
 
 
 class ResumeSnapshot(TimestampMixin, Base):

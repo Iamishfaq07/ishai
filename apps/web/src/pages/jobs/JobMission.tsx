@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
   ArrowRight,
@@ -33,9 +33,11 @@ import { MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone } from "
 import { practiceLink } from "./model";
 import { StagePill } from "./StagePill";
 import { JOBS_TRACKER, jobPath } from "./paths";
+import { InterviewPrepPanel } from "./interview/InterviewPrep";
 
-type Tab = "plan" | "fit" | "resume" | "company" | "practice" | "timeline" | "offer";
+type Tab = "interview" | "plan" | "fit" | "resume" | "company" | "practice" | "timeline" | "offer";
 const TABS: Array<{ id: Tab; label: string }> = [
+  { id: "interview", label: "Interview" },
   { id: "plan", label: "Prep plan" },
   { id: "fit", label: "Evidence & fit" },
   { id: "resume", label: "Resume kit" },
@@ -55,8 +57,11 @@ export function JobMissionPage() {
   const { tracker } = useJobsAi();
   const entry = tracker.data?.find((e) => e.id === entryId) ?? null;
   const mission = useAsync(() => api.jobMission(entryId), [entryId], `job-mission:${entryId}`);
-  // An interview on the calendar opens on its plan; otherwise on the fit.
-  const [tab, setTab] = useState<Tab>(() => (entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit"));
+  // `?tab=` opens one (the tracker's "Prepare for interview" opens Interview); else an interview on the calendar
+  // opens on its plan, and otherwise the fit.
+  const [params] = useSearchParams();
+  const asked = TABS.find((t) => t.id === params.get("tab"))?.id;
+  const [tab, setTab] = useState<Tab>(() => asked ?? (entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit"));
 
   if (tracker.data && !entry) {
     return (
@@ -109,6 +114,15 @@ export function JobMissionPage() {
                   ))}
                 </div>
                 <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+                  {tab === "interview" && (
+                    <InterviewPrepPanel
+                      entry={entry}
+                      onEntry={() => {
+                        tracker.reload();
+                        mission.reload();
+                      }}
+                    />
+                  )}
                   {tab === "plan" && <PrepPlanPanel entry={entry} />}
                   {tab === "fit" && <FitPanel fit={m.fit} entry={entry} />}
                   {tab === "resume" && <ResumePanel mission={m} entry={entry} onMission={update} />}
@@ -415,7 +429,7 @@ function PracticePanel({ mission, entry }: { mission: JobMission; entry: JobTrac
           <dd className="font-display text-2xl font-semibold tabular-nums">{mission.live_rounds}</dd>
         </div>
       </dl>
-      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Counted from sessions you named for {entry.company} since you saved this job.</p>
+      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Counted from sessions started from this job, and ones you named for {entry.company} since you saved it.</p>
       <Link to={practiceLink(entry, jobPath)} className={cx(linkButton("primary", "md"), "mt-4")}>
         Practise for this job <ArrowRight className="h-4 w-4" aria-hidden />
       </Link>
@@ -521,6 +535,7 @@ function NextStepCard({
       return;
     }
     if (step.to === "practise") return onTab("practice");
+    if (step.to === "interview") return onTab("interview");
     if (step.to === "notes") return onTab("timeline");
     return undefined;
   };

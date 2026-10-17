@@ -26,6 +26,7 @@ import {
   cx,
   focusRing,
   CosmicEmptyState,
+  roundLabel,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -63,6 +64,7 @@ import { MAX_COMPARE } from "./compare";
 import { Journey } from "./Journey";
 import { missionPath } from "./mission";
 import { SafetyCard } from "./SafetyCard";
+import { interviewPrepPath } from "./interview/links";
 
 /**
  * Jobs AI → Tracker: every job saved or applied to, and how far along each one is, including ones found elsewhere
@@ -299,10 +301,13 @@ function TrackerCard({
   const apply = safeUrl(entry.apply_url);
   const manual = isManual(entry);
   const open = entry.live ? stillOpenAt(entry) : null;
+  const round = roundLabel(entry.round_type, entry.round_number);
   const dates = [
     entry.applied_at ? `Applied ${shortDate(entry.applied_at)}` : `Saved ${shortDate(entry.created_at)}`,
-    entry.next_at ? `Next: ${shortDate(entry.next_at)}` : null,
+    entry.next_at ? `Next: ${shortDate(entry.next_at)}${round ? `, ${round}` : ""}` : null,
   ].filter(Boolean);
+  // Interview day: the way into its prep (and from there the copilot) once there's an interview to prepare for.
+  const preparing = entry.status === "applied" || entry.status === "interviewing";
 
   return (
     <article className={cx("glass-panel relative overflow-hidden rounded-xl", compact ? "p-3 pl-3.5" : "p-4 pl-5")}>
@@ -351,6 +356,15 @@ function TrackerCard({
           Still open · checked {postedAgo(open).toLowerCase()}
         </p>
       ) : null}
+      {entry.last_round && (
+        <p className="mt-1.5 text-xs text-zinc-600 dark:text-zinc-300">
+          {entry.last_round.practice ? "Practice" : "Last round"} {shortDate(entry.last_round.at)}
+          {entry.last_round.score !== null ? ` · ${entry.last_round.score}/5` : ""} ·{" "}
+          <Link to={`/sessions/${entry.last_round.id}`} className={cx(cardAction, focusRing)}>
+            {entry.last_round.practice ? "Review" : "Summary and scorecard"}
+          </Link>
+        </p>
+      )}
 
       {/* The card leads with one place to work on the job (its mission room) and the step its stage calls for (apply
           while saved, practise while interviewing); everything else waits under More, so a board of cards reads at
@@ -368,10 +382,20 @@ function TrackerCard({
             Apply <ArrowUpRight className="h-3 w-3" aria-hidden />
           </a>
         )}
-        {(entry.document_id || entry.status === "interviewing") && (
-          <Link to={practiceLink(entry, jobPath)} className={cx(cardAction, focusRing)}>
-            <Target className="h-3 w-3" aria-hidden /> Practise
+        {preparing ? (
+          <Link
+            to={interviewPrepPath(entry.id)}
+            aria-label={`Prepare for the interview for ${entry.title} at ${entry.company}`}
+            className={cx(cardAction, focusRing)}
+          >
+            <Target className="h-3 w-3" aria-hidden /> Prepare for interview
           </Link>
+        ) : (
+          entry.document_id && (
+            <Link to={practiceLink(entry, jobPath)} className={cx(cardAction, focusRing)}>
+              <Target className="h-3 w-3" aria-hidden /> Practise
+            </Link>
+          )
         )}
         {compare?.picked && (
           <button type="button" aria-pressed onClick={compare.onToggle} className={cx(cardAction, "!text-emerald-700 dark:!text-emerald-300", focusRing)}>

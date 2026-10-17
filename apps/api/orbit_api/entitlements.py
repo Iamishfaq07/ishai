@@ -390,7 +390,9 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
     """Everything a client may show about the user's plan: limits, this month's usage, features."""
     s = get_settings()
     plan = await plan_for(db, user.id)
-    docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
+    # The plan's documents: the user's own (the ones Orbit saves for practice are capped apart, documents/routes.py).
+    docs = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id,
+                                                                            Document.origin != "orbit"))
     grant_until = running_until(user)
     limits: dict[str, Any] = {k: getattr(plan, k) for k in _INT_FIELDS}
     live_used = round(await usage_this_month(db, user.id, "live_seconds", usage_pool(plan)) / 60, 1)

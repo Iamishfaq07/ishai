@@ -150,7 +150,8 @@ export async function practiceDocuments(
         return have.id;
       }
     }
-    return (await api.createTextDocument({ kind, title: name, text })).id;
+    // Saved by Orbit for the round (outside the plan's documents), not a paste into Documents.
+    return (await api.createTextDocument({ kind, title: name, text, origin: "orbit" })).id;
   };
   const resumeTitle = title.trim() || "Untitled resume";
   const resume = await keep("resume", resumeTitle, resumeText);

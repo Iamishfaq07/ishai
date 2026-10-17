@@ -4,6 +4,7 @@ import type {
   AnswerStyle,
   DocumentKind,
   ExperienceLevel,
+  InterviewSessionContext,
   MockDifficulty,
   MockInterviewType,
   MockPersona,
@@ -62,6 +63,8 @@ import {
   ResumeMakerNote,
   MAX_SESSION_DOCUMENTS,
   safeLocal,
+  contextDocumentIds,
+  contextSessionFields,
 } from "@orbit/ui";
 import { getVersion } from "@tauri-apps/api/app";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -88,6 +91,7 @@ import { UpdateBanner } from "../UpdateBanner";
 import { confirmSessionDuringUpdate, useUpdatePhase } from "../updates";
 import { WorkspaceBar } from "../WorkspaceBar";
 import { sessionTitle } from "../format";
+import { UpcomingInterviews } from "../UpcomingInterviews";
 import { MIC_KEY, OUTPUT_KEY, checkChosenApp, nextSource, usesSystemAudio, type DesktopLaunch } from "../launch";
 import { addSessionDocument, defaultSessionDocuments, sessionDocumentIds, toggleSessionDocument } from "../sessionDocs";
 
@@ -315,6 +319,8 @@ export function SetupScreen({
   const isMock = type === "mock";
   const negotiation = isMock && mockType === "negotiation";
   const [workspaceId, setWorkspaceId] = useState<string | null>(() => safeLocal.getItem(WORKSPACE_KEY));
+  // An interview picked from the tracker: its role, company, round and documents, and the session is linked to it.
+  const [job, setJob] = useState<InterviewSessionContext | null>(null);
   // Failing critical checks (server, AI, transcription, mic, minutes, verification): Start is disabled unless the user
   // explicitly overrides — a broken setup must never slide into a live interview by default.
   const [blockers, setBlockers] = useState<PreflightCheck[]>([]);
@@ -372,6 +378,18 @@ export function SetupScreen({
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Couldn’t load documents."));
     refreshApps();
   }, [refreshApps]);
+
+  const applyJob = async (ctx: InterviewSessionContext): Promise<void> => {
+    setJob(ctx);
+    setRole(ctx.role);
+    try {
+      const list = await api.listDocuments(); // the server just saved the job's post and resume version
+      setDocs(list);
+      setSelected(new Set(contextDocumentIds(ctx, list)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn’t load documents.");
+    }
+  };
 
   const refreshDocs = async (selectId?: string): Promise<void> => {
     const list = await api.listDocuments();
@@ -515,8 +533,10 @@ export function SetupScreen({
     try {
       const session = await api.createSession({
         // Not the picker's label: the mock's ("Mock interview — the AI asks, you practise") would title every round.
-        title: sessionTitle(type, role),
+        // From the tracker, the job's own ("Razorpay — Round 2 · Technical round").
+        title: job ? job.title : sessionTitle(type, role),
         type,
+        ...(job ? contextSessionFields(job) : {}),
         ...(role.trim() ? { role: role.trim() } : {}),
         // A mock interview's language is the practice one (the web Practice page); the copilot's is picked here.
         language: isMock ? "en" : language,
@@ -592,6 +612,8 @@ export function SetupScreen({
             <h1 className="font-display text-2xl font-semibold tracking-tight">New session</h1>
             <p className="mt-0.5 text-xs text-zinc-500">{user ? `Signed in as ${user.email}` : "Offline — some data may be unavailable."}</p>
           </div>
+
+          <UpcomingInterviews picked={job} onPick={(ctx) => void applyJob(ctx)} onClear={() => setJob(null)} />
 
           <WorkspaceBar
             selectedId={workspaceId}

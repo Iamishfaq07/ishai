@@ -66,6 +66,7 @@ from orbit_api.models import (
     Document,
     DocumentChunk,
     EvidenceItem,
+    JobApplication,
     LiveSessionRow,
     Question,
     SavedAnswer,
@@ -162,6 +163,9 @@ class SessionIn(BaseModel):
     mock: MockConfig | None = None
     # The candidate's standing instructions for answers; from a saved setup's notes when not given.
     instructions: str | None = Field(None, max_length=1000)
+    # Started from a job in the tracker (its interview prep, job_portal/interview.py): recorded on the session, so the
+    # round shows on that job. Only one of the account's own.
+    application_id: str | None = Field(None, max_length=36)
 
     # A live session: the interview language and the answer language (live_language.py; None = the interview's),
     # when this server offers them; anything else is English. A mock interview: English, or its practice language
@@ -205,6 +209,7 @@ class SessionOut(BaseModel):
     # Salary practice: its review is about negotiating, and its lines never join the practice queue.
     negotiation: bool = False
     video: bool = False  # an AI video interview (MockConfig.video): the web app opens it in the video-call room
+    application_id: str | None = None  # the tracked job it was started from
 
 
 class SessionDetail(BaseModel):
@@ -236,6 +241,7 @@ def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
         report_status=report_status, workspace_id=row.workspace_id, instructions=row.instructions,
         negotiation=_is_negotiation(row),
         video=_is_video(row),
+        application_id=row.application_id,
     )
 
 
@@ -300,6 +306,10 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
         body.mock.interview_stage = body.interview_stage
         body.mock.tech_stack = list(body.tech_stack)
         body.mock.key_requirements = list(body.key_requirements)
+    if body.application_id:
+        entry = await db.get(JobApplication, body.application_id)
+        if entry is None or entry.user_id != user.id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Not in your tracker")
     if document_ids:
         owned = (await db.scalars(select(Document.id).where(Document.id.in_(document_ids),
                                                             Document.user_id == user.id))).all()
@@ -551,7 +561,8 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
                                      .where(SessionDocument.session_id == row.id))).all())
     title = row.title.removeprefix("Drill: ")
     new = SessionIn(title=f"Drill: {title}"[:300], type="mock", role=row.role, language=row.language,
-                    answer_language=row.answer_language, document_ids=doc_ids, mock=mock)
+                    answer_language=row.answer_language, document_ids=doc_ids, mock=mock,
+                    application_id=row.application_id)  # a drill of a job's round is practice for that job
     return await create_session(new, user, db)
 
 

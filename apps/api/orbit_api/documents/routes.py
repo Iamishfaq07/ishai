@@ -27,6 +27,13 @@ if TYPE_CHECKING:
     from orbit_api.documents.parsing import ChunkDraft
 
 DocKind = Literal["resume", "job_description", "notes", "other"]
+# Who made a document (models.Document.origin): the user (an upload or a paste in Documents), or Orbit itself, from
+# what the user already has in Orbit, to run a practice round or a session (a job's post for Prepare, the resume for a
+# drill, a practice round's job post, a version sent). Orbit's don't count against the plan's documents (the Free
+# plan's 3 would stop practice after three rounds); they're capped on their own, and nothing is deleted to make room.
+Origin = Literal["user", "orbit"]
+ORIGIN_ORBIT: Origin = "orbit"
+MAX_ORBIT_DOCUMENTS = 10
 
 
 class DocumentOut(BaseModel):
@@ -39,6 +46,7 @@ class DocumentOut(BaseModel):
     error: str | None
     chunk_count: int
     created_at: datetime
+    origin: Origin = "user"  # "orbit": saved by Orbit for a practice round or a session, not counted in the plan
 
 
 class TextDocIn(BaseModel):
@@ -48,6 +56,10 @@ class TextDocIn(BaseModel):
     # The document this one is a new version of (the resume maker's "Use in Orbit", clicked again for the same resume):
     # updated in place when it's still the caller's, instead of a second copy. Gone, or not theirs: a new one is made.
     replace_id: str | None = Field(None, max_length=36)
+    # "orbit": saved on the user's behalf to run a practice round (the resume and job post a round reads, the job post a
+    # video interview was set up with), not a paste into Documents. Capped at MAX_ORBIT_DOCUMENTS, so it can't be used
+    # to store more than that outside the plan.
+    origin: Origin = "user"
 
 
 class DocPatchIn(BaseModel):
@@ -66,7 +78,8 @@ class DocTextOut(BaseModel):
 
 def _to_out(d: Document, chunk_count: int) -> DocumentOut:
     return DocumentOut(id=d.id, title=d.title, kind=d.kind, filename=d.filename, size_bytes=d.size_bytes,
-                       status=d.status, error=d.error, chunk_count=chunk_count, created_at=d.created_at)
+                       status=d.status, error=d.error, chunk_count=chunk_count, created_at=d.created_at,
+                       origin="orbit" if d.origin == ORIGIN_ORBIT else "user")
 
 
 async def _out(db: AsyncSession, d: Document) -> DocumentOut:
@@ -74,11 +87,23 @@ async def _out(db: AsyncSession, d: Document) -> DocumentOut:
     return _to_out(d, int(count or 0))
 
 
-async def _check_quota(db: AsyncSession, user: User) -> None:
+async def _check_quota(db: AsyncSession, user: User, origin: Origin = "user") -> None:
+    """Room for one more document: the user's own against the plan's documents; one Orbit saves (`origin="orbit"`)
+    against MAX_ORBIT_DOCUMENTS whatever the plan, with a message saying what to delete (402)."""
+    if origin == ORIGIN_ORBIT:
+        held = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id,
+                                                                                Document.origin == ORIGIN_ORBIT))
+        if (held or 0) >= MAX_ORBIT_DOCUMENTS:
+            raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
+                                f"Orbit has saved {MAX_ORBIT_DOCUMENTS} documents for your practice and interviews, "
+                                "the most it keeps outside your plan's documents. Delete the ones you don't need in "
+                                "Documents (they say \"saved by Orbit\"), then try again.")
+        return
     plan = await plan_for(db, user.id)
     if plan.documents is None:
         return
-    n = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id))
+    n = await db.scalar(select(func.count()).select_from(Document).where(Document.user_id == user.id,
+                                                                         Document.origin != ORIGIN_ORBIT))
     if (n or 0) >= plan.documents:
         raise HTTPException(status.HTTP_402_PAYMENT_REQUIRED,
                             f"You can keep up to {plan.documents} documents. Delete one to add another.")
@@ -167,8 +192,9 @@ async def create_text_document(body: TextDocIn, user: Annotated[User, Depends(re
         await db.commit()
         response.status_code = status.HTTP_200_OK
         return await _out(db, old)
-    await _check_quota(db, user)
-    doc = Document(user_id=user.id, title=body.title, kind=body.kind, size_bytes=len(body.text.encode()))
+    await _check_quota(db, user, body.origin)
+    doc = Document(user_id=user.id, title=body.title, kind=body.kind, size_bytes=len(body.text.encode()),
+                   origin=body.origin)
     db.add(doc)
     await db.flush()
     await _ingest(db, doc, body.text)

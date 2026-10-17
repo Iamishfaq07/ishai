@@ -83,7 +83,8 @@ class NextStep(BaseModel):
     title: str
     why: str
     action: str
-    # Where the action goes: an in-app path, or an in-room action ("link_resume", "snapshot", "link_offer").
+    # Where the action goes: an in-app path, or an in-room action ("link_resume", "snapshot", "link_offer",
+    # "interview": the interview prep tab).
     to: str
 
 
@@ -138,10 +139,14 @@ def next_step(f: Facts, listing_path: str) -> NextStep | None:
         return NextStep(key="offer", title="Add the offer to Offer AI", action="Add the offer",
                         why="See what it pays each month, compare it with the market and plan what to ask for.",
                         to="link_offer")
+    if f.upcoming_days == 0 and f.status == "interviewing":
+        return NextStep(key="interview_day", title="Your interview is today", action="Open interview prep",
+                        why="It's today. The job post, the resume you sent and your stories are in one place, and "
+                            "the copilot starts with them loaded.", to="interview")
     if f.upcoming_days is not None and f.upcoming_days <= 7 and f.status == "interviewing":
-        when = "today" if f.upcoming_days == 0 else "tomorrow" if f.upcoming_days == 1 else f"in {f.upcoming_days} days"
-        return NextStep(key="practise", title="Practise for this interview", action="Start a mock interview",
-                        why=f"It's {when}. A mock round on this job post shows what to work on first.", to="practise")
+        when = "tomorrow" if f.upcoming_days == 1 else f"in {f.upcoming_days} days"
+        return NextStep(key="practise", title="Practise for this interview", action="Prepare for it",
+                        why=f"It's {when}. A mock round on this job post shows what to work on first.", to="interview")
     if not f.fit:
         return NextStep(key="fit", title="Check how well you fit", action="Run the fit check",
                         why="A requirement-by-requirement check against your resume shows what to prove and what's "
@@ -283,6 +288,7 @@ async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, D
     db.add(ResumeSnapshot(user_id=user.id, application_id=entry.id, resume_id=r.id, title=r.title,
                           data=dict(r.data or {}), design=dict(r.design or {}), job_text=r.job_text or "",
                           score=score, note=body.note.strip()))
+    entry.interview_version = None  # interview prep and the copilot use the version just sent (job_portal/interview.py)
     await db.commit()
     return await mission(db, user, entry, tz_offset=tz_offset)
 

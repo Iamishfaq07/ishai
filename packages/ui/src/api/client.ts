@@ -1,4 +1,8 @@
 import type {
+  InterviewPrepUpdate,
+  InterviewPrepView,
+  InterviewSessionContext,
+  InterviewWrapUp,
   EngineeringTelemetry,
   TwoFactorChallenge,
   TwoFactorStatus,
@@ -828,6 +832,27 @@ export function createApiClient(options: ApiClientOptions) {
     loopMemory: (company: string) => json<LoopMemory>(`/v1/sessions/loop-memory${queryString({ company })}`),
     /** Public: rolling 7-day live latency and how long the API has been up (the Technical details page). */
     engineeringTelemetry: () => json<EngineeringTelemetry>("/v1/public/engineering-telemetry"),
+
+    // Interview day: a tracked job's interview prep, the copilot started with it, the wrap-up (job_portal/interview.py)
+    /** The prep view: the round, the job post, the resume version used, matching stories, rounds so far. No AI. */
+    interviewPrep: (id: string) => json<InterviewPrepView>(`/v1/jobs/tracker/${encodeURIComponent(id)}/interview`),
+    updateInterviewPrep: (id: string, patch: InterviewPrepUpdate) =>
+      json<InterviewPrepView>(`/v1/jobs/tracker/${encodeURIComponent(id)}/interview`, { method: "PUT", body: body(patch) }),
+    /** The questions likely for this job, from its resume version and post: one resume credit. */
+    interviewQuestions: (id: string) =>
+      json<ResumeQuestionsResponse>(`/v1/jobs/tracker/${encodeURIComponent(id)}/interview/questions`, {
+        method: "POST",
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
+    /** What a session for this interview starts with: saves the job post and the resume version as documents once. */
+    interviewSessionContext: (id: string, tzOffset = -new Date().getTimezoneOffset()) =>
+      json<InterviewSessionContext>(
+        `/v1/jobs/tracker/${encodeURIComponent(id)}/session-context${queryString({ tz_offset: tzOffset })}`,
+        { method: "POST" },
+      ),
+    /** After a round: what the user confirmed (the next round, waiting, an offer, not this time). */
+    wrapUpInterview: (id: string, req: InterviewWrapUp) =>
+      json<InterviewPrepView>(`/v1/jobs/tracker/${encodeURIComponent(id)}/wrap-up`, { method: "POST", body: body(req) }),
 
     // Admin / advanced settings
     adminStatus: () => json<{ is_admin: boolean }>("/v1/admin/status"),
