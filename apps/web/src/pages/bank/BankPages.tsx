@@ -27,6 +27,7 @@ import {
   ROLES_PATH,
   ROLE_GROUPS,
   companyMockLink,
+  crossLinks,
   entryPath,
   firstSentence,
   inGroup,
@@ -300,6 +301,7 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
   const mock = company ? companyMockLink(entry) : roleMockLink(entry as BankRole);
   const abroad = company ? (entry as BankCompany).abroad : undefined;
   const others = related(company ? companyCards : roleCards, entry.slug);
+  const across = crossLinks(kind, entry, { companies: companyCards, roles: roleCards });
   const groupLabel = (company ? COMPANY_GROUPS : ROLE_GROUPS).find(([g]) => g === entry.group)?.[1] ?? "";
   const title = company ? `${name} interview process and practice questions` : `${name} interview questions and what to expect`;
 
@@ -442,6 +444,15 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
           )}
         </section>
       </article>
+
+      {across.length > 0 && (
+        <nav aria-labelledby="across-title" className="mt-14 border-t mk-line pt-10">
+          <h2 id="across-title" className="mk-h3 text-zinc-950 dark:text-white">
+            {company ? "Role guides to read with this one" : "Company guides to read with this one"}
+          </h2>
+          <CardGrid kind={company ? "role" : "company"} cards={across} />
+        </nav>
+      )}
 
       {others.length > 0 && (
         <nav aria-labelledby="more-title" className="mt-14 border-t mk-line pt-10">

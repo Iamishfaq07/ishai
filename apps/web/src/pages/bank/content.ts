@@ -71,6 +71,48 @@ export function inGroup<T extends BankCard>(cards: readonly T[], group: string):
   return cards.filter((c) => c.group === group);
 }
 
+/**
+ * Links between the two lists: the role guides worth reading with a company's guide (by the kind of company), and
+ * the kinds of company whose guides go with a role's. Reading suggestions, not a claim about who hires whom.
+ */
+export const ROLES_FOR_COMPANIES: Record<CompanyGroup, string[]> = {
+  "it-services": ["campus-placement", "software-engineer", "qa-engineer", "backend-developer"],
+  "india-product": ["software-engineer", "backend-developer", "frontend-developer", "product-manager"],
+  "global-tech": ["software-engineer", "data-scientist", "machine-learning-engineer", "product-manager"],
+  consulting: ["management-consultant", "business-analyst", "mba-placement", "financial-analyst"],
+  finance: ["financial-analyst", "data-analyst", "software-engineer", "business-analyst"],
+  industry: ["mechanical-engineer", "electrical-engineer", "sales-executive", "operations"],
+};
+export const COMPANIES_FOR_ROLES: Record<RoleGroup, CompanyGroup[]> = {
+  "early-career": ["it-services", "india-product"],
+  engineering: ["india-product", "global-tech", "it-services"],
+  data: ["global-tech", "finance"],
+  "product-design": ["india-product", "global-tech"],
+  business: ["consulting", "finance"],
+  "core-engineering": ["industry"],
+  "public-service": ["industry"],
+};
+
+/** Up to `n` guides of the other kind to read with this one: in order for a company, a few from each kind of company
+ *  for a role (taken in turn, so the list mixes them). */
+export function crossLinks(
+  kind: BankKind,
+  entry: { slug: string; group: string },
+  cards: { companies: readonly BankCard[]; roles: readonly BankCard[] },
+  n = 4,
+): BankCard[] {
+  if (kind === "company") {
+    const slugs = ROLES_FOR_COMPANIES[entry.group as CompanyGroup] ?? [];
+    return slugs.map((s) => cards.roles.find((r) => r.slug === s)).filter((r): r is BankCard => !!r).slice(0, n);
+  }
+  const groups = (COMPANIES_FOR_ROLES[entry.group as RoleGroup] ?? []).map((g) => inGroup(cards.companies, g));
+  const out: BankCard[] = [];
+  for (let i = 0; out.length < n && groups.some((g) => i < g.length); i++) {
+    for (const g of groups) if (g[i] && out.length < n) out.push(g[i]!);
+  }
+  return out;
+}
+
 /** Up to `n` other guides in the same group, starting after this one (so every guide links on to different ones). */
 export function related<T extends BankCard>(cards: readonly T[], slug: string, n = 6): T[] {
   const self = cards.find((c) => c.slug === slug);
