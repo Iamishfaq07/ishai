@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { EvidenceItem } from "@orbit/types";
-import { Check, FileText, PenLine, Plus, ShieldCheck, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Input, PageHeader, Select } from "../components/ui";
+import { Check, CosmicEmptyState, FileText, PenLine, Plus, ShieldCheck, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
+import { Button, Card, ErrorNote, Input, PageHeader, Select } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
@@ -220,8 +220,8 @@ export function EvidencePage() {
         {items.error ? (
           <ErrorNote onRetry={items.reload}>{errorText(items.error)}</ErrorNote>
         ) : list.length === 0 ? (
-          <EmptyState
-            icon={ShieldCheck}
+          <CosmicEmptyState
+            variant="evidence"
             title="Your evidence vault is empty"
             body="Add a claim you can stand behind, or let Orbit find them in your resume or a story. Every suggestion shows the words it comes from."
             action={

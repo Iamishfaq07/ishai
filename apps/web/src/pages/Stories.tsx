@@ -15,8 +15,9 @@ import {
   cx,
   focusRing,
   splitPlaceholders,
+  CosmicEmptyState,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { storyPracticeSession } from "../lib/storyPractice";
@@ -543,8 +544,8 @@ export function StoriesPage() {
         <>
           <Coverage stories={list} onPick={startNew} />
           {list.length === 0 && drafts.length === 0 && !editing ? (
-            <EmptyState
-              icon={BookOpen}
+            <CosmicEmptyState
+              variant="stories"
               title="Build your story bank"
               body="Save five to eight real examples — a conflict, a failure, a win. Draft them from your resume in one click, then make them yours."
               action={

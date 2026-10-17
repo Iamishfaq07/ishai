@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { Badge, Briefcase, LoadGate, Skeleton, THead, Table, Td, Th, Tr, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
+import { Badge, Briefcase, CosmicEmptyState, DialogActions, LoadGate, Skeleton, THead, Table, Td, Th, Tr, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
 import { PRODUCTS } from "../components/products";
 import { Sheet } from "../components/Sheet";
 import { api } from "../lib/api";
@@ -242,7 +242,7 @@ export function DocumentsPage() {
       ) : docs.error ? (
         <ErrorNote onRetry={docs.reload}>{errorText(docs.error)}</ErrorNote>
       ) : (docs.data ?? []).length === 0 ? (
-        <EmptyState icon={FileUp} title="No documents yet" body="Uploaded documents are parsed into facts Orbit can cite during a session." />
+        <CosmicEmptyState variant="documents" title="No documents yet" body="Uploaded documents are parsed into facts Orbit can cite during a session." />
       ) : (
         <Table label="Your documents">
           <THead>
@@ -374,14 +374,14 @@ function EditModal({
       size="2xl"
       footer={
         !loaded.loading && !loaded.error ? (
-          <div className="flex justify-end gap-2">
+          <DialogActions>
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" form="edit-document" disabled={saving}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
-          </div>
+          </DialogActions>
         ) : undefined
       }
     >

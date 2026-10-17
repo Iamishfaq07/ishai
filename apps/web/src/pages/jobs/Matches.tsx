@@ -17,7 +17,7 @@ import {
   regionWords,
   sampleCity,
 } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, PageHeader, Select, Spinner } from "../../components/ui";
+import { Button, Card, ErrorNote, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useCountry } from "../../lib/country";
@@ -609,8 +609,9 @@ function NoMatches({ feed, days, searching }: { feed: JobFeed; days: string; sea
           body="They're usually back within the hour. Meanwhile, search the sites below: the links are filled in from your profile."
         />
       ) : (
-        <EmptyState
-          icon={Search}
+        <CosmicEmptyState
+          variant="no-results"
+          kind="no-results"
           title={searching ? "Nothing matches that search" : `No matches posted in the ${days.toLowerCase()}`}
           body={
             searching

@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
-import { ArrowRight, BadgeIndianRupee, Banknote, Plus, Scale, Search, LoadGate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
-import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
+import { ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, Scale, Search, LoadGate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
+import { Button, Card, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -73,8 +73,8 @@ export function OffersPage() {
         {offers.error && !offers.data ? (
           <ErrorNote onRetry={offers.reload}>{errorText(offers.error)}</ErrorNote>
         ) : list.length === 0 && !adding ? (
-          <EmptyState
-            icon={Icon}
+          <CosmicEmptyState
+            variant="offers"
             title="Got an offer? Add it here"
             body={
               india

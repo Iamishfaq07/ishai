@@ -51,7 +51,7 @@ export function SessionsPage() {
       {sessions.error ? (
         <ErrorNote onRetry={sessions.reload}>{errorText(sessions.error)}</ErrorNote>
       ) : (sessions.data ?? []).length === 0 ? (
-        <CosmicEmptyState variant="practice" title="No sessions yet" body="When a session ends, its transcript and summary are saved here. Sessions left open end on their own after an hour." />
+        <CosmicEmptyState variant="copilot" title="No sessions yet" body="When a session ends, its transcript and summary are saved here. Sessions left open end on their own after an hour." />
       ) : (
         <>
           {endError && (

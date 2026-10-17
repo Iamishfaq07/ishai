@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { SavedAnswer, SavedAnswerInput } from "@orbit/types";
-import { LoadGate, MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog } from "@orbit/ui";
+import { CosmicEmptyState, LoadGate, MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { answerPracticeSession } from "../lib/answerPractice";
 import { api } from "../lib/api";
@@ -185,8 +185,8 @@ export function AnswersPage() {
         <ErrorNote onRetry={answers.reload}>{errorText(answers.error)}</ErrorNote>
       ) : list.length === 0 ? (
         !editing && (
-          <EmptyState
-            icon={MessageSquareQuote}
+          <CosmicEmptyState
+            variant="answers"
             title="Keep the answers you've worked out"
             body="After a mock or a real interview, open its review and choose “Save as my answer” on any question. Or write one now for a question you know is coming."
             action={

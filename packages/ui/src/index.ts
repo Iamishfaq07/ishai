@@ -279,6 +279,12 @@ export { TrackerScene } from "./components/scenes/TrackerScene";
 export { NoResultsScene } from "./components/scenes/NoResultsScene";
 export { OfflineScene } from "./components/scenes/OfflineScene";
 export { CelebrationScene } from "./components/scenes/CelebrationScene";
+export { CopilotScene } from "./components/scenes/CopilotScene";
+export { OfferScene } from "./components/scenes/OfferScene";
+export { StoriesScene } from "./components/scenes/StoriesScene";
+export { AnswersScene } from "./components/scenes/AnswersScene";
+export { EvidenceScene } from "./components/scenes/EvidenceScene";
+export { DocumentsScene } from "./components/scenes/DocumentsScene";
 export { useViewTransitionOk, viewTransitionOk, withViewTransition } from "./hooks/useMotion";
 export {
   COUNTRIES,

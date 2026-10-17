@@ -25,8 +25,9 @@ import {
   confirmDialog,
   cx,
   focusRing,
+  CosmicEmptyState,
 } from "@orbit/ui";
-import { Button, EmptyState, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
+import { Button, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
@@ -181,8 +182,8 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   if (tracker.error && !tracker.data) return <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>;
   if (!entries.length) {
     return (
-      <EmptyState
-        icon={BookmarkCheck}
+      <CosmicEmptyState
+        variant="tracker"
         title="Nothing tracked yet"
         body={`Save jobs from your matches, or add one you applied to on ${india ? "Naukri, LinkedIn or a campus portal" : "LinkedIn, Indeed or a company's site"}. Then move each one along: applied, interviewing, offer.`}
         action={
