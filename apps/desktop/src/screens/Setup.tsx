@@ -315,16 +315,20 @@ export function SetupScreen({
     setAutoAnswer(ws.auto_answer);
     setSelected(new Set(ws.document_ids));
   };
-  // Restore the last-used setup once documents are loaded (its document ids replace the default selection).
+  // Restore the last-used setup once documents are loaded (its document ids replace the default selection). Opened
+  // from one of Home's quick starts ("Coding"…), the type is the one clicked, whatever the last setup's was.
   const restored = useRef(false);
   useEffect(() => {
     if (restored.current || docs === null || !workspaceId) return;
     restored.current = true;
     api
       .listWorkspaces()
-      .then((list) => applyWorkspace(list.find((w) => w.id === workspaceId) ?? null))
+      .then((list) => {
+        applyWorkspace(list.find((w) => w.id === workspaceId) ?? null);
+        if (initialType) setType(initialType);
+      })
       .catch(() => undefined);
-  }, [docs, workspaceId]);
+  }, [docs, workspaceId, initialType]);
 
   useEffect(() => {
     api
