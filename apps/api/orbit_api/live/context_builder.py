@@ -11,6 +11,7 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from orbit_api import live_language
 from orbit_api.answers.match import DOC_KIND as ANSWER_KIND
 from orbit_api.answers.match import chunk_question, same_question
 from orbit_api.documents.uploads import sanitize_text
@@ -25,6 +26,7 @@ from orbit_api.live.events import (
     SessionType,
     Speaker,
 )
+from orbit_api.live.multilingual import speech_for
 from orbit_api.providers.llm.base import LLMMessage
 from orbit_api.region import country_name, currency, is_india
 from orbit_api.retrieval.index import Hit, IndexedChunk, SessionIndex
@@ -217,6 +219,8 @@ class PromptInputs:
     simpler: bool = False  # the card's "Simpler": the same answer in plainer words
     # The country the user applies in (the account's), for the job market's words and currency; None when unknown.
     country: str | None = None
+    # The interview language (live_language.py): what QUESTION and the conversation are in. "en" for English.
+    language: str = "en"
 
 
 @dataclass
@@ -359,11 +363,14 @@ def retrieve(index: SessionIndex, inputs: PromptInputs, memory: SessionMemory) -
         # you test it?") loses it after one step, so the last two questions come along.
         query = " ".join([*memory.questions[-FOLLOW_UP_THREAD:], inputs.question])
     hits = index.search(query, inputs.qtype, k=6)
-    if inputs.qtype in _ANCHORED_TYPES and _BROAD_BACKGROUND.search(inputs.question):
+    # In another language, "tell me about yourself" and "a project you're proud of" by its own words too.
+    speech = speech_for(inputs.language) if inputs.language != "en" else None
+    if inputs.qtype in _ANCHORED_TYPES and (_BROAD_BACKGROUND.search(inputs.question) or (
+            speech is not None and speech.broad_background(inputs.question))):
         anchored = _anchor_hits(index)
         seen = {h.chunk.id for h in anchored}
         hits = anchored + [h for h in hits if h.chunk.id not in seen]
-    if _PROJECT_ASK.search(inputs.question):
+    if _PROJECT_ASK.search(inputs.question) or (speech is not None and speech.project_ask(inputs.question)):
         seen = {h.chunk.id for h in hits}
         projects = [Hit(c, 1.0) for c in index.by_category("resume", ("project",), 3) if c.id not in seen]
         hits = projects + hits
@@ -426,7 +433,9 @@ def build_prompt(index: SessionIndex, inputs: PromptInputs, memory: SessionMemor
             if inputs.session_type in ("interview", "mock") and (pack := role_packs.match(inputs.role)) else "",
             _SIZE_RULES[inputs.size] if inputs.size else _LENGTH_RULES.get(inputs.length, _LENGTH_RULES["standard"]),
             _STYLE_RULES[inputs.style] if inputs.qtype != QuestionType.coding else "",
-            f"Answer language: {(inputs.answer_language or '').strip() or 'English'}",
+            f"Answer language: {(inputs.answer_language or '').strip() or 'English'}"
+            if live_language.is_english(inputs.language, inputs.answer_language or "en")
+            else live_language.answer_rule(inputs.answer_language, inputs.language),
             (f"Write any code in {_LANGUAGE_NAMES.get(inputs.coding_language, inputs.coding_language)} unless the "
              "question or the user's request names a different language.") if inputs.coding_language else "",
             _GROUNDING_RULE if inputs.qtype in _PERSONAL_TYPES or inputs.is_follow_up else "",

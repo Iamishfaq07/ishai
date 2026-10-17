@@ -160,6 +160,9 @@ class Settings(BaseSettings):
     # Mock interviews in Hindi and Hinglish (practice_language.py). Off until the owner has checked transcription and
     # review quality on real Hindi/Hinglish answers; English stays the default either way.
     multilingual: bool = Field(False, validation_alias=AliasChoices("ORBIT_MULTILINGUAL"))
+    # Live sessions in other languages (live_language.py, DECISIONS D62): the setup's "Interview language" and "Answer
+    # in". English stays the default either way; off, every new or reopened live session is English again.
+    live_languages: bool = Field(True, validation_alias=AliasChoices("ORBIT_LIVE_LANGUAGES"))
     # The camera coach in mock interviews (sessions/camera.py): on-device numbers about facing the camera. Off until
     # the owner has tried it on their own devices.
     video_mock: bool = Field(False, validation_alias=AliasChoices("ORBIT_VIDEO_MOCK"))

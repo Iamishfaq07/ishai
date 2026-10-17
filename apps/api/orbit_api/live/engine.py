@@ -17,7 +17,7 @@ from typing import Any, Literal, Protocol
 
 from pydantic import ValidationError
 
-from orbit_api import practice_language
+from orbit_api import live_language, practice_language
 from orbit_api.live.answer_format import AnswerStreamParser, finalize_grounding, trim_cut_off
 from orbit_api.live.background import Background, infer_level
 from orbit_api.live.carryover import Carryover
@@ -46,14 +46,8 @@ from orbit_api.live.events import (
 from orbit_api.live.finalizer import GRACE_MS, FinalizedQuestion, QuestionFinalizer
 from orbit_api.live.metrics import AudioClock, LatencySamples
 from orbit_api.live.mock_interviewer import MockConfig, MockInterviewer
-from orbit_api.live.question_detector import (
-    DetectorContext,
-    classify_type,
-    detect,
-    normalize,
-    question_parts,
-    tokens,
-)
+from orbit_api.live.multilingual import ENGLISH, speech_for
+from orbit_api.live.question_detector import DetectorContext, normalize, tokens
 from orbit_api.live.routing import (
     CODE_MAX_TOKENS,
     MAX_TALKING_POINTS,
@@ -63,7 +57,6 @@ from orbit_api.live.routing import (
     SIZE_TOKENS,
     choose_reasoning_level,
     estimate_complexity,
-    pick_size,
     step_size,
 )
 from orbit_api.providers.llm.base import (
@@ -401,9 +394,15 @@ class LiveEngine:
         self._seq = 0
         self.state = LiveState.idle
         self.memory = SessionMemory()
+        # The interview language (live_language.py). A mock interview keeps its own (practice_language.py) and reads
+        # the candidate the English way, as before; an English session reads speech exactly as it always did.
+        self._language = "en" if profile.session_type == "mock" else live_language.known(profile.language)
+        self._answer_language = profile.answer_language or "en"
+        self._english = live_language.is_english(self._language, self._answer_language)
+        self._speech = ENGLISH if profile.session_type == "mock" else speech_for(self._language)
         self._finalizer = QuestionFinalizer(provider_endpoints=stt.provides_endpoints,
-                                            grace_ms=GRACE_MS[self.settings.response_timing])
-        self._dedup = Deduplicator()
+                                            grace_ms=GRACE_MS[self.settings.response_timing], speech=self._speech)
+        self._dedup = Deduplicator(self._speech)
         self._stt_sessions: dict[Channel, STTSession] = {}
         # Real provider connection state per channel, and the combined status last sent to the client.
         self._stt_state: dict[Channel, str] = {}
@@ -501,10 +500,15 @@ class LiveEngine:
     # ---- lifecycle --------------------------------------------------------------------------------------
 
     async def start(self) -> None:
-        cfg = STTConfig(language=practice_language.stt_language(self.profile.language), keyterms=self.profile.keyterms)
+        mock = self.profile.session_type == "mock"
+        language = (practice_language.stt_language(self.profile.language) if mock
+                    else live_language.stt_language(self._language))
+        cfg = STTConfig(language=language, keyterms=self.profile.keyterms)
         channels: tuple[Channel, Channel] = ("mic", "system")
-        # fillers: speaking feedback on you only. Phone / room mode: one mic hears both people, so tell voices apart.
-        configs = {"mic": replace(cfg, filler_words=True, diarize=self.profile.session_type == "phone"),
+        # fillers: speaking feedback on you only (Deepgram keeps "um" in English only). Phone / room mode: one mic
+        # hears both people, so tell voices apart.
+        configs = {"mic": replace(cfg, filler_words=mock or self._language == "en",
+                                  diarize=self.profile.session_type == "phone"),
                    "system": cfg}
         is_mock = isinstance(self._stt, MockSTTProvider)
         if not is_mock:  # truthful from the first frame: nothing is "ok" until the provider says so
@@ -941,8 +945,8 @@ class LiveEngine:
             # The first voice to ask anything ("Can you hear me okay?" counts) is the interviewer; every other voice is
             # the candidate. Until then everyone counts as the interviewer, so the candidate's "Yes, I can hear you
             # fine" was stitched into the first question when only a real question taught the voice.
-            if turn.text.rstrip().endswith("?") or detect(turn.text, "interviewer",
-                                                          self._detector_context()).should_generate:
+            if turn.text.rstrip().endswith("?") or self._speech.detect(turn.text, "interviewer",
+                                                                       self._detector_context()).should_generate:
                 self._learn_voice(voice, "interviewer")
         if (spk == "candidate" and channel == "mic" and self.profile.session_type != "phone"
                 and turn.turn_id not in self._speaker_overrides):
@@ -1031,7 +1035,7 @@ class LiveEngine:
                                              "start_ms": now, "end_ms": now})
         self.memory.add_turn("interviewer", text)
         self.memory.questions.append(text)
-        qtype = QuestionType.follow_up if is_follow_up else classify_type(normalize(question))
+        qtype = QuestionType.follow_up if is_follow_up else self._speech.classify_type(question)
         await self._rec.turn(turn_id, "interviewer", text, now, now)
         await self._rec.question(qid, turn_id, question, qtype.value, 1.0, is_follow_up, "mock")
 
@@ -1072,7 +1076,8 @@ class LiveEngine:
         self._start_speculation(text, kind="classify")
         previous = self.memory.questions[-1] if self.memory.questions else None
         recent = [f"{t.speaker}: {t.text}" for t in self.memory.recent_turns(4)]
-        result = await classify(self._llm, text, previous, recent)
+        result = await classify(self._llm, text, previous, recent,
+                                language=None if self._language == "en" else self._language)
         latency = int((self._clock() - started) * 1000)
         if result is not None and result.response is not None:
             await self._rec.provider_request(result.response.provider or self._llm.name, result.response.model,
@@ -1085,7 +1090,7 @@ class LiveEngine:
         question = result.normalized_question or text
         spec = self._spec
         if (spec is not None and spec.kind == "classify" and spec.question == text
-                and similarity(tokens(question), tokens(text)) >= CLASSIFY_SAME_QUESTION):
+                and similarity(self._speech.tokens(question), self._speech.tokens(text)) >= CLASSIFY_SAME_QUESTION):
             question = text  # only lightly reworded: keep the answer that's already being written
         await self._on_question(turn_id, question, continues=continues)
         if self._spec is not None and self._spec.kind == "classify":
@@ -1098,7 +1103,7 @@ class LiveEngine:
         decision, prior_qid = self._dedup.check(turn_id, text, now, continues=continues)
         if decision == DedupDecision.duplicate:
             return
-        det = detect(text, "interviewer", self._detector_context())
+        det = self._speech.detect(text, "interviewer", self._detector_context())
         if decision == DedupDecision.extends and prior_qid:
             self._dedup.replace(prior_qid, text, now)
             if self._speech_end_ms is not None:  # the answer now responds to the longer question's end
@@ -1142,8 +1147,8 @@ class LiveEngine:
         if not text:
             await self.send("error", {"code": "no_question", "message": "No interviewer question to answer yet."})
             return
-        det = detect(text, "interviewer", self._detector_context())
-        qtype = det.question_type if det.is_question else classify_type(normalize(text))
+        det = self._speech.detect(text, "interviewer", self._detector_context())
+        qtype = det.question_type if det.is_question else self._speech.classify_type(text)
         if held:
             # The question as the auto-answer would fire it ("Okay, great. What is…" → "What is…"), marked as
             # answered: otherwise it fired again when the wait ended, as a second card that cancelled this answer.
@@ -1170,10 +1175,10 @@ class LiveEngine:
                     await self.send("error", {"code": "screenshot_expired", "message": _SHOT_GONE})
                     return
                 images = shot
-            qtype = QuestionType.coding if code_ask or q == self._coded_question else classify_type(normalize(q))
+            qtype = QuestionType.coding if code_ask or q == self._coded_question else self._speech.classify_type(q)
             await self._start_answer(None, q, qtype, True, "chat", instruction=text, images=images)
         else:
-            qtype = QuestionType.coding if code_ask else classify_type(normalize(text))
+            qtype = QuestionType.coding if code_ask else self._speech.classify_type(text)
             await self._start_answer(None, text, qtype, False, "chat")
 
     async def _cancel_active(self, reason: str, *, include_pinned: bool = False, keep: str | None = None) -> None:
@@ -1232,7 +1237,7 @@ class LiveEngine:
         if self._ended or self._dedup.check("speculation", question, self.now_ms(),
                                             continues=True)[0] == DedupDecision.duplicate:
             return
-        det = detect(question, "interviewer", self._detector_context())
+        det = self._speech.detect(question, "interviewer", self._detector_context())
         aid = str(uuid.uuid4())
         out = _AnswerOut(self, speculative=True)
         task = asyncio.ensure_future(self._run_answer(aid, None, question, det.question_type, det.is_follow_up,
@@ -1317,9 +1322,10 @@ class LiveEngine:
             return None  # a screenshot's "question" is our own instruction text: it says nothing about size
         if source == "chat" and instruction is not None:
             last = self._last_size
-            base = last[1] if last is not None and last[0] == question else pick_size(question, qtype, parts)
+            base = (last[1] if last is not None and last[0] == question
+                    else self._speech.pick_size(question, qtype, parts))
             return step_size(base, resize_steps(instruction))
-        return pick_size(question, qtype, parts)
+        return self._speech.pick_size(question, qtype, parts)
 
     def _answer_type(self, qtype: QuestionType) -> QuestionType:
         """The type an answer is written as. A follow-up to an answer that had code ("what if the array is sorted?")
@@ -1331,6 +1337,10 @@ class LiveEngine:
         if qtype == QuestionType.technical and self.profile.session_type in ("coding", "assessment"):
             return QuestionType.coding
         return qtype
+
+    def _scaled(self, tokens: int) -> int:
+        """A token budget in the answer language: other scripts take more tokens for the same speech."""
+        return int(tokens * live_language.token_factor(self._answer_language))
 
     async def _run_answer(
         self, aid: str, qid: str | None, question: str, qtype: QuestionType, is_follow_up: bool, source: str,
@@ -1344,7 +1354,7 @@ class LiveEngine:
         # A bug report is a coding answer (code format, code-sized budget), and a screenshot may well be one.
         is_code = is_code or mode == "debug" or source == "screenshot"
         # A screenshot's "question" is our own instruction text, not the interviewer's asks.
-        asks = question_parts(question) if source != "screenshot" else [question]
+        asks = self._speech.question_parts(question) if source != "screenshot" else [question]
         size = self._answer_size(question, qtype, len(asks), source, instruction, size)
         # The fixed length nearest the size (older clients know only those), else the session's own.
         length: AnswerLength = SIZE_LENGTH[size] if size else (
@@ -1353,7 +1363,7 @@ class LiveEngine:
         inputs = PromptInputs(
             question=question, qtype=qtype, is_follow_up=is_follow_up, session_type=self.profile.session_type,
             role=self.profile.role, length=length, style=self.settings.style,
-            answer_language=self.profile.answer_language or "en",  # English only: no per-session override
+            answer_language=self._answer_language, language=self._language,
             instruction=instruction, coding_language=self.settings.coding_language, mode=mode,
             candidate_instructions=self.profile.instructions, learned_preferences=self.profile.learned,
             prep_context=self.profile.prep_context,
@@ -1379,7 +1389,7 @@ class LiveEngine:
             messages=built.messages, reasoning="light", thinking=self.settings.thinking, images=images,
             # + room for the FOLLOWUP/POINTS trailer, which comes after the answer: a design answer that used its whole
             # budget otherwise lost its key points.
-            max_tokens=budget + TRAILER_TOKENS,
+            max_tokens=budget + TRAILER_TOKENS if self._english else self._scaled(budget + TRAILER_TOKENS),
             request_type={"chat": "chat", "screenshot": "vision"}.get(source, "answer"),
             allow_fallback=self.profile.allow_fallback,
         )
@@ -1394,8 +1404,12 @@ class LiveEngine:
                                  document=h.chunk.doc_title, label=h.chunk.label,
                                  excerpt=chunk_body(h.chunk.category, h.chunk.text)[:240],
                                  verified=h.chunk.verified) for ref, h in built.facts.items()}
+        # The language the answer comes back in: on auto, the question's own (English gets English's clean-up).
+        answer_in = (self._answer_language if self._answer_language != live_language.AUTO
+                     else self._speech.lang(question))
         parser = AnswerStreamParser(question, qtype, built.context_used, facts=facts,
-                                    max_points=SIZE_POINTS[size] if size else MAX_TALKING_POINTS[length])
+                                    max_points=SIZE_POINTS[size] if size else MAX_TALKING_POINTS[length],
+                                    language=answer_in)
         first_token_ms: int | None = None
         streamed = False
 
@@ -1538,7 +1552,7 @@ class LiveEngine:
                 LLMMessage("user", f"PREVIOUS SUMMARY:\n{fence(self.memory.rolling_summary) or '(none)'}\n\n"
                                    f"<reference_data>\n{fence(convo)}\n</reference_data>"),
             ],
-            max_tokens=220, request_type="summary",
+            max_tokens=220 if self._english else self._scaled(220), request_type="summary",
         )
         started = self._clock()
         try:

@@ -9,6 +9,7 @@ Handles two cases:
 from dataclasses import dataclass
 from enum import StrEnum
 
+from orbit_api.live.multilingual import ENGLISH, Speech
 from orbit_api.live.question_detector import tokens
 
 COOLDOWN_MS = 20_000
@@ -49,8 +50,11 @@ def _is_prefix(short: list[str], long: list[str]) -> bool:
 
 
 class Deduplicator:
-    def __init__(self) -> None:
+    def __init__(self, speech: Speech = ENGLISH) -> None:
         self._seen: list[_Seen] = []
+        # Words compared in the session's language (English: question_detector.tokens, as always).
+        self._tokens = speech.tokens
+        self._filler = _FILLER | speech.filler_words
 
     def check(self, turn_id: str, text: str, now_ms: int, *,
               continues: bool = False) -> tuple[DedupDecision, str | None]:
@@ -58,7 +62,7 @@ class Deduplicator:
         finalizer stitched this question onto the one it held (said after a pause), so starting with an earlier
         question's words means it's that question, grown; otherwise, on another turn, it's a new question that
         happens to start the same way ("Why?" … "Why not use DynamoDB instead?")."""
-        toks = tokens(text)
+        toks = self._tokens(text)
         self._seen = [s for s in self._seen if now_ms - s.at_ms <= COOLDOWN_MS]
         for s in reversed(self._seen):
             if s.toks == toks:
@@ -71,15 +75,15 @@ class Deduplicator:
                 return DedupDecision.duplicate, s.question_id  # a fragment of what we already answered
             # Rephrased: nearly the same words, and the ones that differ don't carry meaning ("So tell me about
             # yourself" / "Tell me about yourself"). "…if the array is sorted?" after "…if the array is empty?" isn't.
-            if similarity(s.toks, toks) >= SIMILARITY_THRESHOLD and set(s.toks) ^ set(toks) <= _FILLER:
+            if similarity(s.toks, toks) >= SIMILARITY_THRESHOLD and set(s.toks) ^ set(toks) <= self._filler:
                 return DedupDecision.duplicate, s.question_id
         return DedupDecision.new, None
 
     def record(self, question_id: str, turn_id: str, text: str, now_ms: int) -> None:
-        self._seen.append(_Seen(question_id, turn_id, tokens(text), now_ms))
+        self._seen.append(_Seen(question_id, turn_id, self._tokens(text), now_ms))
 
     def replace(self, question_id: str, text: str, now_ms: int) -> None:
         for s in self._seen:
             if s.question_id == question_id:
-                s.toks = tokens(text)
+                s.toks = self._tokens(text)
                 s.at_ms = now_ms

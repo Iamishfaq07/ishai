@@ -22,13 +22,13 @@ from fastapi import (
     status,
 )
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import Select, delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
-from orbit_api import credits, jobs, practice_language
+from orbit_api import credits, jobs, live_language, practice_language
 from orbit_api.answers.routes import MAX_ANSWERS, answer_text
 from orbit_api.answers.routes import index_chunk as answer_chunk
 from orbit_api.auth.guards import require_verified_user
@@ -163,17 +163,18 @@ class SessionIn(BaseModel):
     # The candidate's standing instructions for answers; from a saved setup's notes when not given.
     instructions: str | None = Field(None, max_length=1000)
 
-    # English, except a mock interview in a practice language while ORBIT_MULTILINGUAL is on (practice_language.py).
-    # Older clients and saved setups may still send another language; it's pinned to English here.
+    # A live session: the interview language and the answer language (live_language.py; None = the interview's),
+    # when this server offers them; anything else is English. A mock interview: English, or its practice language
+    # while ORBIT_MULTILINGUAL is on (practice_language.py), and no answer language (Orbit doesn't answer in a mock).
     @model_validator(mode="after")
-    def _practice_language(self) -> "SessionIn":
-        self.language = practice_language.normalize(self.language, self.type)
+    def _languages(self) -> "SessionIn":
+        if self.type == "mock":
+            self.language = practice_language.normalize(self.language, self.type)
+            self.answer_language = None
+        else:
+            self.language = live_language.normalize(self.language)
+            self.answer_language = live_language.normalize_answer(self.answer_language, self.language)
         return self
-
-    @field_validator("answer_language")
-    @classmethod
-    def _no_answer_language(cls, _: str | None) -> None:
-        return None
 
 
 class SessionOut(BaseModel):
@@ -1015,10 +1016,17 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
         await db.commit()
         # Earlier rounds with the same company: what was asked, and the stories already told (sessions/loop_memory).
         earlier = (await loop_memory(db, user_id, company, exclude_session_id=row.id)).prompt_context()
+        # A mock: English or its practice language, and nothing is answered. A live session: its interview and answer
+        # languages, as this server offers them now (ORBIT_LIVE_LANGUAGES off: English, whatever the row says).
+        if row.type == "mock":
+            language, answer_language = practice_language.normalize(row.language, row.type), "en"
+        else:
+            language = live_language.normalize(row.language)
+            answer_language = live_language.answer_code(live_language.normalize_answer(row.answer_language, language),
+                                                        language)
         profile = SessionProfile(
             session_id=row.id, session_type=row.type,  # type: ignore[arg-type]
-            # English, or the mock's practice language; the copilot's answers are always English.
-            role=row.role, language=practice_language.normalize(row.language, row.type), answer_language="en",
+            role=row.role, language=language, answer_language=answer_language,
             keyterms=keyterms, dev_mode=get_settings().env != "production",
             mock=MockConfig.model_validate(row.mock_config) if row.mock_config else None,
             allow_fallback=plan.has("provider_fallback"),

@@ -1,8 +1,8 @@
 """Practice languages for mock interviews: English (the default), and Hindi and Hinglish behind ORBIT_MULTILINGUAL.
 
-Only the mock interview changes language: what the interviewer says, the transcription setting and the written
-review. The live copilot, saved setups and the rest of the app stay English. The rubric is the same in every language,
-and an answer is never marked down for the language it's given in.
+Only the mock interview changes language here: what the interviewer says, the transcription setting and the written
+review. Live sessions have their own languages (live_language.py); the app's own labels stay English. The rubric is
+the same in every language, and an answer is never marked down for the language it's given in.
 
 Transcription: Deepgram documents Hindi in Nova-3's multilingual code-switching mode (`language=multi`), which is used
 for both Hindi and Hinglish. Its quality on real Hinglish interview audio is for the owner to check before turning the

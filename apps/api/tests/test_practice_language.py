@@ -41,7 +41,8 @@ def test_with_the_flag_only_a_mock_takes_the_language(client: TestClient) -> Non
     assert _session(client, h, type="mock", language="hi")["language"] == "hi"
     assert _session(client, h, type="mock", language="HINGLISH")["language"] == "hinglish"
     assert _session(client, h, type="mock", language="fr")["language"] == "en"  # not offered
-    assert _session(client, h, type="interview", language="hi")["language"] == "en"  # the copilot stays English
+    # A live session's language is its own setting (live_language.py, tests/test_live_languages.py).
+    assert _session(client, h, type="interview", language="hi")["language"] == "hi"
     assert _session(client, h, type="mock")["language"] == "en"  # English is still the default
 
 

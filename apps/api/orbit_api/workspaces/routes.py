@@ -4,10 +4,11 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api import live_language
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
 from orbit_api.live.events import AnswerLength, AnswerStyle, SessionType
@@ -31,16 +32,16 @@ class WorkspaceIn(BaseModel):
     notes: str | None = Field(None, max_length=4000)
     document_ids: list[str] = Field(default_factory=list, max_length=20)
 
-    # Orbit is English only: older clients and saved setups may still send another language, so it's pinned here.
-    @field_validator("language")
-    @classmethod
-    def _english(cls, _: str) -> str:
-        return "en"
-
-    @field_validator("answer_language")
-    @classmethod
-    def _no_answer_language(cls, _: str | None) -> None:
-        return None
+    # A saved live setup keeps its interview and answer languages (live_language.py) when this server offers them;
+    # anything else, and a mock setup, is English (a mock's language is picked on the Practice page).
+    @model_validator(mode="after")
+    def _languages(self) -> "WorkspaceIn":
+        if self.session_type == "mock":
+            self.language, self.answer_language = "en", None
+        else:
+            self.language = live_language.normalize(self.language)
+            self.answer_language = live_language.normalize_answer(self.answer_language, self.language)
+        return self
 
 
 class WorkspaceOut(WorkspaceIn):
