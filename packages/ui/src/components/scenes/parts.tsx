@@ -18,8 +18,10 @@ export interface SceneProps {
  * the same parts only fade in; at Off, in print and without JavaScript it's the final frame from the start. A part
  * marked NUDGE lifts a little on hover. Only the AI-working scenes (WorkingScene) loop, calmly, at Full only.
  */
-export function Scene({ className, title, children }: SceneProps & { children: ReactNode }) {
+export function Scene({ className = "", title, children }: SceneProps & { children: ReactNode }) {
   const [ref, shown] = useInView<SVGSVGElement>("0px");
+  // A width in `className` ("w-24", "sm:w-40") sizes the scene; otherwise it fills its box, up to 15rem.
+  const sized = /(?:^|\s)(?:[a-z0-9-]+:)*w-/.test(className);
   return (
     <svg
       ref={ref}
@@ -29,7 +31,7 @@ export function Scene({ className, title, children }: SceneProps & { children: R
       strokeLinejoin="round"
       focusable="false"
       data-shown={shown ? "" : undefined}
-      className={cx("scene h-auto w-full max-w-[15rem] overflow-visible font-sans", className)}
+      className={cx("scene h-auto overflow-visible font-sans", !sized && "w-full max-w-[15rem]", className)}
       {...(title ? { role: "img", "aria-label": title } : { "aria-hidden": true })}
     >
       {children}
