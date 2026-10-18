@@ -29,7 +29,9 @@ export const CALIBRATE_MS = 500; // of her audibly speaking, learning the echo
 export const HOLD_MS = 300;
 export const GAP_MS = 180; // a dip between syllables or words: still the same stretch of speech
 export const VOICED = 0.5; // of the readings in the stretch
-export const MIN_LEVEL = 0.05; // RMS of a quiet but real voice close to a laptop mic
+// RMS of a quiet but real voice close to a laptop mic (a 5 ms reading). 0.05 missed a soft first syllable and the
+// stretch began a few readings late (a real call: she stopped 0.57 s after their voice began, D76).
+export const MIN_LEVEL = 0.03;
 export const OVER_ECHO = 2.4;
 const HEARD = 0.08; // her output level (0..1) that means sound is coming out
 const QUIET = 0.03;

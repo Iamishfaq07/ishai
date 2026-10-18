@@ -362,16 +362,18 @@ export function useInterviewerVoice(
     if (spokenId.current === line.id) return;
     spokenId.current = line.id;
     if (!enabled) {
-      // Her voice is off: the line is shown in full at once.
+      // Her voice is off: the line is shown in full at once (and that's as said: the server keeps it now).
       current.current = line.id;
       setLineId(line.id);
       tap.beginLine(line.id, line.text);
       tap.endLine();
       setPhase("done");
+      report("started", line.id);
+      report("finished", line.id);
       return;
     }
     say(line.id, line.text, line.speaker);
-  }, [line, enabled, say, natural?.pending, naturalOff, tap]);
+  }, [line, enabled, say, natural?.pending, naturalOff, tap, report]);
 
   useEffect(() => () => halt(), [halt]);
 

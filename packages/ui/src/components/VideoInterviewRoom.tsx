@@ -577,6 +577,7 @@ export function VideoInterviewRoom({
     if (talking || candidateText) heardAt.current = performance.now();
   }, [talking, candidateText]);
   const ackedLast = useRef(false);
+  const ackTurn = useRef(0); // the answer (by when they were last heard) the last chance to acknowledge was for
   const { ack } = voice;
   const waiting = live.mockThinking || voice.phase === "preparing";
   const waitFor = voice.phase === "preparing" ? (line?.id ?? "") : "thinking";
@@ -584,6 +585,9 @@ export function VideoInterviewRoom({
     if (!waiting || muted || done) return;
     const t = window.setTimeout(() => {
       if (performance.now() - heardAt.current > ACK_HEARD_WITHIN_MS + ACK_AFTER_MS) return; // not an answer just given
+      // One chance per answer (thinking, then her voice on its way, is one wait), every other answer at most.
+      if (ackTurn.current === heardAt.current) return;
+      ackTurn.current = heardAt.current;
       if (ackedLast.current) {
         ackedLast.current = false; // this time she just answers
         return;
