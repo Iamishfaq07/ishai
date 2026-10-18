@@ -10,6 +10,8 @@ import { safeLocal } from "../storage";
  * step, and (Full motion only) a 700 ms orbit burst on the toast's icon. Never during a live session.
  *
  *   celebrate("first-ats-80", { message: "Your resume scores 82. Ready to apply?", action: { label: "Find jobs", onClick } });
+ *
+ * Shown with an `id`, the toast can be kept current while it's up (`updateToast`), e.g. a score that has moved on.
  */
 export type Milestone = "first-ats-80" | "first-mock" | "first-applied" | "first-interviewing" | "first-offer" | "stories-6";
 

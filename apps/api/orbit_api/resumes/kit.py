@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.db import get_db
-from orbit_api.job_portal.skills import SkillMatcher
+from orbit_api.job_portal.skills import resume_matcher
 from orbit_api.live.answer_format import humanize
 from orbit_api.live.context_builder import fence
 from orbit_api.models import JobListing, User
@@ -418,7 +418,7 @@ def _asked(row: JobListing) -> list[str]:
 def requirements(row: JobListing, data: ResumeData) -> Requirements:
     """The posting's skills the resume shows and the ones it doesn't, matched the way Jobs AI matches (synonyms
     included): against the resume alone, since the message may only claim what the resume says."""
-    matcher = SkillMatcher(resume_text(data), [])
+    matcher = resume_matcher(data, [])
     asked = _asked(row)
     return Requirements(shown=[k for k in asked if matcher.has(k)], lacking=[k for k in asked if not matcher.has(k)])
 

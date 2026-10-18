@@ -46,7 +46,7 @@ from orbit_api.job_portal.postings import (
 )
 from orbit_api.job_portal.profile import from_resume, parse_profile, plain_title, years_of_experience
 from orbit_api.job_portal.search_parse import parse_search
-from orbit_api.job_portal.skills import SkillMatcher, listing_keywords
+from orbit_api.job_portal.skills import SkillMatcher, listing_keywords, resume_matcher
 from orbit_api.job_portal.sources import allowed_hosts, enabled_sources, source_named
 from orbit_api.job_portal.sources import ashby as ashby_src
 from orbit_api.job_portal.sources import greenhouse as gh_src
@@ -314,6 +314,24 @@ def test_skills_read_the_same_on_every_card_once_each_and_not_the_companys_own_p
     # "Go" on a resume counts only as the language, written as such.
     assert SkillMatcher("Built Go services", []).has("Golang")
     assert not SkillMatcher("Ready to go live with the team", []).has("Go")
+
+
+def test_a_skill_that_is_also_an_everyday_word_counts_only_as_the_skill() -> None:
+    prose = ("Found the three steps where 40% of mobile bookings dropped off. Embedded with the sales team. Took over "
+             "the rest of the backlog.")
+    matcher = SkillMatcher(prose, [])
+    assert not matcher.has("Mobile") and not matcher.has("Embedded") and not matcher.has("REST")
+    assert SkillMatcher("Built the mobile app in React Native, on REST APIs", []).has("Mobile")
+    assert SkillMatcher(prose, ["mobile"]).has("Mobile")  # typed into the job profile
+    # The resume's own Skills section counts as listed, however it's written.
+    data = ResumeData(experience=[Experience(title="Analyst", company="Fernway", start="2019", end="2022",
+                                             bullets=[prose])],
+                      skills=[SkillGroup(name="Platforms", items=["Mobile", "rest"])])
+    assert resume_matcher(data, []).has("Mobile") and resume_matcher(data, []).has("REST")
+    assert not resume_matcher(None, []).has("Mobile")
+    # A post about mobile bookings doesn't ask for "Mobile"; one for a mobile engineer does.
+    assert "Mobile" not in listing_keywords("Product Analyst", "Our mobile bookings rose 30%. SQL and Looker daily.")
+    assert "Mobile" in listing_keywords("Mobile Engineer", "Build our mobile apps in Swift and Kotlin.")
 
 
 # ---- the cache and its refresh ---------------------------------------------------------------------------------------

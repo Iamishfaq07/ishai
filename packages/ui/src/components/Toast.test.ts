@@ -85,6 +85,22 @@ describe("toast queue", () => {
     expect(messages(q)).toEqual(["Copied"]);
   });
 
+  it("rewrites a toast on screen in place, on its old clock, and never brings one back", () => {
+    const q = createToastQueue({ exitMs: () => 160 });
+    q.show({ id: "ats", message: "Your resume scores 82. Ready to apply?", duration: 8000 });
+    q.show("Saved");
+    vi.advanceTimersByTime(3000);
+    expect(q.update("ats", { message: "Your resume scores 99. Ready to apply?" })).toBe(true);
+    expect(messages(q)).toEqual(["Your resume scores 99. Ready to apply?", "Saved"]);
+    expect(q.snapshot()[0]).toMatchObject({ tone: "neutral", duration: 8000 });
+    vi.advanceTimersByTime(5000); // 8 s from when it appeared, not from the rewrite
+    expect(messages(q)).toEqual(["Your resume scores 99. Ready to apply? (leaving)"]);
+    expect(q.update("ats", { message: "Your resume scores 100. Ready to apply?" })).toBe(false);
+    vi.advanceTimersByTime(160);
+    expect(q.update("ats", { message: "Your resume scores 100. Ready to apply?" })).toBe(false);
+    expect(messages(q)).toEqual([]);
+  });
+
   it("stops the clock while held for any reason, and goes on with the time that was left", () => {
     const q = createToastQueue({ exitMs: () => 0 });
     q.show("Saved to tracker");

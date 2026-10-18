@@ -1,5 +1,24 @@
 # Implementation log
 
+## Resume AI: the score toast keeps up, "Found" is past, "mobile bookings" isn't a skill (2026-10-18)
+
+Three things seen while filming the launch videos.
+
+- **The first-80 toast follows the score.** Fixes land a few seconds apart (74, 82, 97, 99), and the toast kept the
+  score that crossed 80 while the header moved on. While it's up it now says the header's score, and a drop back
+  under 80 closes it (`atsMilestone.ts`; the toast queue's new `updateToast` rewrites a toast in place on its old
+  clock).
+- **"Found…" on a role you've left isn't called present tense.** The "+ed" reading took it for the present of "to
+  found" ("founded"); "Forecast" had the same problem. Both are action verbs now, and irregular pasts spelled like a
+  present ("Cut", "Set", "Read", "Wound") are never flagged; the presents "Find", "Speak", "Rebuild" and "Rewrite" are
+  recognised, so they're still flagged on a past role.
+- **"Mobile" and "Embedded" count only as the skill.** "40% of mobile bookings" or "embedded with the sales team" no
+  longer make a job keyword, a skill "your resume already shows", a keyword match or a Jobs AI skill match: the word
+  needs a word beside it that makes it the skill ("mobile apps", "iOS and Android", "embedded systems"), a list of
+  skills, or a Skills section (`ats.skill_mentions`, `names_skill`). The skills that are also everyday words ("Go",
+  "REST", "Excel", "Swift") now count on a resume only as the product, as they already did in a job post, or as
+  listed in Skills; "Sales" is a topic, not a suggested skill. Cached job posts re-read their skills (keywords v4).
+
 ## Google sign-in starts at the API's own address (2026-10-18)
 
 "Continue with Google" opens its start at api.orbitanswer.com when the web app already calls the API there (D80), one
