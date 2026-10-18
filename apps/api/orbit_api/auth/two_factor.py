@@ -29,7 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.alerts import alert
 from orbit_api.auth.guards import require_verified_email
-from orbit_api.auth.security import current_user, decode_claims, token_from_request, verify_password
+from orbit_api.auth.security import current_user, decode_claims, drop_cookie, token_from_request, verify_password
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User, UserTwoFactor
@@ -202,7 +202,7 @@ async def second_step(body: SecondStepIn, request: Request, response: Response,
     succeeded(_wrong_codes, user.id)
     db.add(AuditLog(user_id=user.id, action="auth.login_2fa", ip=_ip(request)))
     await db.commit()
-    response.delete_cookie(CHALLENGE_COOKIE, path="/")
+    drop_cookie(response, request, CHALLENGE_COOKIE)
     return await _auth_out(request, response, user, db)
 
 

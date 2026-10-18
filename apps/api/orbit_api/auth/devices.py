@@ -130,6 +130,6 @@ async def sign_out_device(session_id: str, request: Request, response: Response,
     if session_id == _current_sid(request):
         from orbit_api.auth.routes import _clear_cookie
 
-        _clear_cookie(response)
+        _clear_cookie(response, request)
     response.status_code = status.HTTP_204_NO_CONTENT
     return response

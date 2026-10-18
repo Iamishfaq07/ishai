@@ -25,6 +25,7 @@ export {
 export { VISION_ENABLED, MOCK_INTERVIEW_ENABLED } from "./features";
 export {
   ACCOUNT_SUSPENDED,
+  COOKIE_DOMAIN_HEADER,
   ApiError,
   base64ToBlob,
   createApiClient,
@@ -32,6 +33,7 @@ export {
   type ApiAuth,
   type ApiClient,
   type ApiClientOptions,
+  type DirectRoute,
   type SupportAdminItem,
   type SupportChatMessage,
   type SupportSuggestion,

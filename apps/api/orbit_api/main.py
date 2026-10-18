@@ -25,6 +25,7 @@ from orbit_api.auth.alerts import router as security_alerts_router
 from orbit_api.auth.devices import router as devices_router
 from orbit_api.auth.passkeys import router as passkeys_router
 from orbit_api.auth.routes import router as auth_router
+from orbit_api.auth.security import COOKIE_DOMAIN_HEADER, cookie_domain, share_cookie
 from orbit_api.auth.two_factor import router as two_factor_router
 from orbit_api.billing.monthly import monthly_plans as configured_monthly
 from orbit_api.billing.packs import packs as configured_packs
@@ -262,6 +263,9 @@ def create_app() -> FastAPI:
         # X-Orbit-Support-Token: the support chat reads (and deletes) its thread with it. Without it here the
         # preflight is refused and the open chat never sees a reply when the API is on another origin.
         allow_headers=["Authorization", "Content-Type", CSRF_HEADER, "X-Orbit-Support-Token"],
+        # The web app calls this address directly (D80): each JSON write is preflighted, so a preflight is kept for
+        # the two hours Chrome allows rather than Starlette's 10 minutes.
+        max_age=7200,
     )
 
     @app.middleware("http")
@@ -277,6 +281,12 @@ def create_app() -> FastAPI:
             response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
         if s.env == "production":
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        # The web app calls the API's own address directly once the API says its cookies are shared with it (D80).
+        # Without the proxy secret a host-only cookie from before can't be moved over (share_cookie), so it isn't said.
+        domain = cookie_domain(request)
+        if domain and s.proxy_secret is not None:
+            share_cookie(request, response)
+            response.headers[COOKIE_DOMAIN_HEADER] = domain
         return response
 
     # Level 6 (zlib's default): a third less CPU than Starlette's 9 on the big lists, for 1-2% more bytes.

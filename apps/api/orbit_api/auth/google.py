@@ -28,6 +28,7 @@ from orbit_api.auth.security import (
     cookie_policy,
     create_access_token,
     hash_password,
+    put_cookie,
     set_session_cookie,
 )
 from orbit_api.billing.pricing import request_country
@@ -41,6 +42,9 @@ GOOGLE_COOKIE = "orbit_google"
 _AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 - Google's token endpoint, not a secret
 _JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs"
+# One client, so Google's keys are fetched once an hour rather than on every sign-in (a round trip to Google each
+# time). A key it hasn't seen (Google rotated them) makes it fetch again at once.
+_jwks = jwt.PyJWKClient(_JWKS_URL, timeout=5, lifespan=3600)
 _ISSUERS = ["https://accounts.google.com", "accounts.google.com"]
 _NEXT = re.compile(r"/[A-Za-z0-9_./~%-]*")
 
@@ -154,7 +158,7 @@ async def fetch_identity(code: str, verifier: str, uri: str) -> dict[str, Any]:
         raise GoogleDenied("google")
     try:
         # PyJWKClient fetches keys synchronously. A thread keeps that off the event loop, with a bounded timeout.
-        key = await to_thread(jwt.PyJWKClient(_JWKS_URL, timeout=5).get_signing_key_from_jwt, id_token)
+        key = await to_thread(_jwks.get_signing_key_from_jwt, id_token)
         claims: dict[str, Any] = jwt.decode(
             id_token, key.key, algorithms=["RS256"], audience=s.google_client_id, issuer=_ISSUERS,
         )
@@ -345,13 +349,11 @@ async def _signed_in(db: AsyncSession, request: Request, user: User, created: bo
         # Google proved who it is; the authenticator code still comes next. The challenge rides in a short
         # httpOnly cookie, never in the URL, and the sign-in page asks for the code.
         response = RedirectResponse(_home("/login?step=2fa"), status_code=302)
-        secure, samesite = cookie_policy()
-        response.set_cookie(CHALLENGE_COOKIE, challenge_for(user), max_age=CHALLENGE_TTL_S, httponly=True,
-                            secure=secure, samesite=samesite, path="/")
+        put_cookie(response, request, CHALLENGE_COOKIE, challenge_for(user), CHALLENGE_TTL_S)
         _clear_state(response)
         return response
     sid = await start_session(db, user, request)
     await db.commit()
-    set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True, sid=sid))
+    set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True, sid=sid), request)
     _clear_state(response)
     return response

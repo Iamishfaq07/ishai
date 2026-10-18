@@ -20,12 +20,13 @@ from orbit_api.auth.devices import revoke, start_session
 from orbit_api.auth.security import (
     COOKIE_NAME,
     NOT_ALLOWED,
-    cookie_policy,
     create_access_token,
     current_user,
     decode_claims,
+    drop_cookie,
     hash_password,
     needs_rehash,
+    put_cookie,
     set_session_cookie,
     suspended_detail,
     token_from_request,
@@ -179,14 +180,12 @@ async def _auth_out(request: Request, response: Response, user: User, db: AsyncS
     sid = await start_session(db, user, request)
     await db.commit()
     token = create_access_token(user.id, user.token_version, idle=from_web, sid=sid)
-    set_session_cookie(response, token)
+    set_session_cookie(response, token, request)
     return AuthOut(user=_user_out(user, with_csrf=True), access_token=None if from_web else token)
 
 
-def _clear_cookie(response: Response) -> None:
-    # delete_cookie must repeat the attributes the browser stored it with, or it won't be cleared.
-    secure, samesite = cookie_policy()
-    response.delete_cookie(COOKIE_NAME, path="/", secure=secure, samesite=samesite, httponly=True)
+def _clear_cookie(response: Response, request: Request) -> None:
+    drop_cookie(response, request, COOKIE_NAME)
 
 
 def _ip(request: Request) -> str | None:
@@ -337,7 +336,7 @@ async def logout(request: Request, response: Response, db: Annotated[AsyncSessio
     claims = decode_claims(token) if token else None
     if claims and isinstance(claims.get("sid"), str) and await revoke(db, claims["sub"], claims["sid"]):
         await db.commit()
-    _clear_cookie(response)
+    _clear_cookie(response, request)
     response.status_code = 204
     return response
 
@@ -412,7 +411,7 @@ async def delete_account(body: DeleteAccountIn, request: Request, response: Resp
         # Live work stops first; payments, credit entries and the audit trail stay without personal data
         # (auth/accounts.py, shared with the admin's delete).
         await delete_account_and_data(db, u, AuditLog(user_id=None, action="auth.delete_account", target=user.id))
-    _clear_cookie(response)
+    _clear_cookie(response, request)
     response.status_code = 204
     return response
 
@@ -575,9 +574,7 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
         # A reset link proves the inbox, not the second factor: the new password is set, and signing in still asks
         # for the authenticator code (the challenge rides in the same short httpOnly cookie as after Google).
         challenge = challenge_for(user)
-        secure, samesite = cookie_policy()
-        response.set_cookie(CHALLENGE_COOKIE, challenge, max_age=CHALLENGE_TTL_S, httponly=True, secure=secure,
-                            samesite=samesite, path="/")
+        put_cookie(response, request, CHALLENGE_COOKIE, challenge, CHALLENGE_TTL_S)
         return TwoFactorChallenge(challenge=challenge)
     return await _auth_out(request, response, user, db)
 
@@ -591,7 +588,7 @@ async def logout_everywhere(request: Request, response: Response, user: Annotate
     await _sign_out_everywhere(db, u)
     db.add(AuditLog(user_id=u.id, action="auth.logout_all", ip=_ip(request)))
     await db.commit()
-    _clear_cookie(response)
+    _clear_cookie(response, request)
     response.status_code = 204
     return response
 
@@ -682,7 +679,7 @@ async def confirm_email_change(body: TokenIn, request: Request, response: Respon
     await _sign_out_everywhere(db, user)  # every session signs in again, with the new address
     db.add(AuditLog(user_id=user.id, action="auth.email_changed", target=old, ip=_ip(request)))
     await db.commit()
-    _clear_cookie(response)
+    _clear_cookie(response, request)
     return EmailChangedOut(email=user.email, google_disconnected=had_google)
 
 

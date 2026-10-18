@@ -221,9 +221,32 @@ export type ApiAuth =
   /** Desktop: bearer token held in the OS keychain, cached in memory. */
   | { mode: "bearer"; getToken: () => string | null };
 
+/**
+ * A web app whose `baseUrl` is its own edge proxy (/api) can call the API's own address instead (D80): the proxy
+ * costs a second or more a call from where Cloudflare's free plan routes India (London, Paris, Seattle). Calls go
+ * there once a reply through the proxy says the API's cookies are shared with it (COOKIE_DOMAIN_HEADER), except the
+ * ones that still need the proxy, and back through the proxy for a day if that address can't be reached from here.
+ */
+export interface DirectRoute {
+  /** The API's own address, e.g. https://api.orbitanswer.com. */
+  url: string;
+  /** Calls that still go through the proxy: the edge states the visitor's country only there (prices). */
+  viaProxy: (path: string) => boolean;
+  /** The page's own host (location.hostname): only a page on the cookies' domain goes direct (not a preview copy). */
+  siteHost: string;
+  /** Where the route is remembered between visits. */
+  storage?: { getItem(key: string): string | null; setItem(key: string, value: string): void };
+}
+
+/** The API sets it on every reply when its cookies are shared with its own address (apps/api/orbit_api/main.py). */
+export const COOKIE_DOMAIN_HEADER = "X-Orbit-Cookie-Domain";
+const ROUTE_KEY = "orbit.apiRoute";
+const UNREACHABLE_FOR_MS = 24 * 3600_000;
+
 export interface ApiClientOptions {
   baseUrl: string;
   auth: ApiAuth;
+  direct?: DirectRoute;
   /** Invoked on any 401 so the app can route to sign-in. */
   onUnauthorized?: () => void;
   fetchImpl?: typeof fetch;
@@ -276,7 +299,44 @@ export function createApiClient(options: ApiClientOptions) {
   let csrfToken: string | null = null;
   const UNSAFE = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+  // D80: through the proxy until a reply from it says the API's cookies are shared with its own address; not again
+  // for a day after that address couldn't be reached from here (a network that blocks it).
+  const direct = options.direct ? { ...options.direct, url: trimTrailingSlashes(options.direct.url) } : null;
+  const saved = direct?.storage?.getItem(ROUTE_KEY) ?? "";
+  let goDirect = saved === "direct";
+  let unreachableUntil = saved.startsWith("unreachable:") ? Number(saved.slice("unreachable:".length)) || 0 : 0;
+  const remember = (value: string) => direct?.storage?.setItem(ROUTE_KEY, value);
+  const within = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
+  function heardThroughProxy(response: Response): void {
+    const domain = (response.headers.get(COOKIE_DOMAIN_HEADER) ?? "").toLowerCase();
+    // Both this page and the API's own address on the domain the cookies are shared with, or they wouldn't go along.
+    const shared = Boolean(domain) && within(direct!.siteHost.toLowerCase(), domain) && within(new URL(direct!.url).hostname, domain);
+    if (shared && !goDirect && Date.now() >= unreachableUntil) {
+      goDirect = true;
+      remember("direct");
+    } else if (!shared && goDirect && response.status < 500) {
+      goDirect = false; // the API no longer shares them (a proxy error page wouldn't say either way)
+      remember("");
+    }
+  }
+
   async function raw(path: string, request: RequestInit & { timeoutMs?: number } = {}): Promise<Response> {
+    const viaDirect = Boolean(direct && goDirect && !direct.viaProxy(path));
+    const method = (request.method ?? "GET").toUpperCase();
+    try {
+      return await attempt(path, request, viaDirect);
+    } catch (err) {
+      if (!viaDirect || !(err instanceof ApiError) || err.code !== "offline") throw err;
+      // The API's own address can't be reached from here: the proxy for a day, and a read is asked again through it.
+      goDirect = false;
+      unreachableUntil = Date.now() + UNREACHABLE_FOR_MS;
+      remember(`unreachable:${unreachableUntil}`);
+      if (method !== "GET" && method !== "HEAD") throw err; // a write may have landed: never sent twice
+      return attempt(path, request, false);
+    }
+  }
+
+  async function attempt(path: string, request: RequestInit & { timeoutMs?: number }, viaDirect: boolean): Promise<Response> {
     const { timeoutMs = timeoutFor(path, request.body), signal: caller, ...init } = request;
     const headers = new Headers(init.headers);
     if (options.auth.mode === "bearer") {
@@ -300,7 +360,7 @@ export function createApiClient(options: ApiClientOptions) {
     else caller?.addEventListener("abort", cancel, { once: true });
     let response: Response;
     try {
-      response = await doFetch(`${baseUrl}${path}`, {
+      response = await doFetch(`${viaDirect ? direct!.url : baseUrl}${path}`, {
         ...init,
         headers,
         signal: controller.signal,
@@ -314,6 +374,7 @@ export function createApiClient(options: ApiClientOptions) {
       clearTimeout(timer);
       caller?.removeEventListener("abort", cancel);
     }
+    if (direct && !viaDirect) heardThroughProxy(response);
     if (!response.ok) {
       const error = await toApiError(response);
       // Suspended by the admin: signed out like an expired session; signing in again says why.

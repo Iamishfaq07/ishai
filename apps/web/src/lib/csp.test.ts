@@ -9,8 +9,10 @@ describe("content security policy", () => {
     const csp = contentSecurityPolicy(["window.__orbit=1"], {
       VITE_API_URL: "/api",
       VITE_LIVE_URL: "https://api.orbitanswer.com",
+      VITE_API_DIRECT_URL: "https://api.orbitanswer.com",
     });
     expect(csp.split(";").filter((part) => part.includes("default-src"))).toHaveLength(1);
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/api\.orbitanswer\.com/); // the REST calls made direct (D80)
     expect(csp).toContain("https://checkout.razorpay.com");
     expect(csp).toContain("https://cdn.razorpay.com");
     expect(csp).toContain("https://api.razorpay.com");

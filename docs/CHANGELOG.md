@@ -1,5 +1,19 @@
 # Implementation log
 
+## Faster sign-in: the web app calls the API directly (2026-10-18)
+
+From India each call through the site's /api proxy took 1-7 s (Cloudflare's free plan routes it via London, Paris or
+Seattle); the API's own address answers in 0.3-0.5 s (DECISIONS D80).
+
+- **Cookies shared across orbitanswer.com**: the session and two-step cookies are set for the whole site in
+  production, so api.orbitanswer.com gets them (same site, still first-party, SameSite=Lax); an older host-only cookie
+  is moved over on the next reply through the proxy; signing out clears both kinds.
+- **Direct calls**: once the API says the cookies are shared, the web app sends its calls straight to
+  api.orbitanswer.com, except billing, the region, Support, the resume allowance and sign-up, which need the country
+  the edge states. If that address can't be reached from someone's network, the app goes back through the proxy for a
+  day (reads retried at once, writes never sent twice).
+- **Google sign-in**: Google's signing keys are fetched once an hour instead of on every sign-in.
+
 ## Saba talks like a person on a call (2026-10-18)
 
 Saba, the AI video interviewer, is heard or says why not, her words appear as she says them, and the call goes like

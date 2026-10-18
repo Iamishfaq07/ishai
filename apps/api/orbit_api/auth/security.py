@@ -1,15 +1,18 @@
 import asyncio
+import ipaddress
 import secrets
 import time
 import uuid
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi import Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import HTTPConnection
 
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -17,6 +20,8 @@ from orbit_api.models import User
 from orbit_api.observability import user_id_var
 
 COOKIE_NAME = "orbit_session"
+# Says the cookies are shared with the API's own address (D80): the web app then calls it directly.
+COOKIE_DOMAIN_HEADER = "X-Orbit-Cookie-Domain"
 NOT_ALLOWED = "This Orbit server is private. Ask the owner to add your email."
 # OWASP's argon2id baseline (19 MiB, t=2, p=1): ~5x less CPU than the library default, which took ~2 s
 # per sign-in on a 0.1-CPU host. Older hashes carry their own parameters, verify fine, and are upgraded
@@ -148,8 +153,20 @@ async def current_user(request: Request, response: Response,
     if from_cookie and claims.get("idle") and _now() - int(claims.get("iat", 0)) >= RENEW_AFTER_S:
         set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True,
                                                          signed_in_at=int(claims.get("auth") or claims["iat"]),
-                                                         sid=sid))
+                                                         sid=sid), request)
     return user
+
+
+def share_cookie(request: HTTPConnection, response: Response) -> None:
+    """Through the site's /api proxy, a session cookie may still be a host-only one from before D80, which the API's
+    own address never gets: the same token is set again, shared. Any reply will do (the web app's first one through
+    the proxy is what tells it to go direct), except one that sets or clears cookies itself (sign-in, sign-out)."""
+    from orbit_api.ratelimit import proxy_signed  # here: ratelimit imports this module
+
+    token = request.cookies.get(COOKIE_NAME)
+    if (token and "set-cookie" not in response.headers and cookie_domain(request) and proxy_signed(request)
+            and decode_claims(token) is not None):
+        set_session_cookie(response, token, request)
 
 
 async def optional_user(request: Request, response: Response,
@@ -166,22 +183,64 @@ async def optional_user(request: Request, response: Response,
 
 
 def cookie_policy() -> tuple[bool, Literal["lax", "strict", "none"]]:
-    """(secure, samesite). In production the web app reaches the API through its own /api proxy, so the cookie is
-    first-party and SameSite=Lax (ORBIT_COOKIE_SAMESITE) keeps it off cross-site requests; always Secure there.
-    Locally (same-site over plain http) Lax without Secure."""
+    """(secure, samesite). In production the cookie is first-party: the web app reaches the API through its own /api
+    proxy, or at the API's own address on a subdomain of the same site (D80), so SameSite=Lax (ORBIT_COOKIE_SAMESITE)
+    keeps it off cross-site requests; always Secure there. Locally (same-site over plain http) Lax without Secure."""
     s = get_settings()
     if s.env == "production":
         return True, s.cookie_samesite
     return (True, "none") if s.cookie_samesite == "none" else (False, s.cookie_samesite)
 
 
-def set_session_cookie(response: Response, token: str) -> None:
+def _is_ip(host: str) -> bool:
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return True
+
+
+def cookie_domain(request: HTTPConnection) -> str | None:
+    """The Domain of the cookies the web app's requests carry (D80): in production, the web app's own domain when this
+    request reached the API under it (api.orbitanswer.com, directly or through the site's /api proxy), so one cookie
+    serves both ways and the web app can skip its slow edge proxy. None = host-only: locally, on a preview, or for an
+    API on another site, where a Domain the browser can't match would lose the cookie altogether. ORBIT_COOKIE_DOMAIN
+    overrides it ("" = host-only)."""
+    s = get_settings()
+    if s.cookie_domain is not None:
+        return s.cookie_domain.strip().lstrip(".").lower() or None
+    web = (urlsplit(s.web_url).hostname or "").lower()
+    host = (request.url.hostname or "").lower()
+    if s.env != "production" or "." not in web or _is_ip(web) or not host:
+        return None
+    return web if host == web or host.endswith(f".{web}") else None
+
+
+def put_cookie(response: Response, request: HTTPConnection, key: str, value: str, max_age: int) -> None:
+    """An httpOnly cookie for the web app, shared with the API's own address when it can be (cookie_domain)."""
+    secure, samesite = cookie_policy()
+    domain = cookie_domain(request)
+    if domain:
+        # A host-only copy from before D80 would sit beside the shared one on the website's address: it goes first.
+        response.delete_cookie(key, path="/", secure=secure, samesite=samesite, httponly=True)
+    response.set_cookie(key, value, httponly=True, secure=secure, samesite=samesite, max_age=max_age, path="/",
+                        domain=domain)
+
+
+def drop_cookie(response: Response, request: HTTPConnection, key: str) -> None:
+    """Clears `key` both ways it may be stored, host-only (from before D80) and shared. A deletion must repeat the
+    attributes the browser stored the cookie with, or it isn't cleared."""
+    secure, samesite = cookie_policy()
+    response.delete_cookie(key, path="/", secure=secure, samesite=samesite, httponly=True)
+    domain = cookie_domain(request)
+    if domain:
+        response.delete_cookie(key, path="/", domain=domain, secure=secure, samesite=samesite, httponly=True)
+
+
+def set_session_cookie(response: Response, token: str, request: HTTPConnection) -> None:
     # Our own freshly minted token: read its expiry, no need to re-validate it.
     exp = int(jwt.decode(token, options={"verify_signature": False}).get("exp", 0))
-    secure, samesite = cookie_policy()
-    max_age = max(0, exp - _now())
-    response.set_cookie(COOKIE_NAME, token, httponly=True, secure=secure, samesite=samesite, max_age=max_age,
-                        path="/")
+    put_cookie(response, request, COOKIE_NAME, token, max(0, exp - _now()))
 
 
 # ---- single-use WebSocket tickets --------------------------------------------------------------------
