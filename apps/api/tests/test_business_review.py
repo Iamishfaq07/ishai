@@ -409,7 +409,7 @@ def test_finding8_the_migration_keeps_existing_links_working() -> None:
     source = s.config_secret.get_secret_value() if s.config_secret else "biz-status:" + secret
     opened = Fernet(base64.urlsafe_b64encode(hashlib.sha256(source.encode()).digest())).decrypt(sealed.encode())
     assert opened.decode() == legacy and months == 6 and reminders == 0
-    alembic("downgrade", "-1")
+    alembic("downgrade", "4a93a7c927ef")  # back to this migration's parent (later ones sit on top of it)
     with sqlite3.connect(db) as conn:
         cols = {r[1] for r in conn.execute("pragma table_info(biz_applications)")}
         assert "status_token_sealed" not in cols and conn.execute("select count(*) from biz_applications"

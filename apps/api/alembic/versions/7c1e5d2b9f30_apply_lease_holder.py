@@ -2,7 +2,7 @@
 from it returns the same packet), and auto_apply_setups.executor_seen_at, when an executor last asked for work
 
 Revision ID: 7c1e5d2b9f30
-Revises: 4a93a7c927ef
+Revises: 25f71d009e96
 Create Date: 2026-10-19 18:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '7c1e5d2b9f30'
-down_revision: str | Sequence[str] | None = '4a93a7c927ef'
+down_revision: str | Sequence[str] | None = '25f71d009e96'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
