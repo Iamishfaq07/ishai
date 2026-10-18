@@ -545,3 +545,25 @@ def test_one_open_order_carries_the_discount(client: TestClient, refs: Gateway,
     # The order that lost the discount, paid after all: still credited at what it charged.
     assert _post(client, _captured(refs, card["order_id"], refs.pay(card["order_id"]))).status_code == 200
     assert _payment(client, card["order_id"]).status == "approved"
+
+
+def test_orders_come_through_the_website_once_its_worker_signs(client: TestClient, refs: Gateway,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """A direct caller could name any account country and buy at rupee prices from anywhere (red team): with the
+    proxy secret set, an order needs the website's signed request. The desktop app buys on the website already."""
+    from pydantic import SecretStr
+
+    monkeypatch.setattr(get_settings(), "upi_id", "owner@okicici")
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr("edge-secret"))
+    h, _ = _join(client, None)
+    # Outside production (development, these tests) nothing changes.
+    assert client.post("/v1/billing/upi/orders", headers=h, json={"pack": "mini"}).status_code == 201
+    monkeypatch.setattr(get_settings(), "env", "production")
+    monkeypatch.setattr(get_settings(), "allowed_emails", "*")  # a public server
+    direct = {**h, "X-Orbit-Client-Country": "IN"}  # believed only with the secret
+    for path in ("/v1/billing/upi/orders", "/v1/billing/razorpay/orders", "/v1/billing/paypal/orders"):
+        r = client.post(path, headers=direct, json={"pack": "mini"})
+        assert r.status_code == 409 and "/billing" in r.json()["detail"], (path, r.text)
+    signed = {**direct, "X-Orbit-Proxy-Secret": "edge-secret"}
+    assert client.post("/v1/billing/upi/orders", headers=signed, json={"pack": "starter"}).status_code == 201
+    assert client.post("/v1/billing/razorpay/orders", headers=signed, json={"pack": "mini"}).status_code == 201

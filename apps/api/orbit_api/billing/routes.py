@@ -30,7 +30,7 @@ from orbit_api.db import get_db
 from orbit_api.entitlements import current_grant, plan_named, running_until
 from orbit_api.models import AuditLog, ContactMessage, LaunchAccessClaim, Payment, PaymentEvent, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
-from orbit_api.ratelimit import limit, limit_user
+from orbit_api.ratelimit import limit, limit_user, proxy_signed
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["billing"])
@@ -213,6 +213,19 @@ def _product(product_id: str) -> tuple[str, str, pricing.Priced, int, int, int]:
     raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
 
 
+def priced_by_the_edge(request: Request) -> None:
+    """In production, orders are made only through the website, whose Worker signs its requests (ORBIT_PROXY_SECRET):
+    the price's currency follows the country the edge saw, and a direct caller (the API's own address) could otherwise
+    name any account country and buy in rupees from anywhere (red team). The desktop app buys on the website already
+    (desktop/src/credits.ts opens /billing in the browser), and a branch preview has no secret. Checked on production
+    on 18 October 2026: the site's /api/v1/region answers the visitor's country (signed), a direct call null."""
+    s = get_settings()
+    if s.env == "production" and s.proxy_secret is not None and not proxy_signed(request):
+        web = s.web_url.rstrip("/")
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Buy on the website: {web}/billing. Prices there follow "
+                                                      "the country you're in.")
+
+
 # Why an order lost its first-purchase discount to a newer one (shown on the old order, if anyone looks).
 SUPERSEDED_NOTE = "Replaced by a newer order: the first-purchase discount moved to that one."
 
@@ -244,7 +257,8 @@ async def _offered(db: AsyncSession, user: User, cost: pricing.Price,
     return less, {"referral_code_id": offer.code_id, "discount_minor": off}
 
 
-@router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201, dependencies=[Depends(order_limit)])
+@router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201,
+             dependencies=[Depends(order_limit), Depends(priced_by_the_edge)])
 async def create_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
     """Start paying for a credit pack: the amount, reference and UPI link. An open order for the same pack from the
@@ -356,7 +370,7 @@ class VerifyIn(BaseModel):
 
 
 @router.post("/billing/razorpay/orders", response_model=CheckoutOut, status_code=201,
-             dependencies=[Depends(order_limit)])
+             dependencies=[Depends(order_limit), Depends(priced_by_the_edge)])
 async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> CheckoutOut:
     """Start buying a pack through Razorpay: an order there for the pack's price (rupees in India, US dollars
@@ -550,7 +564,7 @@ class PaypalCaptureIn(BaseModel):
 
 
 @router.post("/billing/paypal/orders", response_model=PaypalCheckoutOut, status_code=201,
-             dependencies=[Depends(order_limit)])
+             dependencies=[Depends(order_limit), Depends(priced_by_the_edge)])
 async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> PaypalCheckoutOut:
     """Start paying a dollar price through PayPal: an order there for it, kept here until it's captured. Buyers in
