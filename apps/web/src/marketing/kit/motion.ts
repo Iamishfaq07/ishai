@@ -113,3 +113,22 @@ export function useNear<T extends Element>(): [React.RefObject<T | null>, boolea
   }, [near]);
   return [ref, near];
 }
+
+/**
+ * False in the built HTML and on the app's first render, true just after the first frame: for a heavy, decorative
+ * part above the fold (the templates behind the hero's resume), so the page paints first and draws it a moment later.
+ */
+export function useAfterPaint(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let timer = 0;
+    const frame = requestAnimationFrame(() => {
+      timer = window.setTimeout(() => setReady(true), 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, []);
+  return ready;
+}

@@ -2,7 +2,7 @@ import { useState, type CSSProperties } from "react";
 import type { ResumeData, ResumeDesign, ResumeTemplate } from "@orbit/types";
 import { Check, Download, FileText, FileUp, RefreshCw, Sparkles, Undo2, cx, focusRing, wordDiff } from "@orbit/ui";
 import { useCountry } from "../../lib/country";
-import { Bars, Chips, FakeButton, Panel, Ring, SampleTag, TickRows, Typed, at, stepsDone, typedWords, useClock, useNear, usePlay } from "../../marketing/kit";
+import { Bars, Chips, FakeButton, Panel, Ring, SampleTag, TickRows, Typed, at, stepsDone, typedWords, useAfterPaint, useClock, useNear, usePlay } from "../../marketing/kit";
 import { LOOKS, templatesFor } from "./model";
 import { MM_TO_PX, PAGE_MM, ResumePreview } from "./ResumePreview";
 import { sampleResume, type SampleResume } from "./sample";
@@ -49,23 +49,40 @@ const STRONG = "Built a Power BI sales dashboard used by 40+ store managers, rep
 
 /** The real resume, scaled to a box of a fixed size (no measuring, so the built page and the app's copy match and
  *  nothing shifts): `--s1` below `sm`, `--s2` from it, for the paper size the sample uses. */
-function Paper({ data, design, widths, className, style }: { data: ResumeData; design: ResumeDesign; widths: [number, number]; className?: string; style?: CSSProperties }) {
+function Paper({ data, design, widths, className, style, ready = true }: {
+  data: ResumeData;
+  design: ResumeDesign;
+  widths: [number, number];
+  className?: string;
+  style?: CSSProperties;
+  /** False: the same box with a light placeholder page (a heavy render that comes a moment later). */
+  ready?: boolean;
+}) {
   const page = PAGE_MM[design.page].w * MM_TO_PX;
   const vars = { "--s1": String(widths[0] / page), "--s2": String(widths[1] / page) } as CSSProperties;
   return (
     <div className={cx("overflow-hidden bg-white", className)} style={style}>
-      <div aria-hidden="true" inert className="w-max origin-top-left [scale:var(--s1)] sm:[scale:var(--s2)]" style={vars}>
-        <ResumePreview data={data} design={design} decorative />
-      </div>
+      {ready ? (
+        <div aria-hidden="true" inert className="w-max origin-top-left [scale:var(--s1)] sm:[scale:var(--s2)]" style={vars}>
+          <ResumePreview data={data} design={{ ...design, font: siteFont(design.font) }} decorative />
+        </div>
+      ) : (
+        <PagePlaceholder />
+      )}
     </div>
   );
+}
+
+/** The resume renders on the public site use a system face where the template asks for Inter or Space Grotesk, so a
+ *  product page downloads no font beyond its own (IBM Plex Sans); the editor offers Arial too. */
+function siteFont(font: ResumeDesign["font"]): ResumeDesign["font"] {
+  return font === "inter" || font === "grotesk" ? "arial" : font;
 }
 
 /** A template's own look for the sample, from the quick looks where it has one. */
 function lookFor(sample: SampleResume, template: ResumeTemplate): ResumeDesign {
   const look = LOOKS.find((l) => l.design.template === template)?.design;
-  // Space Grotesk isn't loaded on the public site; Inter is (the sample uses it).
-  const font = look?.font && look.font !== "grotesk" ? look.font : sample.design.font;
+  const font = look?.font ?? sample.design.font;
   return { ...sample.design, template, accent: look?.accent ?? sample.design.accent, font };
 }
 
@@ -87,6 +104,8 @@ export function ResumeHeroArt() {
   // First the score itself counts up, then on from each score to the next.
   const before = done === 0 ? 40 : done === 1 ? STORY.from : STORY.fixes[done - 2]!.score;
   const floating = "mk-menu-shadow absolute rounded-xl mk-surface";
+  // The two templates behind are drawn just after the page first paints (a placeholder page until then).
+  const behind = useAfterPaint();
   return (
     <figure className="relative mx-auto w-full max-w-[34rem] lg:mr-0">
       <div
@@ -102,6 +121,7 @@ export function ResumeHeroArt() {
           data={sample.data}
           design={lookFor(sample, "classic")}
           widths={[192, 232]}
+          ready={behind}
           className="kp-in absolute left-0 top-12 hidden h-[17rem] w-[12rem] rounded-lg ring-1 ring-zinc-900/10 sm:block sm:h-[20rem] sm:w-[14.5rem] dark:ring-white/10"
           style={at(0, { x: 16 })}
         />
@@ -109,6 +129,7 @@ export function ResumeHeroArt() {
           data={sample.data}
           design={lookFor(sample, "executive")}
           widths={[208, 264]}
+          ready={behind}
           className="kp-in mk-float absolute left-0 top-6 h-[18rem] w-[13rem] rounded-lg sm:left-12 sm:h-[22rem] sm:w-[16.5rem]"
           style={at(80, { x: 16 })}
         />
@@ -123,7 +144,7 @@ export function ResumeHeroArt() {
             <span className="block font-medium text-zinc-900 dark:text-white">ATS score</span>
             <span className="text-zinc-500 dark:text-zinc-400">{score >= 80 ? "Strong" : "Good"} · out of 100</span>
           </span>
-          <span className="kp-fade rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[0.6875rem] font-semibold tabular-nums text-emerald-800 dark:text-emerald-200" style={at(times[3]! + 300)}>
+          <span className="kp-grow rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[0.6875rem] font-semibold tabular-nums text-emerald-800 dark:text-emerald-200" style={at(times[3]! + 300)}>
             +16
           </span>
         </div>
@@ -384,7 +405,7 @@ export function LetterArt() {
   const t = useClock(p.shown, p.play, 4600);
   const typed = typedWords(LETTER, t, 500, 75);
   return (
-    <div ref={p.ref} {...p.attrs} role="img" aria-label={`A cover letter written from the resume and the job post, in a warm tone: "${LETTER}"`} className="kp">
+    <div ref={p.ref} {...p.attrs} role="img" aria-label="A cover letter written from the resume and the job post, in a warm tone, keeping the resume's numbers." className="kp">
       <Panel title="Cover letter" meta={<SampleTag />}>
         <div className="p-3">
           <div className="flex gap-1 text-[0.6875rem]">

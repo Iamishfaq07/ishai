@@ -147,7 +147,7 @@ export function TickRows({ rows, times, className }: { rows: Array<{ label: Reac
             {row.note && <span className="block text-[0.6875rem] text-zinc-500 dark:text-zinc-400">{row.note}</span>}
           </span>
           {row.meta && (
-            <span className="kp-fade shrink-0 rounded-full bg-emerald-500/10 px-1.5 text-[0.6875rem] font-semibold tabular-nums text-emerald-800 dark:text-emerald-200" style={at((times[i] ?? 0) + 120)}>
+            <span className="kp-grow shrink-0 rounded-full bg-emerald-500/10 px-1.5 text-[0.6875rem] font-semibold tabular-nums text-emerald-800 dark:text-emerald-200" style={at((times[i] ?? 0) + 120)}>
               {row.meta}
             </span>
           )}
@@ -158,8 +158,10 @@ export function TickRows({ rows, times, className }: { rows: Array<{ label: Reac
 }
 
 /** Text as it's typed: the words so far, and the caret while it types. The box keeps the full text's room (an
- *  invisible copy under it), so nothing around it moves while the words come in. */
+ *  invisible copy under it), so nothing around it moves while the words come in; once it's all there (and in the
+ *  built HTML) it's the text alone, in the same room. */
 export function Typed({ text, shown, typing, className }: { text: string; shown: string; typing: boolean; className?: string }) {
+  if (!typing && shown === text) return <span className={cx("block", className)}>{text}</span>;
   return (
     <span className={cx("relative block", className)}>
       <span aria-hidden="true" className="invisible block">

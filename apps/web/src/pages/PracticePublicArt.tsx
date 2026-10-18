@@ -219,7 +219,7 @@ export function StrongerArt() {
   const t = useClock(p.shown, p.play, 3600);
   const typed = typedWords(STRONGER, t, 600, 80);
   return (
-    <div ref={p.ref} {...p.attrs} role="img" aria-label={`What you said: "${SAID}" A stronger way to say it: "${STRONGER}"`} className="kp space-y-2">
+    <div ref={p.ref} {...p.attrs} role="img" aria-label="An answer as it was said, then a stronger way to say it: the problem, what you did and the result." className="kp space-y-2">
       <div className="rounded-lg bg-zinc-500/5 p-2.5 text-[0.75rem] leading-relaxed text-zinc-600 ring-1 ring-inset ring-zinc-500/10 dark:text-zinc-300">
         <p className="mb-0.5 text-[0.6875rem] font-medium text-zinc-500 dark:text-zinc-400">What you said · Q3</p>
         {SAID}

@@ -180,7 +180,7 @@ export function AboutArt() {
   const t = useClock(p.shown, p.play, 3600);
   const typed = typedWords(ABOUT_AFTER, t, 300, 70);
   return (
-    <div ref={p.ref} {...p.attrs} role="img" aria-label={`The About, rewritten: "${ABOUT_AFTER}"`} className="kp">
+    <div ref={p.ref} {...p.attrs} role="img" aria-label="The About, rewritten: the role and the best results first, then the roles you want." className="kp">
       <Panel title="About" meta={<SampleTag />}>
         <Typed className="p-3 text-[0.75rem] leading-relaxed text-zinc-800 dark:text-zinc-100" text={ABOUT_AFTER} shown={typed.shown} typing={typed.typing} />
       </Panel>

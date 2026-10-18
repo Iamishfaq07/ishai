@@ -1,5 +1,5 @@
-import { Check, Circle, Copy, Ellipsis, FileText, Laptop, Maximize2, Minus, MonitorSmartphone, PhoneOff, X, cx, LIVE_LANGUAGES, OrbitLogo, CodeBlock } from "@orbit/ui";
-import { Chips, FakeButton, Panel, TickRows, Typed, at, typedWords, useClock, usePlay } from "../marketing/kit";
+import { Check, Circle, Copy, Ellipsis, FileText, Laptop, Maximize2, Minus, MonitorSmartphone, PhoneOff, X, cx, LIVE_LANGUAGES, OrbitLogo, CodeBlock, languageName } from "@orbit/ui";
+import { Chips, FakeButton, Panel, TickRows, Typed, at, typedWords, useClock, useNear, usePlay } from "../marketing/kit";
 
 /**
  * The interview copilot's public page, drawn with the copilot's own pieces (DECISIONS D79): the live answer card's
@@ -105,14 +105,15 @@ export function SourcesArt() {
   );
 }
 
-/** The ten languages (and Hinglish) a live session can be in, from the app's own list, coming on one by one. */
+/** The ten languages (and Hinglish) a live session can be in, from the app's own list, coming on one by one. Named in
+ *  English (languageName): the picker's own scripts would each fetch a font for this one card. */
 export function LanguagesArt() {
   const p = usePlay<HTMLDivElement>();
-  const langs = LIVE_LANGUAGES.filter((l) => l.value !== "auto");
+  const langs = LIVE_LANGUAGES.filter((l) => l.value !== "auto").map((l) => languageName(l.value));
   return (
-    <div ref={p.ref} {...p.attrs} role="img" aria-label={`Interview languages: ${langs.map((l) => l.label).join(", ")}, or auto-detect.`} className="kp">
+    <div ref={p.ref} {...p.attrs} role="img" aria-label={`Interview languages: ${langs.join(", ")}, or auto-detect.`} className="kp">
       <p className="text-[0.6875rem] font-medium text-zinc-600 dark:text-zinc-300">Interview language</p>
-      <Chips className="mt-2" from={200} every={80} items={langs.map((l) => ({ label: l.label, on: true }))} />
+      <Chips className="mt-2" from={200} every={80} items={langs.map((label) => ({ label, on: true }))} />
       <p className="kp-fade mt-3 text-[0.6875rem] text-zinc-500 dark:text-zinc-400" style={at(1300)}>
         Or Auto-detect: it follows the interviewer across languages, even mid-interview. Answers come in the same language, or one you pick.
       </p>
@@ -131,7 +132,7 @@ export function RewriteArt() {
   const short = t >= 1200;
   const typed = typedWords(SHORT, t, 1300, 85);
   return (
-    <div ref={p.ref} {...p.attrs} role="img" aria-label={`An answer made shorter in one tap. Before: "${LONG}" After: "${SHORT}"`} className="kp">
+    <div ref={p.ref} {...p.attrs} role="img" aria-label="An answer made shorter in one tap: the medium answer, rewritten as two lines that keep its numbers." className="kp">
       <div className="flex flex-wrap gap-1.5">
         {["Shorter", "Longer", "Simpler"].map((x) => (
           <FakeButton key={x} className={cx("transition-transform duration-press-out", x === "Shorter" && (short ? "border-indigo-500/60 text-indigo-700 dark:text-indigo-300" : ""), x === "Shorter" && pressed && "scale-[0.97]")}>
@@ -166,12 +167,18 @@ const CODE = `def has_duplicate(nums):
 
 /** A coding question: what to say first, the code (the real code block, with Copy and Wrap), its complexity. */
 export function CodeArt() {
+  // The code font comes with the code block, once it's near the screen (the built HTML keeps a placeholder).
+  const [ref, near] = useNear<HTMLDivElement>();
   return (
-    <div className="space-y-2.5">
+    <div ref={ref} className="space-y-2.5">
       <p className="text-[0.75rem] leading-relaxed text-zinc-700 dark:text-zinc-300">
         <span className="font-medium text-zinc-900 dark:text-white">Say first:</span> one pass with a set. If a number is already in it, that's the duplicate.
       </p>
-      <CodeBlock code={{ language: "python", content: CODE }} />
+      {near ? (
+        <CodeBlock code={{ language: "python", content: CODE }} />
+      ) : (
+        <div aria-hidden="true" className="h-48 rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900" />
+      )}
       <p className="text-[0.6875rem] text-zinc-500 dark:text-zinc-400">O(n) time · O(n) space</p>
     </div>
   );

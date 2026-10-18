@@ -53,7 +53,7 @@ export function JobsHeroArt() {
             <span className="mt-0.5 text-[0.625rem] text-zinc-500 dark:text-zinc-400">match</span>
           </span>
           <Chips className="mt-4" from={500} every={120} items={JOB.have.map((label) => ({ label, on: true }))} />
-          <p className="kp-fade mt-1.5 text-xs text-zinc-500 dark:text-zinc-400" style={at(1000)}>
+          <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
             <span className="font-medium">Not on your resume:</span> {JOB.missing}
           </p>
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">From {JOB.company}'s careers page</p>
@@ -71,7 +71,7 @@ export function JobsHeroArt() {
           <p className="flex items-center gap-2 text-xs">
             <Sparkles className="h-3.5 w-3.5 text-indigo-500" aria-hidden="true" />
             <span className="font-medium text-indigo-700 dark:text-indigo-300">Fit check</span>
-            <span className="kp-pop rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-700 ring-1 ring-emerald-500/25 dark:text-emerald-300" style={at(1700)}>
+            <span className="kp-grow rounded-full bg-emerald-500/10 px-2 py-0.5 font-semibold text-emerald-700 ring-1 ring-emerald-500/25 dark:text-emerald-300" style={at(1700)}>
               Strong fit
             </span>
           </p>
@@ -264,7 +264,7 @@ export function OutreachArt() {
   const t = useClock(p.shown, p.play, 4200);
   const typed = typedWords(MESSAGE, t, 300, 75);
   return (
-    <div ref={p.ref} {...p.attrs} role="img" aria-label={`A referral request written from the resume, ready to copy: "${MESSAGE}" Made-up people.`} className="kp">
+    <div ref={p.ref} {...p.attrs} role="img" aria-label="A referral request to someone at the company, written from the resume, ready to copy and send yourself. Made-up people." className="kp">
       <Panel title="Referral request" meta={<SampleTag />}>
         <div className="p-3">
           <Bubble from="ai">

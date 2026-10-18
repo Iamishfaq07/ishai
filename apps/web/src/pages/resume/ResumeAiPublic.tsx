@@ -64,7 +64,7 @@ function Templates() {
           lead="Every template is the same resume laid out another way, so you can try them all without retyping a line. The one-column ones read cleanly in screening software."
         />
         <div className="mt-12">
-          <Carousel label="Resume AI's templates" count={templates.length} eager={2} render={(i, near) => <TemplateCard index={i} near={near} />} />
+          <Carousel label="Resume AI's templates" count={templates.length} eager={0} render={(i, near) => <TemplateCard index={i} near={near} />} />
         </div>
       </Container>
     </section>

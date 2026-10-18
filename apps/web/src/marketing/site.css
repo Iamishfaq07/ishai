@@ -294,20 +294,54 @@ html.site {
 /* The product pages' animated renders (marketing/kit, DECISIONS D79): real Orbit UI drawn in HTML whose parts play
    one short sequence the first time they're in view (`.kp` gets data-shown, usePlay), then rest on the final frame.
    At Full a part comes in from a few px (.kp-in; --x, --y), pops (.kp-pop), fades (.kp-fade), a bar fills from the
-   left (.kp-fill) or a chip lights up (.kp-lit: its colours ease in); --d delays it. Gentle, Off, print, data saver
-   and the built HTML (`data-still`, no data-motion) show the final frame at once, the words and numbers finished:
-   the hidden "before" state exists only in CSS, behind data-motion="full". Only opacity and transform move. */
-:root[data-motion="full"] .kp:not([data-shown], [data-still]) :is(.kp-in, .kp-pop, .kp-fade, .kp-fill) {
+   left (.kp-fill), a chip grows in (.kp-grow, scale only) or lights up (.kp-lit: its colours ease in); --d delays
+   it. Text never stays half see-through for long: a fade or an entrance is opaque within ~160 ms, then only moves; a
+   badge with words grows instead of fading. Gentle, Off, print, data saver and the built HTML (`data-still`, no
+   data-motion) show the final frame at once, the words and numbers finished: the hidden "before" state exists only
+   in CSS, behind data-motion="full". Only opacity and transform move. */
+:root[data-motion="full"] .kp:not([data-shown], [data-still]) :is(.kp-in, .kp-pop, .kp-fade, .kp-fill, .kp-grow) {
   opacity: 0;
 }
 :root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-in {
-  animation: scene-in 560ms var(--ease-enter) var(--d, 0ms) both;
+  animation: kp-in 560ms var(--ease-enter) var(--d, 0ms) both;
 }
 :root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-pop {
-  animation: scene-pop 420ms var(--ease-enter) var(--d, 0ms) both;
+  animation: kp-pop 420ms var(--ease-enter) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-grow {
+  animation: kp-grow 360ms var(--ease-pop) var(--d, 0ms) both;
+}
+@keyframes kp-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--x, 0px), var(--y, 6px));
+  }
+  14% {
+    opacity: 1;
+  }
+}
+@keyframes kp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  65% {
+    transform: scale(1.06);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes kp-grow {
+  from {
+    transform: scale(0);
+  }
 }
 :root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-fade {
-  animation: orbit-fade 420ms var(--ease-standard) var(--d, 0ms) both;
+  animation: orbit-fade var(--dur-quick) var(--ease-standard) var(--d, 0ms) both;
 }
 .kp-fill {
   transform-origin: 0 50%;
@@ -331,7 +365,7 @@ html.site {
   }
 }
 @media print {
-  .kp :is(.kp-in, .kp-pop, .kp-fade, .kp-fill, .kp-lit) {
+  .kp :is(.kp-in, .kp-pop, .kp-fade, .kp-fill, .kp-lit, .kp-grow) {
     opacity: 1 !important;
     animation: none !important;
   }
