@@ -1287,12 +1287,16 @@ Orbit candidates apply in one click, companies see ranked applicants with reason
   sorts and explains; rejecting is a person's click (one or many), logged with the ranking's model version and score.
   There is no setting that rejects by score.
 - **Ranking without protected attributes.** Resume parsing and ranking run in the background (a durable job) through
-  a port, business/ai_port.py: the real module is orbit_api.business_ai (D83, built separately); until it is present,
-  and in tests, a deterministic fake answers. Ranking gets only professional fields (`professional_only` drops name,
-  contact and location; the parsed resume has no field for gender, age, photo, religion, caste or marital status).
-  Stored with its model version, shown as "Matches 6/8 must-haves" with evidence lines. Blind review (a company
-  setting) hides names, contact details and the resume's contact lines; owners, admins and recruiters can reveal one
-  applicant, which is logged.
+  a port, business/ai_port.py, to orbit_api.business_ai (D83); tests, and ORBIT_BUSINESS_AI=fake, use a
+  deterministic fake. business_ai redacts the parse itself (`redact_for_ranking`), and needs the name to strip it
+  from the text, so it gets the whole parse; the fake gets `professional_only` (no name, contact or location). The
+  parsed resume has no field for gender, age, photo, religion, caste or marital status. Shown as "Matches 6/8
+  must-haves" with evidence lines, and "basic match" when the ranking is keyword matching alone (business_ai's
+  fallback when the model is unavailable). `model_version` names the model, so it is kept in the application, the
+  company's audit log and the Orbit admin's view of it, and never in what members see. Each model call business_ai
+  makes is collected by the port (a context around the app's LLM provider) and stored in `provider_requests` with
+  the company's id, ready for per-plan AI limits. Blind review (a company setting) hides names, contact details and
+  the resume's contact lines; owners, admins and recruiters can reveal one applicant, which is logged.
 - **Notice and consent on every application**, versioned (`NOTICE_VERSION`): what's shared, that AI sorts and a
   person decides, the retention, how to ask for deletion. The version, the time and the text's SHA-256 are kept on
   the application; an old version is refused (409) so nobody agrees to words they didn't see.
