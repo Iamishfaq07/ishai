@@ -645,7 +645,7 @@ def test_an_extension_token_reaches_only_the_executor_routes(app: TestClient) ->
     for method, path in (("GET", "/v1/apply/setup"), ("PUT", "/v1/apply/setup"), ("GET", "/v1/apply/bank"),
                          ("PUT", "/v1/apply/bank"), ("POST", "/v1/apply/plan"), ("GET", "/v1/apply/packets"),
                          ("GET", f"/v1/apply/packets/{pid}"), ("POST", f"/v1/apply/packets/{pid}/answers"),
-                         ("POST", f"/v1/apply/packets/{pid}/done"), ("POST", "/v1/apply/pause"),
+                         ("POST", f"/v1/apply/packets/{pid}/done"), ("POST", f"/v1/apply/packets/{pid}/retry"),
                          ("GET", f"/v1/apply/packets/{pid}/resume.pdf"), ("GET", "/v1/admin/apply/sites"),
                          ("POST", f"/v1/apply/{pid}/result/extra"), ("GET", "/v1/jobs/tracker")):
         r = app.request(method, path, headers=ext, json={})
@@ -657,6 +657,26 @@ def test_an_extension_token_reaches_only_the_executor_routes(app: TestClient) ->
     assert app.get("/v1/apply/status", headers=h).status_code == 200
     # Signed out: nothing.
     assert app.get("/v1/apply/next").status_code == 401
+
+
+def test_the_extension_pauses_and_resumes_the_same_switch_the_web_app_shows(app: TestClient) -> None:
+    h, _ = account(app)
+    jobs(app)
+    plan(app, h)
+    assert app.get("/v1/apply/setup", headers=h).json()["executor_seen_at"] is None
+    ext = ext_token(app, h)
+    r = app.post("/v1/apply/pause", headers=ext)
+    assert r.status_code == 200 and r.json() == {"paused": True}
+    assert app.get("/v1/apply/setup", headers=h).json()["paused"] is True
+    s = app.get("/v1/apply/status", headers=ext).json()
+    assert s["paused"] is True and s["why_not"] == "paused"
+    nothing = app.get("/v1/apply/next", headers=ext)
+    assert nothing.status_code == 204 and nothing.headers["X-Orbit-Apply-Why"] == "paused"
+    # The web app sees that an extension is asking for work (it tells the candidate to set one up until then).
+    assert app.get("/v1/apply/setup", headers=h).json()["executor_seen_at"]
+    assert app.post("/v1/apply/resume", headers=ext).json() == {"paused": False}
+    assert app.get("/v1/apply/setup", headers=h).json()["paused"] is False
+    assert app.get("/v1/apply/next", headers=ext).status_code == 200
 
 
 def test_deleting_the_account_deletes_its_packets_and_proof(app: TestClient) -> None:

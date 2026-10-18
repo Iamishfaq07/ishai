@@ -106,6 +106,9 @@ class SetupOut(BaseModel):
     threshold: int
     ai_line: bool
     paused: bool
+    # When the browser extension (auto-apply switched on there) last asked for work; None: never. Nothing is sent
+    # without it.
+    executor_seen_at: datetime | None = None
     quiet_hours: QuietHours | None
     tz_offset_min: int
     resume: MasterResume | None
@@ -188,6 +191,7 @@ async def _setup_out(db: AsyncSession, user: User, setup: AutoApplySetup | None)
         configured=bool(setup and setup.consent_at), consent_at=aware(setup.consent_at) if setup else None,
         mode="review" if s.mode == "review" else "automatic", daily_limit=pacing.daily_limit(s),
         threshold=s.threshold or rules.DEFAULT_THRESHOLD, ai_line=bool(s.ai_line), paused=bool(s.paused),
+        executor_seen_at=aware(s.executor_seen_at),
         quiet_hours=QuietHours(start=s.quiet_start, end=s.quiet_end)
         if s.quiet_start is not None and s.quiet_end is not None else None,
         tz_offset_min=s.tz_offset_min or 0, resume=master,
@@ -597,11 +601,26 @@ def lease_holder(request: Request) -> str:
     return sid[:64] if isinstance(sid, str) else ""
 
 
+def from_executor(request: Request) -> bool:
+    """A bearer token (the extension, the Windows app), not the web app's cookie."""
+    return request.headers.get("authorization", "").lower().startswith("bearer ")
+
+
+async def seen(db: AsyncSession, user: User, now: datetime) -> None:
+    """Notes that an executor asked (at most once a minute, so the setup's row isn't written on every poll)."""
+    setup = await db.get(AutoApplySetup, user.id)
+    last = aware(setup.executor_seen_at) if setup is not None else None
+    if setup is not None and (last is None or now - last > rules.MIN_GAP):
+        setup.executor_seen_at = now
+
+
 @router.get("/next", response_model=ExecutorPacket, dependencies=[executor_limit],
             responses={204: {"description": "Nothing is due"}})
 async def next_packet(request: Request, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> Any:
     due = await pacing.next_due(db, user, holder=lease_holder(request))
+    if from_executor(request):
+        await seen(db, user, datetime.now(UTC))
     await db.commit()
     p = due.packet
     if p is None:
@@ -655,13 +674,16 @@ class StatusOut(BaseModel):
     needs_you: int
     quota_left: int
     sites_paused: list[str]
+    executor_seen_at: datetime | None = None  # when an executor last asked for work (see SetupOut)
 
 
 @router.get("/status", response_model=StatusOut, dependencies=[executor_limit])
-async def apply_status(user: Annotated[User, Depends(current_user)],
+async def apply_status(request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> StatusOut:
     now = datetime.now(UTC)
     await pacing.expire(db, now, user.id)
+    if from_executor(request):
+        await seen(db, user, now)
     await db.commit()
     setup = await db.get(AutoApplySetup, user.id)
     counts: dict[str, int] = {str(s): int(n) for s, n in (await db.execute(
@@ -690,7 +712,7 @@ async def apply_status(user: Annotated[User, Depends(current_user)],
         limit=pacing.daily_limit(setup) if setup else rules.DEFAULT_DAILY_LIMIT, next_due_at=next_at, why_not=why,
         ready=int(counts.get("ready", 0)),
         needs_you=sum(counts.get(s, 0) for s in packets.GROUPS["needs_you"]), quota_left=q.left,
-        sites_paused=sorted(paused_sites))
+        sites_paused=sorted(paused_sites), executor_seen_at=aware(setup.executor_seen_at) if setup else None)
 
 
 # ---- admin: the per-site kill switch -----------------------------------------------------------------------------

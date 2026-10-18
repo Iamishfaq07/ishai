@@ -69,10 +69,16 @@ export function ExtensionConnectPage() {
           <li>Save the job you're looking at to your tracker, after you check the title and company.</li>
           <li>Show which of the job's keywords your resume already mentions (no AI, no credits).</li>
           <li>Fill an application's empty name, email, phone and link fields from your resume, outlined for you to check.</li>
+          <li>
+            Only if you switch on <strong>Apply for me automatically</strong> in its popup (and set up{" "}
+            <Link to="/jobs/applications" className="underline">Orbit Apply</Link>): send the applications Orbit prepared for you on
+            Greenhouse, Lever and Ashby, with your approved resume and answers, in its own window, one at a time.
+          </li>
         </ul>
         <h2 className="mt-4 font-display text-base font-semibold">What it can't do</h2>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-600 dark:text-zinc-300">
-          <li>Submit an application, or answer questions that are yours to answer (salary, visa, why this company).</li>
+          <li>Submit anything with auto-apply off, or answer a question you haven't answered yourself (salary, visa, why this company).</li>
+          <li>Solve a captcha, sign in to a job site, or apply on a job board such as LinkedIn: those always come back to you.</li>
           <li>Read a page unless you click the extension on it, or see anything else in your Orbit account.</li>
         </ul>
         <div className="mt-5">

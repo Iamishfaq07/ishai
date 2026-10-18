@@ -9,6 +9,7 @@ import { Sheet } from "../Sheet";
 import { linkButton, textLink } from "../links";
 import { JOBS_AUTO_APPLY, JOBS_TRACKER } from "../paths";
 import { applyApi } from "./applyApi";
+import { ExtensionNeeded } from "./ExtensionNeeded";
 import { ATS_LABEL, GROUPS, SOURCE_LABEL, STATUS_LABEL, WHY_NOT, actionsFor, answerText } from "./model";
 import { PlanSummary } from "./Setup";
 
@@ -89,6 +90,7 @@ export function ApplicationsPage() {
           />
         ) : (
           <div className="space-y-4">
+            {configured && <ExtensionNeeded seenAt={s?.executor_seen_at ?? setup.data?.executor_seen_at} />}
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-4 p-4">
                 <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">

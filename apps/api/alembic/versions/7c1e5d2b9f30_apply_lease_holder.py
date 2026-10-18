@@ -1,5 +1,5 @@
 """Orbit Apply: application_packets.lease_holder, the device a packet is leased to (a repeated GET /v1/apply/next
-from it returns the same packet)
+from it returns the same packet), and auto_apply_setups.executor_seen_at, when an executor last asked for work
 
 Revision ID: 7c1e5d2b9f30
 Revises: 4a93a7c927ef
@@ -20,11 +20,15 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """One nullable column: nothing existing changes."""
+    """Two nullable columns: nothing existing changes."""
     with op.batch_alter_table('application_packets') as batch:
         batch.add_column(sa.Column('lease_holder', sa.String(64), nullable=True))
+    with op.batch_alter_table('auto_apply_setups') as batch:
+        batch.add_column(sa.Column('executor_seen_at', sa.DateTime(timezone=True), nullable=True))
 
 
 def downgrade() -> None:
+    with op.batch_alter_table('auto_apply_setups') as batch:
+        batch.drop_column('executor_seen_at')
     with op.batch_alter_table('application_packets') as batch:
         batch.drop_column('lease_holder')

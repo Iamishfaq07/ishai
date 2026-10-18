@@ -143,6 +143,8 @@ export interface ApplyStatus {
   needs_you: number;
   quota_left: number;
   sites_paused: string[];
+  /** When an executor (the extension, with auto-apply switched on) last asked for work; null: never. */
+  executor_seen_at: string | null;
 }
 
 // ---- the web app -------------------------------------------------------------------------------------------------
@@ -228,6 +230,9 @@ export interface ApplySetup {
   threshold: number;
   ai_line: boolean;
   paused: boolean;
+  /** When the browser extension (auto-apply switched on there) last asked for work; null: never. Nothing is sent
+   *  without it. */
+  executor_seen_at: string | null;
   quiet_hours: ApplyQuietHours | null;
   tz_offset_min: number;
   resume: { id: string; title: string; approved: boolean; approved_at: string | null; changed_since: boolean } | null;

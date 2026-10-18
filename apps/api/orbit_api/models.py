@@ -1101,6 +1101,9 @@ class AutoApplySetup(TimestampMixin, Base):
     tz_offset_min: Mapped[int] = mapped_column(Integer, default=0)
     last_planned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # the last "needs you" email
+    # The last time an executor (the extension with auto-apply switched on) asked for work: the web app says whether
+    # one is set up.
+    executor_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
