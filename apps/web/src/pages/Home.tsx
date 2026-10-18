@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
 import {
@@ -46,7 +46,8 @@ import { UsageSummary } from "./UsageSummary";
 import { DueToday } from "./DueToday";
 import { KashSecHomeCard } from "../components/KashSec";
 import { greetingFor, summaryLine } from "./home/dashboard";
-import { SecurityNotice } from "./SecurityActivity";
+// Rare (a change to the sign-in in the last fortnight) and below the first paint: its own small download.
+const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
 import { AtAGlance, Pipeline, Upcoming } from "./home/Mission";
 import { FollowUps } from "./jobs/FollowUps";
 import { InterviewSoon } from "./jobs/interview/InterviewSoon";
@@ -118,7 +119,9 @@ export function HomePage() {
       </header>
 
       {/* A change to how the account is signed in to, until "It was me" here (auth/alerts.py). */}
-      <SecurityNotice />
+      <Suspense fallback={null}>
+        <SecurityNotice />
+      </Suspense>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-6">

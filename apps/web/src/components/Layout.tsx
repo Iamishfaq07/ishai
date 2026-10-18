@@ -49,7 +49,10 @@ import { useCountry } from "../lib/country";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
-import { ShortcutsSheet, asksForShortcuts } from "./ShortcutsSheet";
+import { asksForShortcuts } from "./shortcutKeys";
+
+// Opened with "?" now and then: downloaded when it's first opened.
+const ShortcutsSheet = lazy(() => import("./ShortcutsSheet").then((m) => ({ default: m.ShortcutsSheet })));
 import { CODE_HOME } from "../pages/code/paths";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME, kashsecUrl } from "../pages/learn/links";
@@ -426,7 +429,11 @@ export function Layout() {
           <CommandPalette onClose={() => setSearchOpen(false)} onHelp={openSupportChat} onSignOut={signOut} />
         </Suspense>
       )}
-      <ShortcutsSheet open={keysOpen} onClose={() => setKeysOpen(false)} />
+      {keysOpen && (
+        <Suspense fallback={null}>
+          <ShortcutsSheet open onClose={() => setKeysOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 }

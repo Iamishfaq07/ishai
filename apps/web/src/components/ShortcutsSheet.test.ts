@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asksForShortcuts } from "./ShortcutsSheet";
+import { asksForShortcuts } from "./shortcutKeys";
 
 const key = (k: string, extra: Partial<{ ctrlKey: boolean; metaKey: boolean; altKey: boolean }> = {}) => ({
   key: k, ctrlKey: false, metaKey: false, altKey: false, ...extra,
