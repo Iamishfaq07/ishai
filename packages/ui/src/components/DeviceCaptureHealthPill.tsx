@@ -1,7 +1,9 @@
-export type CaptureHealth = "active" | "recovering" | "muted";
-const labels: Record<CaptureHealth, string> = { active: "Capture active", recovering: "Recovering device…", muted: "Capture muted" };
+/** "offline": the devices still hear, but the connection that carries the audio is gone, so nothing reaches Orbit. */
+export type CaptureHealth = "active" | "recovering" | "muted" | "offline";
+const labels: Record<CaptureHealth, string> = { active: "Capture active", recovering: "Recovering device…", muted: "Capture muted", offline: "Not connected" };
 const tones: Record<CaptureHealth, string> = {
   active: "border-emerald-500/25 text-emerald-700 dark:text-emerald-300",
+  offline: "border-rose-500/25 text-rose-700 dark:text-rose-300",
   recovering: "border-amber-500/25 text-amber-800 dark:text-amber-200",
   muted: "border-zinc-500/20 text-zinc-500 dark:text-zinc-400",
 };

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
-import { ApiError, ApprovalBanner, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner } from "@orbit/ui";
-import { api, setAccessToken, setUnauthorizedHandler } from "./api";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { ApiError, ApprovalBanner, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner, confirmDialog } from "@orbit/ui";
+import { WEB_URL, api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
 import { stepGlass } from "./glass";
 import { useGlobalShortcuts, useShortcutHandler, type GlobalAction } from "./globalShortcuts";
@@ -158,6 +159,17 @@ export function App() {
   // Rejoin an existing (live/created) session with the audio it was set up with (launch.ts): its app found again,
   // else the saved mic and output; never system audio for phone or mock sessions.
   const resume = async (session: OrbitSession) => {
+    // The AI video interview is a camera room the browser runs (the web's /live page draws it): rejoining it here
+    // would open an audio-only copy of it.
+    if (session.video) {
+      const ok = await confirmDialog({
+        title: "Rejoin in your browser?",
+        body: "Video interviews run in the browser, with your camera. Orbit opens this one there, where it left off.",
+        confirmLabel: "Open in browser",
+      });
+      if (ok) void openUrl(`${WEB_URL}/live/${encodeURIComponent(session.id)}`);
+      return;
+    }
     if (!(await confirmSessionDuringUpdate())) return;
     const apps = !IS_MAC && usesSystemAudio(session.type) ? await listAudioApps() : [];
     goLive(session, rejoinLaunch(session, loadSavedAudio(), apps, IS_MAC));
