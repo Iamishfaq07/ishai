@@ -1474,3 +1474,46 @@ Rejected: server-side headless submitting (flagged as fraud, would need the cand
 automating Easy Apply or Naukri (their terms ban it, and the ban falls on the candidate's own account), a per-job
 approval as the only mode (the owner asked for automatic), answering legal questions from a general default, and
 charging per lease (credits would go on captchas and failures).
+
+**D85 — The job assistant fills the whole job form from a few words, and the server decides what it may say: pay
+only as written, knock-outs only from stated requirements, nothing on a personal characteristic.** The owner asked
+for "AI on the right which will fill all the details automatically from some of user inputs". So:
+- **A panel beside the editor, not a dialog.** The new-job and edit-job editor is two columns from `lg` (the form,
+  and a sticky, collapsible "Orbit assistant"; a "Fill with AI" bottom sheet on phones). One input ("Describe the job
+  in a few words", with examples), optional quick fields (title, location, salary, experience) and a paste box for an
+  old post or notes. **Fill the job** fills every field the form has except the hiring team and the closing date.
+  Each filled field gets a quiet AI mark with its own Undo until the person edits it, and "Undo fill" puts back
+  what the form held before; nothing is saved or published by the assistant. Then **refine** with short
+  instructions ("make it more junior", "add a notice period question") that change only the fields they name, with a
+  summary ("Changed: experience band, 1 question added"). Each answer lists what was assumed and why, and the
+  inclusive-language notes. The old brief dialog ("Write with AI") is replaced: the panel does everything it did.
+- **`business_ai.fill_job(JobFillRequest) -> JobFill`** (job_fill.py, pure) with a deterministic reader
+  (job_facts.py) for the common ways people write a job in India and elsewhere: "18-28 LPA" / "CTC" / "lakh" / "Cr"
+  as INR a year, "$90-120k", "€95-120k", "AED 25,000 a month", "15k/month stipend", "$40/hr", Hindi ("25,000 प्रति
+  माह", "2 साल"), fresher, intern, part-time, contract, remote with countries ("Europe time zones" opens European
+  countries, said as an assumption), hybrid, city aliases (Bangalore -> Bengaluru, Gurgaon -> Gurugram) as
+  "City, CC". The reader is the authority for pay: the model's salary is kept only when the reader found none and
+  every figure is one the recruiter wrote; no pay given leaves it empty (and the panel asks for a range: jobs with
+  pay get more applicants and Google for Jobs shows it). A day rate is left out (the form has no "per day").
+- **The server checks every answer** like the JD writer (D83): the description through its grounder (no figure,
+  benefit or company claim the input doesn't give; coded words replaced and listed; 150-700 words, Hindi in
+  Devanagari), locations must be places the recruiter named (a country isn't a place of work), must-haves are skills
+  and experience a resume can show (the place, the right to work and start dates are questions instead), no language
+  the recruiter didn't name, stages only when they described a hiring process. One repair, then the deterministic
+  fill (`source: "template"`, the existing "couldn't reach the AI writer" wording).
+- **Knock-outs only from stated hard requirements**: the right to work where the job is, working from the stated
+  place for on-site/hybrid jobs, a minimum of years only when that number was written, a language that was named,
+  an immediate start that was asked for. Never a maximum of years (an age proxy). Other questions carry no rule.
+- **Personal characteristics are refused before anything reads them**: a clause of the input that screens on
+  gender, age (including "below 30" with no "age"), marital status, religion, caste, appearance, nationality beyond
+  the right to work, disability or pregnancy is removed before the model or the reader sees it, and the recruiter is
+  told ("Left out 'male only': …"). A refine asking for one changes nothing and makes no model call.
+- **`POST /v1/business/companies/{cid}/jobs/assist`** (manage_jobs, a writable company) shares the AI writer's
+  30-a-day limit per company, its usage recording against the company and an audit entry (`job.ai_assist`, no model
+  name). A refine sends the form as it is; a description it doesn't change keeps the editor's own HTML.
+Live eval (scripts/eval_job_fill.py, 2026-10-19, 14 calls: 10 fills including Hindi and a "male only, below 30"
+prompt, 4 refines): every pay, place, workplace, type and level as expected, no protected question or requirement,
+refines changed only their fields; about $0.0006 and 3.7 s per call (1,400 tokens in, 770 out).
+Rejected: generating straight into a saved draft (the person reviews first), letting the model set pay from "market
+rates" (an invented figure on a public job post, and Google shows it), knock-outs from anything the model infers, and
+a chat-style transcript (the form is the record; the panel keeps a one-line history).

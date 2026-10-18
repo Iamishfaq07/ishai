@@ -1,5 +1,24 @@
 # Implementation log
 
+## Orbit for Business: the job assistant (2026-10-19)
+
+- **"Orbit assistant" beside the job editor** (DECISIONS D85, PROTOCOL.md "Orbit for Business"): describe a job in a
+  few words (examples, optional quick fields, a paste box for an old post) and **Fill the job** fills title,
+  department, place / remote / countries, employment type, level, pay (only as written), the description, must-haves,
+  nice-to-haves, screening questions with knock-outs from stated requirements, and stages when a process is
+  described. AI-filled fields are marked with their own Undo; "Undo fill" restores the form. **Refine** with short
+  instructions changes only the named fields ("Changed: 1 question added"). Assumptions and inclusive-language notes
+  are shown; a salary hint when no pay was given. Two columns from `lg` (sticky, collapsible), a bottom sheet on
+  phones; lazy-loaded. Replaces the "Write with AI" brief dialog.
+- **`business_ai.fill_job`** (job_fill.py, job_facts.py): Indian and global pay formats normalised (LPA/CTC/lakh/Cr,
+  $/€/£/AED, k, per month/hour), Hindi prompts, protected characteristics refused before anything reads them, one
+  repair, a deterministic fill when the model is down; the mock model answers it for development.
+  **`POST /v1/business/companies/{cid}/jobs/assist`** shares the AI writer's daily limit and usage recording.
+- Tests: 42 API (test_business_job_fill.py: 18 prompts, pay never invented, knock-outs, refusal, refine, fallback,
+  permissions, tenancy, usage), 7 vitest (assist.test.ts). Live eval scripts/eval_job_fill.py (14 calls, no problems,
+  ~$0.0006 per fill). E2E 36/36 on a local stack with the mock model (fill, refine, per-field undo, publish, JSON-LD
+  salary, axe clean light/dark/phone). No migration.
+
 ## Orbit for Business: review fixes (2026-10-19)
 
 The remaining findings of the PR #400 review (#401 fixed 1, 2, 5 and 13); DECISIONS D82 and D83 amendments.
