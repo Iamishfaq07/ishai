@@ -135,13 +135,14 @@ def _ics_time(when: datetime) -> str:
 
 
 def ics(*, uid: str, start: datetime, minutes: int, summary: str, description: str, location: str,
-        organizer: str | None) -> bytes:
+        organizer: str | None, sequence: int = 0, cancelled: bool = False) -> bytes:
     """One event (RFC 5545), in UTC, with CRLF line ends and lines folded at 75 octets."""
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Orbit AI//Orbit for Business//EN", "METHOD:PUBLISH",
              "BEGIN:VEVENT", f"UID:{uid}@orbitanswer.com", f"DTSTAMP:{_ics_time(datetime.now(UTC))}",
              f"DTSTART:{_ics_time(start)}", f"DTEND:{_ics_time(start + timedelta(minutes=minutes))}",
              f"SUMMARY:{_ics_text(summary)}", f"DESCRIPTION:{_ics_text(description)}",
-             f"LOCATION:{_ics_text(location)}"]
+             f"LOCATION:{_ics_text(location)}", f"SEQUENCE:{sequence}",
+             "STATUS:CANCELLED" if cancelled else "STATUS:CONFIRMED"]
     if organizer:
         lines.append(f"ORGANIZER:mailto:{rules.one_line(organizer).replace(' ', '')}")
     lines += ["END:VEVENT", "END:VCALENDAR"]

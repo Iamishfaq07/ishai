@@ -6,6 +6,7 @@ import type { BizCompanyAnalytics } from "@orbit/types";
 import { Briefcase, Plus, Table, THead, Td, Th, Tr, buttonClass, cx, focusRing } from "@orbit/ui";
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
+import { ApplicationsChart } from "./HiringGraphics";
 import { companyPath, jobPath } from "./model";
 import { Loading, LoadError, Panel, Stat } from "./ui";
 
@@ -57,7 +58,10 @@ export function Dashboard() {
   const [error, setError] = useState<Error | null>(null);
   const [n, setN] = useState(0);
   useEffect(() => {
-    biz.analytics(company.id).then(setData).catch((e: unknown) => setError(e instanceof Error ? e : new Error(String(e))));
+    let live = true;
+    setData(null); setError(null);
+    biz.analytics(company.id).then((d) => { if (live) setData(d); }).catch((e: unknown) => { if (live) setError(e instanceof Error ? e : new Error(String(e))); });
+    return () => { live = false; };
   }, [company.id, n]);
   const actions = company.permissions.manage_jobs ? (
     <Link to={companyPath(company.id, "jobs/new")} className={buttonClass("primary")}>
@@ -84,11 +88,12 @@ export function Dashboard() {
             <Panel title="Where applicants come from">
               <SourceTable bySource={data.by_source} total={data.applicants_total} />
             </Panel>
-            <Panel title="Applicants per day" hint="The last 30 days.">
+            <Panel title="Applicants per day" hint="Today and the previous 29 UTC calendar days.">
+              <ApplicationsChart days={data.daily} />
               {data.daily.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">No applicants in the last 30 days.</p>
               ) : (
-                <div className="max-h-64 overflow-y-auto">
+                <details><summary className="mt-2 cursor-pointer text-sm font-medium">Daily counts</summary><div className="mt-3 max-h-64 overflow-y-auto">
                   <Table label="Applicants per day" dense>
                     <THead>
                       <tr>
@@ -97,7 +102,7 @@ export function Dashboard() {
                       </tr>
                     </THead>
                     <tbody>
-                      {[...data.daily].reverse().filter((d) => d.count > 0).map((d) => (
+                      {[...data.daily].reverse().map((d) => (
                         <Tr key={d.day}>
                           <Td>{new Date(`${d.day}T00:00:00`).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</Td>
                           <Td className="text-right tabular-nums">{d.count}</Td>
@@ -105,7 +110,7 @@ export function Dashboard() {
                       ))}
                     </tbody>
                   </Table>
-                </div>
+                </div></details>
               )}
             </Panel>
           </div>

@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs as job_queue
 from orbit_api import ratelimit
-from orbit_api.business import emails, rules
+from orbit_api.business import emails, hiring, rules
 from orbit_api.business.access import (
     CompanyCtx,
     Ctx,
@@ -29,6 +29,7 @@ from orbit_api.business.access import (
     audit,
     delete_application_rows,
     job_for,
+    lock_company,
     sees_application,
     timeline,
 )
@@ -39,6 +40,7 @@ from orbit_api.db import get_db
 from orbit_api.models import (
     BizApplication,
     BizEvent,
+    BizHiringPlan,
     BizInterview,
     BizJob,
     BizMember,
@@ -172,6 +174,7 @@ class Detail(ListItem):
     interviewers: list[str]
     interview: InterviewOut | None
     consent: Consent
+    hiring_plan_revision: int = 0
 
 
 def _is_blind(ctx: Ctx, reveal: bool) -> bool:
@@ -216,12 +219,12 @@ def _blind_parsed(app: BizApplication, parsed: dict[str, Any]) -> dict[str, Any]
     return {k: walk(v) for k, v in parsed.items()}
 
 
-def _item(app: BizApplication, blind: bool) -> ListItem:
+def _item(app: BizApplication, blind: bool, hide_ranking: bool = False) -> ListItem:
     met, total, label = match_counts(app.ranking)
     headline = (app.parsed or {}).get("headline") if app.parsed else None
     if blind and isinstance(headline, str):
         headline = _blind(app, headline)
-    return ListItem(
+    item = ListItem(
         id=app.id, reference=app.reference, name=rules.candidate_label(app.reference) if blind else app.name,
         email=None if blind else app.email, headline=headline, stage_id=app.stage_id, status=app.status,
         source=app.source, tags=app.tags or [], applied_at=_aware(app.created_at) or now(),
@@ -232,6 +235,10 @@ def _item(app: BizApplication, blind: bool) -> ListItem:
         must_haves_met=met, must_haves_total=total, match_label=label,
         basic_match=app.ranking is not None and basic_match(app.ranking_model),
         deletion_requested=app.deletion_requested_at is not None)
+    if hide_ranking:
+        item.score, item.must_haves_met, item.must_haves_total, item.match_label = None, None, None, None
+        item.basic_match = False
+    return item
 
 
 def _sort_key(app: BizApplication) -> tuple[int, int, float]:
@@ -258,6 +265,9 @@ async def list_applications(
     apps = list((await db.scalars(query)).all())
     apps = [a for a in apps if sees_application(ctx, a, job)]
     blind = _is_blind(ctx, reveal)
+    plan = await db.get(BizHiringPlan, job.id)
+    independent = bool(plan and plan.content.get("independent_feedback", True) and
+                       ctx.role not in ("owner", "admin", "recruiter"))
     if tag:
         apps = [a for a in apps if tag in (a.tags or [])]
     if q:
@@ -265,7 +275,7 @@ async def list_applications(
         apps = [a for a in apps if needle in a.reference.lower()
                 or (not blind and (needle in a.name.lower() or needle in a.email))
                 or any(needle in t.lower() for t in a.tags or [])]
-    if sort == "applied":
+    if sort == "applied" or independent:
         apps.sort(key=lambda a: -(_aware(a.created_at) or now()).timestamp())
     elif sort == "name":
         apps.sort(key=lambda a: a.reference if blind else a.name.lower())
@@ -275,7 +285,7 @@ async def list_applications(
         audit(db, ctx.company.id, ctx.user, "application.revealed", f"job:{job.id}", scope="list")
         await db.commit()
     return ListOut(job=JobRef(id=job.id, title=job.title, stages=job.stages, status=job.status),
-                   items=[_item(a, blind) for a in apps], blind=blind)
+                   items=[_item(a, blind, independent) for a in apps], blind=blind)
 
 
 _EVENT_TEXT = {
@@ -308,8 +318,17 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
                               .order_by(BizNote.created_at))).all()
     cards = (await db.scalars(select(BizScorecard).where(BizScorecard.application_id == app.id)
                               .order_by(BizScorecard.created_at))).all()
+    visible = await hiring.visible_stages(db, ctx, app, job)
+    if visible is not None:
+        cards = [c for c in cards if c.author_id == ctx.user.id or c.stage_id in visible]
+        # Notes have no stage: showing them after one round could leak a later round's recommendations.
+        notes = [n for n in notes if n.author_id == ctx.user.id]
     events = (await db.scalars(select(BizEvent).where(BizEvent.application_id == app.id)
                                .order_by(BizEvent.created_at))).all()
+    if visible is not None:
+        # The timeline must not reveal a peer's recommendation before their card can be read.
+        events = [e for e in events if e.kind not in ("scorecard", "hiring_decision", "ranked")
+                  or e.actor_id == ctx.user.id]
     iv = await latest_interview(db, app.id)
     stage_names = {s["id"]: s["name"] for s in job.stages}
     parsed = None
@@ -320,17 +339,21 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
     answers = app.answers or []
     if blind:
         answers = [{**a, "answer": _blind(app, str(a.get("answer", "")))} for a in answers]
-    base = _item(app, blind).model_dump()
+    base = _item(app, blind, visible is not None).model_dump()
+    plan = await db.get(BizHiringPlan, job.id)
     return Detail(
         **base, job_id=job.id, job_title=job.title, phone=None if blind else app.phone,
         location=None if blind else app.location,
         resume_text=_blind(app, app.resume_text) if blind else app.resume_text,
         resume_filename=None if blind else app.resume_filename, resume_source=app.resume_source, parsed=parsed,
-        answers=answers, ranking=company_ranking(app.ranking),
-        notes=[NoteOut(id=n.id, author=n.author_name, author_id=n.author_id, body=n.body, mentions=n.mentions or [],
+        answers=answers, ranking=(_blind_parsed(app, company_ranking(app.ranking) or {}) if blind else
+                                 company_ranking(app.ranking)) if visible is None else None,
+        notes=[NoteOut(id=n.id, author=n.author_name, author_id=n.author_id,
+                       body=_blind(app, n.body) if blind else n.body, mentions=n.mentions or [],
                        created_at=_aware(n.created_at) or now()) for n in notes],
         scorecards=[ScorecardOut(id=c.id, stage_id=c.stage_id, author=c.author_name, author_id=c.author_id,
-                                 ratings=[ScoreItem(**r) for r in c.ratings or []], notes=c.notes,
+                                 ratings=[ScoreItem(**r) for r in c.ratings or []],
+                                 notes=_blind(app, c.notes) if blind else c.notes,
                                  recommendation=c.recommendation, created_at=_aware(c.created_at) or now())
                     for c in cards],
         timeline=[EventOut(id=e.id, kind=e.kind, text=_event_text(e, stage_names, app, blind), actor=e.actor_name,
@@ -339,6 +362,7 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
         interview=InterviewOut(id=iv.id, slots=iv.slots, duration_min=iv.duration_min, location=iv.location,
                                chosen=iso(iv.chosen),
                                created_at=_aware(iv.created_at) or now()) if iv is not None else None,
+        hiring_plan_revision=plan.revision if plan else 0,
         consent=Consent(notice_version=str((app.consent or {}).get("notice_version", "")),
                         accepted_at=str((app.consent or {}).get("accepted_at", ""))))
 
@@ -611,6 +635,8 @@ async def add_scorecard(application_id: str, body: ScorecardIn, ctx: CompanyCtx,
                         db: Annotated[AsyncSession, Depends(get_db)]) -> Detail:
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
+    if await db.get(BizHiringPlan, job.id) is not None:
+        raise HTTPException(409, "This job uses a structured interview plan. Submit evidence in the interview room.")
     if not any(s["id"] == body.stage_id for s in job.stages):
         raise HTTPException(422, "That stage isn't in this job's pipeline.")
     ratings = [r.model_dump() for r in body.ratings]
@@ -686,12 +712,20 @@ async def offer_slots(application_id: str, body: SlotsIn, ctx: CompanyCtx,
     if app.status != "active":
         raise HTTPException(409, "Only an applicant in the pipeline can be invited.")
     _refuse_unconfirmed(app)
+    await lock_company(db, ctx.company.id)
+    await db.refresh(app)
+    if app.status != "active" or app.deletion_requested_at is not None:
+        raise HTTPException(409, "This application is not accepting interview invitations.")
     slots = sorted({(s if s.tzinfo else s.replace(tzinfo=UTC)).astimezone(UTC) for s in body.slots})
     if len(slots) < 3 or slots[0] <= now() + timedelta(minutes=30):
         raise HTTPException(422, "Offer 3 to 5 different times, all at least 30 minutes from now.")
+    previous = await latest_interview(db, app.id)
+    if previous is not None and previous.chosen is not None:
+        raise HTTPException(409, "Cancel the booked interview before offering replacement times.")
     iv = BizInterview(company_id=ctx.company.id, application_id=app.id,
                       slots=[s.isoformat().replace("+00:00", "Z") for s in slots], duration_min=body.duration_min,
-                      location=body.location.strip(), created_by=ctx.user.id, reply_to=ctx.user.email)
+                      location=body.location.strip(), created_by=ctx.user.id, reply_to=ctx.user.email,
+                      panel_user_ids=list(app.interviewers or [ctx.user.id]))
     db.add(iv)
     _responded(app)
     timeline(db, app, "interview_slots", ctx.user, count=len(slots))
@@ -700,6 +734,37 @@ async def offer_slots(application_id: str, body: SlotsIn, ctx: CompanyCtx,
     _emailed(db, ctx, app, await _send_template(db, ctx, app, job, "interview", body=(
         None if not body.message else body.message + "\n\nPick a time here:\n{{status_link}}")))
     await db.commit()
+    return await detail_out(db, ctx, app, job, _is_blind(ctx, False))
+
+
+@router.post("/applications/{application_id}/interview/cancel", response_model=Detail)
+async def cancel_interview(application_id: str, ctx: CompanyCtx,
+                           db: Annotated[AsyncSession, Depends(get_db)]) -> Detail:
+    ctx.require("move_applicants")
+    ctx.writable()
+    app, job = await application_for(db, ctx, application_id)
+    await lock_company(db, ctx.company.id)
+    iv = await latest_interview(db, app.id)
+    if iv is None or not iv.slots:
+        return await detail_out(db, ctx, app, job, _is_blind(ctx, False))
+    # An empty latest invitation revokes the old booking and frees its panel's time.
+    db.add(BizInterview(company_id=ctx.company.id, application_id=app.id, slots=[],
+        duration_min=iv.duration_min, location=iv.location, created_by=ctx.user.id, reply_to=ctx.user.email,
+        panel_user_ids=iv.panel_user_ids))
+    timeline(db, app, "interview_cancelled", ctx.user)
+    audit(db, ctx.company.id, ctx.user, "application.interview_cancelled", app.reference, job_id=job.id)
+    await db.commit()
+    attachments: tuple[tuple[str, str, bytes], ...] = ()
+    if iv.chosen:
+        cal = emails.ics(uid=iv.id, start=hiring.aware(iv.chosen), minutes=iv.duration_min,
+            summary=f"Cancelled interview: {job.title}", description="The hiring team cancelled this interview.",
+            location=iv.location, organizer=iv.reply_to, sequence=iv.revision + 1, cancelled=True)
+        attachments = (("cancelled-interview.ics", "text/calendar", cal),)
+    if app.email_confirmed_at is not None:
+        await emails.send_to_applicant(ctx.company, app, f"Interview cancelled: {job.title}",
+            "The hiring team cancelled your current interview invitation. They can offer new times on your "
+            "application page. If you imported the previous calendar file, update or remove that event.",
+            ctx.user.email, attachments=attachments)
     return await detail_out(db, ctx, app, job, _is_blind(ctx, False))
 
 

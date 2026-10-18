@@ -25,6 +25,12 @@ statement is a round trip to the database (~0.3-1 ms on Railway's private networ
 even when SQLite hides it.
 
 ### Web
+- Business Hiring Studio (19 October 2026) measures 32.1 kB of shared CSS after reusing the existing palette,
+  type sizes and grid utilities for its SVGs and layouts. Its interview plan, room, hiring desk and comparison
+  are lazy routes; no new runtime dependency is added. The CSS ceiling increases from 32 to **32.25 kB**
+  (256 bytes of additional allowance) for the new responsive controls and reduced-motion variants. Existing
+  JavaScript page budgets remain unchanged; the entry measures 171.1 kB against its 172 kB ceiling.
+
 - **JavaScript** (gzip, first load: the entry plus what the page's chunk imports): `apps/web/scripts/bundle-budget.mjs`
   holds the budget per page and fails CI after the build when one is over (`pnpm --filter @orbit/web budget`).
 

@@ -483,6 +483,7 @@ export interface BizInterviewSlots {
 
 /** GET /v1/business/companies/{cid}/applications/{aid} */
 export interface BizApplicationDetail extends BizApplicationListItem {
+  hiring_plan_revision?: number;
   job_id: string;
   job_title: string;
   phone: string | null;

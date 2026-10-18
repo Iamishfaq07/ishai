@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: [
     { command: "uv run uvicorn orbit_api.main:app --host 127.0.0.1 --port 8000", cwd: resolve("apps/api"),
       url: "http://127.0.0.1:8000/health", timeout: 120_000, reuseExistingServer: !process.env.CI,
-      env: { ORBIT_ENV: "test", ORBIT_LLM_PROVIDER: "mock", ORBIT_STT_PROVIDER: "mock",
+      env: { ORBIT_ENV: "test", ORBIT_LLM_PROVIDER: "mock", ORBIT_STT_PROVIDER: "mock", ORBIT_BUSINESS_AI: "fake",
         ORBIT_DATABASE_URL: "sqlite+aiosqlite:///./e2e.db", ORBIT_ADMIN_EMAIL: "qa-admin@example.com",
         // The camera coach is on, so the video room is checked with its button (video-room.spec.ts).
         ORBIT_VIDEO_MOCK: "true",

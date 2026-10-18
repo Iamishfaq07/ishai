@@ -1379,6 +1379,46 @@ class BizScorecard(TimestampMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class BizHiringPlan(Base):
+    __tablename__ = "biz_hiring_plans"
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    content: Mapped[dict[str, Any]] = mapped_column(JSON)
+    updated_by: Mapped[str | None] = mapped_column(String(36))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizInterviewFeedback(TimestampMixin, Base):
+    __tablename__ = "biz_interview_feedback"
+    __table_args__ = (UniqueConstraint("application_id", "stage_id", "author_id", name="uq_biz_feedback_author_stage"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"), index=True)
+    stage_id: Mapped[str] = mapped_column(String(16))
+    author_id: Mapped[str] = mapped_column(String(36))
+    author_name: Mapped[str] = mapped_column(String(200))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    plan_revision: Mapped[int] = mapped_column(Integer)
+    plan_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON)
+    content: Mapped[dict[str, Any]] = mapped_column(JSON)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizWorkSample(TimestampMixin, Base):
+    __tablename__ = "biz_work_samples"
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    plan_revision: Mapped[int] = mapped_column(Integer)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    brief: Mapped[dict[str, Any]] = mapped_column(JSON)
+    answer: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    follow_up: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class BizEvent(TimestampMixin, Base):
     """An application's timeline (and what analytics counts): applied, moved, rejected, emailed, booked."""
 
@@ -1405,6 +1445,8 @@ class BizInterview(TimestampMixin, Base):
     chosen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[str | None] = mapped_column(String(36))
     reply_to: Mapped[str | None] = mapped_column(String(320))
+    panel_user_ids: Mapped[list[str] | None] = mapped_column(JSON)
+    revision: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
 
 class BizTemplate(Base):

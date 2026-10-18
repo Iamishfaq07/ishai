@@ -2,9 +2,9 @@
 and how long until someone at the company first acts on an application."""
 
 import statistics
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -64,6 +64,10 @@ async def job_analytics(db: AsyncSession, job: BizJob) -> JobAnalytics:
     apps = list((await db.scalars(select(BizApplication).where(BizApplication.job_id == job.id))).all())
     moves = (await db.execute(select(BizEvent.application_id, BizEvent.data).where(
         BizEvent.job_id == job.id, BizEvent.kind == "stage"))).all()
+    return _job_analytics(job, apps, [(aid, data) for aid, data in moves])
+
+
+def _job_analytics(job: BizJob, apps: list[BizApplication], moves: list[tuple[str, dict[str, Any]]]) -> JobAnalytics:
     order = {s["id"]: i for i, s in enumerate(job.stages) if s["kind"] != "rejected"}
     furthest: dict[str, int] = {a.id: order.get(a.stage_id, 0) for a in apps}
     for app_id, data in moves:
@@ -103,14 +107,22 @@ async def get_company_analytics(ctx: CompanyCtx, db: Annotated[AsyncSession, Dep
     ids = [j.id for j in jobs]
     apps = list(await db.scalars(select(BizApplication).where(BizApplication.job_id.in_(ids)))) if ids else []
     now = datetime.now(UTC)
-    since = now - timedelta(days=30)
-    days = Counter(_aware(a.created_at).date().isoformat() for a in apps if _aware(a.created_at) >= since)
+    since = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=29)
+    days = Counter(_aware(a.created_at).date().isoformat() for a in apps if since <= _aware(a.created_at) <= now)
+    grouped: dict[str, list[BizApplication]] = defaultdict(list)
+    for a in apps:
+        grouped[a.job_id].append(a)
+    moves: dict[str, list[tuple[str, dict[str, Any]]]] = defaultdict(list)
+    if ids:
+        for jid, aid, data in await db.execute(select(BizEvent.job_id, BizEvent.application_id, BizEvent.data).where(
+                BizEvent.job_id.in_(ids[:50]), BizEvent.kind == "stage")):
+            moves[jid].append((aid, data))
     hours = _hours(apps)
     return CompanyAnalytics(
         open_jobs=sum(1 for j in jobs if j.status == "open"), applicants_total=len(apps),
         applicants_30d=sum(days.values()), hired=sum(1 for a in apps if a.status == "hired"),
         median_first_response_hours=round(statistics.median(hours), 1) if hours else None,
         by_source=dict(Counter(a.source for a in apps)),
-        jobs=[await job_analytics(db, j) for j in jobs[:50]],
-        daily=[Daily(day=(since + timedelta(days=i + 1)).date().isoformat(),
-                     count=days.get((since + timedelta(days=i + 1)).date().isoformat(), 0)) for i in range(30)])
+        jobs=[_job_analytics(j, grouped[j.id], moves[j.id]) for j in jobs[:50]],
+        daily=[Daily(day=(since + timedelta(days=i)).date().isoformat(),
+                     count=days.get((since + timedelta(days=i)).date().isoformat(), 0)) for i in range(30)])

@@ -39,6 +39,7 @@ import {
 } from "@orbit/ui";
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
+import { planPath } from "./hiringModel";
 import { SourceTable, hours } from "./Dashboard";
 import { applicationPath, applyMove, downloadBlob, groupByStage, jobPath, matchLabel, neighbourStage, rejectedMessage, relTime, scoreTone, sortApplications, toggleId, type SortKey } from "./model";
 import { JobStatusBadge, Loading, LoadError, Panel, errorText } from "./ui";
@@ -332,7 +333,10 @@ export function Pipeline() {
     };
   }, [company.id, jid, q, tag, sort, reveal, n]);
   useEffect(() => {
-    biz.jobAnalytics(company.id, jid).then(setStats).catch(() => undefined);
+    let live = true;
+    setStats(null); setSelected([]);
+    biz.jobAnalytics(company.id, jid).then((s) => { if (live) setStats(s); }).catch(() => undefined);
+    return () => { live = false; };
   }, [company.id, jid, n]);
   useEffect(() => safeLocal.setItem(VIEW_KEY, view), [view]);
 
@@ -377,7 +381,7 @@ export function Pipeline() {
   };
 
   if (error) return <LoadError error={error} onRetry={reload} />;
-  if (!data) return <Loading />;
+  if (!data || data.job.id !== jid) return <Loading />;
   const rejectedStage = data.job.stages.find((s) => s.kind === "rejected");
   const visible: BizApplicationList = showRejected ? data : { ...data, items: data.items.filter((a) => a.status !== "rejected"), job: { ...data.job, stages: data.job.stages.filter((s) => s.kind !== "rejected") } };
   const rejectedCount = data.items.filter((a) => a.status === "rejected").length;
@@ -394,6 +398,7 @@ export function Pipeline() {
         }
         actions={
           <>
+            <Link to={planPath(company.id, jid)} className={buttonClass("secondary")}>Interview plan</Link>
             <Link to={jobPath(company.id, jid, "edit")} className={buttonClass("secondary")}>
               <PenLine className="h-4 w-4" aria-hidden /> {company.permissions.manage_jobs ? "Edit job" : "Job details"}
             </Link>
@@ -455,6 +460,7 @@ export function Pipeline() {
       {canMove && selected.length > 0 && (
         <div role="region" aria-label="Selected applicants" className="sticky top-14 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm dark:border-indigo-400/30 dark:bg-indigo-400/10">
           <strong>{selected.length} selected</strong>
+          {selected.length >= 2 && selected.length <= 4 && <Link to={`${jobPath(company.id, jid, "compare")}?${new URLSearchParams(selected.map((id) => ["ids", id]))}`} className={buttonClass("secondary", "sm")}>Compare evidence</Link>}
           <label htmlFor={`${id}-bulk`} className="sr-only">
             Move to stage
           </label>

@@ -21,14 +21,16 @@ import {
   Sparkles,
   Textarea,
   Trash2,
-  Video,
   confirmDialog,
+  buttonClass,
   cx,
   focusRing,
   toast,
 } from "@orbit/ui";
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
+import { hiringApi } from "./hiringApi";
+import { roomPath, planPath } from "./hiringModel";
 import { RejectDialog } from "./Pipeline";
 import {
   WAITING_FOR_CONFIRMATION,
@@ -227,9 +229,15 @@ function Scheduling({ a, onSaved }: { a: BizApplicationDetail; onSaved: (d: BizA
   const [error, setError] = useState<string | null>(null);
   if (a.interview?.chosen) {
     return (
-      <p className="text-sm">
+      <div className="space-y-3"><p className="text-sm">
         Booked: <strong>{dayTime(a.interview.chosen)}</strong> ({a.interview.duration_min} min{a.interview.location ? `, ${a.interview.location}` : ""}). The invite (.ics) went to both of you.
-      </p>
+      </p><Button variant="secondary" size="sm" loading={busy} onClick={async () => {
+        if (!(await confirmDialog({ title: "Cancel this interview?", body: "This frees the panel's time and notifies the candidate. You can then offer new slots.", confirmLabel: "Cancel interview" }))) return;
+        setBusy(true);
+        try { onSaved(await hiringApi.cancelInterview(company.id, a.id)); }
+        catch (e) { toast({ message: errorText(e), tone: "error" }); }
+        finally { setBusy(false); }
+      }}>Cancel and offer new times</Button></div>
     );
   }
   const submit = async (e: FormEvent) => {
@@ -414,13 +422,16 @@ export function Candidate() {
   const [rejecting, setRejecting] = useState(false);
   const [n, setN] = useState(0);
   useEffect(() => {
-    biz.application(company.id, aid, reveal).then(setA).catch((e: unknown) => setError(e instanceof Error ? e : new Error(String(e))));
+    let live = true;
+    setError(null);
+    biz.application(company.id, aid, reveal).then((d) => { if (live) setA(d); }).catch((e: unknown) => { if (live) setError(e instanceof Error ? e : new Error(String(e))); });
+    return () => { live = false; };
   }, [company.id, aid, reveal, n]);
   useEffect(() => {
     biz.members(company.id).then((m) => setMembers(m.members)).catch(() => undefined);
   }, [company.id]);
   if (error) return <LoadError error={error} onRetry={() => setN((x) => x + 1)} />;
-  if (!a) return <Loading />;
+  if (!a || a.id !== aid) return <Loading />;
   const p = company.permissions;
   const canMove = p.move_applicants && company.status === "active";
   const blind = company.blind_review && !reveal;
@@ -608,11 +619,10 @@ export function Candidate() {
         </div>
 
         <div className="space-y-5">
-          <Panel title="Interview with Saba" hint="Coming soon">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">A short screening interview with Orbit's AI interviewer, scored only on what's said, with a human deciding. Not available yet.</p>
-            <Button className="mt-3" size="sm" variant="secondary" disabled disabledReason="Coming soon">
-              <Video className="h-4 w-4" aria-hidden /> Interview with Saba (coming soon)
-            </Button>
+          <Panel title="Hiring Studio" hint="Prepare with evidence. Interview independently. Decide together.">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">Structured questions, private feedback, practical challenges and a shared debrief for this applicant.</p>
+            <Link to={roomPath(company.id, a.id)} className={cx("mt-3", buttonClass("primary"))}>Open interview room</Link>
+            {!a.hiring_plan_revision && <Link to={planPath(company.id, a.job_id)} className="mt-3 block text-sm underline">Set up this job's interview plan</Link>}
           </Panel>
           <Panel title="Scorecards">
             {a.scorecards.length > 0 && (
@@ -628,7 +638,7 @@ export function Candidate() {
                 ))}
               </ul>
             )}
-            <ScorecardForm a={a} onSaved={setA} />
+            {a.hiring_plan_revision ? <p className="text-sm text-zinc-500">Use the interview room to record structured evidence for this job.</p> : <ScorecardForm a={a} onSaved={setA} />}
           </Panel>
           <Panel title="Notes">
             <Notes a={a} members={members} onSaved={setA} />
