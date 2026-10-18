@@ -21,19 +21,30 @@ const WIDTH: Record<SheetSize, string> = {
 // closes, in whatever order they close; each saving and restoring `overflow` itself would let the page scroll under
 // a panel still open when the one below it closed first.
 let locks = 0;
-let lockedFrom = "";
+let lockedFrom = { overflow: "", gutter: "" };
 
-/** Stops the page scrolling until every caller has released it. Returns the release. */
+/**
+ * Stops the page scrolling until every caller has released it. Returns the release. It holds the page's own scroller
+ * (<html>), not <body>: the app's html clips sideways (overflow-x), so a hidden overflow on body made body a box of
+ * its own a screen tall, and a page scrolled down showed blank (or jumped to its top) behind the dialog. A classic
+ * scrollbar's space stays reserved while it's hidden, so nothing shifts sideways either.
+ */
 export function lockScroll(): () => void {
+  const root = document.documentElement;
   if (locks++ === 0) {
-    lockedFrom = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockedFrom = { overflow: root.style.overflow, gutter: root.style.scrollbarGutter };
+    const bar = typeof window !== "undefined" ? window.innerWidth - root.clientWidth : 0;
+    if (bar > 0) root.style.scrollbarGutter = "stable";
+    root.style.overflow = "hidden";
   }
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    if (--locks === 0) document.body.style.overflow = lockedFrom;
+    if (--locks === 0) {
+      root.style.overflow = lockedFrom.overflow;
+      root.style.scrollbarGutter = lockedFrom.gutter;
+    }
   };
 }
 

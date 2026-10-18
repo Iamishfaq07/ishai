@@ -284,7 +284,7 @@ export { CONFIRM_MS, announce, haptic, hapticsOk, useCopy, useFlash, type CopySt
 export { useFlip } from "./hooks/useFlip";
 export { usePresence } from "./hooks/usePresence";
 export { useIndicator } from "./hooks/useIndicator";
-export { Dialog, DialogActions, Sheet, type SheetSize } from "./components/Sheet";
+export { Dialog, DialogActions, Sheet, lockScroll, type SheetSize } from "./components/Sheet";
 export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
 export {
   GhostPreview,
