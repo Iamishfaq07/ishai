@@ -14,7 +14,8 @@ export const BUDGETS = {
   // +1 kB for D80: the API client's direct route; +1 kB for D84: Orbit Apply's chunk in the preload map, its two
   // routes and tab (its own calls stay in its chunk, through the client's generic `call`) (docs/PERFORMANCE.md).
   entry: 172,
-  css: 32,
+  // Hiring Studio's responsive controls and reduced-motion variants: 32.1 kB measured (docs/PERFORMANCE.md).
+  css: 32.25,
   pages: {
     // +1 kB each for D79 (docs/PERFORMANCE.md): the product pages' shared pieces became chunks of their own, and each
     // chunk's name is in the entry's preload map (+0.3 kB on every first load); Landing shares the live answer and

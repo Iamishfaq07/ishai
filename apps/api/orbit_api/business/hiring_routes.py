@@ -249,10 +249,18 @@ async def hiring_desk(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_d
     plans = {p.job_id: p for p in await db.scalars(select(BizHiringPlan).where(BizHiringPlan.job_id.in_(allowed)))}
     attention = []
     questions = list(await db.scalars(select(BizEvent).where(BizEvent.application_id.in_(ids),
-        BizEvent.kind.in_(("candidate_question", "email"))).order_by(BizEvent.created_at.desc()))) if ids else []
+        BizEvent.kind.in_(("candidate_question", "email", "work_sample_completed", "hiring_decision")))
+        .order_by(BizEvent.created_at.desc()))) if ids else []
     last_contact: dict[str, str] = {}
+    completed: dict[str, datetime] = {}
+    decided: dict[str, datetime] = {}
     for event in questions:
-        last_contact.setdefault(event.application_id, event.kind)
+        if event.kind in ("candidate_question", "email"):
+            last_contact.setdefault(event.application_id, event.kind)
+        elif event.kind == "work_sample_completed":
+            completed.setdefault(event.application_id, hiring.aware(event.created_at))
+        elif event.kind == "hiring_decision":
+            decided.setdefault(event.application_id, hiring.aware(event.created_at))
     for a in apps:
         plan = plans.get(a.job_id)
         target = int((plan.content if plan else {}).get("response_target_days", 3))
@@ -261,6 +269,8 @@ async def hiring_desk(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_d
             reason, priority = "Candidate requested data deletion", "urgent"
         elif last_contact.get(a.id) == "candidate_question":
             reason, priority = "Candidate asked a question; reply from their application", "waiting"
+        elif a.id in completed and (a.id not in decided or completed[a.id] > decided[a.id]):
+            reason, priority = "Practical challenge complete; review their adaptation", "waiting"
         elif age >= target * 24:
             reason, priority = f"No stage change for {age // 24} days", "waiting"
         else:

@@ -148,6 +148,8 @@ def test_practical_challenge_is_two_phase_immutable_and_private(client: TestClie
     final = client.post(path + "?follow_up=true", json={**answer, "base_revision": 2,
         "response": "I reconcile using the provider's idempotency key before retrying the charge."})
     assert final.status_code == 200 and final.json()["sample"]["completed_at"], final.text
+    desk = client.get(f"/v1/business/companies/{cid}/hiring-desk", headers=auth(owner)).json()
+    assert desk["attention"][0]["reason"] == "Practical challenge complete; review their adaptation"
     assert client.get(path.replace(token, "invalid-link")).status_code == 404
     # Candidate responses never expose the company's panel, scores, decisions or private questions.
     assert not any(key in str(initial) for key in ("author_id", "recommendation", "evidence_version"))

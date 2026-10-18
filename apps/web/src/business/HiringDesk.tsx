@@ -30,8 +30,8 @@ export function HiringDeskPage() {
   return <div className="space-y-5">
     <PageTitle title="Hiring desk" subtitle="Your team's next actions, from candidate questions to interview debriefs." actions={<Button variant="secondary" onClick={() => setLoad((n) => n + 1)}>Refresh</Button>} />
     <div className="grid gap-3 sm:grid-cols-3"><Stat label="Candidate attention" value={data.attention.length} detail="Shown in this queue" /><Stat label="Upcoming interviews" value={data.upcoming.length} detail="Next booked conversations" /><Stat label="Feedback due" value={data.feedback_due.length} detail="Completed interviews · last 7 days" /></div>
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="space-y-5"><Panel title="Candidates waiting on your team" hint="Questions, deletion requests and applications beyond the job's response target.">
+    <div className="grid gap-5 lg:grid-cols-2">
+      <div className="space-y-5"><Panel title="Candidates waiting on your team" hint="Questions, completed challenges, deletion requests and applications beyond the job's response target.">
         {data.attention.length ? <ul className="divide-y divide-zinc-200 dark:divide-white/10">{data.attention.map((a) => <li key={a.application_id} className="py-4">
           <div className="flex flex-wrap items-start justify-between gap-2"><div><h3 className="font-medium">{a.name}</h3><p className="text-xs text-zinc-500">{a.job_title} · {a.reference}</p></div><Link to={applicationPath(company.id, a.application_id)} className={buttonClass("secondary", "sm")}>Review application</Link></div>
           <p className={`mt-2 text-sm ${a.priority === "urgent" ? "text-rose-700 dark:text-rose-300" : "text-zinc-600 dark:text-zinc-400"}`}>{a.reason}</p>
