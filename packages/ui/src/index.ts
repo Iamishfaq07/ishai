@@ -297,7 +297,7 @@ export { useFlip } from "./hooks/useFlip";
 export { usePresence } from "./hooks/usePresence";
 export { useIndicator } from "./hooks/useIndicator";
 export { Dialog, DialogActions, Sheet, lockScroll, type SheetSize } from "./components/Sheet";
-export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
+export { ToastHost, dismissToast, toast, updateToast, type ToastOptions, type ToastTone } from "./components/Toast";
 export {
   GhostPreview,
   Skeleton,

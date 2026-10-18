@@ -113,6 +113,14 @@ export function createToastQueue({ max = 3, exitMs = () => EXIT_MS }: { max?: nu
   return {
     show,
     dismiss,
+    /** Changes what a toast on screen says (a number that moved on since it appeared), in place and without restarting
+     *  its time. False when it's gone or going: nothing comes back. */
+    update(id: string, patch: Partial<Pick<ToastOptions, "message" | "detail">>): boolean {
+      const item = toasts.find((t) => t.id === id);
+      if (!item || item.leaving) return false;
+      set(toasts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+      return true;
+    },
     /** Presses the toast's button, then closes it. */
     act(id: string): void {
       const item = toasts.find((t) => t.id === id);
@@ -153,6 +161,11 @@ export function toast(input: string | ToastOptions): string {
 
 export function dismissToast(id: string): void {
   queue.dismiss(id);
+}
+
+/** Rewrites a toast still on screen (by the `id` it was shown with); false once it has gone. */
+export function updateToast(id: string, patch: Partial<Pick<ToastOptions, "message" | "detail">>): boolean {
+  return queue.update(id, patch);
 }
 
 /**

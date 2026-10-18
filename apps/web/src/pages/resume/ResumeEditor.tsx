@@ -40,6 +40,8 @@ import {
   linesOver,
   splitPlaceholders,
   toast,
+  dismissToast,
+  updateToast,
   useCountUp,
   WorkingState,
   CosmicEmptyState,
@@ -57,6 +59,7 @@ import { ContentForm } from "./ContentForm";
 import { toJsonResume } from "./jsonResume";
 import { paintKeywords } from "./previewKeywords";
 import { atsReading, type Reading } from "./atsReading";
+import { ATS_80, ats80Step } from "./atsMilestone";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { saveQueueFor, useBackend } from "./backend";
 import { drafts, type Draft } from "./saveQueue";
@@ -132,11 +135,15 @@ function ResumeEditor() {
   const [loadError, setLoadError] = useState<{ text: string; missing: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("content");
   const [report, setReport] = useState<AtsReport | null>(null);
-  // The first time an edit takes the score past 80 on this device: a success moment (celebrate shows it once).
+  // The first time an edit takes the score past 80 on this device: a success moment (celebrate shows it once). While
+  // it's up it says the score the header shows: fixes landing in a row (82, 97, 99) don't leave it on the first.
   const lastScore = useRef<number | null>(null);
   useEffect(() => {
     const now = report?.score ?? null;
-    if (now !== null && lastScore.current !== null && lastScore.current < 80 && now >= 80) celebrate("first-ats-80", { message: `Your resume scores ${now}. Ready to apply?` });
+    const step = ats80Step(lastScore.current, now);
+    if (step?.do === "celebrate") celebrate(ATS_80, { id: ATS_80, message: step.message });
+    else if (step?.do === "update") updateToast(ATS_80, { message: step.message });
+    else if (step?.do === "close") dismissToast(ATS_80);
     lastScore.current = now; // null between resumes, so opening another doesn't count as a rise
   }, [report?.score]);
   // The resume the report scored: a line's writing issues show only while that line still reads the same.
