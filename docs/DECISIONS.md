@@ -1313,3 +1313,56 @@ source; about $0.0002 per ranking, $0.0002 per parse of a short resume and $0.00
 Rejected: a model-given score (unauditable and unstable), sending the full resume and asking the model to ignore
 personal details (it can't un-read them), embedding similarity for evidence (a quote either is in the resume or it
 isn't), and auto-rejecting below a threshold (GDPR Art. 22, the EU AI Act's human oversight, Mobley v. Workday).
+
+**D84 — Orbit Apply: the server plans, the candidate's own device submits, and the rules are code.** Phase 3 of the
+business plan (orbit-business-plan.md; research note orbit-business-autoapply.md §2.5, §3.1, §3.2) asks for
+"fully automatic" applying that a candidate and an employer can both trust. So (`orbit_api/auto_apply`, PROTOCOL.md
+"Orbit Apply"):
+- **Server plans, client executes (§3.1's hybrid).** The planner picks jobs from Jobs AI's own ranking, reads the
+  employer's public form (Greenhouse's job board API with `questions=true`, Lever's apply page and its question-card
+  templates, Ashby's public posting GraphQL, from recorded real forms in the tests), answers it, tailors the resume,
+  writes a short cover letter and stores an ApplicationPacket. The extension (and later the Windows app) leases it
+  from `GET /v1/apply/next` and submits it in the candidate's own browser at human pace. A server that submits from a
+  data-centre address is a "high-risk" signal on Greenhouse and silently rejected at stricter Ashby settings, and it
+  would need the candidate's passwords for anything with a login.
+- **Pre-approval of the profile, not of each job.** The candidate approves the master resume (its content hash, so
+  an edit needs approving again), confirms the facts, fills the answer bank once and consents
+  (`rules.CONSENT_TEXT`, versioned, audited). Then Automatic mode (the default, as the owner asked) applies within the
+  filters, and Review first holds each packet for a click.
+- **Truthful answers only, enforced where answers are made (`bank.py`).** Each of the ~37 recognised questions has
+  one source: the confirmed facts, the candidate's own bank answer, or text written for this job from true facts.
+  Salary history, notice period, years with a particular skill and work authorisation are never guessed. A required
+  question with no truthful answer stops the packet (`needs_answer`), the candidate answers once, and the answer is
+  saved and reused. Legal attestations (arbitration, an employer's AI policy, background checks, "I certify…", data
+  consent) take only an explicit answer, and agreements are kept per company: "I agree to Acme's arbitration" never
+  answers Globex's. Work authorisation and sponsorship are per country, as the candidate stated them. Voluntary
+  self-identification is "decline" unless they chose otherwise, and a required one with no way to decline stops.
+- **Tailoring reorders and rewords; it can't add.** Resume AI's tailoring prompt (with its grounding checks)
+  rewords existing lines, then the job's skills move first. `truth_violations` compares the result with the master
+  (the same skills, roles, dates, schools and projects, no new figure, no tool or job keyword the master lacks), and
+  anything failing it falls back to the reorder alone. Cover letters and "why this company" drop any sentence naming
+  a skill the resume doesn't show; AI text with a placeholder falls back to a template from the same facts. The AI
+  line ("Prepared with Orbit AI from my verified profile.") is on by default. The resume the executor uploads is a
+  plain text PDF written on the server (`pdf.py`).
+- **No board automation.** LinkedIn, Indeed, Naukri, Glassdoor and similar are matched to the same job on the
+  employer's own board when Jobs AI has it (same dedupe key), else they become a hand-off ("Needs you: apply on
+  LinkedIn") with the answers ready to copy. No captcha solving, stealth or stored job-site passwords: a captcha, a
+  login or an email check comes back as `needs_you`, and the candidate finishes in one click.
+- **Caps and pacing are the server's (`pacing.py`).** At most 25 a day (default 10), two per company per 30 days, one
+  lease at a time for 15 minutes, 60 s between any two, a random 3-8 minutes between two on the same ATS board,
+  quiet hours in the candidate's own time, fresh posts only (30 days at most, none that look re-dated, reposted or
+  like a standing ad). The per-site kill switch pauses a site for everyone for 6 hours when 40% of its last 20
+  results in a day (8 at least) hit a captcha, a block or a failure. The admin can pause or lift any site.
+- **Charged on confirmed submission only (`quota.py`).** A lease holds one application, from the plan's allowance
+  (Basic 60, Pro 150, Premium 300, Unlimited 750 per 30-day window; Free: a 5-application trial, once per account) or
+  from top-up credits (credit kind "apply"). Only `submitted` keeps the hold: an expired lease, a failure, a skip or
+  "needs you" gives it back. The numbers are constants in `rules.py`.
+- **Proof.** The submitted payload, the confirmation text and URL and a PNG screenshot (1.5 MB at most, in the
+  database) are kept per packet and shown under "What we sent". The tracker entry moves to Applied (Orbit Apply),
+  with the tailored resume kept as the version sent.
+- **Orbit Direct** (jobs posted on Orbit for Business) is a seam, `direct.apply_direct(packet)`, which returns None
+  until Orbit for Business's jobs merge. No listing has source "orbit" before then.
+Rejected: server-side headless submitting (flagged as fraud, would need the candidate's passwords; §3.1 A),
+automating Easy Apply or Naukri (their terms ban it, and the ban falls on the candidate's own account), a per-job
+approval as the only mode (the owner asked for automatic), answering legal questions from a general default, and
+charging per lease (credits would go on captchas and failures).

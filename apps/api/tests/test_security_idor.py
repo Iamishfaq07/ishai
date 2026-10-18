@@ -456,6 +456,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/support/threads"), ("GET", "/v1/support/threads/{thread_id}"),
     ("POST", "/v1/support/threads/{thread_id}/messages"), ("POST", "/v1/support/threads/{thread_id}/handoff"),
     ("DELETE", "/v1/support/threads/{thread_id}"),
+    # Orbit Apply's tailored resume for the executor: the 15-minute HMAC link (exp + sig) is the credential.
+    ("GET", "/v1/apply/{packet_id}/resume.pdf"),
 })
 
 
@@ -569,6 +571,8 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/v1/admin/referrals/export", {}),
     ("POST", "/v1/admin/referrals/codes", {"json": {"code": "I{target_code_tag}", "label": "x", "kind": "campus"}}),
     ("PATCH", "/v1/admin/referrals/codes/{target_code}", {"json": {"active": False}}),
+    ("GET", "/v1/admin/apply/sites", {}),
+    ("PUT", "/v1/admin/apply/sites/lever", {"json": {"paused": False}}),
 ]
 ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMIN_ROUTES]
 
@@ -577,7 +581,8 @@ def test_admin_route_inventory_is_complete() -> None:
     admin = {p for _, p in ROUTES if p.startswith("/v1/admin/")} - {"/v1/admin/status"}
     covered = {p.split("?", 1)[0].replace("{target}", "{user_id}").replace("{target_order}", "{payment_id}")
                .replace("{target_message}", "{message_id}").replace("{target_thread}", "{thread_id}")
-               .replace("{target_code}", "{code_id}") for _, p, _ in ADMIN_ROUTES}
+               .replace("{target_code}", "{code_id}").replace("/apply/sites/lever", "/apply/sites/{site}")
+               for _, p, _ in ADMIN_ROUTES}
     assert admin <= covered, f"admin routes missing from the matrix: {sorted(admin - covered)}"
 
 

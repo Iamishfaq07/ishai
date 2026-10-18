@@ -1,0 +1,421 @@
+{
+ "data": {
+  "jobPosting": {
+   "id": "05e14247-17c4-4e98-9a13-53828a4e2f13",
+   "title": "Business Development Representative, New York",
+   "applicationForm": {
+    "id": "8f29d79b-dfc2-4986-8750-81b64d02b741",
+    "sections": [
+     {
+      "title": null,
+      "fieldEntries": [
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741__systemfield_name",
+        "field": {
+         "id": "78a4e6fc-6616-44c8-aa6a-e37ab22d1ade",
+         "path": "_systemfield_name",
+         "humanReadablePath": "Name",
+         "title": "Full Name",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "String",
+         "__autoSerializationID": "StringField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741__systemfield_email",
+        "field": {
+         "id": "ba4e81a6-24d0-4d37-865f-55003c2ce6f0",
+         "path": "_systemfield_email",
+         "humanReadablePath": "Email",
+         "title": "Email",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "Email",
+         "__autoSerializationID": "EmailField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741_1e6fee4b-a07e-4dc8-986d-ed3e78a28794",
+        "field": {
+         "id": "1e6fee4b-a07e-4dc8-986d-ed3e78a28794",
+         "path": "1e6fee4b-a07e-4dc8-986d-ed3e78a28794",
+         "humanReadablePath": "",
+         "title": "Phone",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "Phone",
+         "__autoSerializationID": "PhoneField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741__systemfield_location",
+        "field": {
+         "id": "894c8f5b-9f8d-413b-85ac-3e0857ffbe33",
+         "path": "_systemfield_location",
+         "humanReadablePath": "Location",
+         "title": "Location",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "Location",
+         "locationTypes": [
+          "City",
+          "Country"
+         ],
+         "__autoSerializationID": "LocationField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741__systemfield_resume",
+        "field": {
+         "id": "ec95b263-2241-4e66-be14-5f3b70efa7c6",
+         "path": "_systemfield_resume",
+         "humanReadablePath": "Resume",
+         "title": "Resume",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "File",
+         "__autoSerializationID": "FileField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741_c8940bac-0b61-4acf-a4aa-6580c71ccb20",
+        "field": {
+         "id": "c8940bac-0b61-4acf-a4aa-6580c71ccb20",
+         "path": "c8940bac-0b61-4acf-a4aa-6580c71ccb20",
+         "humanReadablePath": "",
+         "title": "LinkedIn Profile",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "String",
+         "__autoSerializationID": "StringField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741_35f8cca8-b9d4-4db8-8d34-49021dbdfc27",
+        "field": {
+         "id": "35f8cca8-b9d4-4db8-8d34-49021dbdfc27",
+         "path": "35f8cca8-b9d4-4db8-8d34-49021dbdfc27",
+         "humanReadablePath": "",
+         "title": "What pronouns would you like our team to use when addressing you?",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "ValueSelect",
+         "selectableValues": [
+          {
+           "label": "He/Him",
+           "value": "He/Him"
+          },
+          {
+           "label": "She/Her",
+           "value": "She/Her"
+          },
+          {
+           "label": "They/Them",
+           "value": "They/Them"
+          },
+          {
+           "label": "Prefer not to say",
+           "value": "Prefer not to say"
+          },
+          {
+           "label": "Not represented here",
+           "value": "Not represented here"
+          }
+         ],
+         "__autoSerializationID": "ValueSelectField"
+        },
+        "isRequired": false,
+        "isHidden": null,
+        "descriptionHtml": null
+       }
+      ]
+     },
+     {
+      "title": null,
+      "fieldEntries": [
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741_fc359033-3856-407e-b8c2-f1e5fe6c6cff",
+        "field": {
+         "id": "fc359033-3856-407e-b8c2-f1e5fe6c6cff",
+         "path": "fc359033-3856-407e-b8c2-f1e5fe6c6cff",
+         "humanReadablePath": "",
+         "title": "We work from our offices on Mondays, Tuesdays, and Thursdays (Anchor Days). If you need an accommodation, we’ll partner with you and explore reasonable options consistent with applicable law. Are you able to commit to working from one of our offices on Anchor Days each week?",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "Boolean",
+         "__autoSerializationID": "BooleanField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741_c3a81556-73ce-4deb-bdf9-e314212fe507",
+        "field": {
+         "id": "c3a81556-73ce-4deb-bdf9-e314212fe507",
+         "path": "c3a81556-73ce-4deb-bdf9-e314212fe507",
+         "humanReadablePath": "",
+         "title": "Will you now or in the future require Notion to sponsor an immigration case in order to employ you?",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "Boolean",
+         "__autoSerializationID": "BooleanField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741_253adf0f-8a45-4860-adee-63ed1a7c3550",
+        "field": {
+         "id": "253adf0f-8a45-4860-adee-63ed1a7c3550",
+         "path": "253adf0f-8a45-4860-adee-63ed1a7c3550",
+         "humanReadablePath": "",
+         "title": "How did you hear about this opportunity? (select all that apply)",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "MultiValueSelect",
+         "selectableValues": [
+          {
+           "label": "LinkedIn",
+           "value": "LinkedIn"
+          },
+          {
+           "label": "Glassdoor",
+           "value": "Glassdoor"
+          },
+          {
+           "label": "Notion Blog",
+           "value": "Notion Blog"
+          },
+          {
+           "label": "Notion Employee",
+           "value": "Notion Employee"
+          },
+          {
+           "label": "Notion Website",
+           "value": "Notion Website"
+          },
+          {
+           "label": "Billboard/Outdoor Ads",
+           "value": "Billboard/Outdoor Ads"
+          },
+          {
+           "label": "Conference or Meetup",
+           "value": "Conference or Meetup"
+          }
+         ],
+         "__autoSerializationID": "MultiValueSelectField"
+        },
+        "isRequired": false,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "8f29d79b-dfc2-4986-8750-81b64d02b741_81ddc26b-515d-4277-ab01-d7536cf56505",
+        "field": {
+         "id": "549a3f61-f9a8-45de-9079-1c14a28828b2",
+         "path": "81ddc26b-515d-4277-ab01-d7536cf56505",
+         "humanReadablePath": "",
+         "title": "Tell us about why you want to be in sales at Notion",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "LongText",
+         "__autoSerializationID": "LongTextField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       }
+      ]
+     }
+    ]
+   },
+   "surveyForms": [
+    {
+     "id": "e042e348-eec9-437f-8a10-7ea710a51fe6",
+     "sections": [
+      {
+       "title": null,
+       "fieldEntries": [
+        {
+         "id": "e042e348-eec9-437f-8a10-7ea710a51fe6__systemfield_eeoc_gender",
+         "field": {
+          "id": "fbdcc6c7-fc72-4eb2-b7d5-7e149f79dda0",
+          "path": "_systemfield_eeoc_gender",
+          "humanReadablePath": "Gender",
+          "title": "Gender",
+          "isNullable": false,
+          "isPrivate": false,
+          "isDeactivated": false,
+          "isMany": false,
+          "metadata": {},
+          "type": "ValueSelect",
+          "selectableValues": [
+           {
+            "label": "Male",
+            "value": "male"
+           },
+           {
+            "label": "Female",
+            "value": "female"
+           },
+           {
+            "label": "Decline to self-identify",
+            "value": "decline_to_self_identify"
+           }
+          ],
+          "__autoSerializationID": "ValueSelectField"
+         },
+         "isRequired": false,
+         "isHidden": null
+        },
+        {
+         "id": "e042e348-eec9-437f-8a10-7ea710a51fe6__systemfield_eeoc_race",
+         "field": {
+          "id": "b33298aa-dca9-4f59-bc40-c673e60ec7a2",
+          "path": "_systemfield_eeoc_race",
+          "humanReadablePath": "Race",
+          "title": "Race",
+          "isNullable": false,
+          "isPrivate": false,
+          "isDeactivated": false,
+          "isMany": false,
+          "metadata": {},
+          "type": "ValueSelect",
+          "selectableValues": [
+           {
+            "label": "Hispanic or Latino",
+            "value": "hispanic_or_latino"
+           },
+           {
+            "label": "White (Not Hispanic or Latino)",
+            "value": "white"
+           },
+           {
+            "label": "Black or African American (Not Hispanic or Latino)",
+            "value": "black_or_african_american"
+           },
+           {
+            "label": "Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)",
+            "value": "native_hawaiian_or_other_pacific_islander"
+           },
+           {
+            "label": "Asian (Not Hispanic or Latino)",
+            "value": "asian"
+           },
+           {
+            "label": "American Indian or Alaska Native (Not Hispanic or Latino)",
+            "value": "american_indian_or_alaska_native"
+           },
+           {
+            "label": "Two or More Races (Not Hispanic or Latino)",
+            "value": "two_or_more_races"
+           },
+           {
+            "label": "Decline to self-identify",
+            "value": "decline_to_self_identify"
+           }
+          ],
+          "__autoSerializationID": "ValueSelectField"
+         },
+         "isRequired": false,
+         "isHidden": null
+        }
+       ]
+      },
+      {
+       "title": null,
+       "fieldEntries": [
+        {
+         "id": "e042e348-eec9-437f-8a10-7ea710a51fe6__systemfield_eeoc_veteran_status",
+         "field": {
+          "id": "6c5975cb-a5d8-476a-9ddf-d92a99475904",
+          "path": "_systemfield_eeoc_veteran_status",
+          "humanReadablePath": "Veteran Status",
+          "title": "Veteran Status",
+          "isNullable": false,
+          "isPrivate": false,
+          "isDeactivated": false,
+          "isMany": false,
+          "metadata": {},
+          "type": "ValueSelect",
+          "selectableValues": [
+           {
+            "label": "I identify as one or more of the classifications of protected veteran listed above",
+            "value": "protected_veteran"
+           },
+           {
+            "label": "I am not a protected veteran",
+            "value": "non_protected_veteran"
+           },
+           {
+            "label": "I decline to self-identify for protected veteran status",
+            "value": "decline_to_self_identify"
+           }
+          ],
+          "__autoSerializationID": "ValueSelectField"
+         },
+         "isRequired": false,
+         "isHidden": null
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

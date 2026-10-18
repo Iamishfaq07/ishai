@@ -56,6 +56,13 @@ even when SQLite hides it.
   free line in the room it will need once the server answers, so nothing moves (CLS 0, below). The product pages
   carry it too, within their budgets; it's its own chunk, so the pages without it pay only its name in the preload map.
 
+  Orbit Apply (D84, 19 Oct 2026) is a lazy chunk of its own, `AutoApplyPages`, at 183.5 kB first load (10.8 kB of
+  its own; budget 193). Jobs AI's own chunk is unchanged at 276.8 kB. The entry went up 0.3 kB (170.4 → 170.7). Most of
+  that is the new chunk's name in the preload map, the rest the two routes, the Applications tab and two generic
+  client methods (`request`, `blob`); the typed Orbit Apply calls stay in the chunk. That pushed pages already at
+  their budgets just over: Setup 200.1, Mock 206.2, Live 247.3 and Resume AI 205.2 kB. So the entry, Home, Sessions,
+  Setup, Mock, Live and Resume AI budgets went up 1 kB each.
+
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
 - **INP** ≤ 200 ms at p75, and no task over 200 ms while a page opens (total blocking time ≤ 300 ms), under the same

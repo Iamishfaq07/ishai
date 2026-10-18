@@ -21,3 +21,8 @@ Screenshots and traces are in `test-results/`.
 The frontend CI job runs this gate; Postgres locking and career endpoint tests run in the API CI job.
 
 The older `resume-race.mjs` script remains available for manual route-switch diagnostics.
+
+`auto-apply.mjs` is Orbit Apply's run (D84), driven by hand: start `apps/api/scripts/e2e_auto_apply.py` (port 8039,
+recorded ATS forms, fixture jobs, mock AI) and Vite on 5202 with `VITE_API_URL=http://127.0.0.1:8039`, then
+`node tools/e2e/auto-apply.mjs`. It goes through the setup wizard, the planner, a needs_answer packet and a fake
+executor (`apps/api/scripts/fake_executor.py`), and runs axe on each screen. Screenshots go to `%TEMP%\orbit-autoapply-e2e\`.

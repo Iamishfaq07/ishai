@@ -67,6 +67,7 @@ async def end_abandoned_sessions(now: datetime | None = None) -> int:
 
 
 async def sweeper(interval_s: float) -> None:
+    from orbit_api.auto_apply.planner import plan_due as plan_apply_due
     from orbit_api.billing.settle import reconcile_now
     from orbit_api.contact.routes import purge_expired_messages
     from orbit_api.entitlements import roll_due_grants
@@ -109,6 +110,13 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("job alerts sweep failed")
+        # Orbit Apply (auto_apply/planner.py): leases that ran out go back, and the setups due are planned.
+        try:
+            await plan_apply_due()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("orbit apply sweep failed")
         # A plan waiting its turn becomes the stored running one once the one before ends (entitlements.py, D57).
         try:
             await roll_due_grants()

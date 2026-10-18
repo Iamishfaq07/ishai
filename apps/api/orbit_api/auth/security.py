@@ -1,5 +1,6 @@
 import asyncio
 import ipaddress
+import re
 import secrets
 import time
 import uuid
@@ -59,8 +60,19 @@ def _now() -> int:
 # can clip a job to the tracker, check a page's fit and read the autofill basics; nothing else.
 SCOPED_PATHS: dict[str, frozenset[str]] = {
     "extension": frozenset({"/v1/extension/me", "/v1/extension/profile", "/v1/extension/fit",
-                            "/v1/jobs/tracker/manual", "/v1/auth/logout"}),
+                            "/v1/jobs/tracker/manual", "/v1/auth/logout",
+                            # Orbit Apply's executor (auto_apply/routes.py): lease the next packet, see the status.
+                            "/v1/apply/next", "/v1/apply/status"}),
 }
+# Scoped routes with an id in the path, matched whole: Orbit Apply's executor reporting one packet's result.
+SCOPED_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    "extension": (re.compile(r"/v1/apply/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/result"),),
+}
+
+
+def scope_allows(scope: str, path: str) -> bool:
+    return path in SCOPED_PATHS.get(scope, frozenset()) or any(
+        p.fullmatch(path) for p in SCOPED_PATTERNS.get(scope, ()))
 
 
 def create_access_token(user_id: str, token_version: int = 0, *, idle: bool = False,
@@ -134,7 +146,7 @@ async def current_user(request: Request, response: Response,
     if user is None or claims is None or claims.get("ver", 0) != user.token_version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
     scope = claims.get("scope")
-    if scope is not None and request.url.path not in SCOPED_PATHS.get(str(scope), frozenset()):
+    if scope is not None and not scope_allows(str(scope), request.url.path):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "This sign-in only works for the browser extension.")
     # This device signed out from another one (Settings → Security → Devices).
     from orbit_api.auth.devices import check_session

@@ -270,6 +270,8 @@ class TrackerOut(BaseModel):
     round_type: RoundType | None = None
     round_number: int | None = None
     last_round: LastRound | None = None
+    # "orbit_apply": Orbit Apply sent it (auto_apply, D84). None: the candidate applied.
+    applied_via: str | None = None
 
 
 DetailOut.model_rebuild()
@@ -339,7 +341,7 @@ def _tracker_out(t: JobApplication, live: bool, still_listed_at: datetime | None
         resume_id=t.resume_id, document_id=t.document_id, live=live, still_listed_at=still_listed_at,
         created_at=_aware(t.created_at), updated_at=_aware(t.updated_at),
         round_type=as_round_type(t.round_type), round_number=t.round_number,
-        last_round=last_round)
+        last_round=last_round, applied_via=t.applied_via)
 
 
 def _has_content(r: Resume) -> bool:

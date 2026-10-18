@@ -63,7 +63,11 @@ async def timeline(db: AsyncSession, entry: JobApplication, now: datetime | None
             events.append(TimelineEvent(kind="outreach", at=c.last_contacted_at, title=f"Reached out to {c.name}"))
 
     if entry.applied_at:
-        events.append(TimelineEvent(kind="applied", at=entry.applied_at, title="Applied"))
+        orbit = entry.applied_via == "orbit_apply"
+        events.append(TimelineEvent(kind="applied", at=entry.applied_at,
+                                    title="Applied (Orbit Apply)" if orbit else "Applied",
+                                    detail="Sent from your browser by Orbit Apply" if orbit else "",
+                                    link="/jobs/applications" if orbit else None))
 
     # Rounds for this job: practice and live sessions started from it (job_portal/interview.py) and, since the job was
     # saved, ones that name its company and weren't started from another job.
