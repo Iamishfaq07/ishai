@@ -88,7 +88,8 @@ for code only, never for small data labels. Self-hosted via Fontsource (`apps/we
 - `Sheet` (also exported as `Dialog`) — the one modal. A sheet that rises from the bottom on a phone, a centred dialog
   that fades in from a touch smaller from `sm` up (sizes `sm`–`2xl`), portaled to `body` so the tab bar cannot cover
   it. `placement="end"` is the full-height panel from the right (an account or a message). Focus moves in, is
-  trapped, and returns on close; Escape and the backdrop close it, and the page behind does not scroll. A `footer`
+  trapped, and returns on close (neither move scrolls the page); Escape and the backdrop close it, and the page behind
+  does not scroll and stays where it was (`lockScroll` holds `<html>`, the page's scroller). A `footer`
   (use `DialogActions`) stays pinned while the body scrolls. A confirm sits above it.
 - `gradient-border` — 1 px accent → aurora hairline around hero cards.
 - `text-gradient` — accent → aurora headline text.
