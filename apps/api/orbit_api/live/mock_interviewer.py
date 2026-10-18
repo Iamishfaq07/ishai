@@ -10,6 +10,7 @@ Re-drill (spec §33): `MockConfig.drill` replaces free topic choice with a fixed
 "short version" drill. Everything else (listening, completion, recording, grading) is the same mock machinery.
 """
 import asyncio
+import functools
 import json
 import logging
 import re
@@ -219,14 +220,24 @@ def drill_plan(items: list[dict[str, Any]]) -> list[DrillItem]:
     return plan
 
 
+@functools.cache
+def _drill_leads() -> tuple[str, ...]:
+    """Every drill lead line, in every practice language: built once, not on each call (the practice queue strips
+    every question of every review with it, thousands of calls a load)."""
+    return tuple(lead for lead in [*_DRILL_LEAD.values(),
+                                   *(lead for by_key in practice_language.DRILL_LEAD.values()
+                                     for lead in by_key.values())] if lead)
+
+
 def bare_question(text: str) -> str:
     """A review's question without a drill's lead line ("Let's try this one again. …"): reports from before drill
     questions were recorded bare have it, and a drill of one would open with it twice."""
     q = text.strip()
-    leads = [*_DRILL_LEAD.values(),
-             *(lead for by_key in practice_language.DRILL_LEAD.values() for lead in by_key.values())]
+    leads = _drill_leads()
     while True:
-        lead = next((lead for lead in leads if lead and q.startswith(lead)), None)
+        if not q.startswith(leads):  # most questions have no lead: one check in C
+            return q
+        lead = next((lead for lead in leads if q.startswith(lead)), None)
         if lead is None or len(q) == len(lead):
             return q
         q = q[len(lead):].strip()
