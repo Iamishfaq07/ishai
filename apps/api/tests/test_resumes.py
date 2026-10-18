@@ -416,6 +416,19 @@ def test_job_keywords_skip_fragments_perks_and_lookalike_words() -> None:
     assert "ruby on rails" in {k.lower() for k in extract_keywords("We use Ruby on Rails and PostgreSQL daily.")}
 
 
+def test_job_keywords_leave_out_where_the_job_is() -> None:
+    """A post's location isn't a keyword to add to a resume: "Austin, TX", "Offices in Bengaluru and London"."""
+    from orbit_api.resumes.ats import extract_keywords
+
+    job = ("Senior Backend Engineer - Austin, TX (Hybrid)\n"
+           "Brightline is hiring in Austin, TX and San Francisco, CA. Offices in Bengaluru and London.\n"
+           "Location: Austin, Texas. Remote (India) is possible.\n"
+           "Requirements: Python, PostgreSQL and Kubernetes; experience with Kafka, AWS and Unity, AR/VR.\n")
+    got = {k.lower() for k in extract_keywords(job)}
+    assert {"python", "postgresql", "kubernetes", "kafka", "aws", "ar"} <= got
+    assert not got & {"austin", "tx", "san", "francisco", "ca", "bengaluru", "london", "texas", "india"}
+
+
 def test_suggestions_kept_on_a_resume_have_bounded_text(client: TestClient) -> None:
     """The suggestions waiting on a resume come back on every load. Their count was capped (40) but not their text,
     so one autosave could park megabytes on the row."""
