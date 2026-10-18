@@ -39,7 +39,6 @@ import {
   confirmDialog,
   safeLocal,
   useNaturalVoiceSource,
-  VOICE_CHOICE_KEY,
 } from "@orbit/ui";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -133,10 +132,10 @@ export function LiveScreen({
   const [shotNote, setShotNote] = useState<string | null>(null);
 
   const ratings = useAnswerRatings(api, session.id);
-  // The mock interviewer reads questions with the natural voice when the server offers it (Settings picks which).
+  // The mock interviewer reads questions with the natural voice when the server offers it (Aurora at the normal pace,
+  // D76; the admin's voice picker is on the web).
   const naturalVoice = useNaturalVoiceSource(
     api,
-    safeLocal.getItem(VOICE_CHOICE_KEY),
     session.type === "mock" && (session.language ?? "en") === "en", // the natural voices are English
   );
   const { live, actions, client } = useLiveSession({

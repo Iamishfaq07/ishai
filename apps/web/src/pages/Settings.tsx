@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { AdminConfig, AdminConfigUpdate, SignedInDevice } from "@orbit/types";
 import {
@@ -36,7 +36,7 @@ import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { useTheme, type ThemePref } from "../lib/theme";
 import { OnThisPage, type PageSection } from "../components/OnThisPage";
-import { InterviewerVoiceCard } from "./InterviewerVoiceCard";
+import { InterviewerVoiceCard, useVoiceChoice } from "./InterviewerVoiceCard";
 import { PasskeysCard } from "./PasskeysCard";
 import { SecurityActivityCard } from "./SecurityActivity";
 import { TwoFactorCard } from "./TwoFactorCard";
@@ -124,9 +124,12 @@ const SECTIONS: PageSection[] = [
 
 /** Wide screens only: the sections as links in the empty column beside the cards. */
 function SectionNav() {
+  // The interviewer's voice is the admin's card only (D76).
+  const { canChoose } = useVoiceChoice();
+  const sections = useMemo(() => (canChoose ? SECTIONS : SECTIONS.filter((s) => s.id !== "interviewer-voice")), [canChoose]);
   return (
     <div className="hidden lg:block">
-      <OnThisPage sections={SECTIONS} label="Settings sections" className="sticky top-24 pt-[4.75rem]" />
+      <OnThisPage sections={sections} label="Settings sections" className="sticky top-24 pt-[4.75rem]" />
     </div>
   );
 }

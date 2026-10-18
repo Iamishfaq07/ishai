@@ -17,7 +17,7 @@ import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
 import { useInterviewerVoice, voiceLanguage } from "../live/useInterviewerVoice";
-import type { NaturalVoiceSource, VoicePace } from "../live/naturalVoice";
+import type { NaturalVoiceSource } from "../live/naturalVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
 import { readAloudLanguage, scriptLang } from "../live/languages";
@@ -164,12 +164,10 @@ export interface LivePanelProps {
   onInterviewerSpeaking?: (speaking: boolean) => void;
   /** The candidate talked over Orbit's voice: what the page held back meanwhile (their first words) goes out now. */
   onBargeIn?: () => void;
-  /** The interviewer's natural voice (useNaturalVoiceSource); null or absent = the device's voice. */
+  /** The interviewer's voice and pace (useNaturalVoiceSource); null or absent = the device's voice, normal pace. */
   naturalVoice?: NaturalVoiceSource | null;
   /** A mock's practice language ("en", "hi", "hinglish"): which device voice reads the questions. */
   practiceLanguage?: string;
-  /** The interviewer's speaking pace (Settings, the video interview's setup). */
-  voicePace?: VoicePace;
   /** What live answers are written in (the session's answer language, else its interview language): which device
    *  voice reads them aloud. Absent: English. */
   answerLanguage?: string;
@@ -219,7 +217,7 @@ export function LivePanel(props: LivePanelProps) {
     enabled: Boolean(props.mockInterview) && !voiceMuted,
     natural: props.naturalVoice ?? null,
     lang: voiceLanguage(props.practiceLanguage),
-    pace: props.voicePace ?? "normal",
+    pace: props.naturalVoice?.pace ?? "normal", // the admin's to pick (D76)
     onEvent: voiceEvent,
   });
   const { onInterviewerSpeaking, onBargeIn } = props;

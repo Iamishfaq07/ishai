@@ -2,12 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MockVoiceEvent } from "@orbit/types";
 import {
   ACKS,
-  NaturalVoiceError,
   PACE_SPEED,
   cachedAck,
-  naturalVoiceGone,
   playClip,
-  speakNatural,
+  sayNaturalLine,
   voiceForSpeaker,
   warmAcks,
   type NaturalVoiceSource,
@@ -17,13 +15,13 @@ import { speakable } from "./speechText";
 import { VoiceTap } from "./voiceActivity";
 
 /**
- * Speaks the mock interviewer's lines: with the natural voice (neural TTS from the API, the chosen voice and pace)
- * when it's set up and chosen, otherwise with the platform's built-in speech engine (Windows voices in WebView2 / the
- * browser), where a natural-sounding English voice is preferred when installed. Saba never goes silent without saying
- * why (D76): a natural-voice failure, or no sound within a few seconds, falls back to the device's voice for that line
- * (and for the rest of the session when it won't come back: allowance used, off); a browser that won't play sound
- * until a tap gets "blocked" (the room asks for the tap, `unlock` plays it); no voice at all is "unavailable" (the
- * text is shown). Every line is shaped for speech first (speechText.ts).
+ * Speaks the mock interviewer's lines: with the natural voice (neural TTS from the API: Aurora at the normal pace, or
+ * the admin's pick) when it's set up, otherwise with the platform's built-in speech engine (Windows voices in WebView2
+ * / the browser), where a natural-sounding English voice is preferred when installed. Saba never goes silent without
+ * saying why (D76): a natural-voice failure, or no sound within PREPARE_LIMIT_MS, falls back to the device's voice for
+ * that line only (for the rest of the session only when it won't come back: allowance used, off); a browser that won't
+ * play sound until a tap gets "blocked" (the room asks for the tap, `unlock` plays it); no voice at all is
+ * "unavailable" (the text is shown). Every line is shaped for speech first (speechText.ts).
  *
  * `speaking` lets the page mute the microphone while the interviewer talks, so its own voice (from the speakers) is
  * never transcribed as the candidate's answer. `activity` is the voice as the screen follows it (voiceActivity.ts):
@@ -114,8 +112,12 @@ export interface VoiceLine {
   speaker?: string;
 }
 
-/** No sound this long after a natural-voice line was asked for: the device's voice says it instead. */
-const PREPARE_LIMIT_MS = 7000;
+/**
+ * No sound this long after a natural-voice line was asked for: the device's voice says it instead. Her lines crossed
+ * 7 s from India (1-3.7 s for the voice at the server, 1-7 s more through the web's proxy), so she switched to the
+ * robot voice after her greeting; the room says "about to speak…" meanwhile (D76).
+ */
+const PREPARE_LIMIT_MS = 10_000;
 /** The device's voice never started: it isn't there. */
 const DEVICE_START_LIMIT_MS = 4000;
 const DEVICE_RATE: Record<VoicePace, number> = { slower: 0.9, normal: 1, brisk: 1.1 };
@@ -157,7 +159,8 @@ export function useInterviewerVoice(
   const events = useRef(onEvent);
   events.current = onEvent;
   const [naturalOff, setNaturalOff] = useState(false);
-  const useNatural = Boolean(natural) && !natural?.pending && !naturalOff;
+  // No voices: the device's (the admin chose it), at the source's pace.
+  const useNatural = Boolean(natural?.voices.length) && !natural?.pending && !naturalOff;
   const [tap] = useState(() => new VoiceTap());
   useEffect(() => () => tap.dispose(), [tap]);
   const speed = PACE_SPEED[pace];
@@ -293,7 +296,7 @@ export function useInterviewerVoice(
       setLineId(id);
       tap.beginLine(id, text);
       if (speaker && !speakers.current.has(speaker)) speakers.current.set(speaker, speakers.current.size);
-      if (!natural || natural.pending || naturalOff) {
+      if (!natural || natural.pending || !natural.voices.length || naturalOff) {
         sayOnDevice(id, text, speaker);
         return;
       }
@@ -301,56 +304,35 @@ export function useInterviewerVoice(
       const controller = new AbortController();
       inFlight.current = controller;
       setPhase("preparing"); // her voice is on its way: the mic still goes to the transcriber (D76)
-      let heard = false;
-      let blocked = false;
-      const fallBack = (rest: string, detail: string) => {
-        report("fallback", id, detail);
-        sayOnDevice(id, rest, speaker, text.endsWith(rest) ? text.length - rest.length : 0);
-      };
-      // No sound for too long (a slow network, a stuck request): the device's voice says it now.
-      timers.current.push(window.setTimeout(() => {
-        if (heard || blocked || inFlight.current !== controller) return;
-        controller.abort();
-        inFlight.current = null;
-        fallBack(text, "natural voice too slow");
-      }, PREPARE_LIMIT_MS));
-      void speakNatural(text, natural.speak, voiceId, controller.signal, {
+      void sayNaturalLine(text, natural.speak, voiceId, controller, {
+        limitMs: PREPARE_LIMIT_MS,
         speed,
         before: () => ackDone.current ?? Promise.resolve(),
         onClip: (audio, clip, part) => tap.attach(audio, clip.blob, part),
         onPlaying: () => {
-          heard = true;
           if (current.current !== id) return;
           setPhase("speaking");
           report("started", id);
         },
         onBlocked: (play) => {
-          blocked = true;
           setPhase("blocked");
           resume.current = () => {
             resume.current = null;
-            blocked = false;
             setPhase("preparing");
             play();
           };
           report("blocked", id, "autoplay");
         },
         onIssue: (_kind, detail) => report("stalled", id, detail),
-      }).then(
-        () => {
-          if (inFlight.current === controller) {
-            inFlight.current = null;
-            finished(id);
-          }
-        },
-        (err: unknown) => {
-          if (controller.signal.aborted) return; // stopped, or the next line took over
-          inFlight.current = null;
-          const cause = err instanceof NaturalVoiceError ? err.reason : err;
-          if (naturalVoiceGone(cause)) setNaturalOff(true);
-          fallBack(err instanceof NaturalVoiceError ? err.rest : text, cause instanceof Error ? cause.message : "natural voice failed");
-        },
-      );
+      }).then((end) => {
+        if (!end || inFlight.current !== controller) return; // stopped, or the next line took over
+        inFlight.current = null;
+        if (end.said) return finished(id);
+        // Off for the session only when it won't come back; a slow or failed line leaves her next one natural.
+        if (end.gone) setNaturalOff(true);
+        report("fallback", id, end.detail);
+        sayOnDevice(id, end.rest, speaker, text.endsWith(end.rest) ? text.length - end.rest.length : 0);
+      });
     },
     [natural, naturalOff, halt, sayOnDevice, tap, speed, report, finished],
   );

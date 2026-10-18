@@ -66,6 +66,28 @@ describe("sentence by sentence", () => {
       "Let's shift a bit. Can you walk me through one specific finding you triaged that turned out to be a real risk, and what you did about it yourself?",
     ]);
   });
+
+  it("starts a long first sentence with its first real clause (D76), never a fragment or half a word", () => {
+    const cases: Array<[string, string]> = [
+      // "So," alone would be mostly silence: the first clause of four words or more.
+      ["So, for the next 5 minutes or so, we'll focus on application security and how you've handled it before.", "So, for the next 5 minutes or so,"],
+      ["That rollout plan sounds careful and well thought through; walk me through the hardest part of it.", "That rollout plan sounds careful and well thought through;"],
+      ["Before we get into the technical part — tell me a little about the team you work with now.", "Before we get into the technical part —"],
+    ];
+    for (const [line, first] of cases) {
+      const out = speechChunks(line);
+      expect(out[0]).toBe(first);
+      expect(out.join(" ")).toBe(line);
+    }
+    // The dash it ends on is read as a pause.
+    expect(speakable("Before we get into the technical part —")).toBe("Before we get into the technical part,");
+    // Not inside a number, not leaving a fragment behind ("really."), not a sentence of twelve words or fewer.
+    const numbers = "We grew from 50,000 to 2,000,000 users in a year without a single long outage, really.";
+    expect(speechChunks(numbers)).toEqual([numbers]);
+    expect(speechChunks("Okay, so tell me about a time you disagreed with your manager.")).toEqual([
+      "Okay, so tell me about a time you disagreed with your manager.",
+    ]);
+  });
 });
 
 describe("when each word is said", () => {

@@ -28,8 +28,6 @@ import {
   confirmDialog,
   safeLocal,
   useNaturalVoiceSource,
-  savedPace,
-  VOICE_CHOICE_KEY,
 } from "@orbit/ui";
 import { Button, ErrorNote, Spinner } from "../components/ui";
 import { LIVE_URL, api } from "../lib/api";
@@ -99,13 +97,13 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   const [mode, setMode] = useState<PanelMode>(() => (safeLocal.getItem(MODE_KEY) as PanelMode | null) ?? "expanded");
   const [hotkeys] = useState(loadHotkeys);
   const ratings = useAnswerRatings(api, session.id);
-  // The mock interviewer reads questions with the natural voice when the server offers it (Settings picks which).
-  // The camera coach (ORBIT_VIDEO_MOCK): on-device numbers about facing the camera, offered in mock rounds.
+  // The mock interviewer reads questions with the natural voice when the server offers it (Aurora at the normal pace;
+  // the admin's own pick, D76). The camera coach (ORBIT_VIDEO_MOCK): on-device numbers about facing the camera,
+  // offered in mock rounds.
   const { user } = useAuth();
   const cameraCoach = useCameraCoach(session.id, session.type === "mock" && Boolean(user?.video_mock));
   const naturalVoice = useNaturalVoiceSource(
     api,
-    safeLocal.getItem(VOICE_CHOICE_KEY),
     session.type === "mock" && (session.language ?? "en") === "en", // the natural voices are English
   );
   const { live, actions, client } = useLiveSession({
@@ -387,7 +385,6 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       mockInterview={session.type === "mock"}
       videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}
-      voicePace={savedPace()}
       practiceLanguage={session.language}
       answerLanguage={session.answer_language ?? session.language}
       {...(cameraCoach ? { cameraCoach } : {})}

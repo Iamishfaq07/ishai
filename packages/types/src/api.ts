@@ -120,6 +120,8 @@ export interface VoiceStatus {
   default_voice: string;
   /** Characters of natural voice left today; null = no cap. */
   chars_left: number | null;
+  /** Only the admin picks the voice and pace (D76); absent (an older API) = no choice, the default voice. */
+  can_choose?: boolean;
 }
 
 /** GET /v1/auth/2fa */

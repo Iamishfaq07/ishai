@@ -98,7 +98,8 @@ export function speakable(text: string): string {
   t = t.replace(/(^|\s)\*(\S[^*]*\S)\*(?=\s|$|[.,!?])/g, "$1$2");
   // Lines and dashes are pauses.
   t = t.replace(/\s*\n+\s*/g, (m, offset: number) => (offset > 0 && !/[.!?:;,]$/.test(t.slice(0, offset)) ? ". " : " "));
-  t = t.replace(/\s+[—–-]\s+/g, ", ").replace(/—/g, ", ");
+  // A dash that ends a piece (speechChunks splits a long first sentence after one) is a pause too.
+  t = t.replace(/\s+[—–-](?:\s+|$)/g, ", ").replace(/—/g, ", ");
   // Money, percentages, ranges.
   t = t.replace(/₹\s?([\d,]+(?:\.\d+)?)(?:\s?(LPA|lakhs?|L|crores?|cr|k)\b)?/gi, (_m, a: string, u?: string) => rupees(a, u));
   t = t.replace(/\b(?:Rs\.?|INR)\s?([\d,]+(?:\.\d+)?)(?:\s?(LPA|lakhs?|L|crores?|cr|k)\b)?/g, (_m, a: string, u?: string) => rupees(a, u));
@@ -122,12 +123,36 @@ export function speakable(text: string): string {
 /** The second piece's length (characters): long enough to be worth a request, short enough to be ready in time. */
 export const SECOND_CHUNK_CHARS = 140;
 const SHORT_PIECE_CHARS = 50;
+/** A first sentence over this many words starts with its first clause alone. */
+const LONG_FIRST_WORDS = 12;
+/** Words on each side of that split, at least: never a fragment ("So,") on its own. */
+const CLAUSE_MIN_WORDS = 4;
+
+const wordCount = (s: string) => s.split(/\s+/).filter((w) => /[\p{L}\p{N}]/u.test(w)).length;
 
 /**
- * How a line is said, in up to `max` growing pieces (D76): the first sentence alone (its first clause if it's long),
- * so the voice starts as soon as it can; then the next sentences up to SECOND_CHUNK_CHARS, made while the first
- * plays; then the rest, made while the second plays. A very short sentence ("Sure.") goes with its neighbour. Each
- * piece is one request to the voice provider: a real call made one a sentence (36 for a short interview).
+ * `sentence` split after its first clause: a comma, semicolon or colon, or a spaced dash, with at least
+ * CLAUSE_MIN_WORDS words on each side; null when it has none. Only at a space (never inside a word or "50,000"), so
+ * the two joined by a space are the sentence again.
+ */
+function firstClause(sentence: string): [string, string] | null {
+  const boundary = /(?:[,;:]|\s[—–-])(?=\s+\S)/g;
+  for (let m = boundary.exec(sentence); m; m = boundary.exec(sentence)) {
+    const cut = m.index + m[0].length;
+    const head = sentence.slice(0, cut);
+    const tail = sentence.slice(cut).trimStart();
+    if (wordCount(head) < CLAUSE_MIN_WORDS) continue;
+    return wordCount(tail) >= CLAUSE_MIN_WORDS ? [head, tail] : null; // a later one only leaves less
+  }
+  return null;
+}
+
+/**
+ * How a line is said, in up to `max` growing pieces (D76): the first sentence alone (its first clause if it's over
+ * LONG_FIRST_WORDS), so the voice starts as soon as it can; then the next sentences up to SECOND_CHUNK_CHARS, made
+ * while the first plays; then the rest, made while the second plays. A very short sentence ("Sure.") goes with its
+ * neighbour. Each piece is one request to the voice provider: a real call made one a sentence (36 for a short
+ * interview).
  */
 export function speechChunks(text: string, max = 3): string[] {
   const sentences = text.trim().split(/(?<=[.!?])\s+(?=\S)/).map((x) => x.trim()).filter(Boolean);
@@ -141,12 +166,11 @@ export function speechChunks(text: string, max = 3): string[] {
     if (last !== undefined && (tinyLast || tinyThis)) merged[merged.length - 1] = `${last} ${sentence}`;
     else merged.push(sentence);
   }
-  // A long first sentence: its first clause on its own.
+  // A long first sentence: its first clause on its own (a piece plays once all of it has arrived, so a shorter first
+  // request starts her sooner, D76).
   const first = merged[0]!;
-  if (first.split(/\s+/).length > 16) {
-    const comma = first.indexOf(", ", 30);
-    if (comma > 0 && comma < first.length - 20) merged.splice(0, 1, first.slice(0, comma + 1), first.slice(comma + 2));
-  }
+  const split = wordCount(first) > LONG_FIRST_WORDS ? firstClause(first) : null;
+  if (split) merged.splice(0, 1, ...split);
   const out = [merged[0]!];
   let i = 1;
   if (max > 2 && i < merged.length) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "../api/client";
-import { DEVICE_VOICE, naturalVoiceGone, orderVoices, voiceChunks, voiceForSpeaker } from "./naturalVoice";
+import { DEVICE_VOICE, naturalVoiceGone, orderVoices, voiceChunks, voiceForSpeaker, voiceSetup, worthRetrying } from "./naturalVoice";
 
 const OPTIONS = [
   { id: "us", label: "Thalia" },
@@ -27,6 +27,36 @@ describe("natural voice choices", () => {
     expect(naturalVoiceGone(new ApiError(503, "off"))).toBe(true);
     expect(naturalVoiceGone(new ApiError(502, "provider hiccup"))).toBe(false); // next question tries again
     expect(naturalVoiceGone(new Error("autoplay refused"))).toBe(false);
+  });
+
+  it("asks once more only after a hiccup, never after a refusal or a request that took too long", () => {
+    expect(worthRetrying(new TypeError("Failed to fetch"))).toBe(true);
+    expect(worthRetrying(new ApiError(0, "Can't reach Orbit.", "offline"))).toBe(true);
+    for (const status of [500, 502, 504]) expect(worthRetrying(new ApiError(status, "hiccup"))).toBe(true);
+    expect(worthRetrying(new ApiError(0, "That took too long.", "timeout"))).toBe(false);
+    for (const status of [401, 403, 429, 503]) expect(worthRetrying(new ApiError(status, "no"))).toBe(false);
+    expect(worthRetrying(new DOMException("stopped", "AbortError"))).toBe(false);
+  });
+});
+
+describe("only the admin picks the voice and pace (D76)", () => {
+  const status = { available: true, voices: OPTIONS, default_voice: "us" };
+  const old = { choice: "uk", pace: "brisk" as const };
+
+  it("gives everyone else the default voice at the normal pace, whatever an older build saved", () => {
+    expect(voiceSetup(status, old)).toEqual({ voices: ["us", "uk", "au"], pace: "normal" });
+    expect(voiceSetup({ ...status, can_choose: false }, { choice: DEVICE_VOICE, pace: "slower" })).toEqual({
+      voices: ["us", "uk", "au"],
+      pace: "normal",
+    });
+    expect(voiceSetup({ ...status, available: false, voices: [] }, old)).toBeNull(); // the device's voice
+  });
+
+  it("uses the admin's saved voice and pace, the device's voice included", () => {
+    const admin = { ...status, can_choose: true };
+    expect(voiceSetup(admin, old)).toEqual({ voices: ["uk", "us", "au"], pace: "brisk" });
+    expect(voiceSetup(admin, { choice: DEVICE_VOICE, pace: "slower" })).toEqual({ voices: [], pace: "slower" });
+    expect(voiceSetup(admin, { choice: null, pace: "normal" })).toEqual({ voices: ["us", "uk", "au"], pace: "normal" });
   });
 });
 
