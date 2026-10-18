@@ -104,7 +104,7 @@ test("connect, clip, check fit, save, and fill without submitting", async () => 
   await expect(form.locator("#last_name")).toHaveValue("Typed-By-Me"); // never overwrites
   await expect(form.locator("#salary")).toHaveValue(""); // the person's own answers
   await expect(form.locator("#why")).toHaveValue("");
-  await expect(form.getByRole("status")).toContainText("Orbit never submits");
+  await expect(form.getByRole("status")).toContainText("Orbit doesn't submit this form");
   await form.waitForTimeout(300);
   expect(submitted).toBe(false);
 });
