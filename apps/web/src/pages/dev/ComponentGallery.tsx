@@ -75,6 +75,8 @@ import {
   Trash2,
   type SortDirection,
 } from "@orbit/ui";
+import { TranscriptDemo } from "./TranscriptGallery";
+import { VoiceVisualizers } from "./VoiceGallery";
 
 /**
  * The component gallery (development builds only, at /dev/components): every shared primitive in its states, on the
@@ -96,6 +98,8 @@ export function ComponentGalleryPage() {
       <Forms />
       <Data />
       <Illustrations />
+      <VoiceVisualizers />
+      <TranscriptDemo />
     </div>
   );
 }

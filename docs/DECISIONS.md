@@ -745,3 +745,32 @@ the reset now invalidates. Also rejected: forcing 2FA off after a reset. That wo
 factor. A user who has lost both their phone and their recovery codes has no way back on their own today, and
 the admin console can't turn 2FA off either. That's a follow-up (SECURITY_REVIEW.md): an admin action, taken after
 checking who's asking, and audited.
+
+**D69 — Saba is a voice that moves with the real audio, the video room is redrawn around it, and transcripts stay
+where you're reading.** The owner found the video room's orb (a gradient sphere with pulse rings and a spin) dated
+and asked for "a real voice going up and down", like the AI interviewers on micro1, Alignerr and Mercor, more
+animation in the room, new controls and graphics, and a transcript that looks modern and scrolls properly. Saba is
+now `VoiceVisualizer`: a flat disc with a row of rounded bars across it (40, or 24 small), vertically centred, drawn on
+one DPR-aware canvas by one requestAnimationFrame loop that reads the audio itself, so React never renders per frame;
+it sleeps when the tab is hidden, when it's off screen, and when it's paused and still. What drives it: Saba's natural
+voice is real audio, routed through one shared AudioContext with an analyser where Web Audio is running (resumed on
+the first tap, for mobile Safari), and otherwise read from the clip's decoded samples at the element's current time,
+so the voice never depends on the graph (on iPhone and iPad Web Audio follows the ringer switch, so the clip is never
+routed there). The device's voice (speechSynthesis) can't be captured, so its word-boundary events drive a seeded,
+speech-like envelope, syllable by syllable; those events also mark the caption's current word. The candidate's mic
+drives the bars in light ink while Saba hears them, from a voice detector with an adaptive floor and hysteresis
+(`useMicActivity`), which also draws the camera tile's speaking ring. The moods (joining, speaking, listening,
+hearing, thinking, paused) are distinct in colour and movement and ease into each other. Motion follows the app's
+levels, with one exception: at Off, or whenever the OS asks for less motion, the visualizer is a still five-bar meter
+stepping a few times a second (with a meter role), because a moving voice is exactly what reduced-motion users opt out
+of; the mood is always said in words, and announced (not your own talking). Around it the room is the workbench's dark
+blue-grey in either theme, with new call controls (crossed and toned when off, End a destructive pill, tooltips with
+shortcuts), a segmented question progress, a calm "Live" pulse, word-by-word captions, a join and an end moment drawn
+in the scenes' line style, and the camera coach's state as chips. The transcript is one component for the room and
+the copilot (`TranscriptLog`): a conversation, grouped by speaker, a line still being heard lighter until it settles in
+place; `useStickyScroll` follows the bottom only while you're within 48 px of it, holds your place and counts new lines
+when you read back ("Jump to latest · 3 new"), follows in the same frame (observers, not just a dependency), tells its
+own scrolls from yours, and keeps the newest 200 lines in the page while following. Rejected: an animated avatar or
+face (no fake people), a WebGL blob (heavier, and hard to keep flat and accessible), and driving the bars from React
+state (a render per frame). The cost: a second audio path to keep (analyser or decoded samples), and the device voice's
+bars are an honest estimate of a voice rather than its sound.

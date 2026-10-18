@@ -195,7 +195,7 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   reduced-motion setting caps Full at Gentle; a new device starts at Gentle when the OS asks or data saver is on
   (D47).
 - **Writing motion:** use `motion-ok:` (Full only) for anything that moves, not `motion-safe:` (which sees only the
-  OS). Anything animated from JS (canvas, `element.animate`, rAF) reads `useMotion()`; the `Orb` already does.
+  OS). Anything animated from JS (canvas, `element.animate`, rAF) reads `useMotion()`; the `Orb` and Saba's `VoiceVisualizer` do.
   Entrances (`animate-fade-in` / `fade-up` / `scale-in` / `rise`, `stagger`, or `.motion-fade` on your own) become
   fades under Gentle on their own.
 - Utilities: `animate-fade-up` (page), `animate-rise` / `animate-fade-out` (panels, toasts), `stagger` (first 6
@@ -304,6 +304,46 @@ only for as long as the wait lasts.
   `scenes.test.ts` checks these rules.
 - **Plain words:** `<Term term="ats">ATS</Term>` (glossary: ats, jd, utr, star, fit-check, tailor) or `tip="…"`.
 - **Links that look like buttons:** `buttonClass(variant, size)`, never a copied class string.
+
+## The video interview room
+
+The AI video interview (`VideoInterviewRoom`, at `/live/:id` for a video session; D69) is a call with Saba, the AI
+interviewer: her tile, your camera, the transcript and a dock of controls.
+
+- **The panel**: the workbench's dark blue-grey (`.video-room`: `zinc-950` room, `zinc-900` tiles, white hairlines)
+  in either theme, so light mode looks the same; flat, no imagery behind it; the accent is Saba's colour and nothing
+  else's, light ink (`zinc-100`) is yours. Status colours keep their meaning: rose is something turned off (and End),
+  amber is your paused mic.
+- **Saba is a voice, never a face** (`VoiceVisualizer`, `size="lg"` in her tile, `"sm"` where space is short): a flat
+  disc with 40 rounded bars across it (24 small) that rise and fall with the real audio, fast up and slower down. Her
+  voice in the accent while she speaks; yours in light ink while she hears you; a calm low wave while she listens; a
+  shimmer running across while she thinks; bars rising in from flat as she joins; flat, dimmed bars while your mic is
+  paused. Moods blend into each other. The mood is always written beside her (`Saba · listening`) and announced.
+  `/dev/components` shows every mood with fake sources (word timing, or a fake voice through a real analyser) and
+  each motion level.
+- **Where the bars come from**: the natural voice through one shared AudioContext and an analyser (or its decoded
+  samples where Web Audio can't take it), the device voice from its word-boundary events, your voice from the mic's
+  analyser (`useMicActivity`, which also draws your camera tile's speaking ring). One canvas, one animation frame loop
+  reading the audio directly, no React render per frame; it stops when the tab is hidden or it's off screen.
+- **Around it**: a `Live` dot that pulses, the title with the role and company, the time, and the round's progress as
+  one segment per question (a hairline under the header on phones); captions whose words come in one after another and
+  mark the word being said when there's word timing; the camera coach's state as chips that come and go; a join
+  moment and an end moment drawn in the scenes' line style (`JoiningArt`, `WrapUpArt`).
+- **Controls**: round icon buttons, 40 px below 440 px so all seven fit a 360 px phone (#364,
+  `tools/e2e/video-room.spec.ts`), then 48 and 52 px; something turned off is crossed out and toned rose; the press
+  scales to 0.96 (Full only); each has a name, a tooltip (with its keyboard shortcut where there is one) and a
+  focus ring. End is the solid rose button (a pill with its name from 440 px), and asks first.
+- **The transcript** (`TranscriptLog`, shared with the copilot's Transcript tab): a conversation, the interviewer on the
+  left with their mark, you on the right, consecutive lines grouped under one name and time, at a readable width; a
+  line still being heard is lighter and settles in place. It follows the newest line only while you're at the bottom
+  (within 48 px); scroll up to read and it stays put, with a "Jump to latest · N new" chip (smooth at Full, instant
+  otherwise). Screen readers hear each line once, when it's final. On wide screens it's a panel beside the call (hide
+  it from its header; the header's Transcript button brings it back, remembered on the device); on phones and tablets
+  a drawer between the call and the dock, folded to the latest words, that never covers the buttons.
+- **Motion**: Full moves everything above. Gentle keeps the bars moving with the voice, slower and smaller, and turns
+  the room's other motion into fades (captions as one card, the progress fading in, the end summary fading in turn).
+  Off, or the OS asking for less motion, makes Saba a still five-bar meter that steps a few times a second (a meter
+  for assistive technology) and stops everything else; the words always say what's happening.
 
 ## Brand
 

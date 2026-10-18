@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { NaturalVoiceError, naturalVoiceGone, speakNatural, voiceForSpeaker, type NaturalVoiceSource } from "./naturalVoice";
+import { VoiceTap, type VoiceActivity } from "./voiceActivity";
 
 /**
  * Speaks the mock interviewer's questions: with the natural voice (neural TTS from the API, one voice) when it's set
@@ -8,7 +9,8 @@ import { NaturalVoiceError, naturalVoiceGone, speakNatural, voiceForSpeaker, typ
  * device's voice for that question, and for the rest of the session when it won't come back (allowance used, off).
  *
  * `speaking` lets the page mute the microphone while the interviewer talks, so its own voice (from the speakers) is
- * never transcribed as the candidate's answer.
+ * never transcribed as the candidate's answer. `activity` is the voice as the screen follows it (voiceActivity.ts):
+ * the natural voice's real audio, or the device voice's word timing.
  */
 const PREFERRED = [/natural/i, /aria|jenny|guy|sonia|ryan|libby/i, /zira|david|mark/i];
 
@@ -57,6 +59,8 @@ export interface InterviewerVoice {
   voiceName: string | null;
   /** Which engine reads the questions now. */
   engine: "natural" | "device";
+  /** How loud she is and which word she's on, read without re-rendering (the video room's visualizer and captions). */
+  activity: VoiceActivity;
   repeat: () => void;
   stop: () => void;
 }
@@ -75,6 +79,8 @@ export function useInterviewerVoice(
   const inFlight = useRef<AbortController | null>(null);
   const [naturalOff, setNaturalOff] = useState(false);
   const useNatural = Boolean(natural) && !natural?.pending && !naturalOff;
+  const [tap] = useState(() => new VoiceTap());
+  useEffect(() => () => tap.dispose(), [tap]);
 
   useEffect(() => {
     if (!synth) return;
@@ -88,7 +94,8 @@ export function useInterviewerVoice(
   }, [synth, lang]);
 
   const sayOnDevice = useCallback(
-    (text: string, speaker?: string) => {
+    /** `offset`: where `text` starts in the question (-1: not in it), so word timing can mark the caption. */
+    (text: string, speaker?: string, offset = 0) => {
       if (!synth) {
         setSpeaking(false);
         return;
@@ -104,20 +111,41 @@ export function useInterviewerVoice(
       if (chosen) u.voice = chosen;
       u.lang = chosen?.lang ?? lang;
       u.rate = 1;
-      u.onstart = () => setSpeaking(true);
-      u.onend = () => setSpeaking(false);
-      u.onerror = () => setSpeaking(false);
+      let started = false;
+      const start = () => {
+        if (started) return;
+        started = true;
+        tap.deviceStart(u, text, offset);
+      };
+      u.onstart = () => {
+        setSpeaking(true);
+        start();
+      };
+      u.onboundary = (e) => {
+        if (e.name && e.name !== "word") return;
+        start(); // an engine that skipped onstart
+        tap.boundary(u, e.charIndex, e.charLength ?? 0);
+      };
+      u.onend = () => {
+        setSpeaking(false);
+        tap.deviceEnd(u);
+      };
+      u.onerror = () => {
+        setSpeaking(false);
+        tap.deviceEnd(u);
+      };
       setSpeaking(true); // mute the mic from the moment speech is requested, not when audio starts
       synth.speak(u);
     },
-    [synth, voice, voices, lang],
+    [synth, voice, voices, lang, tap],
   );
 
   const halt = useCallback(() => {
     inFlight.current?.abort();
     inFlight.current = null;
     synth?.cancel();
-  }, [synth]);
+    tap.stop();
+  }, [synth, tap]);
 
   const say = useCallback(
     (text: string, speaker?: string) => {
@@ -131,7 +159,7 @@ export function useInterviewerVoice(
       const controller = new AbortController();
       inFlight.current = controller;
       setSpeaking(true); // the mic is muted from the request on, as with the device's voice
-      void speakNatural(text, natural.speak, id, controller.signal).then(
+      void speakNatural(text, natural.speak, id, controller.signal, (audio, blob) => tap.attach(audio, blob)).then(
           () => {
             if (inFlight.current === controller) {
               inFlight.current = null;
@@ -143,11 +171,12 @@ export function useInterviewerVoice(
             inFlight.current = null;
             const cause = err instanceof NaturalVoiceError ? err.reason : err;
             if (naturalVoiceGone(cause)) setNaturalOff(true);
-            sayOnDevice(err instanceof NaturalVoiceError ? err.rest : text, speaker); // only what wasn't heard yet
+            const rest = err instanceof NaturalVoiceError ? err.rest : text;
+            sayOnDevice(rest, speaker, text.endsWith(rest) ? text.length - rest.length : -1); // only what wasn't heard yet
           },
         );
     },
-    [natural, naturalOff, halt, sayOnDevice],
+    [natural, naturalOff, halt, sayOnDevice, tap],
   );
 
   useEffect(() => {
@@ -173,6 +202,7 @@ export function useInterviewerVoice(
     speaking,
     voiceName: useNatural ? null : (voice?.name ?? null),
     engine: useNatural ? "natural" : "device",
+    activity: tap,
     repeat,
     stop,
   };
