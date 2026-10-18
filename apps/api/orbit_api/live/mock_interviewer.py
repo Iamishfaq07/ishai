@@ -424,6 +424,7 @@ class MockInterviewer:
         self._on_say = on_say
         self._phase: Phase = "interview"
         self._phase_ms = 0
+        self._opening_id: str | None = None  # her "how are you?" line
         self._small: list[str] = []  # their reply to the small talk
         self._spoken: dict[str, int] = {}  # a line's id → when the client finished saying it
         self._said_ms: dict[str, int] = {}  # a line's id → when it went out (an estimate of its end without the client)
@@ -455,7 +456,11 @@ class MockInterviewer:
         self._bare: dict[str, str] = {}
         self._awaiting = False  # a question is out and we're listening for the answer
         self._busy = False  # generating the next question
-        self._last_speech_ms: int | None = None
+        self._last_speech_ms: int | None = None  # their last words came in (the transcriber's, in bursts)
+        # Their voice on the mic, heard by the server itself (live/engine.py): exact to the frame, so a turn ends
+        # when they actually stop, not a second later, and never while they're still talking between bursts of words.
+        self._voice_ms: int | None = None
+        self._partial_open = False  # words are in that aren't final yet: the end of what they said is still coming
         self._asked_ms: int | None = None  # one-way: when the current prompt was first seen out (at a tick)
         self._started_ms: int | None = None
         self._drill_next = 0  # index of the next drill item to ask
@@ -493,8 +498,9 @@ class MockInterviewer:
                 # A video call opens like a person would: hello and how are you, before any question (no model call).
                 self._phase, self._phase_ms = "smalltalk", now_ms
                 self._awaiting = True
-                await self._say(talk.smalltalk_opening(self._name, INTERVIEWER_NAME, str(self.config.duration_minutes)
-                                                       + (self._role or "")), "smalltalk", now_ms)
+                self._opening_id = await self._say(
+                    talk.smalltalk_opening(self._name, INTERVIEWER_NAME, str(self.config.duration_minutes)
+                                           + (self._role or "")), "smalltalk", now_ms)
                 return
             await self._ask_next(now_ms)
             return
@@ -538,6 +544,7 @@ class MockInterviewer:
         said = text.strip()
         if not self._awaiting or not said or self.finished:
             return
+        self._partial_open = not final
         if self._phase in ("smalltalk", "closing"):
             # Small talk, or their questions at the end: kept apart from the interview's answers.
             self._last_speech_ms = now_ms
@@ -562,6 +569,28 @@ class MockInterviewer:
         self.asked[-1].answer.append(said)
         if intent == "dont_know" and not before:
             self._pending_intent = "dont_know"
+
+    def on_voice_activity(self, now_ms: int) -> None:
+        """The server heard their voice on the mic just now (live/engine.py)."""
+        self._voice_ms = now_ms
+
+    def on_utterance_end(self) -> None:
+        """The transcriber says what they were saying is over, with no final words to come."""
+        self._partial_open = False
+
+    def _heard_ms(self) -> int | None:
+        """When they were last heard: their voice when it's in step with their words (exact, and it covers the gaps
+        between the transcriber's bursts), else their last words. None until they've said something."""
+        words, voice = self._last_speech_ms, self._voice_ms
+        if words is None or voice is None:
+            return words
+        if voice >= words:
+            return min(voice, words + talk.VOICE_AHEAD_MS)  # still talking (or a noise: it can't hold the turn)
+        return max(voice, words - talk.FINAL_GRACE_MS)  # the words came in after the voice stopped
+
+    def _quiet_ms(self, now_ms: int) -> int | None:
+        heard = self._heard_ms()
+        return None if heard is None else now_ms - heard
 
     def on_voice(self, event: VoiceEvent, line_id: str | None, now_ms: int) -> None:
         """The client's voice: it started or finished saying a line, the candidate talked over it, or it couldn't
@@ -604,13 +633,17 @@ class MockInterviewer:
         answer = " ".join(self.asked[-1].answer)
         if len(answer.split()) < MIN_ANSWER_WORDS:
             return
-        silence = now_ms - self._last_speech_ms
         video = self.config.video
+        # The video call goes by their voice (D76); the classic mock by their words, as before.
+        quiet = self._quiet_ms(now_ms) if video else None
+        silence = quiet if quiet is not None else now_ms - self._last_speech_ms
         if now_ms < self._patience_until and silence < talk.UNFINISHED_MS:
             return  # they asked for a moment: no hurry
         # The video call ends a turn the way a person does (D76); the classic mock keeps its patient pauses.
         ends = talk.turn_end_ms(answer) if video else answer_silence_ms(answer)
         early = talk.prefetch_after_ms(answer) if video else PREFETCH_SILENCE_MS
+        if video and self._partial_open and silence < ends + talk.FINAL_GRACE_MS:
+            return  # the end of what they said is still being transcribed: the next line is for all of it
         if silence >= ends:
             await self._ask_next(now_ms)
         elif silence >= early and self._prefetch is None and self._can_prefetch(now_ms):
@@ -763,8 +796,9 @@ class MockInterviewer:
             return True
         # A long silence after she finished asking: she checks in, once per question.
         spoken = self._spoken_end(asked.question_id)
+        voice_quiet = self._voice_ms is None or now_ms - self._voice_ms >= talk.QUIET_FOR_CHECK_IN_MS
         if (not asked.answer and self._last_speech_ms is None and asked.question_id not in self._checked_in
-                and spoken is not None and now_ms >= self._patience_until
+                and spoken is not None and now_ms >= self._patience_until and voice_quiet
                 and now_ms - spoken >= talk.CHECK_IN_AFTER_MS):
             self._checked_in.add(asked.question_id)
             await self._say(talk.check_in(seed), "checkin", now_ms)
@@ -775,23 +809,32 @@ class MockInterviewer:
         """Small talk, their questions at the end, and the goodbye."""
         if self.finished or self._busy:
             return
+        voice_quiet = self._voice_ms is None or now_ms - self._voice_ms >= talk.QUIET_FOR_CHECK_IN_MS
         if self._phase == "smalltalk":
             said = " ".join(self._small)
-            silence = now_ms - self._last_speech_ms if self._last_speech_ms is not None else None
-            if said and silence is not None and silence >= talk.SMALLTALK_MS:
+            silence = self._quiet_ms(now_ms)
+            asked_end = self._spoken_end(self._opening_id) if self._opening_id else self._phase_ms
+            settled = not self._partial_open or (silence is not None and silence >= talk.SMALLTALK_MS
+                                                 + talk.FINAL_GRACE_MS)
+            if said and silence is not None and silence >= talk.SMALLTALK_MS and settled:
                 await self._open_interview(now_ms)
-            elif not said and now_ms - self._phase_ms >= talk.SMALLTALK_WAIT_MS:
-                await self._open_interview(now_ms)  # no reply: carry on, warmly
+            elif (silence is None and voice_quiet and asked_end is not None
+                  and now_ms - asked_end >= talk.SMALLTALK_WAIT_MS):
+                await self._open_interview(now_ms)  # no reply (counted from when she'd asked): carry on, warmly
+            elif not said and silence is not None and silence >= talk.SMALLTALK_MS + talk.FINAL_GRACE_MS:
+                await self._open_interview(now_ms)  # a sound, but no words came of it
             return
         if self._phase == "closing":
             reply = " ".join(self._closing_reply)
-            silence = now_ms - self._last_speech_ms if self._last_speech_ms is not None else None
+            silence = self._quiet_ms(now_ms)
             asked_end = self._spoken_end(self._closing_id) if self._closing_id else None
+            if self._partial_open and silence is not None and silence < talk.turn_end_ms(reply) + talk.FINAL_GRACE_MS:
+                return  # the end of their reply is still being transcribed
             if reply and silence is not None and silence >= talk.turn_end_ms(reply):
                 self._closing_reply = []
                 self._last_speech_ms = None
                 await self._closing_turn(reply, now_ms)
-            elif not reply and asked_end is not None and now_ms - asked_end >= talk.CLOSING_WAIT_MS:
+            elif not reply and voice_quiet and asked_end is not None and now_ms - asked_end >= talk.CLOSING_WAIT_MS:
                 await self._say_goodbye(now_ms)
             return
         if self._phase == "goodbye" and self._goodbye_id:
@@ -939,6 +982,7 @@ class MockInterviewer:
         self._said_words[qid] = len(text.split())  # when it went out: noted at the next tick (_tick_intent)
         self._turn += 1
         self._last_speech_ms = None
+        self._partial_open = False
         self._asked_ms = None
         self._awaiting = True
         # The transcript keeps what was said; the question (the review's, a drill's) is the question itself, so a
@@ -1163,8 +1207,9 @@ class MockInterviewer:
                          and self._turn % 3 == 2 else " Don't use their name this time.")
             system += ("\nPut a short, specific reaction to what they actually said in \"reaction\" (under 14 "
                        "words): paraphrase one detail they gave, or note what was interesting or unclear; never "
-                       "praise words like 'great answer', never a verdict or a score. Then the question in "
-                       "\"question\"." + name_rule
+                       "praise words like 'great answer', never a verdict or a score. It's said TO them ('you'), "
+                       "never a note about them; when they didn't really answer (a request, a fragment), leave it "
+                       "empty. Then the question in \"question\"." + name_rule
                        + (f" Don't open the way your recent lines did ({recent})." if recent else "")
                        + '\nReturn JSON only: {"reaction": "...", "question": "...", "is_follow_up": true|false}')
         if self._interrupted:
@@ -1285,7 +1330,7 @@ class MockInterviewer:
                     self._bare[said] = question
                     return said, False
                 follow_up = bool(data.get("is_follow_up")) and bool(self.asked) and not cfg.is_one_way
-                reaction = " ".join(str(data.get("reaction") or "").split())[:160] if reacts else ""
+                reaction = talk.spoken_reaction(str(data.get("reaction") or ""))[:160] if reacts else ""
                 if reaction and not question.startswith(reaction):
                     # Said as one ("You moved the ledger to events, interesting. What broke first?"), kept as the
                     # question alone for the questions list and the review.

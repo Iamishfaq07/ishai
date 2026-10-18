@@ -7,10 +7,13 @@ interviewer's question text is sent, never anything the candidate said.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
+import logging
+from collections.abc import AsyncGenerator
 from typing import Protocol
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 SPEAK_URL = "https://api.deepgram.com/v1/speak"
 
@@ -18,7 +21,7 @@ SPEAK_URL = "https://api.deepgram.com/v1/speak"
 class TTSProvider(Protocol):
     name: str
 
-    def stream(self, text: str, model: str, speed: float = 1.0) -> AsyncIterator[bytes]: ...
+    def stream(self, text: str, model: str, speed: float = 1.0) -> AsyncGenerator[bytes, None]: ...
 
 
 class TTSError(Exception):
@@ -35,7 +38,7 @@ def _client() -> httpx.AsyncClient:
     client = _shared.get(loop)
     if client is None or client.is_closed:
         client = httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0), http2=False,
-                                   limits=httpx.Limits(max_keepalive_connections=8, keepalive_expiry=120))
+                                   limits=httpx.Limits(max_keepalive_connections=8, keepalive_expiry=50))
         _shared.clear()  # an earlier loop's client is no use here
         _shared[loop] = client
     return client
@@ -48,28 +51,38 @@ class DeepgramTTS:
         self._key = api_key
         self._transport = transport
 
-    async def stream(self, text: str, model: str, speed: float = 1.0) -> AsyncIterator[bytes]:
+    async def stream(self, text: str, model: str, speed: float = 1.0) -> AsyncGenerator[bytes, None]:
         """`speed`: Deepgram's speaking-rate multiplier (it keeps the prosody natural); 1 sends nothing extra."""
         params: dict[str, str] = {"model": model, "encoding": "mp3"}
         if speed != 1.0:
             params["speed"] = f"{speed:g}"
-        if self._transport is not None:  # tests: their own transport, their own client
-            async with httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0), transport=self._transport) as own:
-                async for chunk in self._stream(own, text, params):
-                    yield chunk
-            return
-        async for chunk in self._stream(_client(), text, params):
-            yield chunk
-
-    async def _stream(self, client: httpx.AsyncClient, text: str, params: dict[str, str]) -> AsyncIterator[bytes]:
-        async with client.stream("POST", SPEAK_URL, params=params, headers={"Authorization": f"Token {self._key}"},
-                                 json={"text": text}) as response:
-            if response.status_code != 200:
-                await response.aread()
-                raise TTSError(f"deepgram speak returned {response.status_code}")
-            async for chunk in response.aiter_bytes():
-                if chunk:
-                    yield chunk
+        # Tests bring their own transport (and so their own client); one generator either way, so closing it closes
+        # the provider's response at once.
+        own = (httpx.AsyncClient(timeout=httpx.Timeout(15.0, connect=5.0), transport=self._transport)
+               if self._transport is not None else None)
+        client = own or _client()
+        started = False
+        try:
+            for attempt in (1, 2):
+                try:
+                    async with client.stream("POST", SPEAK_URL, params=params, json={"text": text},
+                                             headers={"Authorization": f"Token {self._key}"}) as response:
+                        if response.status_code != 200:
+                            await response.aread()
+                            raise TTSError(f"deepgram speak returned {response.status_code}")
+                        async for chunk in response.aiter_bytes():
+                            if chunk:
+                                started = True
+                                yield chunk
+                    return
+                except (httpx.RemoteProtocolError, httpx.ReadError, httpx.ConnectError) as err:
+                    # A kept-open connection the provider had already closed: once more, on a new one.
+                    if started or attempt == 2:
+                        raise
+                    log.info("voice: %s on a kept-open connection; trying again", type(err).__name__)
+        finally:
+            if own is not None:
+                await own.aclose()
 
 
 def get_tts_provider() -> TTSProvider | None:

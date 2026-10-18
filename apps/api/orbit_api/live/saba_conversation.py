@@ -13,20 +13,28 @@ import re
 import zlib
 from typing import Literal
 
-# A turn ends the way a person ends it (counted from the last words the transcriber returned, which is itself
-# ~0.3-0.5 s after the voice stops): soon after an answer that sounds complete, later when it trails off.
+# A turn ends the way a person ends it, counted from when their voice stopped (the server hears the audio itself:
+# the transcriber's words come in bursts about a second apart, so "no new words" isn't "quiet"): soon after an
+# answer that sounds complete, later when it trails off.
 WRAPPED_UP_MS = 650  # "…so yeah", "that's it"
 COMPLETE_MS = 900  # ends a sentence (". ? !")
 DEFAULT_MS = 1100
 UNFINISHED_MS = 2600  # "…and", "so basically…", a comma: they're still going
 SMALLTALK_MS = 800
+# Their voice after the last words transcribed is still them talking, for this long (more is noise in the room, or a
+# sound the transcriber didn't take for words: it doesn't hold the turn open).
+VOICE_AHEAD_MS = 3_000
+# A turn whose last words aren't final yet waits for them this much longer (the transcriber's final comes ~0.3-0.8 s
+# after the voice stops), so the next line is written for everything they said.
+FINAL_GRACE_MS = 1_500
+QUIET_FOR_CHECK_IN_MS = 2_000  # no check-in while they've just made a sound (they may be starting)
 # Start writing the next line this early in a pause (thrown away if they go on): sooner when it sounds finished.
 PREFETCH_COMPLETE_MS = 400
 PREFETCH_OTHER_MS = 1000
 
 CHECK_IN_AFTER_MS = 10_000  # silence after she finished asking, before she gently checks in (once per question)
 WAIT_PATIENCE_MS = 25_000  # "give me a moment": no check-in for this long
-SMALLTALK_WAIT_MS = 9_000  # no reply to "how's your day going?": carry on
+SMALLTALK_WAIT_MS = 7_000  # no reply to "how's your day going?" this long after she asked it: carry on
 CLOSING_WAIT_MS = 12_000  # no reply to "any questions for me?": say goodbye
 MAX_CLOSING_ANSWERS = 2
 GOODBYE_CAP_MS = 15_000  # end the call this long after the goodbye even if the client never says it finished
@@ -65,10 +73,13 @@ def prefetch_after_ms(answer: str) -> int:
 Intent = Literal["repeat", "rephrase", "wait", "dont_know", "no", "yes"]
 
 _REPEAT = re.compile(
-    r"\b(?:repeat (?:that|the question|it|please)|say (?:that|it) again|(?:sorry|pardon)\W*(?:what|me)?\W*$|"
+    # "Can you repeat?" is how the transcriber often writes "can you repeat that?" (D76: it was taken for an answer).
+    r"\b(?:(?:can|could|would) you (?:please )?repeat|repeat (?:that|the question|it|please|again)|please repeat|"
+    r"say (?:that|it) again|(?:sorry|pardon)\W*(?:what|me)?\W*$|"
     r"come again|(?:didn'?t|did not|couldn'?t|could not) (?:catch|hear|get) (?:that|you|it|the question)|"
     r"one more time|what was the question|ask (?:that|it) again|"
-    r"dobara|phir se (?:boliye|bolo|puchiye)|fir se|दोबारा|फिर से)\b|^(?:sorry|what|huh|pardon)\W*$", re.IGNORECASE)
+    r"dobara|phir se (?:boliye|bolo|puchiye)|fir se|दोबारा|फिर से)\b|^(?:sorry|what|huh|pardon)\W*$|"
+    r"^(?:\W*\w+){0,2}\W*repeat\W*$", re.IGNORECASE)
 _REPHRASE = re.compile(
     r"\b(?:rephrase|reword|(?:say|put|ask) (?:it|that) (?:another way|differently|in a different way)|another way|"
     r"what do you mean|(?:i )?(?:don'?t|do not) (?:understand|get) (?:the|your|that|what)|"
@@ -107,6 +118,20 @@ def candidate_intent(text: str) -> Intent | None:
     if words <= 4 and _YES.search(t):
         return "yes"
     return None
+
+
+# A reaction is said TO them: a model's note ABOUT them ("No answer yet, just asked me to repeat the question.") is
+# dropped, and the question is asked on its own.
+_NOTE = re.compile(
+    r"\b(?:the candidate|candidate'?s|the user|no (?:real )?answer(?: yet)?|(?:hasn'?t|has not|didn'?t|did not) "
+    r"(?:answer|respond)|asked (?:me )?to (?:repeat|rephrase)|(?:he|she|they) (?:said|asked|mentioned|answered|"
+    r"didn'?t)|their answer|the answer (?:was|is))\b", re.IGNORECASE)
+
+
+def spoken_reaction(text: str) -> str:
+    """The model's reaction, if it's something to say to the candidate; "" if it's a note about them."""
+    text = " ".join(text.split())
+    return "" if not text or _NOTE.search(text) else text
 
 
 def first_name(name: str | None) -> str:
@@ -159,7 +184,7 @@ def smalltalk_reaction(reply: str, seed: str) -> str:
 def agenda(minutes: int, about: str, seed: str) -> str:
     return _pick((f"Here's the plan: we'll spend about {minutes} minutes{about}. I'll ask a few questions and "
                   "follow up on what you say, and when you've finished an answer, just pause and I'll pick it up.",
-                  f"So, for the next {minutes} minutes or so we'll talk{about}. I'll ask some questions and may dig "
+                  f"So, for the next {minutes} minutes or so, we'll focus{about}. I'll ask some questions and may dig "
                   "into your answers. When you're done with one, just pause.",
                   f"We've got about {minutes} minutes{about}. I'll ask a few questions and follow up as we go; "
                   "pause when you're done with an answer and I'll take it from there."), seed)

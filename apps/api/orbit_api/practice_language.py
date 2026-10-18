@@ -77,6 +77,11 @@ _TOKEN_FACTOR: dict[str, float] = {"hi": 2.5, "hinglish": 1.6}
 MAX_OUTPUT_TOKENS = 8_000
 
 
+def token_factor(language: str) -> float:
+    """How many more tokens the same text takes in the round's language than in English."""
+    return _TOKEN_FACTOR.get(language, 1.0)
+
+
 def max_tokens(english: int, language: str) -> int:
     """An output budget sized for English, for the round's language."""
     return min(MAX_OUTPUT_TOKENS, max(english, round(english * _TOKEN_FACTOR.get(language, 1.0))))

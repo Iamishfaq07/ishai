@@ -119,6 +119,11 @@ def test_a_turn_ends_like_a_person_ends_it() -> None:
     ("yes please", "yes"),
     ("ek minute", "wait"),
     ("phir se boliye", "repeat"),
+    # How the transcriber actually wrote "Sorry, can you repeat that?" in a real run (D76: it was taken for an answer).
+    ("Sorry. Can you repeat?", "repeat"),
+    ("Can you repeat?", "repeat"),
+    ("Repeat?", "repeat"),
+    ("We repeat the scans every week.", None),
     ("I'm not sure, but I think I would add an index on the user id and check the query plan", None),
     ("I built the ledger service and owned its on-call rota for two years", None),
 ])
@@ -158,7 +163,11 @@ async def test_no_reply_to_the_small_talk_is_fine() -> None:
     room = Room(name=None)
     await room.mi.start(0)
     assert room.said[0].startswith("Hi there")
-    await room.wait(talk.SMALLTALK_WAIT_MS + 200)
+    await room.wait(3000)
+    room.spoke(room.mi._opening_id or "")  # she finished asking 3 s in (her voice took a moment to come)
+    await room.wait(talk.SMALLTALK_WAIT_MS - 300)
+    assert not room.questions  # counted from when she'd asked, not from when her line went out
+    await room.wait(500)
     assert room.questions and room.questions[0][1] == VIDEO_OPENING_QUESTION
 
 
@@ -180,7 +189,7 @@ async def test_a_moment_to_think_and_a_check_in_after_a_long_silence() -> None:
     qid = room.mi.asked[-1].question_id
     room.spoke(qid)  # she finished asking
     await room.wait(talk.CHECK_IN_AFTER_MS + 300)
-    assert room.kinds()[-1] == "checkin" and "repeat the question" in room.said[-1]
+    assert room.kinds()[-1] == "checkin" and "the question" in room.said[-1]  # one of her ways of asking
     checks = room.kinds().count("checkin")
     await room.wait(talk.CHECK_IN_AFTER_MS + 300)
     assert room.kinds().count("checkin") == checks  # once per question
@@ -293,4 +302,137 @@ async def test_the_engine_records_her_lines_and_the_voice_reports(caplog: pytest
     assert eng.latency.samples["mock_audio_after_speech"]
     await eng.handle_client({"type": "mock.voice", "data": {"event": "nonsense"}})
     assert sink.of("error")[-1]["code"] == "invalid_event"
+    await eng.end()
+
+
+# ---- turns from the candidate's voice, as a real call goes (D76: found with the real transcriber) ----------------
+
+async def voice(room: Room, until: int, every: int = 50) -> None:
+    """Their voice on the mic (the server hears it) from now until `until`, the clock moving with it."""
+    while room.t < until:
+        room.t += every
+        room.mi.on_voice_activity(room.t)
+        await room.mi.tick(room.t)
+
+
+async def test_the_small_talk_waits_for_a_reply_that_is_still_coming() -> None:
+    # A real run: her "how are you?" took 3.5 s to be heard; the reply's first words weren't final 9 s after the line
+    # went out, and she carried on over "…a little nervous, but excited."
+    room = Room()
+    await room.mi.start(0)
+    await room.wait(5000)
+    room.spoke(room.mi._opening_id or "")
+    await room.wait(800)
+    room.mi.on_candidate("I'm doing well", room.t, final=False)
+    await voice(room, 9400)
+    assert not room.questions  # they're still talking
+    room.mi.on_candidate("I'm doing well, thanks! A little nervous, but excited.", room.t + 300, final=True)
+    await room.wait(talk.SMALLTALK_MS + 300)
+    assert room.questions and room.questions[0][0].startswith("That's completely normal")
+
+
+async def test_a_pause_between_bursts_of_words_isnt_the_end_of_the_answer() -> None:
+    # The transcriber's words come about a second apart: "no new words for 900 ms" happened mid-answer.
+    room = Room(Scripted([{"reaction": "Report-only first.", "question": "What made you settle on two weeks?",
+                           "is_follow_up": True}]))
+    await room.to_first_question()
+    room.spoke(room.mi.asked[-1].question_id)
+    asked = len(room.questions)
+    room.t += 300
+    room.mi.on_candidate("So there was a case where we disagreed about blocking builds on scanner findings.", room.t,
+                         final=True)
+    await voice(room, room.t + 2200)  # still talking; their next words aren't in yet
+    assert len(room.questions) == asked
+    room.mi.on_candidate("I suggested we start in report only mode", room.t, final=False)
+    await voice(room, room.t + 1500)
+    room.mi.on_candidate("I suggested we start in report only mode, and we agreed on a threshold after two weeks.",
+                         room.t + 500, final=True)
+    stopped = room.t
+    await room.wait(talk.COMPLETE_MS - 200)
+    assert len(room.questions) == asked
+    await room.wait(400)
+    assert len(room.questions) == asked + 1 and room.t - stopped <= talk.COMPLETE_MS + 200
+
+
+async def test_the_turn_ends_when_their_voice_stops_not_when_the_words_come_in() -> None:
+    room = Room(Scripted([{"reaction": "Four years on ledgers.", "question": "What broke first?",
+                           "is_follow_up": True}]))
+    await room.to_first_question()
+    asked = len(room.questions)
+    room.mi.on_candidate("I spent four years on payments", room.t, final=False)
+    await voice(room, room.t + 1500)
+    stopped = room.t
+    await room.wait(600)  # the final comes ~0.6 s after the voice stops
+    room.mi.on_candidate("I spent four years on payments and ledgers.", room.t, final=True)
+    while len(room.questions) == asked and room.t < stopped + 4000:
+        await room.wait(50, step=50)
+    # About COMPLETE_MS after they stopped talking, not COMPLETE_MS after the final came in (that was 0.6 s slower).
+    assert room.mi.asked[-1].question == "What broke first?"
+    assert room.t - stopped <= talk.COMPLETE_MS + 150
+
+
+async def test_a_noise_that_never_stops_doesnt_hold_the_turn_open() -> None:
+    room = Room(Scripted([{"reaction": "Go and Postgres.", "question": "Why Postgres?", "is_follow_up": True}]))
+    await room.to_first_question()
+    asked = len(room.questions)
+    room.mi.on_candidate("I mostly work in Go and Postgres.", room.t, final=True)
+    said = room.t
+    await voice(room, said + talk.VOICE_AHEAD_MS + talk.COMPLETE_MS + 400)  # a fan, a TV: "voice" all along
+    assert len(room.questions) == asked + 1
+
+
+async def test_she_doesnt_check_in_while_they_are_making_a_sound() -> None:
+    room = Room()
+    await room.to_first_question()
+    room.spoke(room.mi.asked[-1].question_id)
+    await room.wait(talk.CHECK_IN_AFTER_MS - 1000)
+    await voice(room, room.t + 2000)  # they start ("Umm…"), no words yet
+    assert "checkin" not in room.kinds()
+    await room.wait(talk.QUIET_FOR_CHECK_IN_MS + 300)
+    assert room.kinds()[-1] == "checkin"
+
+
+async def test_a_note_about_the_candidate_is_never_said() -> None:
+    # A real run: the model's "reaction" was "No answer yet, just asked me to repeat the question.", said aloud.
+    assert talk.spoken_reaction("No answer yet, just asked me to repeat the question.") == ""
+    assert talk.spoken_reaction("The candidate only gave an intro.") == ""
+    assert talk.spoken_reaction("Payments, so security there carries real weight.") != ""
+    room = Room(Scripted([{"reaction": "No answer yet, just asked me to repeat the question.",
+                           "question": "Could you tell me about your background?", "is_follow_up": False}]))
+    await room.to_first_question()
+    await room.say("I'm a backend engineer and I work on payments.", 1500)
+    assert room.questions[-1][0] == "Could you tell me about your background?"
+
+
+def _tone(level: float, n: int = 640, hz: int = 180) -> bytes:
+    """40 ms of PCM16 at 16 kHz: a voice-like tone at peak `level` (0..1)."""
+    import math
+    import struct
+    return b"".join(struct.pack("<h", int(level * 32767 * math.sin(2 * math.pi * hz * i / 16000))) for i in range(n))
+
+
+def test_the_server_hears_their_voice_in_the_audio() -> None:
+    from orbit_api.live.voice_activity import VoiceActivity
+    vad = VoiceActivity()
+    assert not any(vad.voiced(_tone(0.002)) for _ in range(20))  # a quiet room
+    assert vad.voiced(_tone(0.1))  # someone talking
+    hum = [vad.voiced(_tone(0.03)) for _ in range(3000)]  # a steady hum: after a while it's the room, not a voice
+    assert hum[0] and not hum[-1]
+    assert not vad.voiced(b"")
+
+
+async def test_the_engine_tells_her_when_their_voice_is_on_the_mic() -> None:
+    now = {"t": 0.0}
+    sink = Sink()
+    eng = LiveEngine(SessionProfile("s2", "mock", "Backend Engineer", "en", "en", dev_mode=True,
+                                    mock=MockConfig(video=True, duration_minutes=10)),
+                     LiveSettings(auto_answer=False), send=sink, llm=Scripted(), stt=MockSTTProvider(),
+                     index=SessionIndex([]), recorder=Spy(), clock=lambda: now["t"])  # type: ignore[arg-type]
+    await eng.start()
+    assert eng._mock is not None
+    await eng.handle_audio(b"\x00" + _tone(0.002))
+    assert eng._mock._voice_ms is None  # the room
+    now["t"] += 0.5
+    await eng.handle_audio(b"\x00" + _tone(0.2))
+    assert eng._mock._voice_ms == eng.now_ms()  # them
     await eng.end()

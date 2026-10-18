@@ -3,6 +3,7 @@ server-side, counts characters against a daily allowance, and fails as JSON (so 
 
 import json
 import uuid
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
@@ -199,3 +200,42 @@ def test_two_requests_at_once_cant_both_spend_the_last_characters(client: TestCl
         return sorted(await asyncio.gather(*tasks))
 
     assert client.portal.call(race) == [200, 429]  # type: ignore[union-attr]
+
+
+async def test_a_kept_open_connection_the_provider_closed_is_tried_once_more() -> None:
+    import httpx
+
+    from orbit_api.providers.tts import DeepgramTTS
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        if len(calls) == 1:
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.", request=req)
+        return httpx.Response(200, content=b"ID3 audio")
+
+    tts = DeepgramTTS("k", transport=httpx.MockTransport(handler))
+    assert b"".join([c async for c in tts.stream("Hi.", "aura-2-vesta-en")]) == b"ID3 audio" and len(calls) == 2
+
+
+async def test_a_clip_given_up_on_closes_the_providers_response_at_once() -> None:
+    import httpx
+
+    from orbit_api.providers.tts import DeepgramTTS
+
+    closed: list[bool] = []
+
+    class Body(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            for part in (b"one", b"two", b"three"):
+                yield part
+
+        async def aclose(self) -> None:
+            closed.append(True)
+
+    tts = DeepgramTTS("k", transport=httpx.MockTransport(lambda req: httpx.Response(200, stream=Body())))
+    chunks = tts.stream("Hello there.", "aura-2-vesta-en")
+    assert await anext(chunks) == b"one"
+    await chunks.aclose()
+    assert closed

@@ -60,6 +60,7 @@ from orbit_api.live.routing import (
     estimate_complexity,
     step_size,
 )
+from orbit_api.live.voice_activity import VoiceActivity
 from orbit_api.providers.llm.base import (
     LLMError,
     LLMImage,
@@ -467,6 +468,7 @@ class LiveEngine:
         # The AI interviewer's turn-taking, measured as the candidate feels it (live/metrics.py): when their speech
         # ended (on the server clock), and each line's base for "her voice started".
         self._candidate_end_ms: int | None = None
+        self._voice = VoiceActivity()  # the candidate's voice on the mic, for the AI interviewer's turns (D76)
         self._line_after_speech: dict[str, int] = {}
         if resume is not None:  # a reconnect: pick up the conversation (and the mock round) where it was
             self.memory = resume.memory
@@ -620,6 +622,9 @@ class LiveEngine:
             # First audio on this channel: tell the client the server is actually hearing it.
             await self.send(f"audio.{channel}_status", {"state": "connected", "detail": "receiving"})
         self.channel_bytes[channel] += len(pcm)
+        if (self._mock is not None and channel == "mic" and self.profile.session_type != "phone"
+                and self._voice.voiced(pcm)):
+            self._mock.on_voice_activity(self.now_ms())  # their turn ends when they stop, not when the words do
         session = self._stt_sessions.get(channel)
         if session:
             await session.send_audio(pcm)
@@ -841,6 +846,8 @@ class LiveEngine:
                     # ends it; new words cancel it; the ticker ends it if neither comes.
                     turn.utterance_end_ms = self.now_ms()
                 else:
+                    if self._mock is not None and self._turn_speaker(channel, turn) == "candidate":
+                        self._mock.on_utterance_end()
                     await self._end_turn(channel, turn)
                 await self._sync_speculation()
             return

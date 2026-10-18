@@ -7,6 +7,7 @@ own voice instead, so a mock never goes silent. Only the interviewer's text is s
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Annotated
@@ -27,6 +28,8 @@ from orbit_api.models import LiveSessionRow, UsageEvent, User
 from orbit_api.providers.tts import TTSError, get_tts_provider
 from orbit_api.ratelimit import limit_user
 from orbit_api.transactions import lock_account
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/v1/voice", tags=["voice"])
 speak_limit = Depends(limit_user("voice-speak", rate_per_s=1, burst=20))
@@ -120,6 +123,7 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
         first = await anext(chunks)  # fail here (a JSON error the client can fall back on), not mid-stream
     except TTSError as err:
         if speed == 1.0:
+            log.warning("voice: the provider made no audio (%s)", err)
             await _give_back(db, spent)
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
         # A pace the provider won't take for this voice: the normal pace, and the client paces the playback itself.
@@ -128,16 +132,21 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
         try:
             first = await anext(chunks)
         except (TTSError, StopAsyncIteration, httpx.HTTPError, OSError) as again:
+            log.warning("voice: the provider made no audio (%s)", type(again).__name__)
             await _give_back(db, spent)
             raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from again
     except (StopAsyncIteration, httpx.HTTPError, OSError) as err:
+        log.warning("voice: the provider made no audio (%s)", type(err).__name__)
         await _give_back(db, spent)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
 
     async def audio() -> AsyncIterator[bytes]:
-        yield first
-        async for chunk in chunks:
-            yield chunk
+        try:
+            yield first
+            async for chunk in chunks:
+                yield chunk
+        finally:
+            await chunks.aclose()  # a clip the client gave up on: the provider's response closes now, not at GC
 
     # X-Orbit-Speed: the pace the audio was made at (1 when the provider wouldn't take the one asked for).
     return StreamingResponse(audio(), media_type="audio/mpeg",

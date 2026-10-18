@@ -175,3 +175,25 @@ def test_the_report_uses_the_documents_and_checks_what_the_model_wrote(
     assert item["speaking"]["long_pauses"] == 1 and item["speaking"]["fillers"] == 1
     assert out["review"]["top_practice"][0] == {"practice": "[mock] Give one number for every result",
                                                 "questions": [1]}  # question 2 doesn't exist in this session
+
+
+def test_the_output_budget_fits_a_full_review_of_each_answer() -> None:
+    # A real 7-question review overran the old budget (280 a question), was cut off mid-JSON and failed 3 times (D76).
+    import json
+
+    from orbit_api.sessions import report
+
+    words = lambda n: " ".join(("we cut the nightly run from six hours to forty minutes " * 20).split()[:n])  # noqa: E731
+    item = {"q": 7, "feedback": words(40), "score": 3, "missing_points": [words(10)] * 3, "delivery_score": 3,
+            "clarity_score": 3, "dimensions": dict.fromkeys(("problem_framing", "technical_depth", "scalability",
+                                                             "edge_case_rigor", "communication_clarity"), 3),
+            "rubric": {k: {"score": 3, "reason": words(14), "quote": words(12)} for k in report.RUBRIC},
+            "improvement": words(20), "better": words(70)}
+    tokens = len(json.dumps(item)) / 4  # English JSON: about four characters a token
+    assert tokens <= report.REVIEW_TOKENS_PER_QUESTION
+    rich, budget = report.review_budget(7)
+    assert rich == 7 and budget >= report.REVIEW_BASE_TOKENS + 7 * tokens
+    # A long session: the latest get the full review, the earliest a short one, all within the model's limit.
+    rich, budget = report.review_budget(20)
+    assert 0 < rich < 20 and budget <= 8_000
+    assert report.review_budget(7, factor=2.5)[0] < 7  # Hindi takes more tokens: fewer full reviews fit
