@@ -219,6 +219,7 @@ def test_url_featured_recommendation_and_checklists() -> None:
     assert "Rahul" not in msg and msg.startswith("Hi,\n\n")
     otw = fixes.open_to_work_fix(_profile(), "Backend Engineer")
     assert "Backend Engineer" in otw.items[0] and "Bengaluru" in otw.items[2] and len(otw.items) == 6
+    assert any("Notice period" in x for x in fixes.open_to_work_fix(_profile(), "Backend Engineer", "IN").items)
     assert fixes.photo_fix(_profile()).part == "photo"
 
 
@@ -528,3 +529,13 @@ def test_free_fixes_dont_use_up_the_ai_limit(jobs: TestClient, monkeypatch: pyte
         assert codes[:10] == [200] * 10 and codes[10] == 429
     finally:
         ratelimit.reset_all()
+
+
+def test_skills_pick_up_tools_the_profile_itself_names() -> None:
+    p = _profile(skills=["Excel"])
+    s = fixes.skills_fix(fixes.Sources(profile=p, use_profile=True, resume=None, target="Data Analyst", market=[]))
+    assert s is not None and s.items[0] == "Excel" and {"Go", "Kafka", "Python", "PostgreSQL"} <= set(s.items)
+    assert "Kubernetes" not in s.items  # nowhere in the profile
+    # From the resume only, the profile's own text isn't a source.
+    r = fixes.skills_fix(fixes.Sources(profile=p, use_profile=False, resume=_resume(), target="", market=[]))
+    assert r is not None and "PostgreSQL" not in r.items and "Kubernetes" in r.items

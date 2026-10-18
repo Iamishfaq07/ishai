@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LinkedInSuggestion, LinkedInSuggestionPatch } from "@orbit/types";
-import { Badge, Check, Checkbox, Copy, ExternalLink, PenLine, Trash2, Undo2, Wand2, cx, toast, wordDiff } from "@orbit/ui";
+import { Badge, Check, Checkbox, ChevronDown, Copy, ExternalLink, PenLine, Trash2, Undo2, Wand2, cx, toast, wordDiff } from "@orbit/ui";
 import { Button, IconButton, Textarea } from "../../components/ui";
 import type { LinkedInActions } from "./actions";
 import { charState, chosenText, placeholders } from "./model";
@@ -142,6 +142,8 @@ export function SuggestionCard({ s: saved, actions, sweepAt }: { s: LinkedInSugg
   };
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  // One already done on LinkedIn opens folded, so the list shows what's left; ticking one done here leaves it open.
+  const [open, setOpen] = useState(() => !saved.done);
   const busy = actions.busy === `s:${s.id}`;
   const error = actions.error?.key === `s:${s.id}` ? actions.error.text : null;
   const text = chosenText(s);
@@ -164,10 +166,13 @@ export function SuggestionCard({ s: saved, actions, sweepAt }: { s: LinkedInSugg
             {s.done && <Badge tone="success">Done on LinkedIn</Badge>}
           </div>
         </div>
+        <Button size="sm" variant="ghost" aria-expanded={open} aria-controls={`${titleId}-body`} aria-label={`${open ? "Hide" : "Show"} ${s.label}`} onClick={() => setOpen((v) => !v)}>
+          <ChevronDown className={cx("h-3.5 w-3.5 motion-ok:transition-transform motion-ok:duration-quick", !open && "-rotate-90")} /> {open ? "Hide" : "Show"}
+        </Button>
         <IconButton label={`Remove the ${s.label} suggestion`} icon={Trash2} size="sm" onClick={() => void actions.remove(s)} disabled={busy} />
       </div>
 
-      <div className="mt-3 space-y-3">
+      <div id={`${titleId}-body`} hidden={!open} className="mt-3 space-y-3">
         {s.options.length > 1 && (
           <fieldset className="space-y-2">
             <legend className="mb-1 text-xs font-medium text-zinc-500 dark:text-zinc-400">Pick one</legend>

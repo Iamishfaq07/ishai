@@ -445,7 +445,7 @@ def _free_fix(body: FixIn, src: fixes.Sources) -> Suggestion:
         return url
     if body.part == "photo":
         return fixes.photo_fix(p)
-    return fixes.open_to_work_fix(p, src.target)
+    return fixes.open_to_work_fix(p, src.target, src.country)
 
 
 @router.post("/fix", response_model=FixOut, dependencies=[fix_ip_limit])

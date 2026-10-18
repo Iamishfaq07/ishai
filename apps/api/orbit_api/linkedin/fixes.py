@@ -36,7 +36,7 @@ from orbit_api.linkedin.where import ABOUT_MAX, HEADLINE_MAX, HELP, ROLE_MAX, SK
 from orbit_api.live.answer_format import humanize
 from orbit_api.live.context_builder import fence
 from orbit_api.providers.llm.base import LLMMessage, LLMProvider, LLMRequest
-from orbit_api.region import localize
+from orbit_api.region import is_india, localize
 from orbit_api.resumes import kit
 from orbit_api.resumes.ats import resume_text
 from orbit_api.resumes.claims import invented_figures, strip_invented_figures
@@ -492,7 +492,7 @@ def photo_fix(p: Profile) -> Suggestion:
                            "this once both are on your profile and the score counts them.")
 
 
-def open_to_work_fix(p: Profile, target: str) -> Suggestion:
+def open_to_work_fix(p: Profile, target: str, country: str | None = None) -> Suggestion:
     titles = list(dict.fromkeys(t for t in [target, *(r.title for r in p.experience[:3])] if t.strip()))[:5]
     place = p.location or "your city"
     items = [f"Job titles: {', '.join(titles) or 'the roles you want'} (up to five, as job posts write them).",
@@ -502,6 +502,8 @@ def open_to_work_fix(p: Profile, target: str) -> Suggestion:
              "Employment types: full-time, plus contract or internship only if you'd take them.",
              "Who can see it: Recruiters only keeps it off your profile (LinkedIn tries to hide it from recruiters at "
              "your own company, but can't promise). All LinkedIn members also adds the #OpenToWork photo frame."]
+    if is_india(country):  # LinkedIn asks these in India
+        items.insert(5, "Notice period and expected salary: give your real notice period; the salary is optional.")
     return Suggestion(id=new_id(), part="open_to_work", label=label_for(p, "open_to_work"), after="\n".join(items),
                       items=items, where=where("open_to_work"), help_url=HELP["open_to_work"],
                       note="Settings on LinkedIn, not text on your profile: tick each one as you set it.")

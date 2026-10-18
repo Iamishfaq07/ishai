@@ -77,6 +77,10 @@ test("LinkedIn AI: fix the headline, apply it, tick it done, and it all stays", 
   await saved;
   await page.reload();
   const again = page.locator("article", { has: page.getByRole("heading", { name: "Headline", exact: true }) });
+  // Done on LinkedIn: kept, and the card opens folded so the list shows what's left.
+  await expect(again.getByText("Done on LinkedIn", { exact: true }).first()).toBeVisible();
+  await expect(again.getByRole("button", { name: "Show Headline" })).toHaveAttribute("aria-expanded", "false");
+  await again.getByRole("button", { name: "Show Headline" }).click();
   await expect(again.getByLabel("Done on LinkedIn")).toBeChecked();
   await expect(again.getByText("In Orbit's copy")).toBeVisible();
   await expect(page.getByRole("progressbar").first()).toHaveAttribute("aria-valuetext", "1 of 1");
