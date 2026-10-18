@@ -9,7 +9,7 @@ import { renderToString } from "react-dom/server";
 import { StaticRouter } from "react-router-dom";
 import { SpaceBackdrop } from "@orbit/ui";
 import { AuthProvider } from "../lib/auth";
-import { pageDocument, sitemapXml } from "./document";
+import { pageDocument, sitemapXml, type PageAssets } from "./document";
 import { publicRoutes, type PageMeta } from "./routes";
 import { url } from "./seo";
 
@@ -28,11 +28,12 @@ export function renderPage(path: string, page: ReactNode): string {
 }
 
 /** The files to write into dist/: every registered page with a component, as a whole document (from the built
- *  index.html), and the sitemap of every registered page. */
+ *  index.html, with `assets`' fonts preloaded), and the sitemap of every registered page. */
 export async function buildSite(
   template: string,
   pageMeta: PageMeta,
   warn: (message: string) => void = console.warn,
+  assets: PageAssets = {},
 ): Promise<Array<{ file: string; contents: string }>> {
   const routes = await publicRoutes(pageMeta);
   const files: Array<{ file: string; contents: string }> = [];
@@ -46,7 +47,7 @@ export async function buildSite(
       warn(`prerender: ${route.path} didn't render, so it's served as the app alone: ${(e as Error).message}`);
       continue;
     }
-    files.push({ file: route.file, contents: pageDocument(template, { path: route.path, head: route.head, html }) });
+    files.push({ file: route.file, contents: pageDocument(template, { path: route.path, head: route.head, html }, assets) });
   }
   // The sitemap lists what may be found in search: not a draft waiting for review (noindex).
   const listed = routes.filter((r) => !r.head?.noindex);

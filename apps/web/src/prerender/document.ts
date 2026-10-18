@@ -22,13 +22,37 @@ function content(html: string, attr: "name" | "property", name: string, value: s
   return swap(html, re, (_m, open, close) => `${open}${escapeHtml(value)}${close}`, `<meta ${attr}="${name}">`);
 }
 
+/** What the built pages load besides the template's own files: the fonts their first paint is drawn in. */
+export interface PageAssets {
+  /** Preloaded beside the stylesheet ("/assets/ibm-plex-sans-latin-….woff2"), so the text is drawn in its own face
+   *  from the first paint instead of swapped in after it (a later, larger paint, and the lines can move). */
+  fonts?: string[];
+}
+
+const ENTRY = /<script type="module"(?: crossorigin)? src="([^"]+)"><\/script>/;
+const MODULE_PRELOAD = /[ \t]*<link rel="modulepreload"(?: crossorigin)? href="([^"]+)">\n?/g;
+
+/** The app's scripts (the build's module entry, then its modulepreload tags) as a list, `#orbit-app`, that
+ *  public/app-start.js loads once the page has painted, instead of tags the browser fetches with the page: on a slow
+ *  phone the first paint then needs only the HTML, the stylesheet and the font (DECISIONS D79, docs/PERFORMANCE.md). */
+export function appAfterPaint(html: string): string {
+  const entry = ENTRY.exec(html)?.[1];
+  if (!entry) throw new Error("prerender: index.html has no module script");
+  const files = [entry, ...[...html.matchAll(MODULE_PRELOAD)].map((m) => m[1]!)];
+  return html.replace(MODULE_PRELOAD, "").replace(ENTRY, () => `<script type="application/json" id="orbit-app">${scriptJson(files)}</script>`);
+}
+
 /** index.html as this page: its title, description, previews, canonical link and structured data, and its HTML
  *  in `<div id="prerender">` just before `<div id="root">` (lib/prerender.tsx hands over when the app is ready).
  *  Every built page is a front-door page, so `<html>` carries `site` (marketing/site.css) from the first paint; the
- *  app keeps it on a public page and drops it on hand-off to anything else. */
-export function pageDocument(template: string, page: { path: string; head: Head; html: string }): string {
+ *  app keeps it on a public page and drops it on hand-off to anything else. The app starts after the page's first
+ *  paint (appAfterPaint), and the fonts in `assets` are preloaded. */
+export function pageDocument(template: string, page: { path: string; head: Head; html: string }, assets: PageAssets = {}): string {
   const { head } = page;
   let out = swap(template, /<html lang="en">/, () => `<html lang="en" class="site">`, "<html lang=\"en\">");
+  out = appAfterPaint(out);
+  const fonts = (assets.fonts ?? []).map((href) => `<link rel="preload" href="${escapeHtml(href)}" as="font" type="font/woff2" crossorigin>\n    `).join("");
+  if (fonts) out = swap(out, /<link rel="stylesheet"|<\/head>/, (m) => `${fonts}${m}`, "stylesheet link or </head>");
   out = swap(out, /<title>[^<]*<\/title>/, () => `<title>${escapeHtml(head.title)}</title>`, "<title>");
   out = content(out, "name", "description", head.description);
   out = content(out, "property", "og:title", head.title);

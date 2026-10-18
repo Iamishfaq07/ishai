@@ -660,7 +660,9 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
   `dist/_prerender/*.html`; a heavy render (a whole resume page) draws a light placeholder there and in the app until
   it's near the screen (`useNear`, the carousel's `render(i, near)`), or, above the fold, until just after the first
   paint (`useAfterPaint`: the templates behind the hero). A render loads no font beyond Plex: resume renders use Arial
-  where a template asks for Inter, languages are named in English, and code waits for the screen.
+  where a template asks for Inter, languages are named in English, and code waits for the screen. The built page
+  paints from its HTML, the stylesheet and Plex (preloaded) alone; the app's code starts once it has painted
+  (`public/app-start.js`), so nothing a page shows may need the app to look right at its first paint.
 - **The FAQ** comes from `worker/faqs/<page>.js`, which the page shows and its FAQPage structured data states, word
   for word (D67): plain text, the same for every visitor, no links inside an answer.
 - **The carousel** scrolls natively (snap points; a swipe, a trackpad or the arrow keys, the row takes focus) and has

@@ -125,6 +125,9 @@ describe("the built public pages", () => {
         }
       }
       expect(html.indexOf('<div id="prerender"'), file).toBeLessThan(html.indexOf('<div id="root"></div>'));
+      // The app starts after the page's first paint (public/app-start.js): listed, not loaded with the page.
+      expect(html, file).not.toMatch(/<script type="module"|rel="modulepreload"/);
+      expect(JSON.parse(tag(html, /<script type="application\/json" id="orbit-app">([^<]*)<\/script>/)), file).toEqual(["/src/main.tsx"]);
     }
     const amazon = files.get("companies/amazon.html")!;
     expect(tag(amazon, /<link rel="canonical" href="([^"]*)"/)).toBe("https://orbitanswer.com/companies/amazon");
