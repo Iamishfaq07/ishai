@@ -53,35 +53,35 @@ async function fakeAudio(context: BrowserContext) {
     w.__plays = plays;
     let probe: AudioContext | null = null;
     const play = HTMLMediaElement.prototype.play;
-    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement, ...args: []) {
-      if (this instanceof HTMLAudioElement) {
-        const el = this;
-        let analyser: AnalyserNode | null = null;
-        try {
-          probe ??= new AudioContext();
-          const stream = (el as unknown as { captureStream: () => MediaStream }).captureStream();
-          const tap = () => {
-            if (analyser || !stream.getAudioTracks().length) return;
-            analyser = probe!.createAnalyser();
-            probe!.createMediaStreamSource(stream).connect(analyser);
-          };
-          tap();
-          stream.addEventListener("addtrack", tap);
-        } catch {
-          // no captureStream: the element's progress is still checked
-        }
-        const buf = new Float32Array(2048);
-        plays.push({
-          el,
-          level: () => {
-            if (!analyser) return -1;
-            analyser.getFloatTimeDomainData(buf);
-            let s = 0;
-            for (const v of buf) s += v * v;
-            return Math.sqrt(s / buf.length);
-          },
-        });
+    const track = (el: HTMLAudioElement) => {
+      let analyser: AnalyserNode | null = null;
+      try {
+        probe ??= new AudioContext();
+        const stream = (el as unknown as { captureStream: () => MediaStream }).captureStream();
+        const tap = () => {
+          if (analyser || !stream.getAudioTracks().length) return;
+          analyser = probe!.createAnalyser();
+          probe!.createMediaStreamSource(stream).connect(analyser);
+        };
+        tap();
+        stream.addEventListener("addtrack", tap);
+      } catch {
+        // no captureStream: the element's progress is still checked
       }
+      const buf = new Float32Array(2048);
+      plays.push({
+        el,
+        level: () => {
+          if (!analyser) return -1;
+          analyser.getFloatTimeDomainData(buf);
+          let s = 0;
+          for (const v of buf) s += v * v;
+          return Math.sqrt(s / buf.length);
+        },
+      });
+    };
+    HTMLMediaElement.prototype.play = function (this: HTMLMediaElement, ...args: []) {
+      if (this instanceof HTMLAudioElement) track(this);
       return play.apply(this, args);
     };
     // The mic audio sent to the server (binary frames on the live socket).
