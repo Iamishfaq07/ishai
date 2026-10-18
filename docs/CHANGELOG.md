@@ -1,5 +1,34 @@
 # Implementation log
 
+## Saba's room: fewer voice requests, a join that says where it is, controls that always fit (2026-10-18)
+
+DECISIONS D76 (2026-10-18 note).
+
+- **Acknowledgements.** After her first line the room asked `/v1/voice/speak` for all five ("Mm-hmm.", "Okay.",
+  "Right.", "Got it.", "I see."): five more requests and characters an interview, at most one said every other answer,
+  and they crossed her next line's requests (on the mock stack, four of the five overlapped her opening line's).
+  `AckWarmer` (naturalVoice.ts) now keeps the two most natural ready, for her own voice only, one request each time
+  she goes quiet and only while she's listening (never while one of her lines is being written, on its way or
+  playing), and one more each time she says one: on the mock stack, a three-answer round asked for four, each between
+  her lines (the first crossed her next one only because the scripted reply came the instant she stopped). Cache
+  Storage still serves a returning user for nothing, and "never the same twice in a row" works with what's kept. A new
+  offline-page service worker no longer deletes the page's caches (it wiped her clips).
+- **Her first words.** Her hello (the small talk's line, the same each time) is kept on the device like the
+  acknowledgements: a returning user heard her 1.57 s after Join, now 0.25 s, with no speak request. The server sends
+  it while the transcriber's sockets are still connecting (it needs neither the model nor them), not after their
+  handshake. The room says where the call is: "Connecting…" until the socket is up, "Saba is joining…" until her line
+  is in, then her voice "about to speak…" (it said "Connecting you with Saba…" all that time, and "listening" for a
+  moment while it still asked which voice she has); the join moment ends as soon as she can be heard.
+- **The control bar.** The room is 100dvh tall (100vh where a browser lacks dvh) with the home bar's inset under its
+  controls, a camera tile or caption can't grow past the room any more, the caption scrolls (newest words in view)
+  instead of running over the controls, and an opened transcript gives way first on a short screen. A phone on its
+  side gets its own layout: the transcript beside the call, your camera in her tile's corner, the controls in one row.
+  Before, on 844×390 the camera tile covered End and her caption ran over the dock, and with the transcript open the
+  dock ran off the bottom on 740×360 (its note) and 568×320 (the bar, by 14 px). Checked at 390×844, 360×800, 540×960
+  (1080×1920 at 2×), 375×548, 844×390, 740×360, 568×320, 1440×900 and 1280×720 with the iPhone insets emulated; axe
+  finds nothing in the room at 390×844 and 844×390, light and dark. An e2e test keeps the dock whole on a tall phone
+  and on its side.
+
 ## Resume AI: the score toast keeps up, "Found" is past, "mobile bookings" isn't a skill (2026-10-18)
 
 Three things seen while filming the launch videos.
