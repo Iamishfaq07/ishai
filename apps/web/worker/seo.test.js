@@ -445,3 +445,37 @@ describe("security.txt (RFC 9116)", () => {
     expect(days).toBeLessThanOrEqual(366);
   });
 });
+
+// ---------------------------------------------------------------- what the Worker writes itself
+
+describe("answers the Worker writes itself", () => {
+  it("carry the security headers the built files get from _headers", async () => {
+    const answers = [
+      await get("/robots.txt"),
+      await get("/.well-known/security.txt"),
+      await get("/privacy/"), // a 301
+      await get("/privacy", { protocol: "http:" }), // http → https, a 301
+      await get("/missing.js"), // a plain 404
+    ];
+    for (const res of answers) {
+      expect(res.headers.get("strict-transport-security"), res.url).toBe("max-age=63072000; includeSubDomains");
+      expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(res.headers.get("x-frame-options")).toBe("DENY");
+      expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+      expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'none'");
+    }
+    expect(answers[2].status).toBe(301);
+    expect(answers[4].status).toBe(404);
+  });
+
+  it("never replace a page's own policy, and leave the API's answers alone", async () => {
+    const page = await get("/");
+    expect(page.headers.get("content-security-policy")).toBeNull(); // a page's CSP comes from _headers, not here
+    expect(page.headers.get("x-frame-options")).toBe("DENY");
+    const own = new Response("<html></html>", { headers: { "content-type": "text/html", "content-security-policy": "script-src 'self'", "x-frame-options": "SAMEORIGIN" } });
+    const { withBaseline } = await import("./seo.js");
+    const kept = withBaseline(own);
+    expect(kept.headers.get("content-security-policy")).toBe("script-src 'self'");
+    expect(kept.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+  });
+});
