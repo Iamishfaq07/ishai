@@ -23,10 +23,11 @@ from urllib.parse import quote
 
 import jwt
 from cryptography.fernet import Fernet, InvalidToken
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api.auth.alerts import alert
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user, decode_claims, token_from_request, verify_password
 from orbit_api.config import get_settings
@@ -283,7 +284,8 @@ class CodesOut(BaseModel):
 
 
 @router.post("/2fa/enable", response_model=CodesOut, dependencies=[settings_limit])
-async def enable(body: CodeIn, request: Request, user: Annotated[User, Depends(require_verified_email)],
+async def enable(body: CodeIn, request: Request, background: BackgroundTasks,
+                 user: Annotated[User, Depends(require_verified_email)],
                  db: Annotated[AsyncSession, Depends(get_db)]) -> CodesOut:
     """Turn it on with a first code from the app; the recovery codes are shown this once."""
     from orbit_api.auth.routes import _ip
@@ -301,6 +303,7 @@ async def enable(body: CodeIn, request: Request, user: Annotated[User, Depends(r
     row.enabled_at, row.last_step, row.recovery_hashes = datetime.now(UTC), step, [_hash(c) for c in codes]
     db.add(AuditLog(user_id=user.id, action="auth.2fa_on", ip=_ip(request)))
     await db.commit()
+    alert(background, user, "auth.2fa_on", request)
     return CodesOut(recovery_codes=codes)
 
 
@@ -331,7 +334,8 @@ async def regenerate(body: CodeIn, user: Annotated[User, Depends(current_user)],
 
 
 @router.post("/2fa/disable", status_code=status.HTTP_204_NO_CONTENT, dependencies=[settings_limit])
-async def disable(body: CodeIn, request: Request, user: Annotated[User, Depends(current_user)],
+async def disable(body: CodeIn, request: Request, background: BackgroundTasks,
+                  user: Annotated[User, Depends(current_user)],
                   db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
     """Turn it off, with a current code or a recovery code."""
     from orbit_api.auth.routes import _ip
@@ -340,4 +344,5 @@ async def disable(body: CodeIn, request: Request, user: Annotated[User, Depends(
     await db.delete(row)
     db.add(AuditLog(user_id=user.id, action="auth.2fa_off", ip=_ip(request)))
     await db.commit()
+    alert(background, user, "auth.2fa_off", request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

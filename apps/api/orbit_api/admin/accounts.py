@@ -12,6 +12,9 @@
   (auth/security.current_user), its live sessions stop and every device is signed out; its owner is told why.
 - `POST /v1/admin/users/{id}/sign-out`: sign the account out everywhere (auth/accounts.sign_out_everywhere).
 - `POST /v1/admin/users/{id}/password-reset`: email the account the usual reset link.
+- `POST /v1/admin/users/{id}/2fa/off`: turn two-step sign-in off for someone who lost their phone and their recovery
+  codes, after checking it's them some other way (the reason, kept in the audit log, says how). Every device is
+  signed out and the owner is emailed (auth/alerts.py).
 - `DELETE /v1/admin/users/{id}`: delete the account, after typing its email (auth/accounts.delete_account, the same
   function the owner's own delete uses). Payments stay, without the account (docs/DECISIONS.md D45).
 
@@ -48,6 +51,7 @@ from orbit_api.admin.routes import (
 )
 from orbit_api.auth import email_tokens
 from orbit_api.auth.accounts import delete_account, end_live_sessions, sign_out_everywhere, stop_account_live
+from orbit_api.auth.alerts import alert
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
@@ -65,6 +69,7 @@ from orbit_api.models import (
     Story,
     UsageEvent,
     User,
+    UserTwoFactor,
     Workspace,
 )
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
@@ -601,6 +606,38 @@ async def send_password_reset(user_id: str, background: BackgroundTasks,
     await db.commit()
     background.add_task(send_safely, reset_email(u.email, token))
     return ResetSentOut(message=f"A reset link is on its way to {u.email}. It works once, for an hour.")
+
+
+class TwoFactorOffIn(BaseModel):
+    # How the admin checked it's really them (kept in the audit log, never shown to anyone else).
+    reason: str = Field(min_length=10, max_length=300)
+
+
+@router.post("/users/{user_id}/2fa/off", response_model=AdminUser)
+async def turn_off_two_factor(user_id: str, body: TwoFactorOffIn, background: BackgroundTasks,
+                              admin: Annotated[User, Depends(require_admin)],
+                              db: Annotated[AsyncSession, Depends(get_db)]) -> AdminUser:
+    """For someone locked out by two-step sign-in (phone and recovery codes both lost): it comes off, so the password
+    alone signs in again. Their passkeys stay. Every device is signed out, and the account's address is told, so an
+    owner who didn't ask hears about it at once."""
+    reason = _one_line(body.reason)
+    if len(reason) < 10:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Say how you checked it's really them.")
+    u = await _account(db, user_id)
+    await _guard(db, u, admin, "turn off two-step sign-in for")
+    row = await db.get(UserTwoFactor, u.id)
+    if row is None or row.enabled_at is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Two-step sign-in isn't on for this account.")
+    await db.delete(row)
+    db.add(AuditLog(user_id=admin.id, action="admin.user.2fa_off", target=f"{u.id} {reason}"))
+    db.add(AuditLog(user_id=u.id, action="auth.2fa_off_by_admin"))  # the account's own security history
+    await db.commit()
+    await stop_account_live(db, u.id)
+    await sign_out_everywhere(db, u)
+    await db.commit()
+    await db.refresh(u)
+    alert(background, u, "auth.2fa_off_by_admin")
+    return (await admin_rows(db, [u]))[0]
 
 
 class DeleteIn(BaseModel):

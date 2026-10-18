@@ -18,7 +18,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -40,6 +40,7 @@ from webauthn.helpers.structs import (
     UserVerificationRequirement,
 )
 
+from orbit_api.auth.alerts import alert
 from orbit_api.auth.devices import device_label
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import NOT_ALLOWED, current_user, suspended_detail
@@ -166,7 +167,8 @@ def _transports(credential: dict[str, Any]) -> list[str]:
 
 @router.post("/passkeys", response_model=PasskeyOut, status_code=status.HTTP_201_CREATED,
              dependencies=[settings_limit])
-async def add_passkey(body: RegisterIn, request: Request, user: Annotated[User, Depends(require_verified_email)],
+async def add_passkey(body: RegisterIn, request: Request, background: BackgroundTasks,
+                      user: Annotated[User, Depends(require_verified_email)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> PasskeyOut:
     """Finish adding a passkey with what the browser made."""
     from orbit_api.auth.routes import _ip
@@ -201,6 +203,7 @@ async def add_passkey(body: RegisterIn, request: Request, user: Annotated[User, 
         await db.rollback()
         raise HTTPException(status.HTTP_409_CONFLICT, "That passkey is already added.") from err
     await db.refresh(passkey)
+    alert(background, user, "auth.passkey_added", request)
     return _out(passkey)
 
 

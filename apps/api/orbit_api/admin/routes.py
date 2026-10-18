@@ -52,6 +52,7 @@ from orbit_api.models import (
     UsageEvent,
     User,
     UserSession,
+    UserTwoFactor,
 )
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.runtime_config import (
@@ -306,6 +307,7 @@ class AdminUser(BaseModel):
     suspended_at: datetime | None = None
     suspended_reason: str | None = None
     has_note: bool = False  # the admin wrote private notes on it
+    two_factor: bool = False  # two-step sign-in is on (the admin can turn it off for someone locked out)
 
 
 class AdminTotals(BaseModel):
@@ -448,6 +450,8 @@ async def admin_rows(db: AsyncSession, users: Sequence[User]) -> list[AdminUser]
         used = {uid: float(total or 0) for uid, total in rows.all()}
     wallets = await credits.balances(db, ids)
     usage = await _usage(db, ids)
+    two_factor = set((await db.scalars(select(UserTwoFactor.user_id).where(
+        UserTwoFactor.user_id.in_(ids), UserTwoFactor.enabled_at.is_not(None)))).all()) if ids else set()
     out = []
     for u in users:
         granted = active_grant(u)
@@ -463,7 +467,7 @@ async def admin_rows(db: AsyncSession, users: Sequence[User]) -> list[AdminUser]
             resume_credits=wallets.get(u.id, (0, 0.0))[0],
             interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1), usage=usage[u.id],
             suspended_at=_aware(u.suspended_at) if u.suspended_at else None, suspended_reason=u.suspended_reason,
-            has_note=bool((u.admin_note or "").strip())))
+            has_note=bool((u.admin_note or "").strip()), two_factor=u.id in two_factor))
     return out
 
 

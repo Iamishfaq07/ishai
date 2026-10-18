@@ -21,6 +21,7 @@ from orbit_api.admin.overview import router as admin_overview_router
 from orbit_api.admin.routes import public_router as announcement_router
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.answers.routes import router as answers_router
+from orbit_api.auth.alerts import router as security_alerts_router
 from orbit_api.auth.devices import router as devices_router
 from orbit_api.auth.passkeys import router as passkeys_router
 from orbit_api.auth.routes import router as auth_router
@@ -348,6 +349,7 @@ def create_app() -> FastAPI:
     app.include_router(job_alerts_router)
     app.include_router(devices_router)
     app.include_router(two_factor_router)
+    app.include_router(security_alerts_router)
     app.include_router(passkeys_router)
     app.include_router(voice_router)
     app.include_router(camera_router)

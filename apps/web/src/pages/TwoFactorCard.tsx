@@ -5,6 +5,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { acknowledgeSecurityChanges } from "../lib/securityNotice";
 
 type Step = { kind: "idle" } | { kind: "password" } | { kind: "scan"; secret: string; uri: string } | { kind: "codes"; codes: string[] };
 
@@ -54,6 +55,7 @@ export function TwoFactorCard() {
     e.preventDefault();
     void run(async () => {
       const r = await api.twoFactorEnable(code);
+      acknowledgeSecurityChanges();
       setCode("");
       setStep({ kind: "codes", codes: r.recovery_codes });
       status.reload();
@@ -65,6 +67,7 @@ export function TwoFactorCard() {
     void run(async () => {
       if (!(await confirmDialog({ title: "Turn off two-step sign-in?", body: "Your password alone will sign you in again.", confirmLabel: "Turn off", danger: true }))) return;
       await api.twoFactorDisable(code);
+      acknowledgeSecurityChanges();
       setCode("");
       status.reload();
       toast({ message: "Two-step sign-in is off", tone: "success" });

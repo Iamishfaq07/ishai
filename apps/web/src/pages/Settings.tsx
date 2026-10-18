@@ -38,7 +38,9 @@ import { useTheme, type ThemePref } from "../lib/theme";
 import { OnThisPage, type PageSection } from "../components/OnThisPage";
 import { InterviewerVoiceCard } from "./InterviewerVoiceCard";
 import { PasskeysCard } from "./PasskeysCard";
+import { SecurityActivityCard } from "./SecurityActivity";
 import { TwoFactorCard } from "./TwoFactorCard";
+import { acknowledgeSecurityChanges } from "../lib/securityNotice";
 
 export function SettingsPage() {
   const [theme, setTheme] = useTheme();
@@ -89,6 +91,7 @@ export function SettingsPage() {
         <TwoFactorCard />
         <PasskeysCard />
         <DevicesCard />
+        <SecurityActivityCard />
         <PrivacyCard />
         <AdvancedSettingsCard />
       </div>
@@ -115,6 +118,7 @@ const SECTIONS: PageSection[] = [
   { id: "two-step", label: "Two-step sign-in" },
   { id: "passkeys", label: "Passkeys" },
   { id: "devices", label: "Devices" },
+  { id: "security-activity", label: "Security activity" },
   { id: "privacy", label: "Privacy" },
 ];
 
@@ -539,6 +543,7 @@ function PasswordChange() {
     setError(null);
     try {
       const res = await api.changePassword(googleOnly ? "" : current, next);
+      acknowledgeSecurityChanges();
       setUser(res.user);
       setDone(true);
       setCurrent("");

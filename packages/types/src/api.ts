@@ -1127,6 +1127,8 @@ export interface AdminUser {
   suspended_reason?: string | null;
   /** The admin wrote private notes on it. */
   has_note?: boolean;
+  /** Two-step sign-in is on (the admin can turn it off for someone locked out). */
+  two_factor?: boolean;
 }
 
 export interface AdminUsage {
@@ -2784,6 +2786,22 @@ export interface OfferScenario {
 }
 
 /** GET /v1/auth/sessions: a signed-in device or browser. No IP address is kept. */
+/** A change to how the account is signed in to (GET /v1/auth/security-activity), newest first. */
+export interface SecurityEvent {
+  id: string;
+  action: string;
+  /** "A passkey was added" */
+  text: string;
+  at: string;
+  /** Recent enough (and serious enough) to show on Home until acknowledged on this device. */
+  notice: boolean;
+}
+
+export interface SecurityActivity {
+  items: SecurityEvent[];
+  notice_days: number;
+}
+
 export interface SignedInDevice {
   id: string;
   kind: "web" | "desktop" | "other";

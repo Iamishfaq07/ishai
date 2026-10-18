@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { errorText, formatDate } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { acknowledgeSecurityChanges } from "../lib/securityNotice";
 
 /**
  * Settings → Passkeys: sign in with the device's own unlock (fingerprint, face or PIN) instead of a password. Only the
@@ -49,6 +50,7 @@ export function PasskeysCard() {
         return; // cancelled
       }
       const added = await api.addPasskey(credential);
+      acknowledgeSecurityChanges();
       list.setData((prev) => [...(prev ?? []), added]);
       toast({ message: `Passkey added: ${added.name}`, tone: "success" });
     });

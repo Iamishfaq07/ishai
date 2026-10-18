@@ -18,6 +18,7 @@ import { kashsecUrl } from "./learn/links";
 import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { storedRef } from "../lib/referral";
 import { InviteNote } from "../components/InviteNote";
+import { acknowledgeSecurityChanges } from "../lib/securityNotice";
 
 /** "Free to start: 20 interview minutes + 1 Resume AI credit", from the server (it decides the welcome credits). */
 function useWelcome(): string | null {
@@ -623,6 +624,7 @@ export function ResetPasswordPage() {
     setError(null);
     try {
       const res = await api.confirmPasswordReset(token, password);
+      acknowledgeSecurityChanges();
       // A reset link proves the inbox, not the authenticator: with two-step sign-in on, the code comes next (the
       // challenge waits in an httpOnly cookie, as after Google).
       if ("two_factor_required" in res) {

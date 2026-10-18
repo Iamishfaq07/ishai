@@ -46,6 +46,7 @@ import { UsageSummary } from "./UsageSummary";
 import { DueToday } from "./DueToday";
 import { KashSecHomeCard } from "../components/KashSec";
 import { greetingFor, summaryLine } from "./home/dashboard";
+import { SecurityNotice } from "./SecurityActivity";
 import { AtAGlance, Pipeline, Upcoming } from "./home/Mission";
 import { FollowUps } from "./jobs/FollowUps";
 import { InterviewSoon } from "./jobs/interview/InterviewSoon";
@@ -115,6 +116,9 @@ export function HomePage() {
           {tracker.data ? summaryLine(tracker.data) : "\u00a0"}
         </p>
       </header>
+
+      {/* A change to how the account is signed in to, until "It was me" here (auth/alerts.py). */}
+      <SecurityNotice />
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-6">

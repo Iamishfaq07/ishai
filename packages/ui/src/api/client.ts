@@ -10,6 +10,7 @@ import type {
   VoiceStatus,
   CameraMetrics,
   PasskeyOptions,
+  SecurityActivity,
   SignedInDevice,
   JobMission,
   PrepPlan,
@@ -497,6 +498,8 @@ export function createApiClient(options: ApiClientOptions) {
     logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
     /** Signed-in devices, most recently used first. */
     devices: () => json<SignedInDevice[]>("/v1/auth/sessions"),
+    /** Recent changes to how this account is signed in to (passkeys, two-step sign-in, password), newest first. */
+    securityActivity: () => json<SecurityActivity>("/v1/auth/security-activity"),
     signOutDevice: (id: string) => json<void>(`/v1/auth/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     requestEmailChange: (newEmail: string, password: string) =>
       json<{ status: string }>("/v1/auth/me/email", {
@@ -907,6 +910,9 @@ export function createApiClient(options: ApiClientOptions) {
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/suspend`, { method: "POST", body: body({ reason }) }),
     unsuspendUser: (userId: string) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/unsuspend`, { method: "POST" }),
+    /** Admin: two-step sign-in off for someone who lost their phone and codes; `reason`: how you checked it's them. */
+    turnOffTwoFactor: (userId: string, reason: string) =>
+      json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/2fa/off`, { method: "POST", body: body({ reason }) }),
     /** Admin: every device signs in again and live sessions stop; the password stays. */
     signOutUser: (userId: string) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/sign-out`, { method: "POST" }),

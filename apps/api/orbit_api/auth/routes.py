@@ -13,6 +13,7 @@ from orbit_api.auth import email_tokens
 from orbit_api.auth.accounts import delete_account as delete_account_and_data
 from orbit_api.auth.accounts import forget_unproven_sign_ins
 from orbit_api.auth.accounts import sign_out_everywhere as _sign_out_everywhere
+from orbit_api.auth.alerts import alert
 from orbit_api.auth.captcha import public_config as captcha_config
 from orbit_api.auth.captcha import require_captcha
 from orbit_api.auth.devices import revoke, start_session
@@ -567,6 +568,7 @@ async def confirm_password_reset(body: ResetConfirmIn, request: Request, respons
         await forget_unproven_sign_ins(db, user.id)
     db.add(AuditLog(user_id=user.id, action="auth.password_reset", ip=_ip(request)))
     await db.commit()
+    alert(background, user, "auth.password_reset", request)
     if newly_verified:  # the reset proved the inbox first: the admin hears about the sign-up now
         _alert_admin_if_waiting(user, background)
     if await two_factor_enabled(db, user.id):
@@ -691,7 +693,7 @@ class PasswordChangeIn(BaseModel):
 
 @router.post("/me/password", response_model=AuthOut, dependencies=[Depends(auth_limit)])
 async def change_password(body: PasswordChangeIn, request: Request, response: Response,
-                          user: Annotated[User, Depends(current_user)],
+                          background: BackgroundTasks, user: Annotated[User, Depends(current_user)],
                           db: Annotated[AsyncSession, Depends(get_db)]) -> AuthOut:
     """A new password, with the current one: every other device (and any live session) is signed out; this one
     stays signed in."""
@@ -712,6 +714,7 @@ async def change_password(body: PasswordChangeIn, request: Request, response: Re
     await _sign_out_everywhere(db, u)
     db.add(AuditLog(user_id=u.id, action="auth.password_change", ip=_ip(request)))
     await db.commit()
+    alert(background, u, "auth.password_change", request)
     return await _auth_out(request, response, u, db)
 
 
