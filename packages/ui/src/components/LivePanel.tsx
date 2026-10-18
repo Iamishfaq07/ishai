@@ -790,7 +790,7 @@ function Banners({
       text:
         live.usage.reason === "session"
           ? "This session reached the time limit and has ended. Start a new session to continue."
-          : "You've run out of interview minutes, so the session has ended. Your transcript is saved in History.",
+          : "You've run out of interview minutes, so the session has ended. Your transcript is saved with the session.",
       ...(live.usage.reason === "session" ? {} : { action: buy("Buy minutes") }),
     });
   else if (live.usage && live.state !== "ended") {

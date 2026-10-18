@@ -707,7 +707,7 @@ function PrivacyCard() {
           disabled={saving}
           onChange={(v) => void setPrivacy({ store_transcripts: v })}
           label="Store transcripts"
-          description="Keep session transcripts in History. Off: transcripts are used live and discarded when the session ends."
+          description="Keep session transcripts in Sessions. Off: transcripts are used live and discarded when the session ends."
         />
         <p className="text-xs text-zinc-500">
           Screenshots are sent to the AI model to answer, then discarded — never stored. Raw audio is never stored.

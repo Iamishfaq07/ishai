@@ -301,7 +301,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
     return () => window.removeEventListener("beforeunload", warn);
   }, [inProgress]);
   const endSession = async () => {
-    if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved to History.", confirmLabel: "End session", danger: true }))) return;
+    if (!(await confirmDialog({ title: "End this session?", body: "The transcript and report are saved in Sessions.", confirmLabel: "End session", danger: true }))) return;
     setEndError(null);
     setEnding(true);
     actions.end();
