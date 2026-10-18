@@ -57,6 +57,8 @@ const loaders = {
   adminInbox: () => import("./pages/AdminInbox"),
   adminSupport: () => import("./pages/AdminSupport"),
   adminReferrals: () => import("./pages/AdminReferrals"),
+  // Orbit for Business (D82): one small router chunk for every business address; its pages load from there.
+  business: () => import("./business/BusinessRoutes"),
 } as const;
 
 function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
@@ -121,6 +123,11 @@ export const AdminAuditPage = page(loaders.adminAudit, (m) => m.AdminAuditPage);
 export const AdminInboxPage = page(loaders.adminInbox, (m) => m.AdminInboxPage);
 export const AdminSupportPage = page(loaders.adminSupport, (m) => m.AdminSupportPage);
 export const AdminReferralsPage = page(loaders.adminReferrals, (m) => m.AdminReferralsPage);
+export const BusinessPages = page(loaders.business, (m) => m.BusinessRoutes);
+export const CompanyCareersPage = page(loaders.business, (m) => m.CompanyCareersPage);
+export const PublicJobPage = page(loaders.business, (m) => m.PublicJobPage);
+export const ApplicationStatusPage = page(loaders.business, (m) => m.ApplicationStatusPage);
+export const AdminBusinessPage = page(loaders.business, (m) => m.AdminBusinessPage);
 
 type PageKey = keyof typeof loaders;
 

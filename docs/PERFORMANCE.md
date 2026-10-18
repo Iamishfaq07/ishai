@@ -56,12 +56,18 @@ even when SQLite hides it.
   free line in the room it will need once the server answers, so nothing moves (CLS 0, below). The product pages
   carry it too, within their budgets; it's its own chunk, so the pages without it pay only its name in the preload map.
 
-  Orbit Apply (D84, 19 Oct 2026) is a lazy chunk of its own, `AutoApplyPages`, at 183.5 kB first load (10.8 kB of
-  its own; budget 193). Jobs AI's own chunk is unchanged at 276.8 kB. The entry went up 0.3 kB (170.4 → 170.7). Most of
-  that is the new chunk's name in the preload map, the rest the two routes, the Applications tab and two generic
-  client methods (`request`, `blob`); the typed Orbit Apply calls stay in the chunk. That pushed pages already at
-  their budgets just over: Setup 200.1, Mock 206.2, Live 247.3 and Resume AI 205.2 kB. So the entry, Home, Sessions,
-  Setup, Mock, Live and Resume AI budgets went up 1 kB each.
+  Orbit Apply (D84, 19 Oct 2026) is a lazy chunk of its own, `AutoApplyPages`, at 183.9 kB first load (about 11 kB
+  of its own; budget 193). Jobs AI's own chunk went from 276.8 to 277.3 kB, under its unchanged 280. The entry
+  grew about 0.3 kB: the new chunk's name in the preload map, the two routes and the Applications tab. The typed
+  Orbit Apply calls stay in the chunk, through the client's generic `call` / `callRaw`. Merged with Orbit for
+  Business (below), whose own budget raises cover the signed-in pages, the entry measures 171.0 kB, so its budget
+  went up 1 kB, to 172. Every page is within its budget.
+
+  Orbit for Business (D82, 19 Oct 2026) raised Home, Sessions, Setup, Mock, Live and Resume AI by 1 kB each: the
+  entry grew ~0.3 kB (the business routes and the one loader for every `/business` and `/company` address; the app
+  itself, the careers pages and the admin screen are lazy chunks), and the table's sort-arrow icon became its own
+  chunk. Measured against an origin/main build: that is the whole cost. New budgets: the /business page 203, the
+  careers and job pages 195.
 
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).

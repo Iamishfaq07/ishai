@@ -425,7 +425,7 @@ def test_the_migration_adds_and_removes_the_links() -> None:
     alembic("upgrade", "head")
     assert "application_id" in cols("sessions") and "origin" in cols("documents")
     assert {"round_type", "round_number", "interview_version", "interview_questions"} <= cols("job_applications")
-    alembic("downgrade", "35a47e5f80ca-1")  # this one (and any later), wherever it's chained
+    alembic("downgrade", "467956f519dd")  # the revision before this one (later ones sit on top of it)
     assert "application_id" not in cols("sessions") and "origin" not in cols("documents")
     assert not {"round_type", "interview_questions"} & cols("job_applications")
     alembic("upgrade", "head")

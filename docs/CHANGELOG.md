@@ -30,7 +30,8 @@
 - **Billing**: the plan's applications per 30-day window (Basic 60, Pro 150, Premium 300, Unlimited 750; Free a
   5-application trial), then top-up credits of kind "apply". Only a confirmed submission is charged, and any other end
   of a lease gives the hold back.
-- Migration `4a93a7c927ef` (on `35a47e5f80ca`): five new tables and `job_applications.applied_via`. The tracker shows
+- Migration `4a93a7c927ef` (on `b75cd70a02a8`, Orbit for Business): five new tables and `job_applications.applied_via`. The
+  tracker shows
   "Applied (Orbit Apply)" in a job's journey.
 - **Web**: Jobs AI → Applications (`/jobs/applications`) and its setup wizard (`/jobs/auto-apply`), a chunk of its
   own.
@@ -47,6 +48,38 @@
   extension token. It submitted with a screenshot, its next ask was held for pacing, and it hit a captcha (needs
   you). The Applications view showed the proof and "Finish in one click", and the tracker showed "applied via
   orbit_apply". axe clean on 6 screens; 18/18 checks.
+## Orbit for Business, Phase 1 core (2026-10-19)
+
+- **A company workspace on the same login** (DECISIONS D82, docs/PROTOCOL.md "Orbit for Business"): `/business`
+  (the public page, prerendered) and the app at `/business/app`. Companies verify their website's domain by a
+  verified Orbit email at it, a 6-digit code to a work address there, or a DNS TXT record; free-mail and hosting
+  domains can't; unverified companies draft but can't publish. Roles (owner, admin, recruiter, hiring manager,
+  interviewer), invites by email with seats, transfer of ownership; a deleted owner's company passes to its admin.
+- **Jobs**: sanitized rich-text description, locations / remote with countries, salary with show/hide, screening
+  questions with knock-out rules (flagged and sorted last, never rejected), editable stages, hiring team, the AI
+  writer (orbit_api.business_ai, D83, behind business/ai_port.py, with its template fallback and inclusive-wording
+  notes shown), publish / pause / close / reopen, closing itself after valid-through.
+- **Careers pages as HTML** from the Worker: `/company/<slug>` and its job pages with Google for Jobs JobPosting JSON-LD
+  while open (410 without it once closed), `/sitemap-jobs.xml`, an embeddable widget (`/embed/company/<slug>`,
+  `/embed.js`), "Report this job", and Indexing API pings when `ORBIT_GOOGLE_INDEXING_SA_JSON` is set.
+- **Applying**: one click from an Orbit account with a preview of exactly what's shared (the chosen resume's text is
+  copied; the job joins the candidate's Jobs AI tracker as "Applied via Orbit" and follows the company's moves), or
+  signed out with a PDF/DOCX; consent with the notice's version and time; one per email per job; the confirmation
+  email's link opens the applicant's status page (confirm, pick an interview time, ask for deletion).
+- **Pipeline**: board and list, keyboard moves, bulk move and reject (with an optional email), tags, notes with
+  @mentions, 1-4 scorecards with hire/no-hire, 3-5 interview slots with an .ics for both sides, templates with
+  variables sent from Orbit with Reply-To the member, blind review, ranking with reasons ("Matches 6/8 must-haves",
+  evidence lines, "basic match" when the model was unavailable; the model version only in the audit log and the
+  Orbit admin), "Interview with Saba (coming soon)".
+- **Data and money**: analytics (sources, the stage funnel, time to first response), CSV export, delete-on-request,
+  a 12-month default retention for rejected applicants, an append-only audit log, AI calls stored per company
+  (`provider_requests.company_id`); Free / Starter / Growth limits enforced, plans granted by the Orbit admin
+  (checkout not wired yet), and `/admin/business` for verification, suspension, take-downs and reports.
+- Migration `b75cd70a02a8` (new `biz_*` tables, `provider_requests.company_id`). Tests: 48 API (test_business_*) plus
+  the IDOR matrix's 12 public and 11 admin Business routes; web vitest (business model, worker careers pages). E2E:
+  headless Chromium against the local API and `wrangler dev`, 30 checks (sign-up → verify → invite → publish →
+  JSON-LD in the HTML → both applies → tracker → ranking → moves, reject with email, scorecard → analytics → export →
+  delete → close is a 410), axe clean on 8 pages.
 
 ## Orbit for Business: the AI module (2026-10-19)
 

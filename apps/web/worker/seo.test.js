@@ -289,7 +289,7 @@ describe("robots.txt", () => {
     const res = await get("/robots.txt");
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("text/plain; charset=utf-8");
-    expect(robots.sitemaps).toEqual([`${SITE}/sitemap.xml`]);
+    expect(robots.sitemaps).toEqual([`${SITE}/sitemap.xml`, `${SITE}/sitemap-jobs.xml`]);
   });
 
   it("lets every search and answer crawler read every public page and the files pages need", () => {

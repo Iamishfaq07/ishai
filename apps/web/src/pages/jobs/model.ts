@@ -367,6 +367,17 @@ export function isManual(entry: Pick<JobTrackerEntry, "listing_id">): boolean {
   return entry.listing_id.startsWith("ext:");
 }
 
+/** A job applied to through Orbit for Business (D82): the company moves it, so its status follows theirs. */
+export function isOrbitDirect(entry: Pick<JobTrackerEntry, "listing_id" | "source">): boolean {
+  return entry.source === "orbit_direct" || entry.listing_id.startsWith("biz:");
+}
+
+/** The address of an Orbit Direct job's page on this site ("/company/acme/jobs/dev"), from its absolute URL. */
+export function orbitDirectPath(url: string): string | null {
+  const m = /^(?:https?:\/\/[^/]+)?(\/company\/[a-z0-9-]+\/jobs\/[a-z0-9-]+)\/?$/.exec(url.trim());
+  return m ? m[1]! : null;
+}
+
 /** "naukri.com", from a saved link (null when there's none). */
 export function linkHost(url: string): string | null {
   const safe = safeUrl(url);

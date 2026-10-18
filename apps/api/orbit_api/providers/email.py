@@ -30,6 +30,11 @@ class OutgoingEmail:
     text: str
     # Where the recipient's "Reply" goes, when not back to ORBIT_EMAIL_FROM (an Inbox reply: to the admin).
     reply_to: str | None = None
+    # Files sent with it: (filename, MIME type, bytes). Orbit for Business's interview invites carry an .ics.
+    attachments: tuple[tuple[str, str, bytes], ...] = ()
+    # The line under the message, when it isn't about the recipient's Orbit account (an applicant's email from a
+    # company on Orbit for Business). None: the account footer.
+    footer: str | None = None
 
 
 class EmailSender(ABC):
@@ -78,11 +83,14 @@ class SmtpSender(EmailSender):
             msg["Reply-To"] = email.reply_to
         # Account mail only. There is no newsletter, so this is how to reach us, not a marketing opt-out.
         msg["List-Unsubscribe"] = "<https://orbitanswer.com/contact>"
-        msg.set_content(
-            email.text.rstrip()
-            + "\n\n--\nThis email is about your Orbit account. Orbit does not send a newsletter. "
-            + "To download or delete your data, use Settings, or the contact page on the site.\n"
-        )
+        footer = email.footer if email.footer is not None else (
+            "This email is about your Orbit account. Orbit does not send a newsletter. "
+            "To download or delete your data, use Settings, or the contact page on the site.")
+        msg.set_content(email.text.rstrip() + f"\n\n--\n{footer}\n")
+        for filename, mime, data in email.attachments:
+            maintype, _, subtype = mime.partition("/")
+            msg.add_attachment(data, maintype=maintype or "application", subtype=subtype or "octet-stream",
+                               filename=filename)
         ctx = ssl.create_default_context()
         if self._port == 465:
             with smtplib.SMTP_SSL(self._host, self._port, context=ctx, timeout=15) as smtp:

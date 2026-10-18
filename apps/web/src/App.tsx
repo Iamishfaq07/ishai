@@ -69,6 +69,11 @@ import {
   AdminInboxPage,
   AdminSupportPage,
   AdminReferralsPage,
+  AdminBusinessPage,
+  ApplicationStatusPage,
+  BusinessPages,
+  CompanyCareersPage,
+  PublicJobPage,
   ContactPage,
   NotFoundPage,
   TechnicalPage,
@@ -100,7 +105,7 @@ export function PageLoading() {
  * Signed out, a page asks you to sign in first, except one with a public face (`publicPage`): "/" shows the front
  * page, and Resume AI's and Jobs AI's homes their product pages.
  */
-function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
+export function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
   const { user, loading, unreachable, recheck } = useAuth();
   const location = useLocation();
   if (loading) {
@@ -254,6 +259,12 @@ export function App() {
       {/* Public: Orbit's interview-prep articles (pages/guides), built as HTML too. */}
       <Route path="/guides" element={<Prerendered><GuidesHubPage /></Prerendered>} />
       <Route path="/guides/:slug" element={<Prerendered><GuideArticlePage /></Prerendered>} />
+      {/* Orbit for Business (D82): its public page; the company app (its own area, signed in); an invite; the
+          careers pages (served as HTML by the Worker too, worker/careers.js) and an applicant's status page. */}
+      <Route path="/business/*" element={<BusinessPages />} />
+      <Route path="/company/:slug" element={<CompanyCareersPage />} />
+      <Route path="/company/:slug/jobs/:jobSlug" element={<PublicJobPage />} />
+      <Route path="/application/:token" element={<ApplicationStatusPage />} />
       {/* Right after sign-up: the three welcome questions, outside the nav so nothing competes with them. */}
       <Route
         path="/welcome"
@@ -326,6 +337,7 @@ export function App() {
         <Route path="admin/inbox" element={<AdminOnly><AdminInboxPage /></AdminOnly>} />
         <Route path="admin/support" element={<AdminOnly><AdminSupportPage /></AdminOnly>} />
         <Route path="admin/referrals" element={<AdminOnly><AdminReferralsPage /></AdminOnly>} />
+        <Route path="admin/business" element={<AdminOnly><AdminBusinessPage /></AdminOnly>} />
         {ComponentGalleryPage && <Route path="dev/components" element={<ComponentGalleryPage />} />}
       </Route>
       <Route path="*" element={<NotFoundPage />} />

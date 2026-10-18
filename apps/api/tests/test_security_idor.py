@@ -458,6 +458,17 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("DELETE", "/v1/support/threads/{thread_id}"),
     # Orbit Apply's tailored resume for the executor: the 15-minute HMAC link (exp + sig) is the credential.
     ("GET", "/v1/apply/{packet_id}/resume.pdf"),
+    # Orbit for Business (D82): the careers pages, their sitemap and a company's logo are public by design; applying
+    # and reporting a job work signed out (rate-limited, the bot check when configured); an invite's lookup shows
+    # only the company and a masked address; the applicant's status page is reached by its emailed HMAC link.
+    ("GET", "/v1/public/business/companies/{slug}"), ("GET", "/v1/public/business/companies/{slug}/jobs/{job_slug}"),
+    ("GET", "/v1/public/business/companies/{slug}/logo"), ("GET", "/v1/public/business/sitemap"),
+    ("POST", "/v1/public/business/jobs/{job_id}/apply"), ("POST", "/v1/public/business/jobs/{job_id}/report"),
+    ("GET", "/v1/public/business/invites/{token}"),
+    ("GET", "/v1/public/business/applications/{token}"),
+    ("POST", "/v1/public/business/applications/{token}/confirm"),
+    ("POST", "/v1/public/business/applications/{token}/book"),
+    ("POST", "/v1/public/business/applications/{token}/delete-request"),
 })
 
 
@@ -573,6 +584,18 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("PATCH", "/v1/admin/referrals/codes/{target_code}", {"json": {"active": False}}),
     ("GET", "/v1/admin/apply/sites", {}),
     ("PUT", "/v1/admin/apply/sites/lever", {"json": {"paused": False}}),
+    # Orbit for Business's review (D82): refused before any lookup, so ids that don't exist are enough.
+    ("GET", "/v1/admin/business/companies", {}),
+    ("GET", "/v1/admin/business/companies/{company_id}", {}),
+    ("POST", "/v1/admin/business/companies/{company_id}/suspend", {"json": {"reason": "idor check"}}),
+    ("POST", "/v1/admin/business/companies/{company_id}/unsuspend", {}),
+    ("POST", "/v1/admin/business/companies/{company_id}/verify", {}),
+    ("POST", "/v1/admin/business/companies/{company_id}/plan", {"json": {"plan": "growth"}}),
+    ("POST", "/v1/admin/business/jobs/{job_id}/take-down", {"json": {"reason": "idor check"}}),
+    ("POST", "/v1/admin/business/jobs/{job_id}/restore", {}),
+    ("GET", "/v1/admin/business/companies/{company_id}/audit", {}),
+    ("GET", "/v1/admin/business/reports", {}),
+    ("POST", "/v1/admin/business/reports/{report_id}", {"json": {"status": "dismissed"}}),
 ]
 ADMIN_IDS = [f"{m} {p} {json.dumps(k.get('json', ''))[:40]}" for m, p, k in ADMIN_ROUTES]
 
@@ -625,6 +648,17 @@ def test_admin_routes_work_for_the_admin(world: World, method: str, path: str, k
                            json={"code": f"T{tag}", "label": "target", "kind": "creator"}))
     ids = {"target": user["id"], "target_email": user["email"], "target_order": order, "target_message": message,
            "target_thread": thread, "target_code": code, "target_code_tag": tag}
+    if "/v1/admin/business/" in path:  # a throwaway company with a published, reported job
+        comp = _created(c.post("/v1/business/companies", headers=h, json={
+            "name": "Target Co", "website": f"target-{tag.lower()}.com", "size": "1-10", "country": "IN"}))
+        assert c.post(f"/v1/admin/business/companies/{comp}/verify", headers=world.admin).status_code == 200
+        job = _created(c.post(f"/v1/business/companies/{comp}/jobs", headers=h, json={
+            "title": "Target role", "locations": ["Pune"],
+            "description_html": "<p>A role that exists only for the admin wall's check, long enough to publish.</p>"}))
+        assert c.post(f"/v1/business/companies/{comp}/jobs/{job}/publish", headers=h).status_code == 200
+        assert c.post(f"/v1/public/business/jobs/{job}/report", json={"reason": "other"}).status_code == 201
+        reports = c.get("/v1/admin/business/reports", headers=world.admin).json()
+        ids.update(company_id=comp, job_id=job, report_id=next(r["id"] for r in reports if r["job_id"] == job))
     if path.endswith("/2fa/off"):  # only for an account that has two-step sign-in on
         from tests.test_two_factor import _turn_on
 

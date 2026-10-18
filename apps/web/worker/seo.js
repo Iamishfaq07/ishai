@@ -8,6 +8,7 @@
 //     engines' verification codes), added on the way out;
 //   - noindex everywhere on any host that isn't the site's own (preview deployments, *.workers.dev).
 // Everyone gets the same page: nothing here looks at who is asking (no cloaking).
+import { careersRoute, serveCareers } from "./careers.js";
 import { metaFor, withPageMeta } from "./meta.js";
 import { ROBOTS_ALLOW_API, ROBOTS_DISALLOW_EXACT, ROBOTS_DISALLOW_PREFIX, foldCase, movedPath, routeKind } from "./routes.js";
 import { SITE, SITE_NAME, jsonLdText, structuredDataFor } from "./site.js";
@@ -114,6 +115,8 @@ export function robotsTxt(env, url) {
     "Disallow: /",
     "",
     `Sitemap: ${origin}/sitemap.xml`,
+    // Orbit for Business: the companies' careers pages and open jobs, from the API (careers.js, D82).
+    `Sitemap: ${origin}/sitemap-jobs.xml`,
     "",
   ].join("\n");
 }
@@ -288,7 +291,9 @@ export const BASELINE_HEADERS = {
 const NOTHING_CSP = "default-src 'none'; frame-ancestors 'none'";
 
 export function withBaseline(response) {
-  const missing = Object.keys(BASELINE_HEADERS).filter((h) => !response.headers.has(h));
+  // The jobs widget (careers.js) is meant to be framed by a company's own site: its CSP says so, and DENY would undo it.
+  const framable = /frame-ancestors \*/.test(response.headers.get("content-security-policy") || "");
+  const missing = Object.keys(BASELINE_HEADERS).filter((h) => !response.headers.has(h) && !(framable && h === "x-frame-options"));
   const csp = !response.headers.has("content-security-policy") && !isHtml(response);
   if (!missing.length && !csp) return response;
   const res = new Response(response.body, response);
@@ -389,9 +394,15 @@ async function seoAnswer(request, env, url, serve) {
   }
 
   const kind = routeKind(path);
+  const careers = readable ? careersRoute(path) : null;
   let response;
   try {
-    if (readable && path.startsWith("/_prerender/")) {
+    if (careers) {
+      // Orbit for Business: careers pages, jobs, the widget and the jobs sitemap, from the API (careers.js, D82).
+      response = await serveCareers(request, env, url, careers, () => appShell(env, request, url), originOf(env));
+      if (!response) response = await notFound(env, request, url);
+      else if (response.status === 200 && isHtml(response) && kind === "public") response = withSeoHead(response, path, env);
+    } else if (readable && path.startsWith("/_prerender/")) {
       // The built copies of public pages (the question bank's prerender) are for the Worker to serve at their own
       // address; asked for directly, they'd be duplicates of those pages.
       response = await notFound(env, request, url);

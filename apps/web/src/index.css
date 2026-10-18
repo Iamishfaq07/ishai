@@ -152,3 +152,35 @@
     min-height: 0 !important;
   }
 }
+
+/* Orbit for Business (D82): a job description as its editor wrote it (worker/careers.js, business/). */
+.biz-prose p,
+.biz-prose ul,
+.biz-prose ol,
+.biz-prose blockquote {
+  margin-top: 0.75em;
+}
+.biz-prose ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.biz-prose ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.biz-prose h3 {
+  margin-top: 1.25em;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.biz-prose h4 {
+  margin-top: 1em;
+  font-weight: 600;
+}
+.biz-prose a {
+  text-decoration: underline;
+}
+.biz-prose blockquote {
+  border-left: 3px solid rgb(161 161 170 / 0.5);
+  padding-left: 0.75rem;
+}

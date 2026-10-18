@@ -33,6 +33,17 @@ from orbit_api.billing.monthly import monthly_plans as configured_monthly
 from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.referral_routes import router as referrals_router
 from orbit_api.billing.routes import router as billing_router
+from orbit_api.business import indexing as _business_indexing  # noqa: F401  (registers its background job)
+from orbit_api.business import ranking as _business_ranking  # noqa: F401  (registers its background job)
+from orbit_api.business.admin import router as business_admin_router
+from orbit_api.business.analytics import router as business_analytics_router
+from orbit_api.business.apply import public_router as business_apply_public_router
+from orbit_api.business.apply import router as business_apply_router
+from orbit_api.business.companies import public_router as business_public_router
+from orbit_api.business.companies import router as business_router
+from orbit_api.business.jobs import router as business_jobs_router
+from orbit_api.business.pipeline import router as business_pipeline_router
+from orbit_api.business.retention import running_sweeper as running_business_sweeper
 from orbit_api.career.routes import router as career_router
 from orbit_api.code.routes import router as code_router
 from orbit_api.config import get_settings
@@ -123,7 +134,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         logging.getLogger(__name__).exception("replaying failed writes failed; the replayer retries")
     async with (jobs.running_worker(s.job_poll_s), running_sweeper(s.session_sweep_s), running_replayer(),
-                running_job_refresher()):
+                running_job_refresher(), running_business_sweeper()):
         yield
         await drain_teardowns()
         # A last try for writes that failed during an outage: the spool file and memory go with this process.
@@ -380,6 +391,15 @@ def create_app() -> FastAPI:
     app.include_router(support_router)
     app.include_router(support_admin_router)
     app.include_router(telemetry_router)
+    # Orbit for Business (D82).
+    app.include_router(business_router)
+    app.include_router(business_public_router)
+    app.include_router(business_jobs_router)
+    app.include_router(business_pipeline_router)
+    app.include_router(business_analytics_router)
+    app.include_router(business_apply_router)
+    app.include_router(business_apply_public_router)
+    app.include_router(business_admin_router)
     return app
 
 

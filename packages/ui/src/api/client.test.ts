@@ -356,3 +356,28 @@ describe("api client direct route (D80)", () => {
     expect(onUnauthorized).toHaveBeenCalledOnce();
   });
 });
+
+describe("api client generic call", () => {
+  it("call sends JSON with the CSRF token and parses the reply; callRaw returns the Response", async () => {
+    const f = fakeFetch([
+      { status: 200, body: { ...user, csrf_token: "tok-9" } },
+      { status: 200, body: { ok: 1 } },
+      { status: 200, body: { csv: true } },
+    ]);
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: f.impl });
+    await api.me();
+    const out = await api.call<{ ok: number }>("/v1/business/companies", { method: "POST", body: JSON.stringify({ a: 1 }) });
+    expect(out.ok).toBe(1);
+    expect(f.calls[1]!.url).toBe("https://api.test/v1/business/companies");
+    expect(f.calls[1]!.headers.get("X-CSRF-Token")).toBe("tok-9");
+    expect(f.calls[1]!.headers.get("Content-Type")).toBe("application/json");
+    const res = await api.callRaw("/v1/business/x.csv");
+    expect(res.ok).toBe(true);
+  });
+
+  it("call raises ApiError on a failed reply", async () => {
+    const f = fakeFetch([{ status: 404, body: { detail: "Not found." } }]);
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: f.impl });
+    await expect(api.call("/v1/business/companies/x")).rejects.toBeInstanceOf(ApiError);
+  });
+});

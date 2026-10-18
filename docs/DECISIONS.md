@@ -1264,6 +1264,75 @@ declaration), a second Google OAuth client of the "desktop" type (a new console 
 place for accounts to be found or made), and polling the API for the result (a code that sits on the server waiting
 for whoever asks).
 
+**D82 — Orbit for Business is a company workspace on the same site and login, its own tenant, where a person decides
+and the AI only sorts and explains.** The owner approved Phase 1 of the business plan
+(research/orbit-business-plan.md, §5.2, §6.2, §6.4 of orbit-business-autoapply.md): companies post jobs on Orbit,
+Orbit candidates apply in one click, companies see ranked applicants with reasons. So:
+- **One login, two sides, kept apart in the API.** A company is a tenant (`biz_*` tables, apps/api/orbit_api/business).
+  Every company route loads the caller's membership of the company in the path and answers 404 to anyone else
+  (company A's member asking with B's ids too). What an applicant shares is *copied* into their application when they
+  apply (the chosen resume's text, their answers); no company route ever reads a candidate's documents, resumes,
+  sessions, practice or LinkedIn AI, and the applicant's account id is never in a company's answers. A member who is
+  also a candidate stays a candidate to every other company. Tests check each of these (test_business_*.py).
+- **Roles in the API, not the UI**: owner, admin, recruiter, hiring manager (only jobs whose hiring team includes
+  them), interviewer (only applications they're assigned to: read, notes, scorecards). 403 `biz_forbidden` for a
+  role, 403 `biz_suspended` for a company the Orbit team suspended.
+- **Fake employers are stopped at publishing.** A company proves its website's domain with a verified Orbit email at
+  the domain, a 6-digit code sent to any work address there, or a DNS TXT record (`orbit-verify=…`, looked up over
+  DNS-over-HTTPS so no resolver library is added). Free-mail and hosting domains (gmail.com, sites.google.com,
+  *.github.io…) can't verify. Unverified companies draft; publishing needs verification. Changing the domain drops
+  it. The public job page has "Report this job"; the Orbit admin reviews companies, verifies by hand, suspends (its
+  pages answer 404 and Google is told), takes single jobs down, and works the reports queue.
+- **No automatic rejection anywhere.** Knock-out answers are flagged ("Doesn't meet: …") and sorted last; ranking
+  sorts and explains; rejecting is a person's click (one or many), logged with the ranking's model version and score.
+  There is no setting that rejects by score.
+- **Ranking without protected attributes.** Resume parsing and ranking run in the background (a durable job) through
+  a port, business/ai_port.py, to orbit_api.business_ai (D83); tests, and ORBIT_BUSINESS_AI=fake, use a
+  deterministic fake. business_ai redacts the parse itself (`redact_for_ranking`), and needs the name to strip it
+  from the text, so it gets the whole parse; the fake gets `professional_only` (no name, contact or location). The
+  parsed resume has no field for gender, age, photo, religion, caste or marital status. Shown as "Matches 6/8
+  must-haves" with evidence lines, and "basic match" when the ranking is keyword matching alone (business_ai's
+  fallback when the model is unavailable). `model_version` names the model, so it is kept in the application, the
+  company's audit log and the Orbit admin's view of it, and never in what members see. Each model call business_ai
+  makes is collected by the port (a context around the app's LLM provider) and stored in `provider_requests` with
+  the company's id, ready for per-plan AI limits. Blind review (a company setting) hides names, contact details and
+  the resume's contact lines; owners, admins and recruiters can reveal one applicant, which is logged.
+- **Notice and consent on every application**, versioned (`NOTICE_VERSION`): what's shared, that AI sorts and a
+  person decides, the retention, how to ask for deletion. The version, the time and the text's SHA-256 are kept on
+  the application; an old version is refused (409) so nobody agrees to words they didn't see.
+- **Applying.** Signed in: one click with a chosen Orbit resume (or resume document), with a preview of exactly what's
+  shared; the job joins the candidate's own Jobs AI tracker (`source: orbit_direct`) and follows the company's moves in
+  plain statuses. Signed out: name, email, phone, a PDF/DOCX read by the same isolated parser as uploads (the file is
+  thrown away, the text kept), the bot check when configured, a honeypot, per-network and per-email limits; the
+  confirmation email's status link confirms the address. One application per email per job; a repeat is answered
+  "applied" (and emailed), never "this address already applied".
+- **Careers pages are real HTML.** `/company/<slug>` and its job pages are served by the Worker from the API's public
+  endpoints, content and Google for Jobs JobPosting JSON-LD in the HTML (built by the API: `jobs.json_ld`, tested),
+  only while the job is open; a closed job's page is a 410 without markup. Jobs have their own sitemap
+  (`/sitemap-jobs.xml`) and an embeddable widget. The Indexing API is pinged on publish, change and close when
+  `ORBIT_GOOGLE_INDEXING_SA_JSON` is set (a service account that's an Owner of the site in Search Console); off and
+  silent otherwise.
+- **Email from Orbit, replies to the recruiter.** Templates per company (received, stage, rejection, interview) with
+  {{variables}}, plain text, From Orbit's address, Reply-To the member who acted, an applicant footer instead of the
+  account one. Simple scheduling: 3-5 slots, the candidate picks one on their status page, both get an .ics. The
+  status link is an HMAC of the application id (no stored token; only its hash is looked up).
+- **Data controls**: retention per company (default: rejected applicants deleted 12 months after rejection, a sweep
+  every 6 hours that also closes jobs past their valid-through), CSV export (formula-safe), delete-on-request (the
+  applicant asks from the status page; the company's admins are emailed; the delete is a member's click), and an
+  append-only audit log (the ORM refuses updates and deletes of its rows) that names applicants by reference only.
+- **Plans are entitlements first.** Free 1 active job and 1 seat; Starter 5/3 (₹2,999 / $39 a month); Growth 20/10
+  (₹9,999 / $129), invite-only. Limits are enforced (402 `biz_limit`; open and paused jobs count, invites hold a seat).
+  Checkout is not wired: billing/ credits one person's account (`payments.user_id` → `credit()` → the user's grant),
+  and a company subscription needs a payment's owner to be a company and its settlement to set the company's plan, a
+  change to the settle path, the reconciler and refunds that deserves its own review. Until then the owner asks for a
+  plan from the workspace (the admin is emailed) and the Orbit admin grants it for N days.
+- Saba interviews are Phase 2: the pipeline only shows "Interview with Saba (coming soon)".
+Rejected: a separate login or subdomain for companies (two accounts for one person, and the cookie would no longer be
+the site's), reading the candidate's Orbit resume live from the company side (any later edit or deletion would leak
+or vanish, and the boundary would be a query filter instead of a copy), storing original resume files (the existing
+rule: text only), and an auto-reject setting with a warning (Art. 22 GDPR, the EU AI Act's human oversight, and the
+research's own advice).
+
 **D83 — Orbit for Business's AI is a pure module (`orbit_api/business_ai`): the model judges, the server checks and
 scores, protected attributes never reach it, and nothing in it can reject anyone.** Phase 1 of Orbit for Business
 needs a JD writer, a resume parser and an applicant ranking with explanations (research note

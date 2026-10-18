@@ -2,7 +2,7 @@
 kill switch; job_applications.applied_via
 
 Revision ID: 4a93a7c927ef
-Revises: 35a47e5f80ca
+Revises: b75cd70a02a8
 Create Date: 2026-10-19 12:00:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '4a93a7c927ef'
-down_revision: str | Sequence[str] | None = '35a47e5f80ca'
+down_revision: str | Sequence[str] | None = 'b75cd70a02a8'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
