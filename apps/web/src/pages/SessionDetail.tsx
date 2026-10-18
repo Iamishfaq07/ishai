@@ -204,6 +204,7 @@ export function SessionDetailPage() {
           practiceQueue={!session.negotiation}
           ended={session.status === "ended"}
           empty={!detail.data.turns.length && !detail.data.questions.length}
+          answers={detail.data.answers.length}
           onGenerate={async () => {
             await api.reviewSession(session.id);
             detail.reload();
