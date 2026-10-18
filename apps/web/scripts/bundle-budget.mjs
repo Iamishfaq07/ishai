@@ -9,20 +9,20 @@ import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
 /** kB of gzip (level 9, as Cloudflare serves the assets): the entry alone, and each page's first load in total. Set
- *  about 5% over what was measured on 18 Oct 2026 (docs/PERFORMANCE.md), so a real jump fails and a few lines don't. */
+ *  about 5% over what main measured on 18 Oct 2026 (docs/PERFORMANCE.md), so a real jump fails and a few lines don't. */
 export const BUDGETS = {
   entry: 170,
   css: 32,
   pages: {
     Home: 210, // the signed-in landing: the page everyone opens
-    Landing: 200, // the front page, signed out
+    Landing: 205, // the front page, signed out
     Sessions: 185,
-    SessionSetup: 195,
-    Mock: 200,
-    Live: 240, // the live copilot
+    SessionSetup: 200,
+    Mock: 205,
+    Live: 255, // the live copilot (with the video room, D69: ~14 kB of it, loaded for every session)
     Resumes: 205,
-    ResumeEditor: 250,
-    JobsAiPages: 275,
+    ResumeEditor: 255,
+    JobsAiPages: 280,
   },
 };
 

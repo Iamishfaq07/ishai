@@ -30,10 +30,13 @@ even when SQLite hides it.
 
   | entry (every page) | CSS | Home | front page | Sessions | Setup | Mock | Live | Resume AI | resume editor | Jobs AI |
   |---|---|---|---|---|---|---|---|---|---|---|
-  | 170 kB | 32 kB | 210 | 200 | 185 | 195 | 200 | 240 | 205 | 250 | 275 |
+  | 170 kB | 32 kB | 210 | 205 | 185 | 200 | 205 | 255 | 205 | 255 | 280 |
 
-  About 5% over what was measured below, so a real jump fails CI and a few lines don't. Raising one needs its reason
-  here.
+  About 5% over main as measured on 18 Oct 2026 after the merges of that day (entry 162.4, CSS 29.1, Home 201.9,
+  front page 195.6, Sessions 177.7, Setup 191.8, Mock 197.6, Live 243.6, Resume AI 196.8, resume editor 243.6, Jobs
+  AI 267.7 kB), so a real jump fails CI and a few lines don't. The first run on that main caught the video room
+  (D69) adding ~14 kB to every live session's first load (Live 229 → 244 kB); Live's budget was raised for it, and
+  loading the room only for video interviews is in "Left to do". Raising a budget needs its reason here.
 
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
@@ -57,6 +60,9 @@ even when SQLite hides it.
 Overall, Balanced: p50 ~2.6 s (2.58 s measured), of which Orbit's own server work is under 10 ms.
 
 ## Baseline and after (18 Oct 2026)
+
+Before is origin/main at 7d7151c9, after is this work on it; the branch was then rebased onto main 8ced5c55 (the
+budgets above are measured there).
 
 ### API — p50 / p95 in ms, in-process, seeded local Postgres 18, 30 calls each (`perf/bench.py`, `perf/ab.sh`)
 Before = origin/main 7d7151c9, after = this branch, run back to back on the same database, best of two rounds.
@@ -206,7 +212,9 @@ any other URL):
   client's re-parse per chunk; it's a protocol change for the web and desktop clients together.
 - **Sessions, stories, answers lists** (4,500-4,700 elements at 80-200 items): the same batched drawing as the tracker
   would bring their tap latency (40-190 ms at 4x CPU) under 100 ms.
-- **The live page's own chunk** (Live 229 kB first load): the camera coach and video room pieces could load on use.
+- **The live page's own chunk** (Live 244 kB first load on main): `VideoInterviewRoom` (14 kB gzip) is imported by
+  `LivePanel` for every session but drawn only for video interviews; loading it on use (with a Suspense fallback in the
+  room's own colours) would take it off every other session's first load. It's the video room's code (D69).
 - **The public pages' first paint**: inline the critical CSS and the theme script in the prerendered HTML (~450 ms
   render-blocking on a cold mobile visit, Lighthouse's estimate); the front page and the Worker belong to the brand
   and search work.
