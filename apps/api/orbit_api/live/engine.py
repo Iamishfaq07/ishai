@@ -1096,6 +1096,8 @@ class LiveEngine:
         self.memory.add_turn("candidate", text)
         await self._rec.turn(turn_id, "candidate", text, now, now)
         self._mock.on_candidate(text, now, final=True)
+        if self._mock.pending_request:
+            return  # "Can you repeat that?" typed: she repeats it (next tick) rather than moving on
         self._spawn(self._mock.next(now))
 
     async def _on_mock_finish(self) -> None:

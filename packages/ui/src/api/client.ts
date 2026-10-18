@@ -463,10 +463,11 @@ export function createApiClient(options: ApiClientOptions) {
     saveCameraMetrics: (sessionId: string, metrics: CameraMetrics, keepalive = false) =>
       json<void>(`/v1/sessions/${encodeURIComponent(sessionId)}/camera-metrics`, { method: "PUT", body: body(metrics), keepalive }),
     /** The interviewer's question as MP3, streamed (read the body as it arrives). */
-    speak: (text: string, voice: string, signal?: AbortSignal, sessionId?: string) =>
+    /** `speed`: the speaking pace (0.8–1.25); the response's X-Orbit-Speed says the pace it was made at. */
+    speak: (text: string, voice: string, signal?: AbortSignal, opts?: { sessionId?: string; speed?: number }) =>
       raw("/v1/voice/speak", {
         method: "POST",
-        body: body({ text, voice, session_id: sessionId ?? null }),
+        body: body({ text, voice, session_id: opts?.sessionId ?? null, ...(opts?.speed && opts.speed !== 1 ? { speed: opts.speed } : {}) }),
         timeoutMs: 15000,
         ...(signal ? { signal } : {}),
       }),

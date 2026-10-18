@@ -235,18 +235,24 @@ export {
 } from "./live/audioDiagnostics";
 export { READ_ALOUD_RATES, speechChunks, speechText } from "./live/readAloud";
 export { splitPlaceholders } from "./live/placeholders";
-export { useInterviewerVoice, type InterviewerVoice } from "./live/useInterviewerVoice";
+export { useInterviewerVoice, type InterviewerVoice, type VoicePhase } from "./live/useInterviewerVoice";
 export {
   DEVICE_VOICE,
+  PACE_KEY,
+  PACE_SPEED,
   VOICE_CHOICE_KEY,
+  playClip,
   playResponse,
+  savedPace,
   speakNatural,
   voiceChunks,
   warmVoiceStatus,
   useNaturalVoiceSource,
   type NaturalVoiceSource,
   type VoiceOption,
+  type VoicePace,
 } from "./live/naturalVoice";
+export { speakable, wordTimeline } from "./live/speechText";
 export { MockPanel, type CameraCoach } from "./components/MockPanel";
 export { VideoInterviewRoom, INTERVIEWER_NAME } from "./components/VideoInterviewRoom";
 export { VoiceVisualizer, type VoiceMood, type VoiceMotion } from "./components/VoiceVisualizer";

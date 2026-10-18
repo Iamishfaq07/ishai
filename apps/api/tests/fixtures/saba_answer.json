@@ -1,0 +1,3 @@
+{"turns": [
+  {"speaker": "candidate", "text": "I am a backend engineer. For four years I have built payment ledgers in Go and Postgres, and I led the move to event sourcing.", "pause_ms": 100}
+]}

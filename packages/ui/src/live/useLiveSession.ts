@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import type {
+  MockVoiceEvent,
   AnswerLength,
   AnswerSize,
   AnswerStyle,
@@ -37,6 +38,8 @@ export interface LiveActions {
   mockNext: () => void;
   /** Mock interview: send a typed answer (the interviewer moves on after it). */
   mockAnswer: (text: string) => void;
+  /** The AI video interview: what this device's voice did with one of her lines (D76). */
+  mockVoice: (event: MockVoiceEvent, lineId: string | null, detail?: string) => void;
   /** Browse an earlier answer; null returns to the live one. */
   viewAnswer: (answerId: string | null) => void;
   pause: () => void;
@@ -150,6 +153,8 @@ export function useLiveSession(options: UseLiveSessionOptions): UseLiveSessionRe
         updateSettings({ response_timing });
       },
       mockNext: () => client.send("mock.next", {}),
+      mockVoice: (event, lineId, detail) =>
+        client.send("mock.voice", { event, line_id: lineId, ...(detail ? { detail: detail.slice(0, 120) } : {}) }),
       mockAnswer: (text) => {
         const trimmed = text.trim().slice(0, MOCK_ANSWER_CHARS);
         if (trimmed) client.send("mock.answer", { text: trimmed });

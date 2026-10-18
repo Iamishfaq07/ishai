@@ -528,6 +528,12 @@ class MockInterviewer:
     def phase(self) -> Phase:
         return self._phase
 
+    @property
+    def pending_request(self) -> bool:
+        """The candidate's last words asked for something (a repeat, another way, a moment): she answers that at the
+        next tick instead of moving on."""
+        return self._pending_intent in ("repeat", "rephrase", "wait")
+
     def on_candidate(self, text: str, now_ms: int, *, final: bool) -> None:
         said = text.strip()
         if not self._awaiting or not said or self.finished:

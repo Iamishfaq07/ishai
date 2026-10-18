@@ -28,6 +28,7 @@ import {
   confirmDialog,
   safeLocal,
   useNaturalVoiceSource,
+  savedPace,
   VOICE_CHOICE_KEY,
 } from "@orbit/ui";
 import { Button, ErrorNote, Spinner } from "../components/ui";
@@ -382,6 +383,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       mockInterview={session.type === "mock"}
       videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}
+      voicePace={savedPace()}
       practiceLanguage={session.language}
       answerLanguage={session.answer_language ?? session.language}
       {...(cameraCoach ? { cameraCoach } : {})}

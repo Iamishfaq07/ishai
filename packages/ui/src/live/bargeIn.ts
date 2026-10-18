@@ -2,46 +2,80 @@ import { useEffect, useRef } from "react";
 
 /**
  * Barge-in: the candidate starts talking while the AI interviewer's voice (or read-aloud) is playing. The mic keeps
- * capturing during that playback (its audio just isn't sent), so its level tells us. The interviewer's own voice can
- * leak from the speakers into the mic, so the first stretch of playback is measured as the echo floor, and only speech
- * clearly louder than it, held for a moment, counts.
+ * capturing during that playback (its audio just isn't sent), so its level tells us.
+ *
+ * Her own voice leaks from the speakers into the mic (echo cancellation takes most of it, not all), so it must never
+ * count as the candidate (D76: it was stopping Saba a sentence in, which looked like "she doesn't talk"). The echo is
+ * learnt from her voice itself: while she's audibly speaking, how much of her output level comes back in the mic
+ * (`echo`, a ratio). From then on the mic has to be clearly above what her current level would leak, and above the
+ * room's own noise, for HOLD_MS, before it's the candidate. The old way calibrated in the first 300 ms after the line
+ * was asked for: with the natural voice that's before any sound has come out (the clip is still on its way), so the
+ * "echo floor" was the quiet room and her first loud syllable tripped it.
  */
 export interface BargeInState {
-  started: number; // when playback started (ms)
-  floor: number; // the loudest level heard during the calibration window: the echo
-  above: number | null; // since when the level has been over the threshold
+  started: number; // when she was asked to speak (ms)
+  heardAt: number | null; // when her voice was first actually heard (her output level up)
+  floor: number; // the room's noise in the mic, while she's quiet
+  echo: number; // mic level per unit of her output level: her voice coming back through the speakers
+  above: number | null; // since when the mic has been over the threshold
 }
 
-export const CALIBRATE_MS = 300;
-export const HOLD_MS = 120;
-export const MIN_LEVEL = 0.04; // RMS of a quiet but real voice close to a laptop mic
-export const OVER_ECHO = 2.2;
+export const CALIBRATE_MS = 500; // of her audibly speaking, learning the echo
+export const HOLD_MS = 300;
+export const MIN_LEVEL = 0.05; // RMS of a quiet but real voice close to a laptop mic
+export const OVER_ECHO = 2.4;
+const HEARD = 0.08; // her output level (0..1) that means sound is coming out
+const QUIET = 0.03;
 
-export function bargeInStep(state: BargeInState, level: number, now: number): { state: BargeInState; fired: boolean } {
-  if (now - state.started < CALIBRATE_MS) {
-    return { state: { ...state, floor: Math.max(state.floor, level), above: null }, fired: false };
+export function bargeInStart(now: number): BargeInState {
+  return { started: now, heardAt: null, floor: 0.01, echo: 0, above: null };
+}
+
+/** The mic's level the candidate has to be over now, given her output level now. */
+export function bargeInThreshold(state: BargeInState, output: number): number {
+  return Math.max(MIN_LEVEL, state.floor * 3, state.echo * output * OVER_ECHO + state.floor);
+}
+
+/** One step: the mic's RMS and her output level (0..1, VoiceTap.level) now. */
+export function bargeInStep(state: BargeInState, mic: number, output: number, now: number): { state: BargeInState; fired: boolean } {
+  let { heardAt, floor, echo } = state;
+  if (output < QUIET) floor = mic < floor ? mic : floor + (mic - floor) * 0.02; // the room, between her words
+  if (output >= HEARD && heardAt === null) heardAt = now;
+  if (heardAt !== null && now - heardAt < CALIBRATE_MS) {
+    // Learning her echo: what comes back in the mic for how loud she is.
+    if (output >= HEARD) echo = Math.max(echo, (mic - floor) / output);
+    return { state: { ...state, heardAt, floor, echo, above: null }, fired: false };
   }
-  const threshold = Math.max(MIN_LEVEL, state.floor * OVER_ECHO);
-  if (level < threshold) return { state: { ...state, above: null }, fired: false };
+  const threshold = bargeInThreshold({ ...state, floor, echo }, output);
+  if (mic < threshold) {
+    // Keep learning, slowly, while it's clearly her (the volume can change).
+    if (output >= HEARD && heardAt !== null) echo = Math.max(echo * 0.998, (mic - floor) / output);
+    return { state: { ...state, heardAt, floor, echo, above: null }, fired: false };
+  }
   const above = state.above ?? now;
-  return { state: { ...state, above }, fired: now - above >= HOLD_MS };
+  return { state: { ...state, heardAt, floor, echo, above }, fired: now - above >= HOLD_MS };
 }
 
 /**
- * Watches the mic level while `active` (the AI is speaking) and calls `onBargeIn` once when the candidate talks over
- * it. Reads the analyser (web) or an amplitude getter (desktop) about every 30 ms; nothing runs while inactive.
+ * Watches the mic level while `active` (the AI is speaking, or about to) and calls `onBargeIn` once when the candidate
+ * talks over it. Reads the analyser (web) or an amplitude getter (desktop), and her own output level (`output`),
+ * about every 30 ms; nothing runs while inactive.
  */
-export function useBargeIn({ active, analyser, amplitude, onBargeIn }: {
+export function useBargeIn({ active, analyser, amplitude, output, onBargeIn }: {
   active: boolean;
-  analyser?: AnalyserNode;
-  amplitude?: () => number;
+  analyser?: AnalyserNode | undefined;
+  amplitude?: (() => number) | undefined;
+  /** Her voice's level now, 0..1 (the video room's VoiceTap.level); without it she's taken as speaking throughout. */
+  output?: (() => number) | undefined;
   onBargeIn: () => void;
 }): void {
   const callback = useRef(onBargeIn);
   callback.current = onBargeIn;
+  const outputRef = useRef(output);
+  outputRef.current = output;
   useEffect(() => {
     if (!active || (!analyser && !amplitude)) return;
-    let state: BargeInState = { started: performance.now(), floor: 0, above: null };
+    let state = bargeInStart(performance.now());
     let wave = analyser ? new Float32Array(analyser.fftSize) : null;
     const level = (): number => {
       if (analyser && wave) {
@@ -54,7 +88,10 @@ export function useBargeIn({ active, analyser, amplitude, onBargeIn }: {
       return amplitude?.() ?? 0;
     };
     const timer = window.setInterval(() => {
-      const step = bargeInStep(state, level(), performance.now());
+      // Without her level (read-aloud, the desktop): she's taken as speaking throughout, so the first half second is
+      // the echo, as before.
+      const out = outputRef.current ? outputRef.current() : 0.5;
+      const step = bargeInStep(state, level(), out, performance.now());
       state = step.state;
       if (step.fired) {
         window.clearInterval(timer);

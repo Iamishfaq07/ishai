@@ -56,43 +56,61 @@ describe("a speech-like envelope", () => {
 describe("Saba's voice from the device's word timing", () => {
   const text = "Tell me about a time you disagreed.";
 
-  it("follows the word being said, in the question's offsets, and talks while words arrive", () => {
+  it("follows the word being said and reveals the line up to it, never ahead (D76)", () => {
     const tap = new VoiceTap();
     const u = {};
     let changes = 0;
     tap.subscribe(() => changes++);
-    tap.deviceStart(u, text, 10);
+    tap.beginLine("q1", text);
+    expect(tap.reveal()).toEqual({ id: "q1", upTo: 0, done: false }); // nothing shown before she starts
+    tap.deviceStart(u, text);
     expect(tap.source()).toBe("estimate");
     expect(tap.word()).toBeNull();
     tap.boundary(u, 5, 2, 1000);
     expect(tap.source()).toBe("words");
-    expect(tap.word()).toEqual({ start: 15, end: 17 });
-    expect(changes).toBe(1);
+    expect(tap.word()).toEqual({ start: 5, end: 7 });
+    expect(tap.reveal()).toEqual({ id: "q1", upTo: 7, done: false });
     const bands = new Float32Array(10);
     expect(tap.sample(bands, 1080)).toBeGreaterThan(0.3);
     expect(Math.max(...bands)).toBeGreaterThan(0.2);
     expect(tap.sample(bands, 4000)).toBe(0); // no more words: quiet
     // An engine that sends no length: up to the next space.
     tap.boundary(u, 8, 0, 1200);
-    expect(tap.word()).toEqual({ start: 18, end: 23 });
+    expect(tap.word()).toEqual({ start: 8, end: 13 });
     // A stale utterance (cancelled) doesn't move it.
     tap.boundary({}, 0, 4, 1300);
-    expect(tap.word()).toEqual({ start: 18, end: 23 });
+    expect(tap.word()).toEqual({ start: 8, end: 13 });
     tap.deviceEnd(u);
     expect(tap.source()).toBeNull();
     expect(tap.word()).toBeNull();
-    expect(tap.sample(bands, 1400)).toBe(0);
+    tap.endLine();
+    expect(tap.reveal()).toEqual({ id: "q1", upTo: text.length, done: true }); // all of it, once she's done
+    expect(changes).toBeGreaterThan(3);
   });
 
-  it("marks no word when the spoken text isn't in the question, and goes quiet on stop", () => {
+  it("maps a shaped or partial line back onto the words on screen", () => {
     const tap = new VoiceTap();
     const u = {};
-    tap.deviceStart(u, text, -1);
+    const line = "Hi there. How would you index a SQL table?";
+    tap.beginLine("q2", line);
+    // The device's voice says the rest (from "How"), shaped: "sequel" for "SQL".
+    const rest = "How would you index a sequel table?";
+    tap.deviceStart(u, rest, 1, line.indexOf("How"));
+    tap.boundary(u, rest.indexOf("index"), 5);
+    expect(line.slice(tap.word()!.start, tap.word()!.end)).toBe("index");
+    tap.boundary(u, rest.indexOf("table"), 5);
+    expect(line.slice(tap.word()!.start, tap.word()!.end)).toBe("table?");
+  });
+
+  it("shows the rest of the line when she's stopped, and goes quiet", () => {
+    const tap = new VoiceTap();
+    const u = {};
+    tap.beginLine("q3", text);
+    tap.deviceStart(u, text);
     tap.boundary(u, 0, 4, 100);
-    expect(tap.word()).toBeNull();
-    expect(tap.source()).toBe("words");
     tap.stop();
     expect(tap.source()).toBeNull();
+    expect(tap.reveal()).toEqual({ id: "q3", upTo: text.length, done: true });
     expect(tap.sample(new Float32Array(4), 150)).toBe(0);
   });
 });
