@@ -1,0 +1,533 @@
+{
+ "__meta": {
+  "flow": "sabaReview",
+  "recordedAt": 1792332249463
+ },
+ "GET /v1/auth/me": [
+  {
+   "status": 200,
+   "body": {
+    "id": "91be8e9c-da7d-42a3-b21f-2a330e8189d6",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "wJ0N2Xo1g2knfCYRep98bqHDgFClQWNBjK0uAtlRv6Q",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "91be8e9c-da7d-42a3-b21f-2a330e8189d6",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "wJ0N2Xo1g2knfCYRep98bqHDgFClQWNBjK0uAtlRv6Q",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/announcement": [
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/auth/config": [
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/status": [
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/payments?only=submitted": [
+  {
+   "status": 200,
+   "body": {
+    "upi_configured": false,
+    "waiting": 0,
+    "payments": [],
+    "processing": 0,
+    "events_to_review": 0,
+    "unlinked_refunds": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/users?only=pending&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "approval_required": false,
+    "users": [],
+    "totals": {
+     "users": 1,
+     "signups_7d": 1,
+     "interview_minutes_this_month": 0.2,
+     "resume_credits_used_this_month": 0,
+     "paid_inr_total": 0,
+     "paid_inr_this_month": 0,
+     "payments_waiting": 0
+    },
+    "total": 0,
+    "offset": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/inbox?status=new&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "items": [],
+    "total": 0,
+    "offset": 0,
+    "has_more": false,
+    "counts": {
+     "new": 0,
+     "open": 0,
+     "done": 0,
+     "spam": 0,
+     "todo": 0,
+     "all": 0
+    }
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/sessions/29b7ae60-17c8-4617-84ed-9c9351bbeb05": [
+  {
+   "status": 200,
+   "body": {
+    "session": {
+     "id": "29b7ae60-17c8-4617-84ed-9c9351bbeb05",
+     "title": "Video interview: Product Analyst",
+     "type": "mock",
+     "role": "Product Analyst",
+     "company": null,
+     "interview_stage": null,
+     "tech_stack": [],
+     "key_requirements": [],
+     "language": "en",
+     "answer_language": null,
+     "length": "standard",
+     "style": "natural",
+     "auto_answer": false,
+     "status": "ended",
+     "created_at": "2026-10-18T13:44:04.776062",
+     "started_at": "2026-10-18T13:44:04.776062",
+     "ended_at": "2026-10-18T13:50:44.776062",
+     "duration_seconds": 400,
+     "question_count": 2,
+     "document_ids": [
+      "6721c1cc-9c86-48da-9d4d-562c83709d2d"
+     ],
+     "report_status": "ready",
+     "workspace_id": null,
+     "instructions": null,
+     "negotiation": false,
+     "video": true,
+     "application_id": null
+    },
+    "turns": [
+     {
+      "id": "233613d0-9fbe-4aa1-98f4-c28af7bc5f73",
+      "speaker": "interviewer",
+      "text": "To start, tell me about a time you used data to change a product decision.",
+      "start_ms": 0,
+      "end_ms": 5700
+     },
+     {
+      "id": "14d99a6e-9abd-4155-b8d0-32171feffc41",
+      "speaker": "candidate",
+      "text": "At Juniper Logistics, most late deliveries came from the date we promised at checkout. So I built a delivery-time model, and made the case for showing a delivery window instead. Late deliveries fell 18% in two quarters.",
+      "start_ms": 6900,
+      "end_ms": 21700
+     },
+     {
+      "id": "90a347ba-ce80-4457-8059-24eb93ee6aba",
+      "speaker": "interviewer",
+      "text": "That's a clear result. When you made the case for a window, how did you convince the product team?",
+      "start_ms": 22900,
+      "end_ms": 30120
+     },
+     {
+      "id": "c28ef4f4-0c31-4f61-a1a3-a5a5cab17313",
+      "speaker": "candidate",
+      "text": "I ran a two-week test, split by city, with cancellations as the main metric. The numbers did the convincing.",
+      "start_ms": 31320,
+      "end_ms": 38920
+     }
+    ],
+    "questions": [
+     {
+      "id": "668360af-05b6-412b-85f9-0790ab69856b",
+      "text": "To start, tell me about a time you used data to change a product decision.",
+      "type": "behavioral",
+      "is_follow_up": false,
+      "source": "auto",
+      "created_at": "2026-10-18T13:44:05.776062"
+     },
+     {
+      "id": "f71665ff-3d17-40a7-ab8f-6f0c1159831a",
+      "text": "That's a clear result. When you made the case for a window, how did you convince the product team?",
+      "type": "behavioral",
+      "is_follow_up": true,
+      "source": "auto",
+      "created_at": "2026-10-18T13:44:31.276062"
+     }
+    ],
+    "answers": [],
+    "summary": {
+     "questions_asked": [
+      "To start, tell me about a time you used data to change a product decision.",
+      "That's a clear result. When you made the case for a window, how did you convince the product team?"
+     ],
+     "question_types": {
+      "behavioral": 2
+     },
+     "follow_up_count": 1,
+     "summary": "A short video interview with Saba for a product analyst role: a product decision changed with data, and how the case was made to the product team.",
+     "topics": [
+      "Product decisions",
+      "Experiment design"
+     ],
+     "important_follow_ups": [],
+     "potential_weak_areas": [
+      "Naming the guardrail metric"
+     ],
+     "suggested_preparation": [
+      "A 60-second version"
+     ],
+     "review": {
+      "overall_score": 4,
+      "strengths": [
+       "You led with the problem and closed with a measured result",
+       "A specific, testable change, not a vague one"
+      ],
+      "improvements": [
+       "Say what the guardrail metric was when you describe the test"
+      ],
+      "practice": [
+       "Tell the same story in 60 seconds, result first"
+      ],
+      "top_practice": [],
+      "items": [
+       {
+        "question_id": "668360af-05b6-412b-85f9-0790ab69856b",
+        "question": "To start, tell me about a time you used data to change a product decision.",
+        "you_said": "At Juniper Logistics, most late deliveries came from the date we promised at checkout. So I built a delivery-time model, and made the case for showing a delivery window instead. Late deliveries fell 18% in two quarters.",
+        "score": 4,
+        "feedback": "Problem, action and a measured result in under a minute.",
+        "better": "Name your part in one line before the model: 'I owned the analysis and the case to product.'",
+        "answer_s": 15,
+        "words": 37,
+        "missing_points": [
+         "Who else was involved"
+        ],
+        "delivery_score": 4,
+        "clarity_score": 5,
+        "dimensions": {
+         "problem_framing": 4,
+         "technical_depth": null,
+         "scalability": null,
+         "edge_case_rigor": null,
+         "communication_clarity": 5
+        },
+        "rubric": {},
+        "improvement": "",
+        "speaking": {
+         "speaking_seconds": 15,
+         "words_per_minute": 154,
+         "fillers": 0,
+         "top_fillers": [],
+         "long_pauses": 0
+        }
+       },
+       {
+        "question_id": "f71665ff-3d17-40a7-ab8f-6f0c1159831a",
+        "question": "That's a clear result. When you made the case for a window, how did you convince the product team?",
+        "you_said": "I ran a two-week test, split by city, with cancellations as the main metric. The numbers did the convincing.",
+        "score": 4,
+        "feedback": "A test design is the right answer to 'how did you convince them'.",
+        "better": "Add the guardrail you watched, conversion, so the result can't be read as a trade-off.",
+        "answer_s": 8,
+        "words": 19,
+        "missing_points": [
+         "The guardrail metric"
+        ],
+        "delivery_score": 4,
+        "clarity_score": 4,
+        "dimensions": {
+         "problem_framing": 4,
+         "technical_depth": 4,
+         "scalability": null,
+         "edge_case_rigor": null,
+         "communication_clarity": 4
+        },
+        "rubric": {},
+        "improvement": "",
+        "speaking": {
+         "speaking_seconds": 8,
+         "words_per_minute": 158,
+         "fillers": 0,
+         "top_fillers": [],
+         "long_pauses": 0
+        }
+       }
+      ]
+     },
+     "generated_by": "demo-seed",
+     "delivery": {
+      "speaking_seconds": 22,
+      "words": 58,
+      "words_per_minute": 155,
+      "fillers_total": 0,
+      "fillers_per_minute": 0,
+      "top_fillers": [],
+      "talk_share": 0.63,
+      "long_pauses": 0,
+      "median_start_seconds": 1.2,
+      "answers": 2,
+      "average_answer_words": 29,
+      "longest_answer_words": 38,
+      "tips": []
+     }
+    },
+    "camera": null
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/sessions/29b7ae60-17c8-4617-84ed-9c9351bbeb05/debrief": [
+  {
+   "status": 200,
+   "body": {
+    "session_id": "29b7ae60-17c8-4617-84ed-9c9351bbeb05",
+    "status": "ended",
+    "items": [
+     {
+      "question_id": "668360af-05b6-412b-85f9-0790ab69856b",
+      "index": 1,
+      "time_ms": 0,
+      "question": "To start, tell me about a time you used data to change a product decision.",
+      "transcript": "At Juniper Logistics, most late deliveries came from the date we promised at checkout. So I built a delivery-time model, and made the case for showing a delivery window instead. Late deliveries fell 18% in two quarters.",
+      "ideal_answer": "Name your part in one line before the model: 'I owned the analysis and the case to product.'",
+      "ideal_code": null,
+      "score": 4,
+      "feedback": "Problem, action and a measured result in under a minute.",
+      "missing_points": [
+       "Who else was involved"
+      ],
+      "delivery_score": 4,
+      "clarity_score": 5,
+      "dimensions": {
+       "problem_framing": 4,
+       "technical_depth": null,
+       "scalability": null,
+       "edge_case_rigor": null,
+       "communication_clarity": 5
+      },
+      "attempts": []
+     },
+     {
+      "question_id": "f71665ff-3d17-40a7-ab8f-6f0c1159831a",
+      "index": 2,
+      "time_ms": 22900,
+      "question": "That's a clear result. When you made the case for a window, how did you convince the product team?",
+      "transcript": "I ran a two-week test, split by city, with cancellations as the main metric. The numbers did the convincing.",
+      "ideal_answer": "Add the guardrail you watched, conversion, so the result can't be read as a trade-off.",
+      "ideal_code": null,
+      "score": 4,
+      "feedback": "A test design is the right answer to 'how did you convince them'.",
+      "missing_points": [
+       "The guardrail metric"
+      ],
+      "delivery_score": 4,
+      "clarity_score": 4,
+      "dimensions": {
+       "problem_framing": 4,
+       "technical_depth": 4,
+       "scalability": null,
+       "edge_case_rigor": null,
+       "communication_clarity": 4
+      },
+      "attempts": []
+     }
+    ],
+    "radar": {
+     "problem_framing": 4,
+     "technical_depth": 4,
+     "scalability": null,
+     "edge_case_rigor": null,
+     "communication_clarity": 4.5
+    },
+    "review_ready": true,
+    "score_basis": "Transcript and answer timing; vocal tone is not assessed."
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "session_id": "29b7ae60-17c8-4617-84ed-9c9351bbeb05",
+    "status": "ended",
+    "items": [
+     {
+      "question_id": "668360af-05b6-412b-85f9-0790ab69856b",
+      "index": 1,
+      "time_ms": 0,
+      "question": "To start, tell me about a time you used data to change a product decision.",
+      "transcript": "At Juniper Logistics, most late deliveries came from the date we promised at checkout. So I built a delivery-time model, and made the case for showing a delivery window instead. Late deliveries fell 18% in two quarters.",
+      "ideal_answer": "Name your part in one line before the model: 'I owned the analysis and the case to product.'",
+      "ideal_code": null,
+      "score": 4,
+      "feedback": "Problem, action and a measured result in under a minute.",
+      "missing_points": [
+       "Who else was involved"
+      ],
+      "delivery_score": 4,
+      "clarity_score": 5,
+      "dimensions": {
+       "problem_framing": 4,
+       "technical_depth": null,
+       "scalability": null,
+       "edge_case_rigor": null,
+       "communication_clarity": 5
+      },
+      "attempts": []
+     },
+     {
+      "question_id": "f71665ff-3d17-40a7-ab8f-6f0c1159831a",
+      "index": 2,
+      "time_ms": 22900,
+      "question": "That's a clear result. When you made the case for a window, how did you convince the product team?",
+      "transcript": "I ran a two-week test, split by city, with cancellations as the main metric. The numbers did the convincing.",
+      "ideal_answer": "Add the guardrail you watched, conversion, so the result can't be read as a trade-off.",
+      "ideal_code": null,
+      "score": 4,
+      "feedback": "A test design is the right answer to 'how did you convince them'.",
+      "missing_points": [
+       "The guardrail metric"
+      ],
+      "delivery_score": 4,
+      "clarity_score": 4,
+      "dimensions": {
+       "problem_framing": 4,
+       "technical_depth": 4,
+       "scalability": null,
+       "edge_case_rigor": null,
+       "communication_clarity": 4
+      },
+      "attempts": []
+     }
+    ],
+    "radar": {
+     "problem_framing": 4,
+     "technical_depth": 4,
+     "scalability": null,
+     "edge_case_rigor": null,
+     "communication_clarity": 4.5
+    },
+    "review_ready": true,
+    "score_basis": "Transcript and answer timing; vocal tone is not assessed."
+   },
+   "epoch": 0
+  }
+ ]
+}

@@ -1,0 +1,64 @@
+{
+ "voice": "aura-2-aurora-en",
+ "note": "The Saba film: Saba (Aurora, her voice in the app, at the normal pace) and the candidate (another Aura-2 voice). Saba's lines are cut the way the app cuts them for her voice (packages/ui/src/live/speechText.ts speechChunks), one file per piece, so the room plays exactly these files for its own requests. The saba-ack-* lines are her short acknowledgements (packages/ui/src/live/naturalVoice.ts ACKS); the film serves one of them.",
+ "lines": [
+  {
+   "id": "saba-01a",
+   "text": "Hi Aditi, I'm Saba.",
+   "caption": "Hi Aditi, I'm Saba."
+  },
+  {
+   "id": "saba-01b",
+   "text": "Thanks for making time today.",
+   "caption": "Thanks for making time today."
+  },
+  {
+   "id": "saba-02",
+   "text": "To start, tell me about a time you used data to change a product decision.",
+   "caption": "To start, tell me about a time you used data to change a product decision."
+  },
+  {
+   "id": "cand-01",
+   "voice": "aura-2-cordelia-en",
+   "split": true,
+   "text": "At Juniper Logistics, most late deliveries came from the date we promised at checkout. So I built a delivery-time model, and made the case for showing a delivery window instead. Late deliveries fell eighteen percent in two quarters.",
+   "caption": "At Juniper Logistics, most late deliveries came from the date we promised at checkout. So I built a delivery-time model, and made the case for showing a delivery window instead. Late deliveries fell 18% in two quarters."
+  },
+  {
+   "id": "saba-03a",
+   "text": "That's a clear result.",
+   "caption": "That's a clear result."
+  },
+  {
+   "id": "saba-03b",
+   "text": "When you made the case for a window, how did you convince the product team?",
+   "caption": "When you made the case for a window, how did you convince the product team?"
+  },
+  {
+   "id": "cand-02",
+   "voice": "aura-2-cordelia-en",
+   "text": "I ran a two-week test, split by city, with cancellations as the main metric. The numbers did the convincing.",
+   "caption": "I ran a two-week test, split by city, with cancellations as the main metric. The numbers did the convincing."
+  },
+  {
+   "id": "saba-04a",
+   "text": "Thank you, Aditi.",
+   "caption": "Thank you, Aditi."
+  },
+  {
+   "id": "saba-04b",
+   "text": "That's all from me today, and your review is ready now.",
+   "caption": "That's all from me today, and your review is ready now."
+  },
+  {
+   "id": "saba-ack-mm",
+   "text": "Mm-hmm.",
+   "caption": "Mm-hmm."
+  },
+  {
+   "id": "saba-ack-ok",
+   "text": "Okay.",
+   "caption": "Okay."
+  }
+ ]
+}

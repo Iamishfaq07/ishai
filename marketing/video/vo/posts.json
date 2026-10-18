@@ -1,0 +1,87 @@
+{
+  "note": "Suggested post copy for each video: Instagram (link in bio) and Facebook (with the link), an India and a global version. True of the product as it is; no prices, no numbers we can't show, no promises about jobs or offers. The live answer notes are always 'for interviews and calls where AI help is allowed'.",
+  "hashtags": {
+    "in": "#OrbitAI #InterviewPrep #JobSearchIndia #ResumeTips #CareerGrowth #Freshers #PlacementPrep #MockInterview #ATSResume",
+    "global": "#OrbitAI #InterviewPrep #JobSearch #ResumeTips #CareerAdvice #MockInterview #ATSResume #CareerGrowth #JobHunt"
+  },
+  "posts": {
+    "launch": {
+      "ig_in": "Your whole job search, in one account. Fix your resume with an ATS score out of 100, find jobs from companies' own careers pages, practise out loud with an AI interviewer, and on interview day get answer notes from your own resume, live, in calls where AI help is allowed. In 10 interview languages, from Hindi to Japanese. Free to start: link in bio.",
+      "ig_global": "Your whole job search, in one account. Score and fix your resume, find roles from companies' own careers pages, practise out loud with an AI interviewer, and get live answer notes from your own resume in calls where AI help is allowed. 10 interview languages. Windows app and web. Free to start: link in bio.",
+      "fb_in": "Meet Orbit AI: one account from resume to offer. Resume AI scores your resume out of 100 and fixes it, Jobs AI brings roles from companies' careers pages that fit you, Practice gives you a review after every round, and the copilot writes answer notes from your own resume in interviews and calls where AI help is allowed. Hindi, Hinglish and 9 more languages. Free to start at orbitanswer.com",
+      "fb_global": "Meet Orbit AI: one account from resume to offer. Resume AI, Jobs AI, practice with an AI interviewer and its review, LinkedIn AI, Offer AI, and live answer notes from your own resume in interviews and calls where AI help is allowed. On Windows and the web, in 10 interview languages. Free to start at orbitanswer.com"
+    },
+    "cut30": {
+      "ig_in": "Fix your resume. Find jobs that fit. Practise out loud. Then, in calls where AI help is allowed, get answer notes from your own resume, live. One free account: link in bio.",
+      "ig_global": "Fix your resume. Find jobs that fit. Practise out loud. Then get live answer notes from your own resume in calls where AI help is allowed. Free to start: link in bio.",
+      "fb_in": "Your job search in 30 seconds: Resume AI, Jobs AI, practice with an AI interviewer, and answer notes from your own resume in calls where AI help is allowed. Free to start at orbitanswer.com",
+      "fb_global": "Your job search in 30 seconds: Resume AI, Jobs AI, practice with an AI interviewer, and live answer notes from your own resume in calls where AI help is allowed. Free to start at orbitanswer.com"
+    },
+    "cut15": {
+      "ig_in": "The question lands; your notes are already forming, from your own resume. For interviews and calls where AI help is allowed. Free to start: link in bio.",
+      "ig_global": "Answer notes from your own resume, live, in calls where AI help is allowed. Free to start: link in bio.",
+      "fb_in": "Orbit writes answer notes from your own resume while the interviewer is still asking, in interviews and calls where AI help is allowed. Free to start at orbitanswer.com",
+      "fb_global": "Orbit writes answer notes from your own resume, live, in interviews and calls where AI help is allowed. Free to start at orbitanswer.com"
+    },
+    "copilot": {
+      "ig_in": "The interviewer asks. Orbit hears the question and writes answer notes from your own resume, and the key points tick off as you say them. For interviews and calls where AI help is allowed. Free to start: link in bio.",
+      "ig_global": "Answer notes from your own resume, in seconds, with the key points ticking off as you say them. For interviews and calls where AI help is allowed. Free to start: link in bio.",
+      "fb_in": "Orbit's interview copilot listens for the question and writes answer notes from your resume, with the sources it used. Windows app and web. For interviews and calls where AI help is allowed. Free to start at orbitanswer.com",
+      "fb_global": "Orbit's interview copilot listens for the question and writes answer notes from your resume, with the resume lines it used. Windows app and web. For interviews and calls where AI help is allowed. Free to start at orbitanswer.com"
+    },
+    "practice": {
+      "ig_in": "Practise the interview before the interview. An AI interviewer asks out loud, follows up on your answers, and gives you a review after every round. Placement season or a job switch, start free: link in bio.",
+      "ig_global": "Practise the interview before the interview: an AI interviewer that asks out loud, follows up, and reviews every round. Free to start: link in bio.",
+      "fb_in": "Mock interviews out loud with an AI interviewer, and a review after each round: what went well, what to fix, what to practise next. Free to start at orbitanswer.com",
+      "fb_global": "Mock interviews out loud with an AI interviewer, and a review after each round: what went well, what to fix, what to practise next. Free to start at orbitanswer.com"
+    },
+    "resume": {
+      "ig_in": "Is your resume getting past the filters? Resume AI gives it an ATS score out of 100, shows what's holding it back and fixes it with AI. You confirm every skill it adds. Free to start: link in bio.",
+      "ig_global": "Your resume's ATS score out of 100, what's holding it back, and the fixes, written with AI. You confirm every skill it adds. Free to start: link in bio.",
+      "fb_in": "Resume AI scores your resume out of 100 against the job you want, rewrites the weak lines with your own facts and lists the skills the job asks for, for you to keep only the ones you have. Free to start at orbitanswer.com",
+      "fb_global": "Resume AI scores your resume out of 100 against the job you want, rewrites the weak lines with your own facts and shows the skills the job asks for, for you to keep only the ones you have. Free to start at orbitanswer.com"
+    },
+    "jobs": {
+      "ig_in": "New jobs from companies' own careers pages, matched to your resume. Save the ones you like and track each one from saved to offer. Free to start: link in bio.",
+      "ig_global": "Roles straight from companies' careers pages, matched to your resume, and a Mission room for every job you track. Free to start: link in bio.",
+      "fb_in": "Jobs AI brings you new roles from companies' careers pages with how well each fits your resume, and tracks every application in one place, from saved to offer. Free to start at orbitanswer.com",
+      "fb_global": "Jobs AI brings you new roles from companies' careers pages with how well each fits your resume, and tracks every application, from saved to offer. Free to start at orbitanswer.com"
+    },
+    "dayloop": {
+      "ig_in": "Interview tomorrow? Orbit turns the job you're tracking into a prep plan, lets you practise that round, starts the copilot with the job already loaded and drafts your thank-you note afterwards. Free to start: link in bio.",
+      "ig_global": "From the job you're tracking to a prep plan, a practice round, a live session with the job loaded, and a thank-you note drafted after. Free to start: link in bio.",
+      "fb_in": "Interview day, handled in one place: the prep plan for that job, a practice round, the live session with its context, and the wrap-up with your thank-you email. Free to start at orbitanswer.com",
+      "fb_global": "Interview day in one place: the prep plan for that job, a practice round, the live session with its context, and the wrap-up with your thank-you email. Free to start at orbitanswer.com"
+    },
+    "linkedin": {
+      "ig_in": "See your LinkedIn the way recruiters do. LinkedIn AI scores each section for the role you want and writes the fixes to paste in: headline, About, roles, skills. Free to start: link in bio.",
+      "ig_global": "Your LinkedIn, scored by section for the role you want, with the fixes written and ready to paste. Free to start: link in bio.",
+      "fb_in": "LinkedIn AI reads your profile, scores each section against the role you want, and writes the fixes: a headline, an About, your roles' lines. Nothing invented: a number it can't find becomes a placeholder for you. Free to start at orbitanswer.com",
+      "fb_global": "LinkedIn AI reads your profile, scores each section against the role you want, and writes the fixes. Nothing invented: a number it can't find becomes a placeholder for you to fill in. Free to start at orbitanswer.com"
+    },
+    "languages": {
+      "ig_in": "Interview in Hindi, English, Hinglish and 8 more languages. Orbit follows the interviewer's language and writes your notes in the one you choose. Free to start: link in bio.",
+      "ig_global": "10 interview languages, from Hindi to Japanese. Orbit follows the interviewer and writes your notes in the language you choose. Free to start: link in bio.",
+      "fb_in": "Orbit's copilot works in 10 interview languages, with Hinglish too, and auto-detect follows the interviewer even mid-interview. Your notes can be in another language. Free to start at orbitanswer.com",
+      "fb_global": "Orbit's copilot works in 10 interview languages, and auto-detect follows the interviewer even mid-interview. Your notes can be in another language. Free to start at orbitanswer.com"
+    },
+    "offer": {
+      "ig_in": "Got an offer? Offer AI shows what reaches your account each month, where it sits in the market for the role, and what to ask for, with the words for the call and the email. Free to start: link in bio.",
+      "ig_global": "Got an offer? See what it really pays each month, how it compares with the market, and what to ask for. Free to start: link in bio.",
+      "fb_in": "Offer AI works out your monthly in-hand from the CTC, compares the offer with pay ranges in recent job posts for the role, and plans the ask: what to say on the call and the email after. Free to start at orbitanswer.com",
+      "fb_global": "Offer AI works out what an offer pays each month, compares it with pay ranges in recent job posts for the role, and plans the ask: what to say on the call and the email after. Free to start at orbitanswer.com"
+    },
+    "learning": {
+      "ig_in": "Learn the skills interviews test: coding rounds by pattern in Orbit, and cybersecurity for free at KashSec Academy from the Orbit team. Free to start: link in bio.",
+      "ig_global": "Coding-round practice by pattern, with tests that run in your browser. And KashSec Academy, the Orbit team's free cybersecurity school. Link in bio.",
+      "fb_in": "Learning AI: coding rounds by pattern with tests in your browser, and KashSec Academy, free cybersecurity education for complete beginners from the Orbit team (kashsec.vercel.app). Start at orbitanswer.com",
+      "fb_global": "Learning AI: coding rounds by pattern with tests in your browser, and KashSec Academy, free cybersecurity education for complete beginners from the Orbit team (kashsec.vercel.app). Start at orbitanswer.com"
+    },
+    "saba": {
+      "ig_in": "Meet Saba, your AI interviewer. Practise a video interview out loud: she asks, listens, follows up on what you actually said, and your review is ready when you finish, each answer graded against the job. Free to start: link in bio.",
+      "ig_global": "Meet Saba, your AI interviewer. She asks, listens, and follows up on your own answer, like a real interviewer would. Then a review of every answer, graded against the job. Free to start: link in bio.",
+      "fb_in": "Practise interviews out loud with Saba, Orbit's AI interviewer. She talks like a person, asks a follow-up on what you just said, and ends with a review: each answer graded against the job, with a stronger way to say it. Free to start at orbitanswer.com",
+      "fb_global": "Practise interviews out loud with Saba, Orbit's AI interviewer. She talks like a person, follows up on what you just said, and ends with a review: each answer graded against the job, with a stronger way to say it. Free to start at orbitanswer.com"
+    }
+  }
+}

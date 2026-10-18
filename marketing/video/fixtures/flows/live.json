@@ -1,0 +1,698 @@
+{
+ "__meta": {
+  "flow": "live",
+  "recordedAt": 1792324400059
+ },
+ "__sessions": {
+  "interview": "2dd9ceab-69fe-4004-806b-1c9314dbf249",
+  "mock": "3c347d96-2c2d-4e6e-be0a-bb036585a9d0"
+ },
+ "GET /v1/auth/me": [
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 2
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 2
+  }
+ ],
+ "GET /v1/sessions/2dd9ceab-69fe-4004-806b-1c9314dbf249": [
+  {
+   "status": 200,
+   "body": {
+    "session": {
+     "id": "2dd9ceab-69fe-4004-806b-1c9314dbf249",
+     "title": "Kestrel Pay: hiring manager round",
+     "type": "interview",
+     "role": "Product Analyst",
+     "company": "Kestrel Pay",
+     "interview_stage": null,
+     "tech_stack": [],
+     "key_requirements": [],
+     "language": "en",
+     "answer_language": null,
+     "length": "auto",
+     "style": "natural",
+     "auto_answer": true,
+     "status": "created",
+     "created_at": "2026-10-18T11:53:20.072422",
+     "started_at": null,
+     "ended_at": null,
+     "duration_seconds": 0,
+     "question_count": 0,
+     "document_ids": [
+      "d80a5d93-23f9-483d-8232-7bfa8db43c69"
+     ],
+     "report_status": null,
+     "workspace_id": null,
+     "instructions": null,
+     "negotiation": false,
+     "video": false,
+     "application_id": "29aea56a-a2ae-4003-9095-63197b3d33af"
+    },
+    "turns": [],
+    "questions": [],
+    "answers": [],
+    "summary": null,
+    "camera": null
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "session": {
+     "id": "2dd9ceab-69fe-4004-806b-1c9314dbf249",
+     "title": "Kestrel Pay: hiring manager round",
+     "type": "interview",
+     "role": "Product Analyst",
+     "company": "Kestrel Pay",
+     "interview_stage": null,
+     "tech_stack": [],
+     "key_requirements": [],
+     "language": "en",
+     "answer_language": null,
+     "length": "auto",
+     "style": "natural",
+     "auto_answer": true,
+     "status": "created",
+     "created_at": "2026-10-18T11:53:20.072422",
+     "started_at": null,
+     "ended_at": null,
+     "duration_seconds": 0,
+     "question_count": 0,
+     "document_ids": [
+      "d80a5d93-23f9-483d-8232-7bfa8db43c69"
+     ],
+     "report_status": null,
+     "workspace_id": null,
+     "instructions": null,
+     "negotiation": false,
+     "video": false,
+     "application_id": "29aea56a-a2ae-4003-9095-63197b3d33af"
+    },
+    "turns": [],
+    "questions": [],
+    "answers": [],
+    "summary": null,
+    "camera": null
+   },
+   "epoch": 0
+  }
+ ],
+ "POST /v1/sessions/2dd9ceab-69fe-4004-806b-1c9314dbf249/live-ticket": [
+  {
+   "status": 200,
+   "body": {
+    "ticket": "RMxxt8KOkx9H_Jj9w4ERxU5ZUqPwyXidEMivanc1hWw",
+    "expires_in": 60
+   },
+   "epoch": 0,
+   "sent": null
+  },
+  {
+   "status": 200,
+   "body": {
+    "ticket": "KuqmEIv79gi0wzDrkmvuMQ13WC9KkdbOUsAC-P-BLFg",
+    "expires_in": 60
+   },
+   "epoch": 1,
+   "sent": null
+  }
+ ],
+ "GET /v1/sessions/3c347d96-2c2d-4e6e-be0a-bb036585a9d0": [
+  {
+   "status": 200,
+   "body": {
+    "session": {
+     "id": "3c347d96-2c2d-4e6e-be0a-bb036585a9d0",
+     "title": "Product analyst: hiring manager round",
+     "type": "mock",
+     "role": "Product Analyst",
+     "company": "Kestrel Pay",
+     "interview_stage": null,
+     "tech_stack": [],
+     "key_requirements": [],
+     "language": "en",
+     "answer_language": null,
+     "length": "auto",
+     "style": "natural",
+     "auto_answer": true,
+     "status": "created",
+     "created_at": "2026-10-18T11:53:29.065264",
+     "started_at": null,
+     "ended_at": null,
+     "duration_seconds": 0,
+     "question_count": 0,
+     "document_ids": [
+      "d80a5d93-23f9-483d-8232-7bfa8db43c69"
+     ],
+     "report_status": null,
+     "workspace_id": null,
+     "instructions": null,
+     "negotiation": false,
+     "video": false,
+     "application_id": null
+    },
+    "turns": [],
+    "questions": [],
+    "answers": [],
+    "summary": null,
+    "camera": null
+   },
+   "epoch": 2
+  },
+  {
+   "status": 200,
+   "body": {
+    "session": {
+     "id": "3c347d96-2c2d-4e6e-be0a-bb036585a9d0",
+     "title": "Product analyst: hiring manager round",
+     "type": "mock",
+     "role": "Product Analyst",
+     "company": "Kestrel Pay",
+     "interview_stage": null,
+     "tech_stack": [],
+     "key_requirements": [],
+     "language": "en",
+     "answer_language": null,
+     "length": "auto",
+     "style": "natural",
+     "auto_answer": true,
+     "status": "created",
+     "created_at": "2026-10-18T11:53:29.065264",
+     "started_at": null,
+     "ended_at": null,
+     "duration_seconds": 0,
+     "question_count": 0,
+     "document_ids": [
+      "d80a5d93-23f9-483d-8232-7bfa8db43c69"
+     ],
+     "report_status": null,
+     "workspace_id": null,
+     "instructions": null,
+     "negotiation": false,
+     "video": false,
+     "application_id": null
+    },
+    "turns": [],
+    "questions": [],
+    "answers": [],
+    "summary": null,
+    "camera": null
+   },
+   "epoch": 2
+  }
+ ],
+ "GET /v1/voice": [
+  {
+   "status": 200,
+   "body": {
+    "available": false,
+    "voices": [],
+    "default_voice": "us",
+    "chars_left": 0
+   },
+   "epoch": 2
+  }
+ ],
+ "POST /v1/sessions/3c347d96-2c2d-4e6e-be0a-bb036585a9d0/live-ticket": [
+  {
+   "status": 200,
+   "body": {
+    "ticket": "78VwXMIdfXxlxRBO8Davpved-NAADududechyZfznvI",
+    "expires_in": 60
+   },
+   "epoch": 2,
+   "sent": null
+  },
+  {
+   "status": 200,
+   "body": {
+    "ticket": "kNCnKxYwkQNc5I_8F1CrDnbkHOfD9BAHZImgdoeksYs",
+    "expires_in": 60
+   },
+   "epoch": 3,
+   "sent": null
+  }
+ ],
+ "__ws": [
+  {
+   "kind": "interview",
+   "at": 1792324401184,
+   "frame": {
+    "v": 1,
+    "type": "session.started",
+    "seq": 1,
+    "ts": 1792324401138,
+    "data": {
+     "state": "listening",
+     "settings": {
+      "auto_answer": true,
+      "length": "auto",
+      "style": "natural",
+      "answer_language": null,
+      "response_timing": "balanced",
+      "thinking": "off",
+      "coding_language": null,
+      "experience": "auto"
+     }
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324401193,
+   "frame": {
+    "v": 1,
+    "type": "provider.status",
+    "seq": 2,
+    "ts": 1792324401138,
+    "data": {
+     "provider": "stt",
+     "name": "mock",
+     "state": "mock"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324401194,
+   "frame": {
+    "v": 1,
+    "type": "provider.status",
+    "seq": 3,
+    "ts": 1792324401139,
+    "data": {
+     "provider": "llm",
+     "name": "mock",
+     "state": "mock"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324401194,
+   "frame": {
+    "v": 1,
+    "type": "state.changed",
+    "seq": 4,
+    "ts": 1792324401139,
+    "data": {
+     "state": "listening"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324401194,
+   "frame": {
+    "v": 1,
+    "type": "audio.mic_status",
+    "seq": 5,
+    "ts": 1792324401139,
+    "data": {
+     "state": "connected"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324401194,
+   "frame": {
+    "v": 1,
+    "type": "audio.system_status",
+    "seq": 6,
+    "ts": 1792324401139,
+    "data": {
+     "state": "connected"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324401452,
+   "frame": {
+    "v": 1,
+    "type": "audio.mic_status",
+    "seq": 7,
+    "ts": 1792324401452,
+    "data": {
+     "state": "connected",
+     "detail": "receiving"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324404474,
+   "frame": {
+    "v": 1,
+    "type": "audio.system_status",
+    "seq": 8,
+    "ts": 1792324404473,
+    "data": {
+     "state": "connected",
+     "detail": "receiving"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324408236,
+   "frame": {
+    "v": 1,
+    "type": "state.changed",
+    "seq": 9,
+    "ts": 1792324408236,
+    "data": {
+     "state": "ended"
+    }
+   }
+  },
+  {
+   "kind": "interview",
+   "at": 1792324408236,
+   "frame": {
+    "v": 1,
+    "type": "session.ended",
+    "seq": 10,
+    "ts": 1792324408236,
+    "data": {
+     "state": "ended",
+     "settings": {
+      "auto_answer": true,
+      "length": "auto",
+      "style": "natural",
+      "answer_language": null,
+      "response_timing": "balanced",
+      "thinking": "off",
+      "coding_language": null,
+      "experience": "auto"
+     }
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409816,
+   "frame": {
+    "v": 1,
+    "type": "session.started",
+    "seq": 1,
+    "ts": 1792324409814,
+    "data": {
+     "state": "listening",
+     "settings": {
+      "auto_answer": true,
+      "length": "auto",
+      "style": "natural",
+      "answer_language": null,
+      "response_timing": "balanced",
+      "thinking": "off",
+      "coding_language": null,
+      "experience": "auto"
+     }
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409819,
+   "frame": {
+    "v": 1,
+    "type": "provider.status",
+    "seq": 2,
+    "ts": 1792324409815,
+    "data": {
+     "provider": "stt",
+     "name": "mock",
+     "state": "mock"
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409824,
+   "frame": {
+    "v": 1,
+    "type": "provider.status",
+    "seq": 3,
+    "ts": 1792324409815,
+    "data": {
+     "provider": "llm",
+     "name": "mock",
+     "state": "mock"
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409824,
+   "frame": {
+    "v": 1,
+    "type": "state.changed",
+    "seq": 4,
+    "ts": 1792324409815,
+    "data": {
+     "state": "listening"
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409824,
+   "frame": {
+    "v": 1,
+    "type": "audio.mic_status",
+    "seq": 5,
+    "ts": 1792324409815,
+    "data": {
+     "state": "connected"
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409824,
+   "frame": {
+    "v": 1,
+    "type": "audio.system_status",
+    "seq": 6,
+    "ts": 1792324409815,
+    "data": {
+     "state": "connected"
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409825,
+   "frame": {
+    "v": 1,
+    "type": "transcript.final",
+    "seq": 7,
+    "ts": 1792324409815,
+    "data": {
+     "turn_id": "5a76ed36-312d-4230-bf5a-519a1a4e2d36",
+     "speaker": "interviewer",
+     "text": "Thanks for joining. To start, tell me about a time you used data to change a product decision.",
+     "start_ms": 0,
+     "end_ms": 0
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324409825,
+   "frame": {
+    "v": 1,
+    "type": "mock.question",
+    "seq": 8,
+    "ts": 1792324409815,
+    "data": {
+     "question_id": "b96bef53-e403-4ea9-aeef-484c314a05c5",
+     "text": "Thanks for joining. To start, tell me about a time you used data to change a product decision.",
+     "concept_depth": 1,
+     "is_follow_up": false,
+     "index": 1,
+     "total": 6,
+     "question_type": "behavioral"
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324421857,
+   "frame": {
+    "v": 1,
+    "type": "state.changed",
+    "seq": 9,
+    "ts": 1792324421856,
+    "data": {
+     "state": "ended"
+    }
+   }
+  },
+  {
+   "kind": "mock",
+   "at": 1792324421857,
+   "frame": {
+    "v": 1,
+    "type": "session.ended",
+    "seq": 10,
+    "ts": 1792324421856,
+    "data": {
+     "state": "ended",
+     "settings": {
+      "auto_answer": true,
+      "length": "auto",
+      "style": "natural",
+      "answer_language": null,
+      "response_timing": "balanced",
+      "thinking": "off",
+      "coding_language": null,
+      "experience": "auto"
+     }
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,3497 @@
+{
+ "__meta": {
+  "flow": "resume",
+  "recordedAt": 1792324307143
+ },
+ "GET /v1/auth/me": [
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/announcement": [
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/auth/config": [
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/status": [
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/inbox?status=new&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "items": [],
+    "total": 0,
+    "offset": 0,
+    "has_more": false,
+    "counts": {
+     "new": 0,
+     "open": 0,
+     "done": 0,
+     "spam": 0,
+     "todo": 0,
+     "all": 0
+    }
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/payments?only=submitted": [
+  {
+   "status": 200,
+   "body": {
+    "upi_configured": false,
+    "waiting": 0,
+    "payments": [],
+    "processing": 0,
+    "events_to_review": 0,
+    "unlinked_refunds": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/users?only=pending&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "approval_required": false,
+    "users": [],
+    "totals": {
+     "users": 1,
+     "signups_7d": 1,
+     "interview_minutes_this_month": 0,
+     "resume_credits_used_this_month": 0,
+     "paid_inr_total": 0,
+     "paid_inr_this_month": 0,
+     "payments_waiting": 0
+    },
+    "total": 0,
+    "offset": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/resumes/allowance": [
+  {
+   "status": 200,
+   "body": {
+    "unlimited": true,
+    "credits_left": 0,
+    "upgrade": {
+     "pack": "mini",
+     "label": "AI credits",
+     "price_inr": 499,
+     "resume_credits": 25,
+     "interview_minutes": 0,
+     "buyable": false,
+     "price_text": "₹499"
+    },
+    "fixes_left": 0,
+    "fixes_per_credit": 5
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "unlimited": true,
+    "credits_left": 0,
+    "upgrade": {
+     "pack": "mini",
+     "label": "AI credits",
+     "price_inr": 499,
+     "resume_credits": 25,
+     "interview_minutes": 0,
+     "buyable": false,
+     "price_text": "₹499"
+    },
+    "fixes_left": 0,
+    "fixes_per_credit": 5
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "unlimited": true,
+    "credits_left": 0,
+    "upgrade": {
+     "pack": "mini",
+     "label": "AI credits",
+     "price_inr": 499,
+     "resume_credits": 25,
+     "interview_minutes": 0,
+     "buyable": false,
+     "price_text": "₹499"
+    },
+    "fixes_left": 0,
+    "fixes_per_credit": 5
+   },
+   "epoch": 2
+  }
+ ],
+ "GET /v1/resumes/5cc515a2-84a5-4ba9-bfcd-f55110d64727": [
+  {
+   "status": 200,
+   "body": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Data Analyst",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst with experience in data. Hard working team player looking for new opportunities."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Responsible for the delivery time model for checkout. Late deliveries went down 18% in two quarters.",
+        "Worked on A/B tests on the booking flow with the product team, 14 tests, 5 shipped.",
+        "Made a dashboard to replace 9 weekly spreadsheet reports for 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Looked at the booking funnel and found the three steps where 40% of people dropped off.",
+        "Did the monthly revenue report using SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "base_revision": null,
+    "client_id": null,
+    "client_revision": null,
+    "pending_suggestions": [],
+    "id": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+    "created_at": "2026-10-18T11:49:21.532740",
+    "updated_at": "2026-10-18T11:51:46.226625",
+    "revision": 1,
+    "prep_context": null
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Data Analyst",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst with experience in data. Hard working team player looking for new opportunities."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Responsible for the delivery time model for checkout. Late deliveries went down 18% in two quarters.",
+        "Worked on A/B tests on the booking flow with the product team, 14 tests, 5 shipped.",
+        "Made a dashboard to replace 9 weekly spreadsheet reports for 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Looked at the booking funnel and found the three steps where 40% of people dropped off.",
+        "Did the monthly revenue report using SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "base_revision": null,
+    "client_id": null,
+    "client_revision": null,
+    "pending_suggestions": [],
+    "id": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+    "created_at": "2026-10-18T11:49:21.532740",
+    "updated_at": "2026-10-18T11:51:46.226625",
+    "revision": 1,
+    "prep_context": null
+   },
+   "epoch": 0
+  }
+ ],
+ "POST /v1/resumes/score": [
+  {
+   "status": 200,
+   "body": {
+    "score": 74,
+    "verdict": "Good",
+    "categories": [
+     {
+      "id": "contact",
+      "label": "Contact details",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "sections",
+      "label": "Standard sections",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "summary",
+      "label": "Summary",
+      "points": 2,
+      "max_points": 4
+     },
+     {
+      "id": "experience",
+      "label": "Experience bullets",
+      "points": 22.8,
+      "max_points": 26
+     },
+     {
+      "id": "skills",
+      "label": "Skills",
+      "points": 2.6,
+      "max_points": 7
+     },
+     {
+      "id": "readability",
+      "label": "Readability",
+      "points": 10,
+      "max_points": 14
+     },
+     {
+      "id": "layout",
+      "label": "ATS-safe layout",
+      "points": 4,
+      "max_points": 4
+     },
+     {
+      "id": "keywords",
+      "label": "Job keywords",
+      "points": 12.5,
+      "max_points": 25
+     }
+    ],
+    "checks": [
+     {
+      "id": "name",
+      "category": "contact",
+      "label": "Your name at the top",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "email",
+      "category": "contact",
+      "label": "A valid email address",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "phone",
+      "category": "contact",
+      "label": "A phone number",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "location",
+      "category": "contact",
+      "label": "Your city or region",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "link",
+      "category": "contact",
+      "label": "A LinkedIn or portfolio link",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_experience",
+      "category": "sections",
+      "label": "An Experience section",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_education",
+      "category": "sections",
+      "label": "An Education section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_skills",
+      "category": "sections",
+      "label": "A Skills section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "summary",
+      "category": "summary",
+      "label": "A summary of 25-90 words",
+      "points": 2,
+      "max_points": 4,
+      "passed": false,
+      "fix": "Your summary has 14 words; aim for 25-90 so it's read in full.",
+      "target": "basics.summary",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "roles_complete",
+      "category": "experience",
+      "label": "Every role has a title, company and dates",
+      "points": 6,
+      "max_points": 6,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullets_per_role",
+      "category": "experience",
+      "label": "2-6 bullets per role",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "action_verbs",
+      "category": "experience",
+      "label": "Bullets start with an action verb",
+      "points": 0.8,
+      "max_points": 4,
+      "passed": false,
+      "fix": "1 of 5 bullets start with an action verb. Lead with what you did: Led, Built, Reduced, Launched.",
+      "target": "experience.x1.bullets.0",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": [
+       "experience.x1.bullets.0",
+       "experience.x1.bullets.1",
+       "experience.x1.bullets.2",
+       "experience.x2.bullets.1"
+      ]
+     },
+     {
+      "id": "quantified",
+      "category": "experience",
+      "label": "At least half the bullets have a number",
+      "points": 7,
+      "max_points": 7,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullet_length",
+      "category": "experience",
+      "label": "Bullets are 8-35 words",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "varied_verbs",
+      "category": "experience",
+      "label": "Opening verbs are varied",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_pronouns",
+      "category": "experience",
+      "label": "No \"I\" or \"my\" in bullets",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "skills_count",
+      "category": "skills",
+      "label": "At least 8 skills listed",
+      "points": 2.6,
+      "max_points": 7,
+      "passed": false,
+      "fix": "You list 3 skills; list at least 8 tools, languages and methods you really use.",
+      "target": "skills",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "length",
+      "category": "readability",
+      "label": "300-1,000 words (1-2 pages)",
+      "points": 1.2,
+      "max_points": 3,
+      "passed": false,
+      "fix": "The resume has 117 words: add more detail to your roles.",
+      "target": "experience",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "dates",
+      "category": "readability",
+      "label": "Dates written one way",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "date_order",
+      "category": "readability",
+      "label": "Roles most recent first, dates in order",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "placeholders",
+      "category": "readability",
+      "label": "No [placeholders] left to fill",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "cliches",
+      "category": "readability",
+      "label": "No clichés like \"team player\"",
+      "points": 0,
+      "max_points": 1,
+      "passed": false,
+      "fix": "\"team player\" claims a quality instead of showing it. Replace it with what you did that proves it.",
+      "target": "basics.summary",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": [
+       "basics.summary"
+      ]
+     },
+     {
+      "id": "clear_writing",
+      "category": "readability",
+      "label": "Every line reads clearly (strong opener, active, no filler)",
+      "points": 1.8,
+      "max_points": 3,
+      "passed": false,
+      "fix": "2 lines could read stronger. First: Starts with \"Responsible for\", which describes a duty. Lead with what you did: \"Ran…\", \"Built…\", \"Cut…\". Fix weak openers (\"Responsible for\", \"Helped\"), the passive voice, filler words and a past role written in the present tense.",
+      "target": "experience.x1.bullets.0",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": [
+       "experience.x1.bullets.0",
+       "experience.x1.bullets.1"
+      ]
+     },
+     {
+      "id": "tech_names",
+      "category": "readability",
+      "label": "Tools and tech spelled the standard way",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "single_column",
+      "category": "layout",
+      "label": "Single-column template",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_photo",
+      "category": "layout",
+      "label": "No photo",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "keywords",
+      "category": "keywords",
+      "label": "Matches the job post's keywords",
+      "points": 12.5,
+      "max_points": 25,
+      "passed": false,
+      "fix": "Missing from your resume: BigQuery, Looker, Statistics. Add the ones you really have, in your skills or bullets.",
+      "target": "skills",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     }
+    ],
+    "keywords": {
+     "matched": [
+      "Python",
+      "SQL"
+     ],
+     "missing": [
+      "BigQuery",
+      "Looker",
+      "Statistics"
+     ]
+    },
+    "has_job": true,
+    "issues": [
+     {
+      "path": "experience.x1.bullets.0",
+      "kind": "weak_opener",
+      "message": "Starts with \"Responsible for\", which describes a duty. Lead with what you did: \"Ran…\", \"Built…\", \"Cut…\".",
+      "fixed": null
+     },
+     {
+      "path": "experience.x1.bullets.1",
+      "kind": "weak_opener",
+      "message": "Starts with \"Worked on\", which describes a duty. Lead with what you did: \"Ran…\", \"Built…\", \"Cut…\".",
+      "fixed": null
+     }
+    ]
+   },
+   "epoch": 0,
+   "sent": {
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Data Analyst",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst with experience in data. Hard working team player looking for new opportunities."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Responsible for the delivery time model for checkout. Late deliveries went down 18% in two quarters.",
+        "Worked on A/B tests on the booking flow with the product team, 14 tests, 5 shipped.",
+        "Made a dashboard to replace 9 weekly spreadsheet reports for 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Looked at the booking funnel and found the three steps where 40% of people dropped off.",
+        "Did the monthly revenue report using SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. "
+   }
+  },
+  {
+   "status": 200,
+   "body": {
+    "score": 82,
+    "verdict": "Strong",
+    "categories": [
+     {
+      "id": "contact",
+      "label": "Contact details",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "sections",
+      "label": "Standard sections",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "summary",
+      "label": "Summary",
+      "points": 4,
+      "max_points": 4
+     },
+     {
+      "id": "experience",
+      "label": "Experience bullets",
+      "points": 26,
+      "max_points": 26
+     },
+     {
+      "id": "skills",
+      "label": "Skills",
+      "points": 2.6,
+      "max_points": 7
+     },
+     {
+      "id": "readability",
+      "label": "Readability",
+      "points": 12.5,
+      "max_points": 14
+     },
+     {
+      "id": "layout",
+      "label": "ATS-safe layout",
+      "points": 4,
+      "max_points": 4
+     },
+     {
+      "id": "keywords",
+      "label": "Job keywords",
+      "points": 12.5,
+      "max_points": 25
+     }
+    ],
+    "checks": [
+     {
+      "id": "name",
+      "category": "contact",
+      "label": "Your name at the top",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "email",
+      "category": "contact",
+      "label": "A valid email address",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "phone",
+      "category": "contact",
+      "label": "A phone number",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "location",
+      "category": "contact",
+      "label": "Your city or region",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "link",
+      "category": "contact",
+      "label": "A LinkedIn or portfolio link",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_experience",
+      "category": "sections",
+      "label": "An Experience section",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_education",
+      "category": "sections",
+      "label": "An Education section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_skills",
+      "category": "sections",
+      "label": "A Skills section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "summary",
+      "category": "summary",
+      "label": "A summary of 25-90 words",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "roles_complete",
+      "category": "experience",
+      "label": "Every role has a title, company and dates",
+      "points": 6,
+      "max_points": 6,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullets_per_role",
+      "category": "experience",
+      "label": "2-6 bullets per role",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "action_verbs",
+      "category": "experience",
+      "label": "Bullets start with an action verb",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "quantified",
+      "category": "experience",
+      "label": "At least half the bullets have a number",
+      "points": 7,
+      "max_points": 7,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullet_length",
+      "category": "experience",
+      "label": "Bullets are 8-35 words",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "varied_verbs",
+      "category": "experience",
+      "label": "Opening verbs are varied",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_pronouns",
+      "category": "experience",
+      "label": "No \"I\" or \"my\" in bullets",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "skills_count",
+      "category": "skills",
+      "label": "At least 8 skills listed",
+      "points": 2.6,
+      "max_points": 7,
+      "passed": false,
+      "fix": "You list 3 skills; list at least 8 tools, languages and methods you really use.",
+      "target": "skills",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "length",
+      "category": "readability",
+      "label": "300-1,000 words (1-2 pages)",
+      "points": 1.5,
+      "max_points": 3,
+      "passed": false,
+      "fix": "The resume has 151 words: add more detail to your roles.",
+      "target": "experience",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "dates",
+      "category": "readability",
+      "label": "Dates written one way",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "date_order",
+      "category": "readability",
+      "label": "Roles most recent first, dates in order",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "placeholders",
+      "category": "readability",
+      "label": "No [placeholders] left to fill",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "cliches",
+      "category": "readability",
+      "label": "No clichés like \"team player\"",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "clear_writing",
+      "category": "readability",
+      "label": "Every line reads clearly (strong opener, active, no filler)",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "tech_names",
+      "category": "readability",
+      "label": "Tools and tech spelled the standard way",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "single_column",
+      "category": "layout",
+      "label": "Single-column template",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_photo",
+      "category": "layout",
+      "label": "No photo",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "keywords",
+      "category": "keywords",
+      "label": "Matches the job post's keywords",
+      "points": 12.5,
+      "max_points": 25,
+      "passed": false,
+      "fix": "Missing from your resume: BigQuery, Looker, Statistics. Add the ones you really have, in your skills or bullets.",
+      "target": "skills",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     }
+    ],
+    "keywords": {
+     "matched": [
+      "Python",
+      "SQL"
+     ],
+     "missing": [
+      "BigQuery",
+      "Looker",
+      "Statistics"
+     ]
+    },
+    "has_job": true,
+    "issues": []
+   },
+   "epoch": 2,
+   "sent": {
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. "
+   }
+  },
+  {
+   "status": 200,
+   "body": {
+    "score": 97,
+    "verdict": "Strong",
+    "categories": [
+     {
+      "id": "contact",
+      "label": "Contact details",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "sections",
+      "label": "Standard sections",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "summary",
+      "label": "Summary",
+      "points": 4,
+      "max_points": 4
+     },
+     {
+      "id": "experience",
+      "label": "Experience bullets",
+      "points": 26,
+      "max_points": 26
+     },
+     {
+      "id": "skills",
+      "label": "Skills",
+      "points": 5.2,
+      "max_points": 7
+     },
+     {
+      "id": "readability",
+      "label": "Readability",
+      "points": 12.5,
+      "max_points": 14
+     },
+     {
+      "id": "layout",
+      "label": "ATS-safe layout",
+      "points": 4,
+      "max_points": 4
+     },
+     {
+      "id": "keywords",
+      "label": "Job keywords",
+      "points": 25,
+      "max_points": 25
+     }
+    ],
+    "checks": [
+     {
+      "id": "name",
+      "category": "contact",
+      "label": "Your name at the top",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "email",
+      "category": "contact",
+      "label": "A valid email address",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "phone",
+      "category": "contact",
+      "label": "A phone number",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "location",
+      "category": "contact",
+      "label": "Your city or region",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "link",
+      "category": "contact",
+      "label": "A LinkedIn or portfolio link",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_experience",
+      "category": "sections",
+      "label": "An Experience section",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_education",
+      "category": "sections",
+      "label": "An Education section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_skills",
+      "category": "sections",
+      "label": "A Skills section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "summary",
+      "category": "summary",
+      "label": "A summary of 25-90 words",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "roles_complete",
+      "category": "experience",
+      "label": "Every role has a title, company and dates",
+      "points": 6,
+      "max_points": 6,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullets_per_role",
+      "category": "experience",
+      "label": "2-6 bullets per role",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "action_verbs",
+      "category": "experience",
+      "label": "Bullets start with an action verb",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "quantified",
+      "category": "experience",
+      "label": "At least half the bullets have a number",
+      "points": 7,
+      "max_points": 7,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullet_length",
+      "category": "experience",
+      "label": "Bullets are 8-35 words",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "varied_verbs",
+      "category": "experience",
+      "label": "Opening verbs are varied",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_pronouns",
+      "category": "experience",
+      "label": "No \"I\" or \"my\" in bullets",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "skills_count",
+      "category": "skills",
+      "label": "At least 8 skills listed",
+      "points": 5.2,
+      "max_points": 7,
+      "passed": false,
+      "fix": "You list 6 skills; list at least 8 tools, languages and methods you really use.",
+      "target": "skills",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "length",
+      "category": "readability",
+      "label": "300-1,000 words (1-2 pages)",
+      "points": 1.5,
+      "max_points": 3,
+      "passed": false,
+      "fix": "The resume has 154 words: add more detail to your roles.",
+      "target": "experience",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "dates",
+      "category": "readability",
+      "label": "Dates written one way",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "date_order",
+      "category": "readability",
+      "label": "Roles most recent first, dates in order",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "placeholders",
+      "category": "readability",
+      "label": "No [placeholders] left to fill",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "cliches",
+      "category": "readability",
+      "label": "No clichés like \"team player\"",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "clear_writing",
+      "category": "readability",
+      "label": "Every line reads clearly (strong opener, active, no filler)",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "tech_names",
+      "category": "readability",
+      "label": "Tools and tech spelled the standard way",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "single_column",
+      "category": "layout",
+      "label": "Single-column template",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_photo",
+      "category": "layout",
+      "label": "No photo",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "keywords",
+      "category": "keywords",
+      "label": "Matches the job post's keywords",
+      "points": 25,
+      "max_points": 25,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     }
+    ],
+    "keywords": {
+     "matched": [
+      "BigQuery",
+      "Looker",
+      "Python",
+      "SQL",
+      "Statistics"
+     ],
+     "missing": []
+    },
+    "has_job": true,
+    "issues": []
+   },
+   "epoch": 4,
+   "sent": {
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python",
+        "BigQuery",
+        "Looker",
+        "Statistics"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. "
+   }
+  },
+  {
+   "status": 200,
+   "body": {
+    "score": 99,
+    "verdict": "Strong",
+    "categories": [
+     {
+      "id": "contact",
+      "label": "Contact details",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "sections",
+      "label": "Standard sections",
+      "points": 10,
+      "max_points": 10
+     },
+     {
+      "id": "summary",
+      "label": "Summary",
+      "points": 4,
+      "max_points": 4
+     },
+     {
+      "id": "experience",
+      "label": "Experience bullets",
+      "points": 26,
+      "max_points": 26
+     },
+     {
+      "id": "skills",
+      "label": "Skills",
+      "points": 7,
+      "max_points": 7
+     },
+     {
+      "id": "readability",
+      "label": "Readability",
+      "points": 12.6,
+      "max_points": 14
+     },
+     {
+      "id": "layout",
+      "label": "ATS-safe layout",
+      "points": 4,
+      "max_points": 4
+     },
+     {
+      "id": "keywords",
+      "label": "Job keywords",
+      "points": 25,
+      "max_points": 25
+     }
+    ],
+    "checks": [
+     {
+      "id": "name",
+      "category": "contact",
+      "label": "Your name at the top",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "email",
+      "category": "contact",
+      "label": "A valid email address",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "phone",
+      "category": "contact",
+      "label": "A phone number",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "location",
+      "category": "contact",
+      "label": "Your city or region",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "link",
+      "category": "contact",
+      "label": "A LinkedIn or portfolio link",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_experience",
+      "category": "sections",
+      "label": "An Experience section",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_education",
+      "category": "sections",
+      "label": "An Education section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "has_skills",
+      "category": "sections",
+      "label": "A Skills section",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "summary",
+      "category": "summary",
+      "label": "A summary of 25-90 words",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "roles_complete",
+      "category": "experience",
+      "label": "Every role has a title, company and dates",
+      "points": 6,
+      "max_points": 6,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullets_per_role",
+      "category": "experience",
+      "label": "2-6 bullets per role",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "action_verbs",
+      "category": "experience",
+      "label": "Bullets start with an action verb",
+      "points": 4,
+      "max_points": 4,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "quantified",
+      "category": "experience",
+      "label": "At least half the bullets have a number",
+      "points": 7,
+      "max_points": 7,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "bullet_length",
+      "category": "experience",
+      "label": "Bullets are 8-35 words",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "varied_verbs",
+      "category": "experience",
+      "label": "Opening verbs are varied",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_pronouns",
+      "category": "experience",
+      "label": "No \"I\" or \"my\" in bullets",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "skills_count",
+      "category": "skills",
+      "label": "At least 8 skills listed",
+      "points": 7,
+      "max_points": 7,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "length",
+      "category": "readability",
+      "label": "300-1,000 words (1-2 pages)",
+      "points": 1.6,
+      "max_points": 3,
+      "passed": false,
+      "fix": "The resume has 160 words: add more detail to your roles.",
+      "target": "experience",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "dates",
+      "category": "readability",
+      "label": "Dates written one way",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "date_order",
+      "category": "readability",
+      "label": "Roles most recent first, dates in order",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "placeholders",
+      "category": "readability",
+      "label": "No [placeholders] left to fill",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "cliches",
+      "category": "readability",
+      "label": "No clichés like \"team player\"",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "clear_writing",
+      "category": "readability",
+      "label": "Every line reads clearly (strong opener, active, no filler)",
+      "points": 3,
+      "max_points": 3,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "tech_names",
+      "category": "readability",
+      "label": "Tools and tech spelled the standard way",
+      "points": 1,
+      "max_points": 1,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "single_column",
+      "category": "layout",
+      "label": "Single-column template",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "no_photo",
+      "category": "layout",
+      "label": "No photo",
+      "points": 2,
+      "max_points": 2,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     },
+     {
+      "id": "keywords",
+      "category": "keywords",
+      "label": "Matches the job post's keywords",
+      "points": 25,
+      "max_points": 25,
+      "passed": true,
+      "fix": null,
+      "target": null,
+      "ai_fixable": false,
+      "fix_kind": null,
+      "paths": []
+     }
+    ],
+    "keywords": {
+     "matched": [
+      "BigQuery",
+      "Looker",
+      "Python",
+      "SQL",
+      "Statistics"
+     ],
+     "missing": []
+    },
+    "has_job": true,
+    "issues": []
+   },
+   "epoch": 6,
+   "sent": {
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python",
+        "BigQuery",
+        "Looker",
+        "Statistics",
+        "A/B testing",
+        "dbt",
+        "Tableau",
+        "Forecasting"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. "
+   }
+  }
+ ],
+ "POST /v1/resumes/fix": [
+  {
+   "status": 200,
+   "body": {
+    "suggestions": [
+     {
+      "id": "6ca9bbe84548",
+      "path": "basics.summary",
+      "label": "Summary",
+      "before": "Data analyst with experience in data. Hard working team player looking for new opportunities.",
+      "after": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams.",
+      "reason": "Starts with what you did, keeps your numbers, and names the tools the job asks for.",
+      "kind": "rewrite",
+      "confirm": null
+     },
+     {
+      "id": "9351dc9bbe84",
+      "path": "experience.x1.bullets.0",
+      "label": "Senior Data Analyst at Juniper Logistics, bullet 1",
+      "before": "Responsible for the delivery time model for checkout. Late deliveries went down 18% in two quarters.",
+      "after": "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+      "reason": "Starts with what you did, keeps your numbers, and names the tools the job asks for.",
+      "kind": "rewrite",
+      "confirm": null
+     },
+     {
+      "id": "bdfb1bd7bb2a",
+      "path": "experience.x1.bullets.1",
+      "label": "Senior Data Analyst at Juniper Logistics, bullet 2",
+      "before": "Worked on A/B tests on the booking flow with the product team, 14 tests, 5 shipped.",
+      "after": "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+      "reason": "Starts with what you did, keeps your numbers, and names the tools the job asks for.",
+      "kind": "rewrite",
+      "confirm": null
+     },
+     {
+      "id": "1c3083d45389",
+      "path": "experience.x1.bullets.2",
+      "label": "Senior Data Analyst at Juniper Logistics, bullet 3",
+      "before": "Made a dashboard to replace 9 weekly spreadsheet reports for 60+ city managers.",
+      "after": "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers.",
+      "reason": "Starts with what you did, keeps your numbers, and names the tools the job asks for.",
+      "kind": "rewrite",
+      "confirm": null
+     },
+     {
+      "id": "168d5f42b2d3",
+      "path": "experience.x2.bullets.1",
+      "label": "Data Analyst at Fernway Travel, bullet 2",
+      "before": "Did the monthly revenue report using SQL and Python, from 3 days to 4 hours.",
+      "after": "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours.",
+      "reason": "Starts with what you did, keeps your numbers, and names the tools the job asks for.",
+      "kind": "rewrite",
+      "confirm": null
+     },
+     {
+      "id": "162b73a5da04",
+      "path": "basics.headline",
+      "label": "Headline",
+      "before": "Data Analyst",
+      "after": "Senior Data Analyst · SQL, Python, A/B tests",
+      "reason": "Leads with what you did and names the tools the job asks for.",
+      "kind": "rewrite",
+      "confirm": null
+     },
+     {
+      "id": "43c2fce9ae66",
+      "path": "experience.x2.bullets.0",
+      "label": "Data Analyst at Fernway Travel, bullet 1",
+      "before": "Looked at the booking funnel and found the three steps where 40% of people dropped off.",
+      "after": "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+      "reason": "Leads with what you did and names the tools the job asks for.",
+      "kind": "rewrite",
+      "confirm": null
+     }
+    ],
+    "review": [
+     {
+      "id": "dfc5fd8ee54c",
+      "path": "skills",
+      "label": "Skills the job post asks for",
+      "before": "",
+      "after": "BigQuery, Looker, Statistics",
+      "reason": "The job post uses these words and your resume doesn't, so keyword filters skip it.",
+      "kind": "add_skill",
+      "confirm": "These come from the job post. Add only the ones you've really used."
+     },
+     {
+      "id": "c00a82223fd2",
+      "path": "skills",
+      "label": "Skills common for your kind of role",
+      "before": "",
+      "after": "A/B testing, dbt, Tableau, Forecasting",
+      "reason": "Recruiters and ATS filters look for a full Skills section; these fit the roles you list.",
+      "kind": "add_skill",
+      "confirm": "Common for your kind of role, not taken from your resume. Add only what you really use."
+     }
+    ],
+    "questions": [],
+    "design": {},
+    "order": null,
+    "score_before": 74,
+    "score_after": 82,
+    "remaining": [
+     {
+      "id": "skills_count",
+      "category": "skills",
+      "label": "At least 8 skills listed",
+      "points": 2.6,
+      "max_points": 7,
+      "passed": false,
+      "fix": "You list 3 skills; list at least 8 tools, languages and methods you really use.",
+      "target": "skills",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "length",
+      "category": "readability",
+      "label": "300-1,000 words (1-2 pages)",
+      "points": 1.5,
+      "max_points": 3,
+      "passed": false,
+      "fix": "The resume has 151 words: add more detail to your roles.",
+      "target": "experience",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     },
+     {
+      "id": "keywords",
+      "category": "keywords",
+      "label": "Matches the job post's keywords",
+      "points": 12.5,
+      "max_points": 25,
+      "passed": false,
+      "fix": "Missing from your resume: BigQuery, Looker, Statistics. Add the ones you really have, in your skills or bullets.",
+      "target": "skills",
+      "ai_fixable": true,
+      "fix_kind": "ai",
+      "paths": []
+     }
+    ],
+    "upgrade_required": false,
+    "ai_error": null,
+    "followup": null
+   },
+   "epoch": 1,
+   "sent": {
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Data Analyst",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst with experience in data. Hard working team player looking for new opportunities."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Responsible for the delivery time model for checkout. Late deliveries went down 18% in two quarters.",
+        "Worked on A/B tests on the booking flow with the product team, 14 tests, 5 shipped.",
+        "Made a dashboard to replace 9 weekly spreadsheet reports for 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Looked at the booking funnel and found the three steps where 40% of people dropped off.",
+        "Did the monthly revenue report using SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. "
+   }
+  }
+ ],
+ "PUT /v1/resumes/5cc515a2-84a5-4ba9-bfcd-f55110d64727": [
+  {
+   "status": 200,
+   "body": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "base_revision": null,
+    "client_id": null,
+    "client_revision": null,
+    "pending_suggestions": [],
+    "id": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+    "created_at": "2026-10-18T11:49:21.532740",
+    "updated_at": "2026-10-18T11:51:52.065385",
+    "revision": 2,
+    "prep_context": null
+   },
+   "epoch": 3,
+   "sent": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "pending_suggestions": [],
+    "base_revision": 1,
+    "client_id": "e40f341c-2e81-4d2b-8058-d061d37cec7b",
+    "client_revision": 1
+   }
+  },
+  {
+   "status": 200,
+   "body": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python",
+        "BigQuery",
+        "Looker",
+        "Statistics"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "base_revision": null,
+    "client_id": null,
+    "client_revision": null,
+    "pending_suggestions": [],
+    "id": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+    "created_at": "2026-10-18T11:49:21.532740",
+    "updated_at": "2026-10-18T11:51:55.042733",
+    "revision": 3,
+    "prep_context": null
+   },
+   "epoch": 5,
+   "sent": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python",
+        "BigQuery",
+        "Looker",
+        "Statistics"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "pending_suggestions": [],
+    "base_revision": 2,
+    "client_id": "e40f341c-2e81-4d2b-8058-d061d37cec7b",
+    "client_revision": 2
+   }
+  },
+  {
+   "status": 200,
+   "body": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python",
+        "BigQuery",
+        "Looker",
+        "Statistics",
+        "A/B testing",
+        "dbt",
+        "Tableau",
+        "Forecasting"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "base_revision": null,
+    "client_id": null,
+    "client_revision": null,
+    "pending_suggestions": [],
+    "id": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+    "created_at": "2026-10-18T11:49:21.532740",
+    "updated_at": "2026-10-18T11:51:56.639216",
+    "revision": 4,
+    "prep_context": null
+   },
+   "epoch": 7,
+   "sent": {
+    "title": "Aditi Rao, first draft",
+    "data": {
+     "basics": {
+      "name": "Aditi Rao",
+      "headline": "Senior Data Analyst · SQL, Python, A/B tests",
+      "email": "aditi.rao@example.com",
+      "phone": "+91 98765 43210",
+      "location": "Bengaluru, India",
+      "links": [
+       {
+        "label": "LinkedIn",
+        "url": "linkedin.com/in/aditi-rao-demo"
+       }
+      ],
+      "summary": "Data analyst in logistics and travel who turns product and operations data into decisions: A/B tests, a delivery-time model and dashboards, built in SQL and Python and explained in plain words to product teams."
+     },
+     "experience": [
+      {
+       "id": "x1",
+       "title": "Senior Data Analyst",
+       "company": "Juniper Logistics",
+       "location": "Bengaluru",
+       "start": "Apr 2023",
+       "end": "",
+       "current": true,
+       "bullets": [
+        "Built the delivery-time model behind the checkout promise, cutting late deliveries by 18% in two quarters.",
+        "Designed and analysed 14 A/B tests on the booking flow with the product team; 5 shipped to all users.",
+        "Replaced 9 weekly spreadsheet reports with one dashboard used by 60+ city managers."
+       ]
+      },
+      {
+       "id": "x2",
+       "title": "Data Analyst",
+       "company": "Fernway Travel",
+       "location": "Pune",
+       "start": "Jul 2021",
+       "end": "Mar 2023",
+       "current": false,
+       "bullets": [
+        "Identified the three steps where 40% of bookings dropped off in the app, and worked with design on the fixes.",
+        "Automated the monthly revenue close with SQL and Python, from 3 days to 4 hours."
+       ]
+      }
+     ],
+     "education": [
+      {
+       "id": "e1",
+       "school": "College of Engineering, Pune",
+       "degree": "B.Tech",
+       "field": "Information Technology",
+       "start": "2017",
+       "end": "2021",
+       "details": "",
+       "grade": "8.4 / 10 CGPA"
+      }
+     ],
+     "skills": [
+      {
+       "id": "s1",
+       "name": "Skills",
+       "items": [
+        "Excel",
+        "SQL",
+        "Python",
+        "BigQuery",
+        "Looker",
+        "Statistics",
+        "A/B testing",
+        "dbt",
+        "Tableau",
+        "Forecasting"
+       ]
+      }
+     ],
+     "projects": [],
+     "certifications": [],
+     "extras": [],
+     "section_order": [
+      "summary",
+      "experience",
+      "skills",
+      "projects",
+      "education",
+      "certifications"
+     ],
+     "hidden": [],
+     "titles": {}
+    },
+    "design": {
+     "template": "modern",
+     "accent": "#4f46e5",
+     "font": "inter",
+     "font_size": 10.5,
+     "spacing": "normal",
+     "line_height": "normal",
+     "skills_style": "list",
+     "page": "a4",
+     "photo": null,
+     "show_photo": false
+    },
+    "job_text": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience. ",
+    "cover_letter": "",
+    "pending_suggestions": [],
+    "base_revision": 3,
+    "client_id": "e40f341c-2e81-4d2b-8058-d061d37cec7b",
+    "client_revision": 3
+   }
+  }
+ ]
+}

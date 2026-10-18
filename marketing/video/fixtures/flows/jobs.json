@@ -1,0 +1,1696 @@
+{
+ "__meta": {
+  "flow": "jobs",
+  "recordedAt": 1792327080920
+ },
+ "GET /v1/auth/me": [
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 1
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/announcement": [
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 1
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/auth/config": [
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 1
+  },
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/admin/status": [
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 1
+  },
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/admin/inbox?status=new&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "items": [],
+    "total": 0,
+    "offset": 0,
+    "has_more": false,
+    "counts": {
+     "new": 0,
+     "open": 0,
+     "done": 0,
+     "spam": 0,
+     "todo": 0,
+     "all": 0
+    }
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "items": [],
+    "total": 0,
+    "offset": 0,
+    "has_more": false,
+    "counts": {
+     "new": 0,
+     "open": 0,
+     "done": 0,
+     "spam": 0,
+     "todo": 0,
+     "all": 0
+    }
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/admin/payments?only=submitted": [
+  {
+   "status": 200,
+   "body": {
+    "upi_configured": false,
+    "waiting": 0,
+    "payments": [],
+    "processing": 0,
+    "events_to_review": 0,
+    "unlinked_refunds": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "upi_configured": false,
+    "waiting": 0,
+    "payments": [],
+    "processing": 0,
+    "events_to_review": 0,
+    "unlinked_refunds": 0,
+    "has_more": false
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/admin/users?only=pending&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "approval_required": false,
+    "users": [],
+    "totals": {
+     "users": 1,
+     "signups_7d": 1,
+     "interview_minutes_this_month": 0.3,
+     "resume_credits_used_this_month": 0,
+     "paid_inr_total": 0,
+     "paid_inr_this_month": 0,
+     "payments_waiting": 0
+    },
+    "total": 0,
+    "offset": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "approval_required": false,
+    "users": [],
+    "totals": {
+     "users": 1,
+     "signups_7d": 1,
+     "interview_minutes_this_month": 0.3,
+     "resume_credits_used_this_month": 0,
+     "paid_inr_total": 0,
+     "paid_inr_this_month": 0,
+     "payments_waiting": 0
+    },
+    "total": 0,
+    "offset": 0,
+    "has_more": false
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/jobs/tracker": [
+  {
+   "status": 200,
+   "body": [
+    {
+     "id": "1e84be48-0987-4142-ba27-f73ebd05c166",
+     "listing_id": "j50a920f00e7de541a7226f1ab6e36a30089",
+     "source": "ashby",
+     "company": "Tessellate",
+     "title": "Senior Product Analyst",
+     "location": "Remote, India",
+     "url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+     "apply_url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+     "posted_at": "2026-10-15T11:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-18T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-17T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "1439d7c3-4e29-4c98-9a96-5a88703101d6",
+     "listing_id": "j3f549a7683c50a7207496b626b3481a247e",
+     "source": "ashby",
+     "company": "Northwind Labs",
+     "title": "Product Analyst",
+     "location": "Remote, India",
+     "url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+     "apply_url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+     "posted_at": "2026-10-17T05:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-17T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-17T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.767487Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "5a7d391f-246f-4136-a8af-dbe69cc1d8d2",
+     "listing_id": "j11e90d558c2683b3a6e700527b7f3a1dc83",
+     "source": "lever",
+     "company": "Cobalt Commerce",
+     "title": "Analytics Engineer",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+     "apply_url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+     "posted_at": "2026-10-15T11:49:10.930996Z",
+     "status": "offer",
+     "notes": "",
+     "applied_at": "2026-09-27T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-17T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-09-27T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "29aea56a-a2ae-4003-9095-63197b3d33af",
+     "listing_id": "jfd5302899db38eb3ef892fa603c25da4fb1",
+     "source": "greenhouse",
+     "company": "Kestrel Pay",
+     "title": "Product Analyst, Payments",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+     "apply_url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+     "posted_at": "2026-10-18T06:49:10.930996Z",
+     "status": "interviewing",
+     "notes": "Hiring manager round with the payments product lead. Prepare the A/B test story and the delivery-time model.",
+     "applied_at": "2026-10-09T11:49:10.930996Z",
+     "next_at": "2026-10-20T05:30:00Z",
+     "status_at": "2026-10-16T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": "1aac7727-18ab-4da1-b7f8-05333a67795f",
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-09T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:51:08.284544Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": {
+      "id": "2dd9ceab-69fe-4004-806b-1c9314dbf249",
+      "at": "2026-10-18T11:53:28.236122Z",
+      "practice": false,
+      "score": null
+     }
+    },
+    {
+     "id": "8779ec41-c8f4-4ecc-af60-816d43b3186e",
+     "listing_id": "j0f3c2138c587b0caaaa0b44bceda997fc8b",
+     "source": "lever",
+     "company": "Lumen Analytics",
+     "title": "Senior Data Analyst",
+     "location": "Bengaluru",
+     "url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+     "apply_url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+     "posted_at": "2026-10-17T15:49:10.930996Z",
+     "status": "applied",
+     "notes": "Referred by Meera (ex-Fernway). Follow up on Friday if there's no reply.",
+     "applied_at": "2026-10-13T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-13T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-13T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.765983Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "2351b5aa-0813-4e98-86fb-4bdb1df89580",
+     "listing_id": "jebd938d8050aa56d9893f1de1934d20b1dd",
+     "source": "smartrecruiters",
+     "company": "Quillbook",
+     "title": "Data Analyst, Growth",
+     "location": "Pune",
+     "url": "https://careers.quillbook.example/jobs/4106-data-analyst--growth",
+     "apply_url": "https://careers.quillbook.example/jobs/4106-data-analyst--growth",
+     "posted_at": "2026-10-14T11:49:10.930996Z",
+     "status": "rejected",
+     "notes": "",
+     "applied_at": "2026-10-02T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-12T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-02T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "995bbb73-d55e-4b8a-9340-b73897f7397c",
+     "listing_id": "j7cb006913b876297f835650109268320170",
+     "source": "greenhouse",
+     "company": "Brightline Health",
+     "title": "Data Analyst, Care Operations",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+     "apply_url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+     "posted_at": "2026-10-16T11:49:10.930996Z",
+     "status": "applied",
+     "notes": "",
+     "applied_at": "2026-10-10T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-10T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-10T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.765983Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    }
+   ],
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": [
+    {
+     "id": "2d7d4cbb-84b0-4191-85b0-14fa5d39b068",
+     "listing_id": "j4b44e0679ab44eed4973332ca1d5473aa48",
+     "source": "lever",
+     "company": "Harbourline",
+     "title": "Marketing Data Analyst",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+     "apply_url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+     "posted_at": "2026-10-12T11:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-18T12:38:03.742497Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-18T12:38:03.743498Z",
+     "updated_at": "2026-10-18T12:38:03.743498Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "1e84be48-0987-4142-ba27-f73ebd05c166",
+     "listing_id": "j50a920f00e7de541a7226f1ab6e36a30089",
+     "source": "ashby",
+     "company": "Tessellate",
+     "title": "Senior Product Analyst",
+     "location": "Remote, India",
+     "url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+     "apply_url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+     "posted_at": "2026-10-15T11:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-18T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-17T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "1439d7c3-4e29-4c98-9a96-5a88703101d6",
+     "listing_id": "j3f549a7683c50a7207496b626b3481a247e",
+     "source": "ashby",
+     "company": "Northwind Labs",
+     "title": "Product Analyst",
+     "location": "Remote, India",
+     "url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+     "apply_url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+     "posted_at": "2026-10-17T05:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-17T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-17T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.767487Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "5a7d391f-246f-4136-a8af-dbe69cc1d8d2",
+     "listing_id": "j11e90d558c2683b3a6e700527b7f3a1dc83",
+     "source": "lever",
+     "company": "Cobalt Commerce",
+     "title": "Analytics Engineer",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+     "apply_url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+     "posted_at": "2026-10-15T11:49:10.930996Z",
+     "status": "offer",
+     "notes": "",
+     "applied_at": "2026-09-27T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-17T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-09-27T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "29aea56a-a2ae-4003-9095-63197b3d33af",
+     "listing_id": "jfd5302899db38eb3ef892fa603c25da4fb1",
+     "source": "greenhouse",
+     "company": "Kestrel Pay",
+     "title": "Product Analyst, Payments",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+     "apply_url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+     "posted_at": "2026-10-18T06:49:10.930996Z",
+     "status": "interviewing",
+     "notes": "Hiring manager round with the payments product lead. Prepare the A/B test story and the delivery-time model.",
+     "applied_at": "2026-10-09T11:49:10.930996Z",
+     "next_at": "2026-10-20T05:30:00Z",
+     "status_at": "2026-10-16T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": "1aac7727-18ab-4da1-b7f8-05333a67795f",
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-09T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:51:08.284544Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": {
+      "id": "2dd9ceab-69fe-4004-806b-1c9314dbf249",
+      "at": "2026-10-18T11:53:28.236122Z",
+      "practice": false,
+      "score": null
+     }
+    },
+    {
+     "id": "8779ec41-c8f4-4ecc-af60-816d43b3186e",
+     "listing_id": "j0f3c2138c587b0caaaa0b44bceda997fc8b",
+     "source": "lever",
+     "company": "Lumen Analytics",
+     "title": "Senior Data Analyst",
+     "location": "Bengaluru",
+     "url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+     "apply_url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+     "posted_at": "2026-10-17T15:49:10.930996Z",
+     "status": "applied",
+     "notes": "Referred by Meera (ex-Fernway). Follow up on Friday if there's no reply.",
+     "applied_at": "2026-10-13T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-13T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-13T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.765983Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "2351b5aa-0813-4e98-86fb-4bdb1df89580",
+     "listing_id": "jebd938d8050aa56d9893f1de1934d20b1dd",
+     "source": "smartrecruiters",
+     "company": "Quillbook",
+     "title": "Data Analyst, Growth",
+     "location": "Pune",
+     "url": "https://careers.quillbook.example/jobs/4106-data-analyst--growth",
+     "apply_url": "https://careers.quillbook.example/jobs/4106-data-analyst--growth",
+     "posted_at": "2026-10-14T11:49:10.930996Z",
+     "status": "rejected",
+     "notes": "",
+     "applied_at": "2026-10-02T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-12T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-02T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "995bbb73-d55e-4b8a-9340-b73897f7397c",
+     "listing_id": "j7cb006913b876297f835650109268320170",
+     "source": "greenhouse",
+     "company": "Brightline Health",
+     "title": "Data Analyst, Care Operations",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+     "apply_url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+     "posted_at": "2026-10-16T11:49:10.930996Z",
+     "status": "applied",
+     "notes": "",
+     "applied_at": "2026-10-10T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-10T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-10T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.765983Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    }
+   ],
+   "epoch": 1
+  },
+  {
+   "status": 200,
+   "body": [
+    {
+     "id": "2d7d4cbb-84b0-4191-85b0-14fa5d39b068",
+     "listing_id": "j4b44e0679ab44eed4973332ca1d5473aa48",
+     "source": "lever",
+     "company": "Harbourline",
+     "title": "Marketing Data Analyst",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+     "apply_url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+     "posted_at": "2026-10-12T11:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-18T12:38:03.742497Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-18T12:38:03.743498Z",
+     "updated_at": "2026-10-18T12:38:03.743498Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "1e84be48-0987-4142-ba27-f73ebd05c166",
+     "listing_id": "j50a920f00e7de541a7226f1ab6e36a30089",
+     "source": "ashby",
+     "company": "Tessellate",
+     "title": "Senior Product Analyst",
+     "location": "Remote, India",
+     "url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+     "apply_url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+     "posted_at": "2026-10-15T11:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-18T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-17T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "1439d7c3-4e29-4c98-9a96-5a88703101d6",
+     "listing_id": "j3f549a7683c50a7207496b626b3481a247e",
+     "source": "ashby",
+     "company": "Northwind Labs",
+     "title": "Product Analyst",
+     "location": "Remote, India",
+     "url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+     "apply_url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+     "posted_at": "2026-10-17T05:49:10.930996Z",
+     "status": "saved",
+     "notes": "",
+     "applied_at": null,
+     "next_at": null,
+     "status_at": "2026-10-17T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-17T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.767487Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "5a7d391f-246f-4136-a8af-dbe69cc1d8d2",
+     "listing_id": "j11e90d558c2683b3a6e700527b7f3a1dc83",
+     "source": "lever",
+     "company": "Cobalt Commerce",
+     "title": "Analytics Engineer",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+     "apply_url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+     "posted_at": "2026-10-15T11:49:10.930996Z",
+     "status": "offer",
+     "notes": "",
+     "applied_at": "2026-09-27T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-17T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-09-27T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "29aea56a-a2ae-4003-9095-63197b3d33af",
+     "listing_id": "jfd5302899db38eb3ef892fa603c25da4fb1",
+     "source": "greenhouse",
+     "company": "Kestrel Pay",
+     "title": "Product Analyst, Payments",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+     "apply_url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+     "posted_at": "2026-10-18T06:49:10.930996Z",
+     "status": "interviewing",
+     "notes": "Hiring manager round with the payments product lead. Prepare the A/B test story and the delivery-time model.",
+     "applied_at": "2026-10-09T11:49:10.930996Z",
+     "next_at": "2026-10-20T05:30:00Z",
+     "status_at": "2026-10-16T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": "1aac7727-18ab-4da1-b7f8-05333a67795f",
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-09T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:51:08.284544Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": {
+      "id": "2dd9ceab-69fe-4004-806b-1c9314dbf249",
+      "at": "2026-10-18T11:53:28.236122Z",
+      "practice": false,
+      "score": null
+     }
+    },
+    {
+     "id": "8779ec41-c8f4-4ecc-af60-816d43b3186e",
+     "listing_id": "j0f3c2138c587b0caaaa0b44bceda997fc8b",
+     "source": "lever",
+     "company": "Lumen Analytics",
+     "title": "Senior Data Analyst",
+     "location": "Bengaluru",
+     "url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+     "apply_url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+     "posted_at": "2026-10-17T15:49:10.930996Z",
+     "status": "applied",
+     "notes": "Referred by Meera (ex-Fernway). Follow up on Friday if there's no reply.",
+     "applied_at": "2026-10-13T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-13T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-13T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.765983Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "2351b5aa-0813-4e98-86fb-4bdb1df89580",
+     "listing_id": "jebd938d8050aa56d9893f1de1934d20b1dd",
+     "source": "smartrecruiters",
+     "company": "Quillbook",
+     "title": "Data Analyst, Growth",
+     "location": "Pune",
+     "url": "https://careers.quillbook.example/jobs/4106-data-analyst--growth",
+     "apply_url": "https://careers.quillbook.example/jobs/4106-data-analyst--growth",
+     "posted_at": "2026-10-14T11:49:10.930996Z",
+     "status": "rejected",
+     "notes": "",
+     "applied_at": "2026-10-02T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-12T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-02T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.768001Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    },
+    {
+     "id": "995bbb73-d55e-4b8a-9340-b73897f7397c",
+     "listing_id": "j7cb006913b876297f835650109268320170",
+     "source": "greenhouse",
+     "company": "Brightline Health",
+     "title": "Data Analyst, Care Operations",
+     "location": "Bengaluru · Hybrid",
+     "url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+     "apply_url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+     "posted_at": "2026-10-16T11:49:10.930996Z",
+     "status": "applied",
+     "notes": "",
+     "applied_at": "2026-10-10T11:49:10.930996Z",
+     "next_at": null,
+     "status_at": "2026-10-10T11:49:10.930996Z",
+     "resume_id": null,
+     "document_id": null,
+     "live": true,
+     "still_listed_at": "2026-10-18T10:49:10.930996Z",
+     "created_at": "2026-10-10T11:49:10.930996Z",
+     "updated_at": "2026-10-18T11:49:15.765983Z",
+     "round_type": null,
+     "round_number": null,
+     "last_round": null
+    }
+   ],
+   "epoch": 1
+  }
+ ],
+ "GET /v1/jobs/profile": [
+  {
+   "status": 200,
+   "body": {
+    "prefs": {
+     "titles": [
+      "Product Analyst",
+      "Senior Data Analyst",
+      "Analytics Engineer"
+     ],
+     "skills": [
+      "SQL",
+      "Python",
+      "A/B testing",
+      "Looker",
+      "BigQuery",
+      "dbt",
+      "Statistics",
+      "Tableau"
+     ],
+     "locations": [
+      "Bengaluru",
+      "Remote"
+     ],
+     "workplace": [
+      "remote",
+      "hybrid",
+      "onsite"
+     ],
+     "level": "mid",
+     "years": 4,
+     "job_types": [],
+     "posted_within": 7,
+     "sources_off": [],
+     "portals": [
+      "linkedin",
+      "naukri",
+      "indeed",
+      "foundit",
+      "instahyre",
+      "google"
+     ],
+     "exclude": [],
+     "needs_sponsorship": false
+    },
+    "suggested": null,
+    "resume": {
+     "id": "5ac88d21-01e4-4bf6-9584-fd6ac2dc0159",
+     "title": "Aditi Rao, analyst"
+    },
+    "resumes": [
+     {
+      "id": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+      "title": "Aditi Rao, first draft"
+     },
+     {
+      "id": "5ac88d21-01e4-4bf6-9584-fd6ac2dc0159",
+      "title": "Aditi Rao, analyst"
+     }
+    ],
+    "ai_left": null,
+    "saved": true,
+    "portals": {
+     "linkedin": "LinkedIn",
+     "naukri": "Naukri",
+     "indeed": "Indeed",
+     "foundit": "Foundit",
+     "instahyre": "Instahyre",
+     "cutshort": "Cutshort",
+     "hirist": "Hirist",
+     "wellfound": "Wellfound",
+     "internshala": "Internshala",
+     "google": "Google Jobs"
+    },
+    "sources": [
+     {
+      "id": "greenhouse",
+      "label": "Greenhouse"
+     },
+     {
+      "id": "lever",
+      "label": "Lever"
+     },
+     {
+      "id": "ashby",
+      "label": "Ashby"
+     },
+     {
+      "id": "smartrecruiters",
+      "label": "SmartRecruiters"
+     },
+     {
+      "id": "himalayas",
+      "label": "Himalayas"
+     },
+     {
+      "id": "remoteok",
+      "label": "Remote OK"
+     },
+     {
+      "id": "jobicy",
+      "label": "Jobicy"
+     }
+    ],
+    "cities": [
+     "India",
+     "Bengaluru",
+     "Mumbai",
+     "Delhi",
+     "Gurugram",
+     "Noida",
+     "Hyderabad",
+     "Chennai",
+     "Pune",
+     "Kolkata",
+     "Ahmedabad",
+     "Jaipur",
+     "Kochi",
+     "Coimbatore",
+     "Chandigarh",
+     "Indore",
+     "Thiruvananthapuram",
+     "Bhubaneswar",
+     "Nagpur",
+     "Lucknow",
+     "Mysuru",
+     "Visakhapatnam",
+     "Vadodara",
+     "Surat",
+     "Goa",
+     "Mangaluru",
+     "Bhopal",
+     "Guwahati",
+     "Dehradun",
+     "Nashik",
+     "Madurai"
+    ],
+    "note": null
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "prefs": {
+     "titles": [
+      "Product Analyst",
+      "Senior Data Analyst",
+      "Analytics Engineer"
+     ],
+     "skills": [
+      "SQL",
+      "Python",
+      "A/B testing",
+      "Looker",
+      "BigQuery",
+      "dbt",
+      "Statistics",
+      "Tableau"
+     ],
+     "locations": [
+      "Bengaluru",
+      "Remote"
+     ],
+     "workplace": [
+      "remote",
+      "hybrid",
+      "onsite"
+     ],
+     "level": "mid",
+     "years": 4,
+     "job_types": [],
+     "posted_within": 7,
+     "sources_off": [],
+     "portals": [
+      "linkedin",
+      "naukri",
+      "indeed",
+      "foundit",
+      "instahyre",
+      "google"
+     ],
+     "exclude": [],
+     "needs_sponsorship": false
+    },
+    "suggested": null,
+    "resume": {
+     "id": "5ac88d21-01e4-4bf6-9584-fd6ac2dc0159",
+     "title": "Aditi Rao, analyst"
+    },
+    "resumes": [
+     {
+      "id": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+      "title": "Aditi Rao, first draft"
+     },
+     {
+      "id": "5ac88d21-01e4-4bf6-9584-fd6ac2dc0159",
+      "title": "Aditi Rao, analyst"
+     }
+    ],
+    "ai_left": null,
+    "saved": true,
+    "portals": {
+     "linkedin": "LinkedIn",
+     "naukri": "Naukri",
+     "indeed": "Indeed",
+     "foundit": "Foundit",
+     "instahyre": "Instahyre",
+     "cutshort": "Cutshort",
+     "hirist": "Hirist",
+     "wellfound": "Wellfound",
+     "internshala": "Internshala",
+     "google": "Google Jobs"
+    },
+    "sources": [
+     {
+      "id": "greenhouse",
+      "label": "Greenhouse"
+     },
+     {
+      "id": "lever",
+      "label": "Lever"
+     },
+     {
+      "id": "ashby",
+      "label": "Ashby"
+     },
+     {
+      "id": "smartrecruiters",
+      "label": "SmartRecruiters"
+     },
+     {
+      "id": "himalayas",
+      "label": "Himalayas"
+     },
+     {
+      "id": "remoteok",
+      "label": "Remote OK"
+     },
+     {
+      "id": "jobicy",
+      "label": "Jobicy"
+     }
+    ],
+    "cities": [
+     "India",
+     "Bengaluru",
+     "Mumbai",
+     "Delhi",
+     "Gurugram",
+     "Noida",
+     "Hyderabad",
+     "Chennai",
+     "Pune",
+     "Kolkata",
+     "Ahmedabad",
+     "Jaipur",
+     "Kochi",
+     "Coimbatore",
+     "Chandigarh",
+     "Indore",
+     "Thiruvananthapuram",
+     "Bhubaneswar",
+     "Nagpur",
+     "Lucknow",
+     "Mysuru",
+     "Visakhapatnam",
+     "Vadodara",
+     "Surat",
+     "Goa",
+     "Mangaluru",
+     "Bhopal",
+     "Guwahati",
+     "Dehradun",
+     "Nashik",
+     "Madurai"
+    ],
+    "note": null
+   },
+   "epoch": 1
+  }
+ ],
+ "GET /v1/jobs/feed?sort=best&page_size=20": [
+  {
+   "status": 200,
+   "body": {
+    "items": [
+     {
+      "id": "jfd5302899db38eb3ef892fa603c25da4fb1",
+      "source": "greenhouse",
+      "source_label": "Greenhouse",
+      "direct": true,
+      "attribution": null,
+      "company": "Kestrel Pay",
+      "title": "Product Analyst, Payments",
+      "locations": [
+       "Bengaluru, India"
+      ],
+      "place": "Bengaluru · Hybrid",
+      "workplace": "hybrid",
+      "employment_type": "full_time",
+      "level": "mid",
+      "experience": "3-5 years",
+      "posted_at": "2026-10-18T06:49:10.930996Z",
+      "url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+      "apply_url": "https://careers.kestrelpay.example/jobs/4100-product-analyst--payments",
+      "snippet": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience.",
+      "salary": null,
+      "first_seen_at": "2026-10-18T06:49:10.930996Z",
+      "still_listed_at": "2026-10-18T10:49:10.930996Z",
+      "visa": null,
+      "relocation": false,
+      "match": {
+       "score": 99,
+       "matched": [
+        "BigQuery",
+        "Looker",
+        "Python",
+        "SQL",
+        "Statistics"
+       ],
+       "missing": []
+      },
+      "tracked": {
+       "id": "29aea56a-a2ae-4003-9095-63197b3d33af",
+       "status": "interviewing"
+      }
+     },
+     {
+      "id": "j50a920f00e7de541a7226f1ab6e36a30089",
+      "source": "ashby",
+      "source_label": "Ashby",
+      "direct": true,
+      "attribution": null,
+      "company": "Tessellate",
+      "title": "Senior Product Analyst",
+      "locations": [
+       "Remote, India"
+      ],
+      "place": "Remote, India",
+      "workplace": "remote",
+      "employment_type": "full_time",
+      "level": "senior",
+      "experience": "4-7 years",
+      "posted_at": "2026-10-15T11:49:10.930996Z",
+      "url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+      "apply_url": "https://careers.tessellate.example/jobs/4105-senior-product-analyst",
+      "snippet": "We're hiring a product analyst to work with our payments product team. You'll define the metrics for new features, design and read A/B tests, and build dashboards in Looker on BigQuery. Strong SQL and Python, experience with experimentation and statistics, and the ability to explain results to product managers and engineers. 3-5 years of experience.",
+      "salary": null,
+      "first_seen_at": "2026-10-15T11:49:10.930996Z",
+      "still_listed_at": "2026-10-18T10:49:10.930996Z",
+      "visa": null,
+      "relocation": false,
+      "match": {
+       "score": 99,
+       "matched": [
+        "BigQuery",
+        "Looker",
+        "Python",
+        "SQL",
+        "Statistics"
+       ],
+       "missing": []
+      },
+      "tracked": {
+       "id": "1e84be48-0987-4142-ba27-f73ebd05c166",
+       "status": "saved"
+      }
+     },
+     {
+      "id": "j0f3c2138c587b0caaaa0b44bceda997fc8b",
+      "source": "lever",
+      "source_label": "Lever",
+      "direct": true,
+      "attribution": null,
+      "company": "Lumen Analytics",
+      "title": "Senior Data Analyst",
+      "locations": [
+       "Bengaluru, India"
+      ],
+      "place": "Bengaluru",
+      "workplace": "onsite",
+      "employment_type": "full_time",
+      "level": "senior",
+      "experience": "4-6 years",
+      "posted_at": "2026-10-17T15:49:10.930996Z",
+      "url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+      "apply_url": "https://careers.lumenanalytics.example/jobs/4101-senior-data-analyst",
+      "snippet": "Join the analytics team as a senior data analyst. Own the metrics for our marketplace, work with dbt and BigQuery, run experiments with product managers and present findings to leadership. SQL, Python, statistics and A/B testing are a must; Looker or Tableau a plus. 4-6 years of experience.",
+      "salary": null,
+      "first_seen_at": "2026-10-17T15:49:10.930996Z",
+      "still_listed_at": "2026-10-18T10:49:10.930996Z",
+      "visa": null,
+      "relocation": false,
+      "match": {
+       "score": 98,
+       "matched": [
+        "A/B testing",
+        "BigQuery",
+        "dbt",
+        "Looker",
+        "Python",
+        "SQL"
+       ],
+       "missing": []
+      },
+      "tracked": {
+       "id": "8779ec41-c8f4-4ecc-af60-816d43b3186e",
+       "status": "applied"
+      }
+     },
+     {
+      "id": "j7cb006913b876297f835650109268320170",
+      "source": "greenhouse",
+      "source_label": "Greenhouse",
+      "direct": true,
+      "attribution": null,
+      "company": "Brightline Health",
+      "title": "Data Analyst, Care Operations",
+      "locations": [
+       "Bengaluru, India"
+      ],
+      "place": "Bengaluru · Hybrid",
+      "workplace": "hybrid",
+      "employment_type": "full_time",
+      "level": "mid",
+      "experience": "2-4 years",
+      "posted_at": "2026-10-16T11:49:10.930996Z",
+      "url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+      "apply_url": "https://careers.brightlinehealth.example/jobs/4103-data-analyst--care-operations",
+      "snippet": "Brightline Health is looking for a data analyst for our care operations team: forecasting demand, building dashboards in Tableau and SQL, and analysing patient journeys with Python. 2-4 years of experience.",
+      "salary": null,
+      "first_seen_at": "2026-10-16T11:49:10.930996Z",
+      "still_listed_at": "2026-10-18T10:49:10.930996Z",
+      "visa": null,
+      "relocation": false,
+      "match": {
+       "score": 98,
+       "matched": [
+        "Python",
+        "SQL",
+        "Tableau"
+       ],
+       "missing": []
+      },
+      "tracked": {
+       "id": "995bbb73-d55e-4b8a-9340-b73897f7397c",
+       "status": "applied"
+      }
+     },
+     {
+      "id": "j3f549a7683c50a7207496b626b3481a247e",
+      "source": "ashby",
+      "source_label": "Ashby",
+      "direct": true,
+      "attribution": null,
+      "company": "Northwind Labs",
+      "title": "Product Analyst",
+      "locations": [
+       "Remote, India"
+      ],
+      "place": "Remote, India",
+      "workplace": "remote",
+      "employment_type": "full_time",
+      "level": "mid",
+      "experience": "3-5 years",
+      "posted_at": "2026-10-17T05:49:10.930996Z",
+      "url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+      "apply_url": "https://careers.northwindlabs.example/jobs/4102-product-analyst",
+      "snippet": "Our growth team needs a data analyst to own funnel and retention analysis in Amplitude and SQL, size experiments with product managers, and automate reporting in Python. Snowflake and Airflow experience is a plus. 2-4 years of experience.",
+      "salary": null,
+      "first_seen_at": "2026-10-17T05:49:10.930996Z",
+      "still_listed_at": "2026-10-18T10:49:10.930996Z",
+      "visa": null,
+      "relocation": false,
+      "match": {
+       "score": 82,
+       "matched": [
+        "Python",
+        "SQL"
+       ],
+       "missing": [
+        "Airflow",
+        "Snowflake"
+       ]
+      },
+      "tracked": {
+       "id": "1439d7c3-4e29-4c98-9a96-5a88703101d6",
+       "status": "saved"
+      }
+     },
+     {
+      "id": "j11e90d558c2683b3a6e700527b7f3a1dc83",
+      "source": "lever",
+      "source_label": "Lever",
+      "direct": true,
+      "attribution": null,
+      "company": "Cobalt Commerce",
+      "title": "Analytics Engineer",
+      "locations": [
+       "Bengaluru, India"
+      ],
+      "place": "Bengaluru · Hybrid",
+      "workplace": "hybrid",
+      "employment_type": "full_time",
+      "level": "mid",
+      "experience": "3-6 years",
+      "posted_at": "2026-10-15T11:49:10.930996Z",
+      "url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+      "apply_url": "https://careers.cobaltcommerce.example/jobs/4104-analytics-engineer",
+      "snippet": "As an analytics engineer you will build our data models in dbt on Snowflake, orchestrate pipelines with Airflow, write production SQL and Python, and give analysts clean, tested tables. Spark experience is a plus. 3-6 years of experience.",
+      "salary": null,
+      "first_seen_at": "2026-10-15T11:49:10.930996Z",
+      "still_listed_at": "2026-10-18T10:49:10.930996Z",
+      "visa": null,
+      "relocation": false,
+      "match": {
+       "score": 82,
+       "matched": [
+        "dbt",
+        "Python",
+        "SQL"
+       ],
+       "missing": [
+        "Airflow",
+        "Snowflake"
+       ]
+      },
+      "tracked": {
+       "id": "5a7d391f-246f-4136-a8af-dbe69cc1d8d2",
+       "status": "offer"
+      }
+     },
+     {
+      "id": "j4b44e0679ab44eed4973332ca1d5473aa48",
+      "source": "lever",
+      "source_label": "Lever",
+      "direct": true,
+      "attribution": null,
+      "company": "Harbourline",
+      "title": "Marketing Data Analyst",
+      "locations": [
+       "Bengaluru, India"
+      ],
+      "place": "Bengaluru · Hybrid",
+      "workplace": "hybrid",
+      "employment_type": "full_time",
+      "level": "mid",
+      "experience": "2-5 years",
+      "posted_at": "2026-10-12T11:49:10.930996Z",
+      "url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+      "apply_url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+      "snippet": "Our growth team needs a data analyst to own funnel and retention analysis in Amplitude and SQL, size experiments with product managers, and automate reporting in Python. Snowflake and Airflow experience is a plus. 2-4 years of experience.",
+      "salary": null,
+      "first_seen_at": "2026-10-12T11:49:10.930996Z",
+      "still_listed_at": "2026-10-18T10:49:10.930996Z",
+      "visa": null,
+      "relocation": false,
+      "match": {
+       "score": 61,
+       "matched": [
+        "Python",
+        "SQL"
+       ],
+       "missing": [
+        "Airflow",
+        "Snowflake"
+       ]
+      },
+      "tracked": null
+     }
+    ],
+    "total": 7,
+    "page": 1,
+    "page_size": 20,
+    "has_more": false,
+    "refreshing": false,
+    "sources": [
+     {
+      "id": "greenhouse",
+      "label": "Greenhouse",
+      "kind": "board",
+      "listings": 9,
+      "last_success_at": null,
+      "refreshing": false,
+      "failing": false
+     },
+     {
+      "id": "lever",
+      "label": "Lever",
+      "kind": "board",
+      "listings": 3,
+      "last_success_at": null,
+      "refreshing": false,
+      "failing": false
+     },
+     {
+      "id": "ashby",
+      "label": "Ashby",
+      "kind": "board",
+      "listings": 2,
+      "last_success_at": null,
+      "refreshing": false,
+      "failing": false
+     },
+     {
+      "id": "smartrecruiters",
+      "label": "SmartRecruiters",
+      "kind": "board",
+      "listings": 1,
+      "last_success_at": null,
+      "refreshing": false,
+      "failing": false
+     },
+     {
+      "id": "himalayas",
+      "label": "Himalayas",
+      "kind": "search",
+      "listings": 0,
+      "last_success_at": null,
+      "refreshing": false,
+      "failing": false
+     },
+     {
+      "id": "remoteok",
+      "label": "Remote OK",
+      "kind": "feed",
+      "listings": 0,
+      "last_success_at": null,
+      "refreshing": false,
+      "failing": false
+     },
+     {
+      "id": "jobicy",
+      "label": "Jobicy",
+      "kind": "feed",
+      "listings": 0,
+      "last_success_at": null,
+      "refreshing": false,
+      "failing": false
+     }
+    ],
+    "portals": [
+     {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "url": "https://www.linkedin.com/jobs/search/?keywords=Product+Analyst&sortBy=DD&f_TPR=r604800&location=Bengaluru%2C+India&f_E=3%2C4"
+     },
+     {
+      "id": "naukri",
+      "name": "Naukri",
+      "url": "https://www.naukri.com/product-analyst-jobs-in-bangalore?k=Product+Analyst&l=bangalore&experience=4&jobAge=7"
+     },
+     {
+      "id": "indeed",
+      "name": "Indeed",
+      "url": "https://in.indeed.com/jobs?q=Product+Analyst&l=Bengaluru&sort=date&fromage=7"
+     },
+     {
+      "id": "foundit",
+      "name": "Foundit",
+      "url": "https://www.foundit.in/srp/results?query=Product+Analyst&locations=Bengaluru&jobFreshness=7&experienceRanges=3~6"
+     },
+     {
+      "id": "instahyre",
+      "name": "Instahyre",
+      "url": "https://www.instahyre.com/product-analyst-jobs-in-bangalore/"
+     },
+     {
+      "id": "google",
+      "name": "Google Jobs",
+      "url": "https://www.google.com/search?q=Product+Analyst+jobs+in+Bengaluru&udm=8"
+     }
+    ],
+    "understood": [],
+    "keywords": "",
+    "resume": {
+     "id": "5ac88d21-01e4-4bf6-9584-fd6ac2dc0159",
+     "title": "Aditi Rao, analyst"
+    },
+    "has_profile": true
+   },
+   "epoch": 0
+  }
+ ],
+ "POST /v1/jobs/tracker": [
+  {
+   "status": 201,
+   "body": {
+    "id": "2d7d4cbb-84b0-4191-85b0-14fa5d39b068",
+    "listing_id": "j4b44e0679ab44eed4973332ca1d5473aa48",
+    "source": "lever",
+    "company": "Harbourline",
+    "title": "Marketing Data Analyst",
+    "location": "Bengaluru · Hybrid",
+    "url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+    "apply_url": "https://careers.harbourline.example/jobs/4108-marketing-data-analyst",
+    "posted_at": "2026-10-12T11:49:10.930996Z",
+    "status": "saved",
+    "notes": "",
+    "applied_at": null,
+    "next_at": null,
+    "status_at": "2026-10-18T12:38:03.742497Z",
+    "resume_id": null,
+    "document_id": null,
+    "live": true,
+    "still_listed_at": "2026-10-18T10:49:10.930996Z",
+    "created_at": "2026-10-18T12:38:03.743498Z",
+    "updated_at": "2026-10-18T12:38:03.743498Z",
+    "round_type": null,
+    "round_number": null,
+    "last_round": null
+   },
+   "epoch": 0,
+   "sent": {
+    "listing_id": "j4b44e0679ab44eed4973332ca1d5473aa48",
+    "status": "saved"
+   }
+  }
+ ]
+}
