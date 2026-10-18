@@ -1067,3 +1067,247 @@ class SupportMessage(TimestampMixin, Base):
     text: Mapped[str] = mapped_column(Text)
     thread: Mapped[SupportThread] = relationship(back_populates="messages")
 
+
+# ---- Orbit for Business (orbit_api/business, D82) ------------------------------------------------------------------
+# A company workspace is its own tenant. Every row below carries its company_id and is only ever read through it; a
+# candidate's own Orbit data (documents, resumes, sessions, practice, LinkedIn AI) never hangs off these tables: what an
+# applicant shares is copied into their application when they apply. Members are Orbit accounts (users.id).
+
+
+class BizCompany(TimestampMixin, Base):
+    __tablename__ = "biz_companies"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    slug: Mapped[str] = mapped_column(String(80), unique=True)
+    name: Mapped[str] = mapped_column(String(120))
+    website: Mapped[str] = mapped_column(String(300))
+    domain: Mapped[str] = mapped_column(String(253), index=True)
+    size: Mapped[str] = mapped_column(String(16), default="1-10")
+    country: Mapped[str] = mapped_column(String(2), default="IN")
+    about: Mapped[str] = mapped_column(Text, default="")
+    logo: Mapped[bytes | None] = mapped_column(LargeBinary, deferred=True)
+    logo_type: Mapped[str | None] = mapped_column(String(16))
+    logo_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    status: Mapped[str] = mapped_column(String(16), default="active", server_default="active")  # active | suspended
+    suspended_reason: Mapped[str | None] = mapped_column(String(300))
+    verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    verification_method: Mapped[str | None] = mapped_column(String(8))  # email | dns | admin
+    # The DNS TXT value to publish (orbit-verify=<token>), and a work-email code waiting: its address, SHA-256, expiry.
+    dns_token: Mapped[str] = mapped_column(String(64))
+    email_code_to: Mapped[str | None] = mapped_column(String(320))
+    email_code_hash: Mapped[str | None] = mapped_column(String(64))
+    email_code_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    email_code_tries: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    plan: Mapped[str] = mapped_column(String(16), default="free", server_default="free")  # free | starter | growth
+    plan_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    plan_request: Mapped[str | None] = mapped_column(String(16))
+    plan_request_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retention_months: Mapped[int] = mapped_column(Integer, default=12, server_default="12")
+    blind_review: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    created_by: Mapped[str | None] = mapped_column(String(36))  # no FK: the record outlives the account
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizMember(TimestampMixin, Base):
+    __tablename__ = "biz_members"
+    __table_args__ = (UniqueConstraint("company_id", "user_id", name="uq_biz_members_company_user"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(16))  # owner | admin | recruiter | hiring_manager | interviewer
+
+
+class BizInvite(TimestampMixin, Base):
+    __tablename__ = "biz_invites"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    role: Mapped[str] = mapped_column(String(16))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    invited_by: Mapped[str | None] = mapped_column(String(36))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BizJob(TimestampMixin, Base):
+    __tablename__ = "biz_jobs"
+    __table_args__ = (UniqueConstraint("company_id", "slug", name="uq_biz_jobs_company_slug"),
+                      Index("ix_biz_jobs_status", "status"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    slug: Mapped[str] = mapped_column(String(120))
+    title: Mapped[str] = mapped_column(String(160))
+    description_html: Mapped[str] = mapped_column(Text, default="")
+    department: Mapped[str] = mapped_column(String(80), default="")
+    locations: Mapped[list[str]] = mapped_column(JSON, default=list)
+    workplace: Mapped[str] = mapped_column(String(8), default="onsite")
+    allowed_countries: Mapped[list[str]] = mapped_column(JSON, default=list)
+    employment_type: Mapped[str] = mapped_column(String(16), default="full_time")
+    experience: Mapped[str] = mapped_column(String(8), default="mid")
+    salary_min: Mapped[int | None] = mapped_column(BigInteger)
+    salary_max: Mapped[int | None] = mapped_column(BigInteger)
+    salary_currency: Mapped[str] = mapped_column(String(3), default="INR")
+    salary_period: Mapped[str] = mapped_column(String(8), default="year")
+    show_salary: Mapped[bool] = mapped_column(Boolean, default=True)
+    must_haves: Mapped[list[str]] = mapped_column(JSON, default=list)
+    nice_to_haves: Mapped[list[str]] = mapped_column(JSON, default=list)
+    questions: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    stages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    hiring_team: Mapped[list[str]] = mapped_column(JSON, default=list)  # user ids
+    status: Mapped[str] = mapped_column(String(8), default="draft")  # draft | open | paused | closed
+    valid_through: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    taken_down_reason: Mapped[str | None] = mapped_column(String(300))  # the Orbit team took it down
+    created_by: Mapped[str | None] = mapped_column(String(36))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizApplication(TimestampMixin, Base):
+    """One person's application to one job: what they shared (a copy, never a link to their Orbit data), their
+    answers and consent, where it is in the pipeline, and the AI ranking with its model version."""
+
+    __tablename__ = "biz_applications"
+    __table_args__ = (UniqueConstraint("job_id", "email", name="uq_biz_applications_job_email"),
+                      Index("ix_biz_applications_company_status", "company_id", "status"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    reference: Mapped[str] = mapped_column(String(12), unique=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), index=True)
+    # The Orbit account that applied with one click (SET NULL: deleting the account keeps the company's copy until
+    # its retention runs out or the company deletes it). Never exposed to the company.
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    name: Mapped[str] = mapped_column(String(160))
+    email: Mapped[str] = mapped_column(String(320))
+    phone: Mapped[str | None] = mapped_column(String(40))
+    location: Mapped[str | None] = mapped_column(String(160))
+    resume_text: Mapped[str] = mapped_column(Text, default="")
+    resume_filename: Mapped[str | None] = mapped_column(String(200))
+    resume_source: Mapped[str] = mapped_column(String(16), default="upload")  # upload | orbit_resume | orbit_document
+    answers: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    knockout_failed: Mapped[bool] = mapped_column(Boolean, default=False)
+    knockout_reasons: Mapped[list[str]] = mapped_column(JSON, default=list)
+    source: Mapped[str] = mapped_column(String(16), default="careers")
+    # {"notice_version", "accepted_at", "text_sha256"}: what they were told and when they agreed.
+    consent: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    email_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status_token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    stage_id: Mapped[str] = mapped_column(String(16))
+    status: Mapped[str] = mapped_column(String(10), default="active")  # active | rejected | hired
+    stage_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    interviewers: Mapped[list[str]] = mapped_column(JSON, default=list)  # user ids
+    parsed: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    ranking: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    ranking_status: Mapped[str] = mapped_column(String(8), default="pending")  # pending | done | failed
+    ranking_model: Mapped[str | None] = mapped_column(String(64))
+    tracker_id: Mapped[str | None] = mapped_column(String(36))  # the candidate's JobApplication row, not an FK
+    deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizNote(TimestampMixin, Base):
+    __tablename__ = "biz_notes"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"), index=True)
+    author_id: Mapped[str | None] = mapped_column(String(36))
+    author_name: Mapped[str] = mapped_column(String(200), default="")
+    body: Mapped[str] = mapped_column(Text)
+    mentions: Mapped[list[str]] = mapped_column(JSON, default=list)
+
+
+class BizScorecard(TimestampMixin, Base):
+    __tablename__ = "biz_scorecards"
+    __table_args__ = (UniqueConstraint("application_id", "stage_id", "author_id", name="uq_biz_scorecards_one_each"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"), index=True)
+    stage_id: Mapped[str] = mapped_column(String(16))
+    author_id: Mapped[str | None] = mapped_column(String(36))
+    author_name: Mapped[str] = mapped_column(String(200), default="")
+    ratings: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    recommendation: Mapped[str] = mapped_column(String(8))  # hire | no_hire
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizEvent(TimestampMixin, Base):
+    """An application's timeline (and what analytics counts): applied, moved, rejected, emailed, booked."""
+
+    __tablename__ = "biz_events"
+    __table_args__ = (Index("ix_biz_events_application_created", "application_id", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str] = mapped_column(String(36), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(24))
+    data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    actor_id: Mapped[str | None] = mapped_column(String(36))
+    actor_name: Mapped[str | None] = mapped_column(String(200))
+
+
+class BizInterview(TimestampMixin, Base):
+    __tablename__ = "biz_interviews"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"), index=True)
+    slots: Mapped[list[str]] = mapped_column(JSON, default=list)  # ISO datetimes (UTC)
+    duration_min: Mapped[int] = mapped_column(Integer, default=30)
+    location: Mapped[str] = mapped_column(String(300), default="")
+    chosen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_by: Mapped[str | None] = mapped_column(String(36))
+    reply_to: Mapped[str | None] = mapped_column(String(320))
+
+
+class BizTemplate(Base):
+    __tablename__ = "biz_templates"
+    __table_args__ = (UniqueConstraint("company_id", "kind", name="uq_biz_templates_company_kind"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(12))  # received | stage | rejection | interview
+    subject: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizNotification(TimestampMixin, Base):
+    __tablename__ = "biz_notifications"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str | None] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(16), default="mention")
+    text: Mapped[str] = mapped_column(String(400))
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BizReport(TimestampMixin, Base):
+    """'Report this job' from a public page: waits for the Orbit team (fake employers, job scams)."""
+
+    __tablename__ = "biz_reports"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), index=True)
+    reason: Mapped[str] = mapped_column(String(16))
+    details: Mapped[str] = mapped_column(Text, default="")
+    email: Mapped[str | None] = mapped_column(String(320))
+    status: Mapped[str] = mapped_column(String(10), default="open", index=True)  # open | dismissed | actioned
+
+
+class BizAudit(TimestampMixin, Base):
+    """The company's audit log, append-only: business/audit.py refuses updates and deletes of a row through the ORM,
+    and no route edits it. It names applicants by reference only, so deleting an applicant leaves no personal data
+    here."""
+
+    __tablename__ = "biz_audit"
+    __table_args__ = (Index("ix_biz_audit_company_created", "company_id", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"))
+    actor_id: Mapped[str | None] = mapped_column(String(36))
+    actor_name: Mapped[str | None] = mapped_column(String(200))
+    action: Mapped[str] = mapped_column(String(48))
+    target: Mapped[str | None] = mapped_column(String(200))
+    detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
