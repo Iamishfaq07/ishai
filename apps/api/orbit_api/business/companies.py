@@ -273,8 +273,17 @@ async def update_company(body: CompanyPatch, ctx: CompanyCtx,
         website = body.website.strip()
         c.website = (website if "://" in website else "https://" + website)[:300]
         if domain != c.domain:  # a new domain has to be proven again
+            open_jobs = await db.scalar(select(func.count()).select_from(BizJob).where(
+                BizJob.company_id == c.id, BizJob.status == "open"))
+            if open_jobs:
+                # Its open jobs were published under the proven domain: they'd stay live, "verified", under the new one.
+                raise HTTPException(409, "Pause or close your open jobs before you change the company's website "
+                                         "domain. The new domain has to be verified again.")
             c.domain, c.verified_at, c.verification_method = domain, None, None
             c.dns_token = secrets.token_hex(16)
+            # A code sent for the old domain must not verify the new one.
+            c.email_code_hash = c.email_code_to = c.email_code_until = None
+            c.email_code_tries = 0
             changed["domain"] = domain
     if body.name is not None and body.name.strip() != c.name:
         c.name = body.name.strip()
@@ -408,7 +417,7 @@ async def send_work_email_code(body: WorkEmailIn, ctx: CompanyCtx,
     ratelimit.check(_code_sends, f"biz-code:{ctx.company.id}", "Too many codes sent. Try again in an hour.")
     code = f"{secrets.randbelow(10**6):06d}"
     c = ctx.company
-    c.email_code_to, c.email_code_hash = address, rules.digest(f"{c.id}:{code}")
+    c.email_code_to, c.email_code_hash = address, _code_digest(c, address, code)
     c.email_code_until, c.email_code_tries = now() + timedelta(minutes=CODE_MINUTES), 0
     await db.commit()
     await send_safely(OutgoingEmail(
@@ -420,6 +429,11 @@ async def send_work_email_code(body: WorkEmailIn, ctx: CompanyCtx,
     return _verification(c, ctx.user)
 
 
+def _code_digest(c: BizCompany, address: str, code: str) -> str:
+    """A code proves one address at one domain: changing either afterwards leaves it worthless."""
+    return rules.digest(f"{c.id}:{c.domain}:{address}:{code}")
+
+
 class CodeIn(BaseModel):
     code: str = Field(min_length=6, max_length=6)
 
@@ -429,10 +443,14 @@ async def confirm_work_email(body: CodeIn, ctx: CompanyCtx,
                              db: Annotated[AsyncSession, Depends(get_db)]) -> VerificationOut:
     ctx.require("manage_company")
     c = ctx.company
+    _refuse_blocked(c)
     if not c.email_code_hash or (_aware(c.email_code_until) or now()) <= now() or c.email_code_tries >= CODE_TRIES:
         raise HTTPException(400, "That code has expired. Send a new one.")
+    address = c.email_code_to or ""
+    if not rules.email_matches_domain(address, c.domain):
+        raise HTTPException(400, "That code has expired. Send a new one.")
     c.email_code_tries += 1
-    if not secrets.compare_digest(c.email_code_hash, rules.digest(f"{c.id}:{body.code.strip()}")):
+    if not secrets.compare_digest(c.email_code_hash, _code_digest(c, address, body.code.strip())):
         await db.commit()
         raise HTTPException(400, "That code isn't right.")
     _mark_verified(db, ctx, "email", email=mask_email(c.email_code_to or ""))
@@ -888,7 +906,15 @@ async def audit_log(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)
         q = q.where(BizAudit.created_at < before)
     rows = (await db.scalars(q.order_by(BizAudit.created_at.desc()).limit(limit))).all()
     return [AuditOut(id=r.id, actor=r.actor_name, actor_id=r.actor_id, action=r.action, target=r.target,
-                     detail=r.detail or {}, created_at=_aware(r.created_at) or now()) for r in rows]
+                     detail=customer_detail(r.detail), created_at=_aware(r.created_at) or now()) for r in rows]
+
+
+# Kept for Orbit's admins (admin.company_audit): they name the AI model, which customer screens never do (D82).
+ADMIN_ONLY_DETAIL = frozenset({"model_version", "ranking_model"})
+
+
+def customer_detail(detail: dict[str, Any] | None) -> dict[str, Any]:
+    return {k: v for k, v in (detail or {}).items() if k not in ADMIN_ONLY_DETAIL}
 
 
 async def hand_over_on_account_deletion(db: AsyncSession, user_id: str) -> None:
