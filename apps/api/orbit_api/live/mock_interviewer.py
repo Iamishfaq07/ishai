@@ -187,7 +187,11 @@ def video_greeting(config: "MockConfig", role: str | None, company: str | None) 
     return (f"Hi, my name is {INTERVIEWER_NAME}, and I'll be taking your interview today{for_what}. It will take "
             f"about {config.duration_minutes} minutes: I'll ask you some questions{about}, and I may follow up on "
             "your answers. Take your time, and when you've finished an answer, just pause and I'll move on. To start, "
-            "could you briefly introduce yourself and walk me through your background?")
+            + VIDEO_OPENING_QUESTION[0].lower() + VIDEO_OPENING_QUESTION[1:])
+
+
+# The video greeting's question, as the questions list and the review keep it (not the whole greeting).
+VIDEO_OPENING_QUESTION = "Could you briefly introduce yourself and walk me through your background?"
 
 
 WEAK_SCORE = 3  # review scores of 3/5 or lower (or unanswered) are worth drilling
@@ -407,6 +411,8 @@ class MockInterviewer:
         self._on_finish = on_finish
         self._record_usage = record_usage
         self.asked: list[_Asked] = []
+        # An opening as said → its question alone (the video greeting's, or a written opening's "question").
+        self._bare: dict[str, str] = {}
         self._awaiting = False  # a question is out and we're listening for the answer
         self._busy = False  # generating the next question
         self._last_speech_ms: int | None = None
@@ -552,7 +558,9 @@ class MockInterviewer:
                 await self._finish()
                 return
             if not self.asked and self._greets():
-                await self._put(video_greeting(self.config, self._role, self._company), False)
+                greeting = video_greeting(self.config, self._role, self._company)
+                self._bare[greeting] = VIDEO_OPENING_QUESTION
+                await self._put(greeting, False)
                 return
             self._busy = True
             self._awaiting = False
@@ -614,8 +622,11 @@ class MockInterviewer:
         self._asked_ms = None
         self._awaiting = True
         # The transcript keeps what was said; the question (the review's, a drill's) is the question itself, so a
-        # "Try this one again" of it doesn't open with "Let's work on a few questions…" twice.
-        await self._on_question(qid, text, follow_up, drill.question if drill and not follow_up else text)
+        # "Try this one again" of it doesn't open with "Let's work on a few questions…" twice, and the opening's
+        # question isn't the whole greeting.
+        bare = self._bare.pop(text, text)
+        self._bare.clear()
+        await self._on_question(qid, text, follow_up, drill.question if drill and not follow_up else bare)
         await self._send("mock.question", self._question_payload(asked))
 
     def _question_payload(self, asked: _Asked) -> dict[str, Any]:
@@ -871,6 +882,10 @@ class MockInterviewer:
         else:
             steer = (f"Topics so far: {self._topics()} of about {cfg.planned_questions}. Decide: a follow-up on the "
                      "last answer if it was vague or incomplete, otherwise a new topic.")
+        if not self.asked and follow_up_on is None:
+            # The opening is said as one, but the questions list and the review keep the question alone.
+            steer += ('\nPut the opening words (the greeting, any introductions) in "greeting" and only the question '
+                      'itself in "question": {"greeting": "...", "question": "...", "is_follow_up": false}.')
         if panel:
             # Who speaks depends on the choice the model makes: a follow-up from the topic's asker, a new topic from
             # the next panelist (the server holds them to it: _panelist).
@@ -921,7 +936,13 @@ class MockInterviewer:
                     assessed = isinstance(score, int) and not isinstance(score, bool) and 1 <= score <= 5
                     change = 1 if assessed and score >= 4 else -1 if assessed and score <= 2 else 0
                     self._proposed_depth[answer_key] = max(1, min(5, depth + change))
-                return question[:400], bool(data.get("is_follow_up")) and bool(self.asked) and not cfg.is_one_way
+                question = question[:400]
+                greeting = str(data.get("greeting") or "").strip()[:400] if not self.asked else ""
+                if greeting and not question.startswith(greeting):
+                    said = f"{greeting} {question}"
+                    self._bare[said] = question
+                    return said, False
+                return question, bool(data.get("is_follow_up")) and bool(self.asked) and not cfg.is_one_way
         except (TimeoutError, LLMError, json.JSONDecodeError, ValueError) as e:
             log.warning("mock interviewer question failed (%s); using a fallback", type(e).__name__)
         if follow_up_on is not None:

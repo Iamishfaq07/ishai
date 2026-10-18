@@ -231,3 +231,36 @@ def test_the_practice_page_gets_the_guides_for_the_users_country(client: TestCli
     assert "Communication assessment (spoken English)" in accenture()  # no country yet: India's, as always
     assert client.patch("/v1/auth/me/region", headers=h, json={"country": "GB"}).status_code == 200
     assert not any("spoken English" in r for r in accenture())
+
+
+async def test_the_opening_is_said_whole_but_kept_as_its_question() -> None:
+    """Saba's greeting is said as one, but the questions list and the review keep the question alone: Q1 of a video
+    interview was stored as the whole greeting. A written opening (Hindi, a panel, a classic mock) gives its greeting
+    apart from its question."""
+    from orbit_api.live.mock_interviewer import VIDEO_OPENING_QUESTION
+
+    recorded: list[tuple[str, str]] = []
+
+    async def on_question(_qid: str, text: str, _follow_up: bool, question: str) -> None:
+        recorded.append((text, question))
+
+    mi = MockInterviewer(MockConfig(video=True), llm=_Recording(), index=SessionIndex([]), role="Analyst",
+                         send=_noop, on_question=on_question, on_finish=_noop)
+    await mi.start(0)
+    said, question = recorded[0]
+    assert said.startswith("Hi, my name is Saba") and said.endswith(VIDEO_OPENING_QUESTION[1:])
+    assert question == VIDEO_OPENING_QUESTION
+
+    class Opening(_Recording):
+        async def generate(self, request: LLMRequest) -> LLMResponse:
+            self.systems.append(request.messages[-1].content)
+            return LLMResponse(text='{"greeting": "Namaste, main Saba hoon.", "question": "Apne baare mein bataiye.",'
+                               ' "is_follow_up": false}', model="mock", usage=Usage(1, 1))
+
+    recorded.clear()
+    llm = Opening()
+    hindi = MockInterviewer(MockConfig(video=True), llm=llm, index=SessionIndex([]), role=None, send=_noop,
+                            on_question=on_question, on_finish=_noop, language="hinglish")
+    await hindi.start(0)
+    assert '"greeting"' in llm.systems[0]
+    assert recorded == [("Namaste, main Saba hoon. Apne baare mein bataiye.", "Apne baare mein bataiye.")]
