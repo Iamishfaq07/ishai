@@ -217,7 +217,7 @@ The bottom line of every page reads "Orbit · orbitanswer.com" instead of NSIS's
 only the progress page, without the panel (its function returns at once when `$PassiveMode` or `$UpdateMode` is set),
 then it closes and Orbit restarts. `/S` shows nothing at all. Welcome and Finish are skipped in passive mode by
 Tauri's own `SkipIfPassive`, so their words and the opt-in never appear there. Checked on 2026-10-18 with a test
-product (below): `/P /UPDATE` 0.55 s and `/P` 0.9 s, each one window with only "Installing Orbit"; `/S` no window.
+product (below): `/P /UPDATE` 0.5 s and `/P` 0.9 s, each one window with only "Installing Orbit"; `/S` no window.
 
 **The template is Tauri's plus Orbit's blocks**, each between `; ORBIT:BEGIN <name>` and `; ORBIT:END`; nothing of
 Tauri's is edited. `apps/desktop/src/installer-template.test.ts` checks that the file minus the blocks is the installed
@@ -240,7 +240,8 @@ pnpm --filter @orbit/desktop tauri build --bundles nsis --config C:\path\to\test
 It installs to `%LOCALAPPDATA%\Orbit Redesign Test` with its own uninstall key and shortcuts. Drive its pages by its
 process id only: capture its own window with `PrintWindow`, press its own buttons with `BM_CLICK` posted to the
 button (Finish sometimes ignores it: post `WM_COMMAND(IDOK)` to the installer's window), never `SendInput` or the
-real cursor. Untick Open Orbit before Finish so nothing launches. Remove it with `uninstall.exe /S` (silent
+real cursor. Untick Open Orbit before Finish with `BM_SETCHECK` (a posted click can be dropped) and check it took, so
+nothing launches. Remove it with `uninstall.exe /S` (silent
 uninstalls keep app data, so the hook below never runs). **Never tick "Delete the application data" on a test
 product**: `hooks.nsh` removes the real app's sign-in (`access_token.ai.orbit.desktop`) whatever the product's name.
 

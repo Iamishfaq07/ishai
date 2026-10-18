@@ -26,6 +26,9 @@ installer").
 - **The installer**: the brand's header and sidebar bitmaps and icon, Welcome and Finish pages in Orbit's words,
   "What you get with Orbit" on the installing page, and an unticked "Explore Orbit's free tools on the web" on
   Finish. Passive (the updater) and silent installs are unchanged: no extra page, no panel.
+- **Checked**: axe (WCAG 2.2 AA) finds nothing on Home, Documents, History (list and a session), Settings, New
+  session, the welcome tour and the live overlay, light and dark; the shared `Dropzone` is now named by the words it
+  shows.
 - **Microsoft Store policy**: "Inappropriate or harmful" on an answer's thumbs-down (11.16; API reason
   `inappropriate`, in the admin's report, never a style hint), Report a problem (the contact form's new `report`
   topic), and a one-time note in Setup to check that people on the call are okay with Orbit transcribing it (10.5.3).
