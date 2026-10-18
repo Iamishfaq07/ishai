@@ -8,8 +8,14 @@ import secrets
 import unicodedata
 from dataclasses import dataclass
 from html.parser import HTMLParser
-from typing import Any, Literal
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlsplit
+
+import tldextract
+
+if TYPE_CHECKING:
+    from cryptography.fernet import Fernet
 
 Role = Literal["owner", "admin", "recruiter", "hiring_manager", "interviewer"]
 ROLES: tuple[Role, ...] = ("owner", "admin", "recruiter", "hiring_manager", "interviewer")
@@ -65,12 +71,28 @@ PLANS: dict[str, BizPlan] = {
 
 # ---- domains -------------------------------------------------------------------------------------------------------
 
-# Free-mail providers: anyone can have an address there, so it proves nothing about a company.
-FREE_MAIL = frozenset("""
-gmail.com googlemail.com yahoo.com yahoo.co.in yahoo.in yahoo.co.uk ymail.com rocketmail.com outlook.com hotmail.com
-hotmail.co.uk live.com live.in msn.com icloud.com me.com mac.com aol.com proton.me protonmail.com pm.me zoho.com
-zohomail.com zohomail.in yandex.com yandex.ru gmx.com gmx.net gmx.de mail.com rediffmail.com rediff.com inbox.com
-tutanota.com tuta.io fastmail.com hey.com mail.ru qq.com 163.com 126.com sina.com naver.com web.de t-online.de
+_DATA = Path(__file__).with_name("data")
+
+
+def _domain_list(name: str) -> frozenset[str]:
+    """A vendored list (business/data/, its source and licence in its header), one domain per line."""
+    text = (_DATA / name).read_text(encoding="utf-8")
+    return frozenset(ln.strip().lower() for ln in text.splitlines() if ln.strip() and not ln.startswith("#"))
+
+
+# Free-mail providers (anyone can have an address there, so it proves nothing about a company) and throwaway
+# addresses: vendored snapshots of maintained lists, loaded once.
+FREE_MAIL = _domain_list("free_mail_domains.txt") | frozenset("""
+gmail.com googlemail.com yahoo.com yahoo.co.in yahoo.in ymail.com rocketmail.com outlook.com hotmail.com live.com
+msn.com icloud.com me.com mac.com aol.com proton.me protonmail.com pm.me zoho.com zohomail.com zohomail.in
+yandex.com gmx.com gmx.net mail.com rediffmail.com rediff.com tutanota.com tuta.io fastmail.com hey.com duck.com
+""".split())
+DISPOSABLE = _domain_list("disposable_email_domains.txt")
+# Providers that run consumer mail under many country domains (hotmail.fr, yahoo.co.jp, gmx.at, proton.ch...): the
+# registrable domain's own label decides, whatever the suffix.
+FREE_MAIL_LABELS = frozenset("""
+gmail googlemail hotmail outlook live msn yahoo ymail rocketmail aol gmx proton protonmail tutanota tuta yandex
+mailinator rediffmail rediff zohomail icloud fastmail duck
 """.split())
 # Hosting and social platforms: a site there (or a page about the company) isn't the company's own domain.
 HOSTED = frozenset("""
@@ -80,13 +102,26 @@ sites.google.com google.com carrd.co webflow.io netlify.app vercel.app pages.dev
 web.app linktr.ee bit.ly youtube.com angel.co wellfound.com glassdoor.com naukri.com indeed.com orbitanswer.com
 """.split())
 
+# The Public Suffix List (ICANN and private sections) from tldextract's bundled snapshot: never fetched at runtime.
+_PSL = tldextract.TLDExtract(cache_dir=None, suffix_list_urls=(), fallback_to_snapshot=True,
+                             include_psl_private_domains=True)
+
 
 class DomainError(ValueError):
     pass
 
 
+def registrable_domain(host: str) -> str | None:
+    """'eng.acme.co.in' → 'acme.co.in'; None for a bare public suffix ('co.in', 'github.io') or an unknown TLD."""
+    parts = _PSL(host.lower().rstrip("."))
+    if not parts.suffix or not parts.domain:
+        return None
+    return f"{parts.domain}.{parts.suffix}"
+
+
 def domain_of(website: str) -> str:
-    """'https://www.Acme.com/careers' → 'acme.com'. Refuses what isn't a public web address."""
+    """'https://www.Acme.com/careers' → 'acme.com' (the registrable domain: 'jobs.acme.co.in' → 'acme.co.in').
+    Refuses what isn't a public web address, and a bare public suffix ('co.in', 'github.io')."""
     raw = website.strip()
     if not raw:
         raise DomainError("Add the company's website.")
@@ -106,19 +141,36 @@ def domain_of(website: str) -> str:
             host = host.encode("idna").decode("ascii")
         except UnicodeError as e:
             raise DomainError("That website address doesn't look right.") from e
-    return host.removeprefix("www.")
+    reg = registrable_domain(host.removeprefix("www."))
+    if reg is None:
+        raise DomainError("Use the company's own website domain (like acme.com or acme.co.in), not a shared "
+                          "suffix.")
+    return reg
+
+
+def _listed(domain: str, names: frozenset[str]) -> bool:
+    return any(domain == x or domain.endswith("." + x) for x in names)
 
 
 def blocked_domain(domain: str) -> bool:
-    """A domain nobody can prove a company by: free mail, or a site on a hosting or social platform."""
-    d = domain.lower()
-    return any(d == x or d.endswith("." + x) for x in FREE_MAIL | HOSTED)
+    """A domain nobody can prove a company by: free or throwaway mail, a bare public suffix, or a site on a hosting
+    or social platform."""
+    d = domain.lower().rstrip(".")
+    reg = registrable_domain(d)
+    if reg is None:
+        return True
+    label = reg.split(".", 1)[0]
+    return (label in FREE_MAIL_LABELS or reg in FREE_MAIL or reg in DISPOSABLE
+            or d in FREE_MAIL or d in DISPOSABLE or _listed(d, HOSTED))
 
 
 def email_matches_domain(email: str, domain: str) -> bool:
-    """An address at the domain or one of its subdomains ('a@eng.acme.com' for acme.com)."""
-    at = email.strip().lower().rpartition("@")[2]
-    return bool(at) and (at == domain or at.endswith("." + domain)) and not blocked_domain(at)
+    """An address exactly at the domain ('a@acme.com' for acme.com). A subdomain mailbox ('a@eng.acme.com') proves
+    only that someone has mail at a subdomain, which a hosted mail service or a department server can hand out:
+    those companies verify with a DNS record instead."""
+    at = email.strip().lower().rpartition("@")[2].rstrip(".")
+    d = domain.strip().lower()
+    return bool(at) and at == d and registrable_domain(at) == d and not blocked_domain(at)
 
 
 # ---- slugs, tokens ------------------------------------------------------------------------------------------------
@@ -215,11 +267,20 @@ class _Sanitizer(HTMLParser):
         return "".join(self.out)
 
 
+class DescriptionTooLong(ValueError):
+    pass
+
+
 def sanitize_html(raw: str) -> str:
+    """The HTML rebuilt from the allowed tags. The input is bounded before it's parsed; the output is never cut
+    (cutting it could end inside a tag or an entity): too long a result is refused."""
     p = _Sanitizer()
     p.feed(raw[: MAX_DESCRIPTION * 2])
     p.close()
-    return p.result()[:MAX_DESCRIPTION * 2].strip()
+    out = p.result().strip()
+    if len(out) > MAX_DESCRIPTION * 2:
+        raise DescriptionTooLong("The description is too long. Shorten it and save again.")
+    return out
 
 
 def html_to_text(raw: str) -> str:
@@ -349,7 +410,7 @@ def knockout_failure(question: dict[str, Any], answer: str) -> str | None:
 
 # ---- the notice applicants agree to --------------------------------------------------------------------------------
 
-NOTICE_VERSION = "2026-10-19.1"
+NOTICE_VERSION = "2026-10-19.2"  # .2: deletion after the job closes, and within 30 days of a request
 
 
 def notice_text(company: str, retention_months: int) -> str:
@@ -361,9 +422,13 @@ def notice_text(company: str, retention_months: int) -> str:
         f"to {company}. Orbit's AI reads your resume to sort applications and to explain how it matches the job's "
         "requirements; it doesn't use your name, age, gender, photo or other personal traits, and it never rejects "
         f"anyone. A person at {company} reviews every application and makes every decision. If you aren't selected, "
-        f"your application is deleted after {retention_months} months. You can ask for it to be deleted at any time "
-        "from the status page linked in your confirmation email."
+        f"your application is deleted {retention_months} months after that decision, or {retention_months} months "
+        "after the job closes if no decision was made. You can ask for it to be deleted at any time from the status "
+        "page linked in your confirmation email; it is deleted within 30 days of your request."
     )
+
+
+DELETION_DAYS = 30  # a deletion request is carried out by the sweep at the latest this long after it's made
 
 
 def notice_digest(text: str) -> str:
@@ -374,25 +439,58 @@ def candidate_label(reference: str) -> str:
     return f"Candidate {reference}"
 
 
-_CONTACT_LINE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+|\+?\d[\d ()-]{7,}\d|https?://\S+")
+def blind_text(text: str, name: str, *literals: str | None) -> str:
+    """Text about the applicant (their resume, answers, parsed experience) with their name, contact details and links
+    hidden (blind review): business_ai's identity redaction."""
+    from orbit_api.business_ai.redact import redact_identity
+
+    return redact_identity(text, name, *literals)
 
 
-def blind_text(text: str, name: str) -> str:
-    """The resume with the applicant's contact details and name hidden (blind review)."""
-    out = _CONTACT_LINE.sub("[hidden]", text)
-    for part in sorted({p for p in re.split(r"\s+", name.strip()) if len(p) >= 2}, key=len, reverse=True):
-        out = re.sub(rf"\b{re.escape(part)}\b", "[hidden]", out, flags=re.I)
-    return out
+# ---- the applicant's status link -----------------------------------------------------------------------------------
 
 
-def status_token(application_id: str) -> str:
-    """The applicant's status-page link token: derived from the application id with the server's secret, so every
-    email can carry the same link without storing it (only its SHA-256 is stored, to find the application)."""
+def _status_fernet() -> "Fernet":
+    """The key that seals each application's status token, so later emails can carry the same link: ORBIT_CONFIG_SECRET
+    (required in production), or one derived from the JWT secret outside production."""
     import base64
-    import hmac
+
+    from cryptography.fernet import Fernet
 
     from orbit_api.config import get_settings
 
-    key = get_settings().jwt_secret.get_secret_value().encode()
-    mac = hmac.new(key, f"biz-status:{application_id}".encode(), hashlib.sha256).digest()
-    return base64.urlsafe_b64encode(mac).decode().rstrip("=")
+    s = get_settings()
+    source = s.config_secret.get_secret_value() if s.config_secret else "biz-status:" + s.jwt_secret.get_secret_value()
+    return Fernet(base64.urlsafe_b64encode(hashlib.sha256(source.encode()).digest()))
+
+
+def new_status_token() -> tuple[str, str, str]:
+    """A fresh random status-page token for an application: (raw, its SHA-256 to look it up by, the raw sealed for
+    later emails). Nothing about it derives from the application id or a server-wide secret."""
+    raw = token()
+    return raw, digest(raw), _status_fernet().encrypt(raw.encode()).decode()
+
+
+def open_status_token(sealed: str | None, token_hash: str) -> str | None:
+    """The application's status token from its sealed copy, or None (no copy, or the key changed: later emails then
+    point to the first email's link)."""
+    from cryptography.fernet import InvalidToken
+
+    if not sealed:
+        return None
+    try:
+        raw = _status_fernet().decrypt(sealed.encode()).decode()
+    except (InvalidToken, ValueError):
+        return None
+    return raw if secrets.compare_digest(digest(raw), token_hash) else None
+
+
+# ---- one-line text (titles, names, subjects) ----------------------------------------------------------------------
+
+_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f\u2028\u2029]+")
+
+
+def one_line(text: str) -> str:
+    """Control characters (CR, LF, tab, NUL...) out of text that becomes a title, a name or an email subject: each run
+    becomes one space."""
+    return re.sub(r" {2,}", " ", _CONTROL.sub(" ", text)).strip()

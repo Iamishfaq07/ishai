@@ -118,6 +118,14 @@ describe("JSON-LD only while open", () => {
     expect(html).toContain("We &lt;b&gt;make&lt;/b&gt;");
     expect(html).toContain("Open jobs (1)");
   });
+
+  it("names the verified domain on the badge", () => {
+    const base = { slug: "acme", name: "Acme", website: "acme.com", logo_url: null, about: "", country: "IN", jobs: [] };
+    expect(companyBody({ ...base, verified: true, verified_domain: "acme.com" })).toContain("Verified: acme.com");
+    expect(companyBody({ ...base, verified: true, verified_domain: "<b>x</b>.com" })).toContain("Verified: &lt;b&gt;x&lt;/b&gt;.com");
+    expect(companyBody({ ...base, verified: false, verified_domain: null })).not.toContain("Verified");
+    expect(jobBody(job({ company: { slug: "acme", name: "Acme", logo_url: null, website: "https://acme.com", verified: true, verified_domain: "acme.com" } }))).toContain("Verified: acme.com");
+  });
 });
 
 describe("sitemap and widget", () => {

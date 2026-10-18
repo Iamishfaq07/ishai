@@ -105,6 +105,12 @@ def _named(form: str, line_folded: str, line_tokens: set[str]) -> bool:
     return form in line_tokens or (len(form) > 3 and form + "s" in line_tokens)
 
 
+def groups_named(req: Requirement, line: str) -> int:
+    """How many of the requirement's term groups (any synonym counts) one line names."""
+    f, toks = fold(line), set(tokens(line))
+    return sum(1 for g in req.groups if any(_named(form, f, toks) for form in g))
+
+
 def match(req: Requirement, lines: list[str], total_years: float | None) -> RequirementMatch:
     if not req.groups:
         return RequirementMatch(requirement=req.text, met="no", evidence=None)

@@ -62,7 +62,9 @@ def test_domains_free_mail_and_hosting_cannot_prove_a_company() -> None:
     for blocked in ("gmail.com", "outlook.com", "sites.google.com", "acme.github.io", "acme.wixsite.com"):
         assert rules.blocked_domain(blocked), blocked
     assert not rules.blocked_domain("acme.com")
-    assert rules.email_matches_domain("Ana@Eng.Acme.com", "acme.com")
+    assert rules.email_matches_domain("Ana@Acme.com", "acme.com")
+    # A subdomain mailbox verifies only by DNS (finding 3).
+    assert not rules.email_matches_domain("Ana@Eng.Acme.com", "acme.com")
     assert not rules.email_matches_domain("ana@acme.com.evil.io", "acme.com")
     assert not rules.email_matches_domain("ana@gmail.com", "gmail.com")
 

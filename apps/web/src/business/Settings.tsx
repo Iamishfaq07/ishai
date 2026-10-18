@@ -126,7 +126,7 @@ function DataControls() {
           }}
         >
           <div className="w-56">
-            <Field label="Delete rejected applicants after" htmlFor={`${id}-m`} hint="Months after they're rejected (1-48). Default 12.">
+            <Field label="Delete rejected applicants after" htmlFor={`${id}-m`} hint="Months after they're rejected, or after the job closes for anyone never decided on (1-48). Default 12. A change applies to applications made from now on: earlier applicants keep the period they were told.">
               <Input id={`${id}-m`} type="number" min={1} max={48} value={months} onChange={(e) => setMonths(Math.max(1, Math.min(48, Number(e.target.value) || 12)))} />
             </Field>
           </div>
@@ -134,7 +134,7 @@ function DataControls() {
             Save
           </Button>
         </form>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">Applicants can ask you to delete their data from their status page; you'll see it on their profile. Export a job's applicants from its pipeline.</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">Applicants can ask you to delete their data from their status page; you'll see it on their profile, and Orbit deletes it 30 days after the request if you haven't (you're reminded a week and a day before). Export a job's applicants from its pipeline.</p>
       </div>
     </Panel>
   );

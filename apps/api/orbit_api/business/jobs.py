@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import ratelimit
 from orbit_api.business import indexing, rules, usage
-from orbit_api.business.access import CompanyCtx, Ctx, audit, job_for, sees_job
+from orbit_api.business.access import CompanyCtx, Ctx, audit, job_for, lock_company, sees_job
 from orbit_api.business.ai_port import JobBrief, get_business_ai, recording
 from orbit_api.business.companies import active_jobs, effective_plan, limit_error, logo_url
 from orbit_api.config import get_settings
@@ -242,9 +242,15 @@ async def _unique_job_slug(db: AsyncSession, company_id: str, title: str, job_id
 
 async def _apply_fields(db: AsyncSession, ctx: Ctx, job: BizJob, body: JobIn, fields: set[str]) -> None:
     if "title" in fields and body.title is not None:
-        job.title = body.title.strip()
+        title = rules.one_line(body.title)  # no CR/LF or other control characters: it goes into email subjects
+        if len(title) < 2:
+            raise HTTPException(422, "Give the job a title.")
+        job.title = title
     if "description_html" in fields:
-        job.description_html = rules.sanitize_html(body.description_html)
+        try:
+            job.description_html = rules.sanitize_html(body.description_html)
+        except rules.DescriptionTooLong as e:
+            raise HTTPException(422, str(e)) from e
     simple = ("department", "workplace", "employment_type", "experience", "salary_min", "salary_max",
               "salary_period", "show_salary", "allowed_countries")
     for f in simple:
@@ -254,7 +260,7 @@ async def _apply_fields(db: AsyncSession, ctx: Ctx, job: BizJob, body: JobIn, fi
     if "salary_currency" in fields:
         job.salary_currency = body.salary_currency.upper()
     if "locations" in fields:
-        job.locations = _clean_list(body.locations, 10, 120)
+        job.locations = _clean_list([rules.one_line(x) for x in body.locations], 10, 120)
     if "must_haves" in fields:
         job.must_haves = _clean_list(body.must_haves, 15, 160)
     if "nice_to_haves" in fields:
@@ -305,8 +311,8 @@ async def list_jobs(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)
 async def create_job(body: JobIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> JobOut:
     ctx.require("manage_jobs")
     ctx.writable()
-    job = BizJob(company_id=ctx.company.id, slug=await _unique_job_slug(db, ctx.company.id, body.title),
-                 title=body.title.strip(), status="draft", created_by=ctx.user.id,
+    job = BizJob(company_id=ctx.company.id, slug=await _unique_job_slug(db, ctx.company.id, rules.one_line(body.title)),
+                 title=rules.one_line(body.title), status="draft", created_by=ctx.user.id,
                  stages=[dict(s) for s in rules.DEFAULT_STAGES], hiring_team=[])
     fields = set(body.model_fields_set) | {"description_html", "locations", "must_haves", "nice_to_haves",
                                             "questions"}
@@ -364,6 +370,7 @@ async def publish(job_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depe
     job = await job_for(db, ctx, job_id)
     _require_publishable(ctx, job)
     if job.status in {"draft", "closed"}:
+        await lock_company(db, ctx.company.id)  # two publishes at once can't both take the last active job
         plan = effective_plan(ctx.company)
         if await active_jobs(db, ctx.company.id) >= rules.PLANS[plan].jobs:
             raise limit_error("jobs", plan)

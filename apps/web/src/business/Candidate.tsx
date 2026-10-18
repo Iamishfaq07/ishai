@@ -30,7 +30,18 @@ import {
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { RejectDialog } from "./Pipeline";
-import { checkSlots, companyPath, dayTime, jobPath, matchLabel, mentionedMembers, relTime, scoreTone } from "./model";
+import {
+  WAITING_FOR_CONFIRMATION,
+  checkSlots,
+  companyPath,
+  dayTime,
+  jobPath,
+  matchLabel,
+  mentionedMembers,
+  rejectedMessage,
+  relTime,
+  scoreTone,
+} from "./model";
 import { Loading, LoadError, Panel, errorText } from "./ui";
 
 const MET: Record<BizMet, { label: string; icon: typeof CircleCheck; tone: string }> = {
@@ -627,12 +638,20 @@ export function Candidate() {
               <Panel title="Interviewers" hint="They can see this applicant and add notes and scorecards.">
                 <Interviewers a={a} members={members} onSaved={setA} />
               </Panel>
-              <Panel title="Schedule an interview">
-                <Scheduling a={a} onSaved={setA} />
-              </Panel>
-              <Panel title="Email">
-                <EmailForm a={a} onSaved={setA} />
-              </Panel>
+              {a.email_confirmed ? (
+                <>
+                  <Panel title="Schedule an interview">
+                    <Scheduling a={a} onSaved={setA} />
+                  </Panel>
+                  <Panel title="Email">
+                    <EmailForm a={a} onSaved={setA} />
+                  </Panel>
+                </>
+              ) : (
+                <Panel title="Email and interviews">
+                  <Callout tone="info">{WAITING_FOR_CONFIRMATION}</Callout>
+                </Panel>
+              )}
             </>
           )}
           <Panel title="Consent">
@@ -657,8 +676,8 @@ export function Candidate() {
         onClose={() => setRejecting(false)}
         count={1}
         onReject={async (send, s, b) => {
-          await biz.reject(company.id, { ids: [a.id], send_email: send, ...(s ? { subject: s } : {}), ...(b ? { body: b } : {}) });
-          toast({ message: send ? "Rejected and emailed" : "Rejected", tone: "success" });
+          const r = await biz.reject(company.id, { ids: [a.id], send_email: send, ...(s ? { subject: s } : {}), ...(b ? { body: b } : {}) });
+          toast({ message: rejectedMessage(r.moved, send, r.emails_waiting), tone: "success" });
           setN((x) => x + 1);
         }}
       />
