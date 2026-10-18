@@ -521,6 +521,12 @@ class MockInterviewer:
             await self._ask_next(now_ms)
 
     @property
+    def opens_at_once(self) -> bool:
+        """A new video call's first words are her fixed hello (talk.smalltalk_opening): no model call and nothing
+        heard yet, so they can go out before the transcriber is ready (engine.start)."""
+        return self._resumed is None and not self.asked and self._talks
+
+    @property
     def awaiting_answer(self) -> bool:
         return (self._awaiting and bool(self.asked) and not self.finished and not self._busy
                 and self._phase == "interview")

@@ -529,6 +529,12 @@ class LiveEngine:
             self._stt_published = "connecting"
             await self.send("provider.status", {"provider": "stt", "name": self._stt.name, "state": "connecting",
                                                 "detail": "Connecting to transcription…"})
+        # The video interview's hello needs neither the model nor the transcriber (D76, 2026-10-18): it goes out now,
+        # while the transcriber's sockets are still connecting, instead of after their handshake. Their reply waits in
+        # the socket until those are up (sooner than her hello takes to say).
+        early = self._mock if self._mock is not None and self._mock.opens_at_once else None
+        if early is not None:
+            self._spawn(early.start(self.now_ms()))
         # Both provider sockets handshake concurrently: sequential connects doubled time-to-ready.
         sessions = await asyncio.gather(*(self._stt.start(configs[c]) for c in channels))
         if self._ended:
@@ -543,7 +549,7 @@ class LiveEngine:
             self._spawn(self._pump_stt(channel, session))
         self._spawn(self._ticker())
         self._spawn(self._llm.warm())  # the first answer shouldn't pay for the TLS handshake
-        if self._mock is not None:
+        if self._mock is not None and early is None:
             self._spawn(self._mock.start(self.now_ms()))
         await self.send("session.started", {"state": LiveState.listening.value,
                                             "settings": self.settings.model_dump()})
