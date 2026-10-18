@@ -13,7 +13,7 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use tauri::menu::{Menu, MenuItem};
-use tauri::tray::TrayIconBuilder;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, WindowEvent};
 
 /// Asks the window to confirm a tray "Quit Orbit" (CloseDialog.tsx).
@@ -172,13 +172,25 @@ pub fn run() {
             let quit = MenuItem::with_id(app, "quit", "Quit Orbit", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show, &quit])?;
 
+            // A left click brings Orbit back, as Windows apps' tray icons do; the menu is on the right click.
             let mut tray = TrayIconBuilder::with_id("orbit-tray")
                 .tooltip("Orbit")
                 .menu(&menu)
+                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => show_main(app),
                     "quit" => tray_quit(app),
                     _ => {}
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        show_main(tray.app_handle());
+                    }
                 });
             if let Some(icon) = app.default_window_icon() {
                 tray = tray.icon(icon.clone());
