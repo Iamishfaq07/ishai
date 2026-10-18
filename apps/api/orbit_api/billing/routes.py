@@ -305,8 +305,8 @@ async def submit_utr(order_id: str, body: UtrIn, background: BackgroundTasks,
     s = get_settings()
     if first_time and s.admin_email and not s.is_admin_email(user.email):
         background.add_task(send_safely, OutgoingEmail(
-            to=s.admin_email, subject=f"UPI payment to check: ₹{p.amount_inr} from {user.email}",
-            text=(f"{user.email} says they paid ₹{p.amount_inr} for the {_label(p)}.\n\n"
+            to=s.admin_email, subject=f"UPI payment to check: ₹{p.amount_inr:,} from {user.email}",
+            text=(f"{user.email} says they paid ₹{p.amount_inr:,} for the {_label(p)}.\n\n"
                   f"UTR: {utr}\nReference (in the UPI note): {p.reference}\n\n"
                   f"Check your bank statement, then approve or reject it: {s.web_url.rstrip('/')}/admin/payments")))
     return _order_out(p)
@@ -747,7 +747,7 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
     else:
         reason = f"\n\nWhy: {note}" if note else ""
         mail = OutgoingEmail(to=u.email, subject="We couldn't confirm your Orbit payment",
-                             text=(f"We couldn't find your ₹{p.amount_inr} payment with UTR {p.utr} in our account."
+                             text=(f"We couldn't find your ₹{p.amount_inr:,} payment with UTR {p.utr} in our account."
                                    f"{reason}\n\nIf you did pay, check the UTR in your UPI app and send it again: "
                                    f"{web}/billing"))
     db.add(AuditLog(user_id=admin.id, action=f"admin.payment.{body.action}",

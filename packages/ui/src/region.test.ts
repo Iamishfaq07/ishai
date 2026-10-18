@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES, countryName, currencyFor, detectCountry, formatNumber, isIndia, sampleOffer } from "./region";
+import { COUNTRIES, countryName, currencyFor, detectCountry, formatNumber, isIndia, rupees, sampleOffer } from "./region";
 
 describe("region", () => {
   it("lists India first and every country once", () => {
@@ -37,5 +37,15 @@ describe("speech language", () => {
     expect(speechLang("IN")).toBe("en-IN");
     expect(speechLang("gb")).toBe("en-GB");
     expect(speechLang("DE")).toBe("en-US");
+  });
+});
+
+describe("rupees", () => {
+  it("groups the way India writes amounts, never a bare ₹26499", () => {
+    expect(rupees(499)).toBe("₹499");
+    expect(rupees(1649)).toBe("₹1,649");
+    expect(rupees(26499)).toBe("₹26,499");
+    expect(rupees(150000)).toBe("₹1,50,000");
+    expect(rupees(499.5)).toBe("₹499.50");
   });
 });

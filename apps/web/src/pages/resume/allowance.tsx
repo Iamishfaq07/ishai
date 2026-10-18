@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { ResumeAiAllowance } from "@orbit/types";
-import { ApiError, Crown, Sparkles, buttonClass, cx, focusRing } from "@orbit/ui";
+import { ApiError, Crown, Sparkles, buttonClass, cx, focusRing, rupees } from "@orbit/ui";
 import { useBackend } from "./backend";
 
 /**
@@ -36,7 +36,7 @@ export const isUpgradeError = (err: unknown): boolean => err instanceof ApiError
 
 /** "₹499", or nothing without a price. */
 export function priceText(price: number | null | undefined): string {
-  return price ? `₹${price}` : "";
+  return price ? rupees(price) : "";
 }
 
 /** Where buying credits starts: Plan & billing, with the cheapest pack that has resume credits opened. */

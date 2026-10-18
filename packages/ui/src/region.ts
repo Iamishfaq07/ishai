@@ -126,6 +126,13 @@ export function formatNumber(n: number, code: string | null | undefined): string
   }
 }
 
+/** Rupees as India writes them: "₹1,649", "₹1,00,000" (grouped, never a bare "₹26499"). Paise only when there are
+ *  some ("₹499.50"). */
+export function rupees(n: number): string {
+  const whole = Number.isInteger(n);
+  return `₹${n.toLocaleString("en-IN", whole ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 // A believable mid-level offer, and a target a fair step above it, in the way offers are written there.
 const OFFERS: Record<string, [string, string]> = {
   IN: ["₹12 LPA fixed + ₹2 L variable", "₹15 LPA fixed"],

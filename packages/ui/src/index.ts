@@ -340,6 +340,7 @@ export {
   formatNumber,
   isIndia,
   localeFor,
+  rupees,
   sampleOffer,
   speechLang,
   type Country,

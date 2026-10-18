@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { UpiOrder } from "@orbit/types";
-import { Check, CircleCheck, Copy, IndianRupee, QrCode, Smartphone, X, buttonClass, cx, focusRing, toast } from "@orbit/ui";
+import { Check, CircleCheck, Copy, IndianRupee, QrCode, Smartphone, X, buttonClass, cx, focusRing, rupees, toast } from "@orbit/ui";
 import { Button, Card, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -8,7 +8,9 @@ import { errorText } from "../lib/format";
 /** On a phone the upi:// link opens GPay / PhonePe / Paytm straight away; on a computer it does nothing, so scan instead. */
 const onPhone = (): boolean => typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
 
-function CopyValue({ label, value }: { label: string; value: string }) {
+/** A value to type into a UPI app, with a copy button. `copy`: what's copied when it isn't what's shown (the amount
+ *  is shown as "₹1,649" but copied as "1649", which a UPI app's amount field takes). */
+function CopyValue({ label, value, copy = value }: { label: string; value: string; copy?: string }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1.5 text-sm">
       <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
@@ -19,7 +21,7 @@ function CopyValue({ label, value }: { label: string; value: string }) {
           aria-label={`Copy ${label.toLowerCase()}`}
           onClick={() =>
             void navigator.clipboard
-              .writeText(value)
+              .writeText(copy)
               .then(() => toast("Copied"))
               .catch(() => toast({ message: "Couldn't copy", tone: "error" }))
           }
@@ -66,7 +68,7 @@ export function UpiCheckout({ order: initial, onClose, onChanged }: { order: Upi
         </span>
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-lg font-semibold">
-            {order.label} · ₹{order.amount_inr.toLocaleString("en-IN")}
+            {order.label} · {rupees(order.amount_inr)}
           </h2>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
             {[order.interview_minutes ? `${order.interview_minutes} interview minutes` : "", order.resume_credits ? `${order.resume_credits} Resume AI credits` : ""]
@@ -103,7 +105,7 @@ export function UpiCheckout({ order: initial, onClose, onChanged }: { order: Upi
             <div className="mx-auto flex flex-col items-center gap-2">
               {order.upi_uri && (
                 <span className="rounded-xl ring-1 ring-zinc-200 dark:ring-white/10">
-                  <QrCode value={order.upi_uri} size={192} label={`UPI QR code: pay ₹${order.amount_inr} to ${order.upi_id ?? "Orbit"}`} />
+                  <QrCode value={order.upi_uri} size={192} label={`UPI QR code: pay ${rupees(order.amount_inr)} to ${order.upi_id ?? "Orbit"}`} />
                 </span>
               )}
               <span className="text-xs text-zinc-500 dark:text-zinc-400">Scan with any UPI app</span>
@@ -114,17 +116,17 @@ export function UpiCheckout({ order: initial, onClose, onChanged }: { order: Upi
                   href={order.upi_uri}
                   className={buttonClass("primary", "lg", "w-full")}
                 >
-                  <Smartphone className="h-4 w-4" /> Pay ₹{order.amount_inr} with a UPI app
+                  <Smartphone className="h-4 w-4" /> Pay {rupees(order.amount_inr)} with a UPI app
                 </a>
               )}
               <div className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 px-3 dark:divide-white/10 dark:border-white/10">
                 {order.upi_id && <CopyValue label="UPI ID" value={order.upi_id} />}
                 {order.payee_name && <CopyValue label="Name" value={order.payee_name} />}
-                <CopyValue label="Amount" value={`₹${order.amount_inr}`} />
+                <CopyValue label="Amount" value={rupees(order.amount_inr)} copy={String(order.amount_inr)} />
                 <CopyValue label="Note / reference" value={order.reference} />
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                The QR and the button fill in the amount and the reference. Paying the UPI ID by hand? Pay exactly ₹{order.amount_inr} and
+                The QR and the button fill in the amount and the reference. Paying the UPI ID by hand? Pay exactly {rupees(order.amount_inr)} and
                 put {order.reference} in the note. If an app won't open the link, scanning the QR always works.
               </p>
             </div>

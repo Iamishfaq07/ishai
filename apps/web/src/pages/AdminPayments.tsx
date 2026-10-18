@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AdminPayment } from "@orbit/types";
-import { Check, CosmicEmptyState, IndianRupee, LoadGate, X, confirmDialog, cx } from "@orbit/ui";
+import { Check, CosmicEmptyState, IndianRupee, LoadGate, X, confirmDialog, cx, rupees } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
@@ -131,8 +131,8 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
         .filter(Boolean)
         .join(" and ");
       const ok = await confirmDialog({
-        title: `Approve ₹${p.amount_inr} from ${p.email}?`,
-        body: `Only if ₹${p.amount_inr} with UTR ${p.utr} is in your account. ${what} are added to their account.`,
+        title: `Approve ${rupees(p.amount_inr)} from ${p.email}?`,
+        body: `Only if ${rupees(p.amount_inr)} with UTR ${p.utr} is in your account. ${what} are added to their account.`,
         confirmLabel: "Approve",
       });
       if (!ok) return;
@@ -152,7 +152,7 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-medium">
-            {p.currency === "USD" && p.amount_text ? `${p.amount_text} (≈ ₹${p.amount_inr})` : `₹${p.amount_inr}`} · {p.label} ·{" "}
+            {p.currency === "USD" && p.amount_text ? `${p.amount_text} (≈ ${rupees(p.amount_inr)})` : rupees(p.amount_inr)} · {p.label} ·{" "}
             {p.name ? `${p.name} · ${p.email}` : p.email}
           </p>
           <p className="mt-0.5 text-sm tabular-nums">
@@ -160,7 +160,7 @@ function PaymentRow({ payment: p, onChange }: { payment: AdminPayment; onChange:
               <>
                 Paid through {p.method === "paypal" ? "PayPal" : "Razorpay"}, confirmed automatically · reference{" "}
                 <strong>{p.reference}</strong>
-                {!!p.refunded_inr && <> · refunded {p.refunded_text || `₹${p.refunded_inr}`} (credits kept)</>}
+                {!!p.refunded_inr && <> · refunded {p.refunded_text || rupees(p.refunded_inr)} (credits kept)</>}
               </>
             ) : (
               <>

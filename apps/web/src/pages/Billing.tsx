@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BillingScene, CreditCard, LoadGate, Spot, cx, focusRing } from "@orbit/ui";
+import { BillingScene, CreditCard, LoadGate, Spot, cx, focusRing, rupees } from "@orbit/ui";
 import type { CreditPack, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
@@ -42,7 +42,7 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
         {shown.map((o) => (
           <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
             <span className="font-medium">
-              {o.label} · {o.amount_text || `₹${o.amount_inr}`}
+              {o.label} · {o.amount_text || rupees(o.amount_inr)}
             </span>
             <span className="text-zinc-500">{formatDate(o.submitted_at ?? o.created_at)}</span>
             {o.method === "razorpay" || o.method === "paypal" ? (
@@ -62,7 +62,7 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
             )}
             {!!o.refunded_inr && (
               <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-800 dark:text-sky-200">
-                Refunded {o.refunded_text || `₹${o.refunded_inr}`}
+                Refunded {o.refunded_text || rupees(o.refunded_inr)}
               </span>
             )}
             {o.status === "processing" && (

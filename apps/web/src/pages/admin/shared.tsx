@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
 import type { AdminUser } from "@orbit/types";
-import { Badge, Headphones, Inbox, IndianRupee, Megaphone, ScrollText, Users, cx } from "@orbit/ui";
+import { Badge, Headphones, Inbox, IndianRupee, Megaphone, ScrollText, Users, cx, rupees } from "@orbit/ui";
 import { ProductTabs } from "../../components/products";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 
 /** Pieces the admin pages share: their tabs, money and minutes in words, an account's badges. */
 
-export const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+export const inr = rupees;
 export const mins = (n: number) => `${Math.round(n).toLocaleString("en-IN")} min`;
 export const count = (n: number) => n.toLocaleString("en-IN");
 
