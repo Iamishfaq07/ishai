@@ -221,3 +221,18 @@ describe("the admin console's client", () => {
     expect(seen[5]!.body).toBe(JSON.stringify({ text: "Sorted." }));
   });
 });
+
+describe("the camera coach's last numbers", () => {
+  it("go as a keepalive request when the page closes, so they outlive the tab", async () => {
+    const seen: RequestInit[] = [];
+    const impl = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      seen.push(init ?? {});
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    const api = createApiClient({ baseUrl: "https://api.test", auth: { mode: "cookie" }, fetchImpl: impl });
+    const metrics = { samples: 3, eye_contact: 0.5, smile: 0.1, head_still: 0.9 } as unknown as Parameters<typeof api.saveCameraMetrics>[1];
+    await api.saveCameraMetrics("s1", metrics);
+    await api.saveCameraMetrics("s1", metrics, true);
+    expect(seen.map((i) => i.keepalive)).toEqual([false, true]);
+  });
+});

@@ -458,9 +458,10 @@ export function createApiClient(options: ApiClientOptions) {
     voiceStatus: () => json<VoiceStatus>("/v1/voice"),
     /** A sign-in only the browser extension can use, handed to it on the Connect page (never shown). */
     extensionConnect: () => json<{ token: string }>("/v1/extension/connect", { method: "POST" }),
-    /** The camera coach's numbers so far for a mock session (sent again as they grow). */
-    saveCameraMetrics: (sessionId: string, metrics: CameraMetrics) =>
-      json<void>(`/v1/sessions/${encodeURIComponent(sessionId)}/camera-metrics`, { method: "PUT", body: body(metrics) }),
+    /** The camera coach's numbers so far for a mock session (sent again as they grow). `keepalive`: sent as the page
+     *  closes, so the browser finishes the request after the tab is gone. */
+    saveCameraMetrics: (sessionId: string, metrics: CameraMetrics, keepalive = false) =>
+      json<void>(`/v1/sessions/${encodeURIComponent(sessionId)}/camera-metrics`, { method: "PUT", body: body(metrics), keepalive }),
     /** The interviewer's question as MP3, streamed (read the body as it arrives). */
     speak: (text: string, voice: string, signal?: AbortSignal, sessionId?: string) =>
       raw("/v1/voice/speak", {
