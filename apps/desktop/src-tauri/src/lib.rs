@@ -1,3 +1,5 @@
+#[cfg(target_os = "windows")]
+mod app_icons;
 mod audio;
 #[cfg(target_os = "windows")]
 mod process_loopback;
@@ -12,12 +14,52 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager, WindowEvent};
 
 /// Asks the window to confirm a tray "Quit Orbit" (CloseDialog.tsx).
 const CONFIRM_QUIT_EVENT: &str = "orbit:confirm-quit";
+/// A tray item the window acts on (tray.ts): "new-session", "history", "settings" or "web".
+const TRAY_EVENT: &str = "orbit:tray";
+
+/// What a tray menu item does.
+#[derive(Debug, PartialEq, Eq)]
+enum TrayAction {
+    Show,
+    Quit,
+    /// Shown, then told which screen to open (the window ignores it during a live session).
+    Open(&'static str),
+    /// Orbit on the web: the window opens the browser (it knows the web address), without coming forward.
+    Web,
+}
+
+fn tray_action(id: &str) -> Option<TrayAction> {
+    match id {
+        "show" => Some(TrayAction::Show),
+        "quit" => Some(TrayAction::Quit),
+        "new-session" => Some(TrayAction::Open("new-session")),
+        "history" => Some(TrayAction::Open("history")),
+        "settings" => Some(TrayAction::Open("settings")),
+        "web" => Some(TrayAction::Web),
+        _ => None,
+    }
+}
+
+fn on_tray_item(app: &tauri::AppHandle, id: &str) {
+    match tray_action(id) {
+        Some(TrayAction::Show) => show_main(app),
+        Some(TrayAction::Quit) => tray_quit(app),
+        Some(TrayAction::Open(screen)) => {
+            show_main(app);
+            let _ = app.emit_to("main", TRAY_EVENT, screen);
+        }
+        Some(TrayAction::Web) => {
+            let _ = app.emit_to("main", TRAY_EVENT, "web");
+        }
+        None => {}
+    }
+}
 
 /// "Quit Orbit" from the close dialog.
 #[tauri::command]
@@ -168,20 +210,37 @@ pub fn run() {
             }
         })
         .setup(|app| {
-            let show = MenuItem::with_id(app, "show", "Show Orbit", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit Orbit", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &quit])?;
+            // The tray menu (right click): which Orbit this is, the usual places, the web, and Quit last.
+            let item = |id: &str, text: &str| MenuItem::with_id(app, id, text, true, None::<&str>);
+            let version = MenuItem::with_id(
+                app,
+                "version",
+                format!("Orbit {}", app.package_info().version),
+                false,
+                None::<&str>,
+            )?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &version,
+                    &PredefinedMenuItem::separator(app)?,
+                    &item("show", "Open Orbit")?,
+                    &item("new-session", "New session…")?,
+                    &item("history", "Past sessions")?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &item("web", "Orbit on the web")?,
+                    &item("settings", "Settings")?,
+                    &PredefinedMenuItem::separator(app)?,
+                    &item("quit", "Quit Orbit")?,
+                ],
+            )?;
 
             // A left click brings Orbit back, as Windows apps' tray icons do; the menu is on the right click.
             let mut tray = TrayIconBuilder::with_id("orbit-tray")
-                .tooltip("Orbit")
+                .tooltip("Orbit: interview copilot")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "show" => show_main(app),
-                    "quit" => tray_quit(app),
-                    _ => {}
-                })
+                .on_menu_event(|app, event| on_tray_item(app, event.id.as_ref()))
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
                         button: MouseButton::Left,
@@ -216,6 +275,10 @@ pub fn run() {
             audio::stop_capture,
             #[cfg(target_os = "windows")]
             process_loopback::list_audio_apps,
+            #[cfg(target_os = "windows")]
+            process_loopback::audio_levels,
+            #[cfg(target_os = "windows")]
+            app_icons::app_icon,
             screen::capture_screen,
             screen::capture_region,
             screen::capture_scrolling,
@@ -234,7 +297,7 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
-    use super::{QuitRequest, WindowPrivacy};
+    use super::{tray_action, QuitRequest, TrayAction, WindowPrivacy};
     use std::time::Duration;
 
     #[test]
@@ -246,6 +309,20 @@ mod tests {
         let main = &conf["app"]["windows"][0];
         assert_eq!(main["contentProtected"], false);
         assert_eq!(main["skipTaskbar"], false);
+    }
+
+    #[test]
+    fn tray_items_show_quit_or_hand_the_window_a_screen() {
+        assert_eq!(tray_action("show"), Some(TrayAction::Show));
+        assert_eq!(tray_action("quit"), Some(TrayAction::Quit));
+        assert_eq!(
+            tray_action("new-session"),
+            Some(TrayAction::Open("new-session"))
+        );
+        assert_eq!(tray_action("history"), Some(TrayAction::Open("history")));
+        assert_eq!(tray_action("settings"), Some(TrayAction::Open("settings")));
+        assert_eq!(tray_action("web"), Some(TrayAction::Web));
+        assert_eq!(tray_action("version"), None); // the disabled "Orbit X.Y.Z" line does nothing
     }
 
     #[test]

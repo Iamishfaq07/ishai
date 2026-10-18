@@ -109,7 +109,7 @@ unsafe fn take_pwstr(p: PWSTR) -> String {
     s
 }
 
-unsafe fn device_id(device: &IMMDevice) -> windows::core::Result<String> {
+pub(crate) unsafe fn device_id(device: &IMMDevice) -> windows::core::Result<String> {
     Ok(take_pwstr(device.GetId()?))
 }
 
@@ -122,7 +122,11 @@ unsafe fn device_name(device: &IMMDevice) -> String {
     read().unwrap_or_else(|_| "Unknown device".into())
 }
 
-unsafe fn default_id(enumr: &IMMDeviceEnumerator, flow: Flow, comms: bool) -> Option<String> {
+pub(crate) unsafe fn default_id(
+    enumr: &IMMDeviceEnumerator,
+    flow: Flow,
+    comms: bool,
+) -> Option<String> {
     let role = if comms { eCommunications } else { eConsole };
     enumr
         .GetDefaultAudioEndpoint(data_flow(flow), role)
