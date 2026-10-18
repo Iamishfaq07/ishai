@@ -3,6 +3,7 @@
 The client asks `GET /v1/voice` what's on offer, then `POST /v1/voice/speak` per question. When it's unavailable (no
 key, turned off, the day's characters used up, the provider down), the client reads the question with the device's
 own voice instead, so a mock never goes silent. Only the interviewer's text is sent, and it's capped per request.
+Everyone hears Aurora at the normal pace; only the admin picks another voice or pace, for testing (D76).
 """
 
 from __future__ import annotations
@@ -35,6 +36,9 @@ router = APIRouter(prefix="/v1/voice", tags=["voice"])
 speak_limit = Depends(limit_user("voice-speak", rate_per_s=1, burst=20))
 METRIC = "tts_chars"
 NO_ANSWER = "The natural voice didn't answer. Using your device's voice."
+# The two refusals that last the rest of the session (D76): the client turns the natural voice off for it only on
+# these codes. Any other 429 (the per-second limit) or 503 (the host restarting) passes, and her next line tries again.
+VOICE_OFF, ALLOWANCE_USED = "voice_off", "voice_allowance_used"
 MAX_CHARS = 800  # one interviewer turn; questions are far shorter
 
 
@@ -44,19 +48,20 @@ class Voice(BaseModel):
     model: str
 
 
-# A small choice (D76): two women's and two men's Aura-2 voices that Deepgram describes as natural and suited to
-# interviews and conversation. Measured from here they all start within the network's noise of each other (1.3-2.7 s
-# to the first byte for a sentence, one connection kept open), so Vesta, Deepgram's "patient, empathetic" interview
-# voice, is the default. Every model name was checked against Deepgram's list (a name it doesn't have fails every
-# request). An older client's "us" (Thalia) gets the default. Deepgram has no Indian-English Aura-2 voice yet.
+# Two women's and two men's Aura-2 voices that Deepgram describes as natural and suited to interviews and
+# conversation (D76). Aurora is Saba's voice for everyone (the owner's pick, 2026-10-18); the others are for a panel,
+# where each interviewer gets the next one, and for the admin's testing. Measured from here they all start within the
+# network's noise of each other (1.3-2.7 s to the first byte for a sentence, one connection kept open). Every model
+# name was checked against Deepgram's list (a name it doesn't have fails every request). An older client's "us"
+# (Thalia) gets the default. Deepgram has no Indian-English Aura-2 voice yet.
 VOICES: dict[str, Voice] = {
-    "vesta": Voice(id="vesta", label="Vesta · warm and patient", model="aura-2-vesta-en"),
     "aurora": Voice(id="aurora", label="Aurora · bright and lively", model="aura-2-aurora-en"),
+    "vesta": Voice(id="vesta", label="Vesta · warm and patient", model="aura-2-vesta-en"),
     "pluto": Voice(id="pluto", label="Pluto · calm, deeper voice", model="aura-2-pluto-en"),
     "arcas": Voice(id="arcas", label="Arcas · natural and clear", model="aura-2-arcas-en"),
 }
-DEFAULT_VOICE = "vesta"
-# Speaking pace (Settings and the video interview's setup): slower, normal, brisk.
+DEFAULT_VOICE = "aurora"
+# Speaking pace (the admin's, for testing): slower, normal, brisk. Everyone else's is the normal one.
 MIN_SPEED, MAX_SPEED = 0.8, 1.25
 
 
@@ -64,9 +69,9 @@ def _day_start() -> datetime:
     return datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
 
-async def chars_left(db: AsyncSession, user: User) -> int | None:
-    """Characters left today; None = no cap (the admin)."""
-    if await is_admin(db, user):
+async def chars_left(db: AsyncSession, user: User, *, admin: bool) -> int | None:
+    """Characters left today; None = no cap (the admin, as the caller already looked up)."""
+    if admin:
         return None
     used = await db.scalar(select(func.coalesce(func.sum(UsageEvent.quantity), 0.0)).where(
         UsageEvent.user_id == user.id, UsageEvent.metric == METRIC, UsageEvent.created_at >= _day_start()))
@@ -78,14 +83,18 @@ class VoiceStatus(BaseModel):
     voices: list[Voice]
     default_voice: str
     chars_left: int | None
+    # Only the admin picks the voice and pace (D76): everyone else hears the default at the normal pace, whatever an
+    # older client saved on the device.
+    can_choose: bool = False
 
 
 @router.get("", response_model=VoiceStatus)
 async def voice_status(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> VoiceStatus:
     on = get_tts_provider() is not None
+    admin = await is_admin(db, user)
     return VoiceStatus(available=on, voices=list(VOICES.values()) if on else [], default_voice=DEFAULT_VOICE,
-                       chars_left=await chars_left(db, user) if on else 0)
+                       chars_left=await chars_left(db, user, admin=admin) if on else 0, can_choose=admin)
 
 
 class SpeakIn(BaseModel):
@@ -100,7 +109,8 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
                 db: Annotated[AsyncSession, Depends(get_db)]) -> StreamingResponse:
     provider = get_tts_provider()
     if provider is None:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The natural voice isn't set up on this server.")
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                            {"code": VOICE_OFF, "message": "The natural voice isn't set up on this server."})
     voice = VOICES.get(body.voice) or VOICES[DEFAULT_VOICE]  # an older client's other choice: the one voice
     text = " ".join(body.text.split())
     # Only a session of the caller's own is named on the usage row.
@@ -109,15 +119,19 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
     # The characters are taken before the provider is asked, under the account lock: two requests at once can't both
     # pass the check with the same characters left. A provider that doesn't answer gives them back.
     await lock_account(db, user.id)
-    left = await chars_left(db, user)
+    admin = await is_admin(db, user)
+    left = await chars_left(db, user, admin=admin)
     if left is not None and len(text) > left:
         await db.rollback()
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
-                            "Today's natural-voice allowance is used up. Your device's voice reads the questions now.")
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, {
+            "code": ALLOWANCE_USED,
+            "message": "Today's natural-voice allowance is used up. Your device's voice reads the questions now.",
+        })
     spent = UsageEvent(user_id=user.id, session_id=session_id, metric=METRIC, quantity=float(len(text)))
     db.add(spent)
     await db.commit()
-    speed = round(body.speed, 2)
+    # The pace is the admin's to pick (D76): anyone else's is the normal one, whatever an older client asks for.
+    speed = round(body.speed, 2) if admin else 1.0
     chunks = provider.stream(text, voice.model, speed) if speed != 1.0 else provider.stream(text, voice.model)
     try:
         first = await anext(chunks)  # fail here (a JSON error the client can fall back on), not mid-stream

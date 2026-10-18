@@ -286,9 +286,8 @@ export function VideoInterviewPage() {
             <li>{INTERVIEWER_NAME} talks with you like an interviewer would: answer out loud, and pause when you're done (or press "I'm done answering"). Ask her to repeat or rephrase anytime.</li>
             <li>Use headphones if you can, so {INTERVIEWER_NAME}'s voice isn't picked up as your answer.</li>
           </ul>
-          <div className="border-t border-zinc-200 pt-4 dark:border-white/10">
-            <VoicePicker compact />
-          </div>
+          {/* The admin's only (D76): nothing here for anyone else. */}
+          <VoicePicker compact className="border-t border-zinc-200 pt-4 dark:border-white/10" />
           {error && <ErrorNote>{error}</ErrorNote>}
           <div className="flex flex-wrap justify-between gap-2">
             <Button variant="ghost" onClick={() => setStep("setup")}>

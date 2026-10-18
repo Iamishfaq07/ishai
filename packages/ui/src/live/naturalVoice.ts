@@ -4,17 +4,20 @@ import { safeLocal } from "../storage";
 import { speakable, speechChunks } from "./speechText";
 
 /**
- * The mock interviewer's natural voice: neural text-to-speech from the API (Deepgram Aura behind it, a small choice of
- * voices). When it can't be used (not set up, today's allowance used, the provider down), the device's own voice reads
- * the question instead; when the browser won't play sound until a tap, the room asks for one (D76). The mock never
- * goes silent without saying why, and the question is always readable.
+ * The mock interviewer's natural voice: neural text-to-speech from the API (Deepgram Aura behind it; Aurora for
+ * everyone, the admin can pick another to test). When it can't be used (not set up, today's allowance used, the
+ * provider down), the device's own voice reads the question instead; when the browser won't play sound until a tap,
+ * the room asks for one (D76). The mock never goes silent without saying why, and the question is always readable.
  */
 export interface NaturalVoiceSource {
-  /** Voice ids, the chosen one first; a panel gives each interviewer the next one. */
+  /** Voice ids, the chosen one first; a panel gives each interviewer the next one. None: the device's voice (the
+   *  admin chose it). */
   voices: string[];
   speak: SpeakFn;
   /** Still finding out whether the server has it: hold the first question for a moment rather than use the device's. */
   pending?: boolean;
+  /** The speaking pace: the admin's saved one, normal for everyone else (D76). */
+  pace?: VoicePace;
 }
 
 const STATUS_WAIT_MS = 2500;
@@ -24,7 +27,8 @@ export interface VoiceOption {
   label: string;
 }
 
-/** What Settings stores: "device" (the platform's voices), or a natural voice id. */
+/** What the admin's voice picker stores: "device" (the platform's voices), or a natural voice id. Only the admin's
+ *  counts (voiceSetup): an older build let everyone pick, and those choices are still on their devices. */
 export const VOICE_CHOICE_KEY = "orbit.interviewerVoice";
 export const DEVICE_VOICE = "device";
 
@@ -35,8 +39,25 @@ export function voiceForSpeaker(voices: string[], n: number): string | undefined
 
 /** After this failure, stop asking for the natural voice for the rest of the session (it won't come back soon). */
 export function naturalVoiceGone(err: unknown): boolean {
-  return err instanceof ApiError && (err.status === 429 || err.status === 503 || err.status === 401 || err.status === 403);
+  if (!(err instanceof ApiError)) return false;
+  // Today's allowance used, or not set up here (the API's codes). Its per-second limit (429) or a host restarting
+  // (503) passes in a moment: then only that line is said by the device's voice (D76).
+  return err.status === 401 || err.status === 403 || err.code === "voice_allowance_used" || err.code === "voice_off";
 }
+
+/**
+ * A failure worth asking once more for (D76): the network dropped (fetch's TypeError, the client's "offline") or the
+ * API or its provider hiccuped (500, 502, 504). Never one that won't pass soon (naturalVoiceGone) or a request that
+ * already took too long (the client's "timeout").
+ */
+export function worthRetrying(err: unknown): boolean {
+  if (err instanceof TypeError) return true;
+  if (!(err instanceof ApiError)) return false;
+  return (err.status === 0 && err.code === "offline") || err.status === 500 || err.status === 502 || err.status === 504;
+}
+
+/** A piece that failed sooner than this is asked for once more: a second try can still beat the room's limit. */
+const RETRY_WITHIN_MS = 4000;
 
 /** The chosen voice first, then the others; null when it's off or not offered. */
 export function orderVoices(options: VoiceOption[], choice: string | null, fallback: string): string[] | null {
@@ -223,12 +244,12 @@ export class NaturalVoiceError extends Error {
 
 export type SpeakFn = (text: string, voice: string, signal: AbortSignal, opts?: { speed?: number }) => Promise<Response>;
 
-/** The speaking pace: slower, normal, brisk (Settings and the video interview's setup). */
+/** The speaking pace: slower, normal, brisk (the admin's voice picker; everyone else's is normal). */
 export type VoicePace = "slower" | "normal" | "brisk";
 export const PACE_KEY = "orbit.interviewerPace";
 export const PACE_SPEED: Record<VoicePace, number> = { slower: 0.88, normal: 1, brisk: 1.12 };
 
-/** The pace kept on this device (Settings, the video interview's setup). */
+/** The pace kept on this device (the admin's voice picker). Only the admin's counts (voiceSetup). */
 export function savedPace(): VoicePace {
   const p = safeLocal.getItem(PACE_KEY);
   return p === "slower" || p === "brisk" ? p : "normal";
@@ -264,8 +285,9 @@ export interface SpeakHooks {
 /**
  * Says `text` in the natural voice, in growing pieces (D76): the first two are requested at once, the first plays as
  * soon as it arrives (it's short, so it starts sooner), and each later one is requested when the one before it starts
- * playing, so it's ready when that ends and isn't made at all for a line she's cut off on. Rejects with a
- * NaturalVoiceError naming what wasn't heard.
+ * playing, so it's ready when that ends and isn't made at all for a line she's cut off on. A piece that hiccups
+ * (worthRetrying) soon enough is asked for once more before the line gives up. Rejects with a NaturalVoiceError
+ * naming what wasn't heard.
  */
 export async function speakNatural(text: string, speak: SpeakFn, voice: string, signal: AbortSignal, hooks: SpeakHooks = {}): Promise<void> {
   const chunks = speechChunks(text);
@@ -273,7 +295,13 @@ export async function speakNatural(text: string, speak: SpeakFn, voice: string, 
   const requests: Array<Promise<VoiceClip> | undefined> = [];
   const request = (i: number) => {
     if (i >= chunks.length || requests[i] || signal.aborted) return;
-    const r = fetchClip(speak, chunks[i]!, voice, signal, speed, Boolean(hooks.keep));
+    const asked = performance.now();
+    const once = () => fetchClip(speak, chunks[i]!, voice, signal, speed, Boolean(hooks.keep));
+    // One dropped request used to switch the rest of her line to the device's voice mid-sentence.
+    const r = once().catch((err: unknown) => {
+      if (signal.aborted || !worthRetrying(err) || performance.now() - asked > RETRY_WITHIN_MS) throw err;
+      return once();
+    });
     r.catch(() => undefined); // awaited in order below; don't report a later one twice
     requests[i] = r;
   };
@@ -309,6 +337,73 @@ export async function speakNatural(text: string, speak: SpeakFn, voice: string, 
       throw new NaturalVoiceError(err, chunks.slice(i).join(" "));
     }
   }
+}
+
+/** How a line in the natural voice ended: all said, or what the device's voice says instead, and why. */
+export type NaturalLineEnd = { said: true } | { said: false; rest: string; detail: string; gone: boolean };
+
+/**
+ * One of her lines in the natural voice, with the device's voice as its fallback (D76): no sound within `limitMs` (a
+ * slow network, a stuck request) or a failure ends it with what wasn't heard, for the device's voice to say. `gone`
+ * only when the natural voice won't come back this session (naturalVoiceGone): a slow or failed line never makes her
+ * next one robotic. While the browser waits for a tap, the limit doesn't run out. Null: the caller aborted
+ * `controller` (stopped, or the next line took over).
+ */
+export function sayNaturalLine(
+  text: string,
+  speak: SpeakFn,
+  voice: string,
+  controller: AbortController,
+  { limitMs, ...hooks }: SpeakHooks & { limitMs: number },
+): Promise<NaturalLineEnd | null> {
+  return new Promise((resolve) => {
+    let heard = false;
+    let blocked = false;
+    let over = false;
+    const end = (out: NaturalLineEnd | null) => {
+      if (over) return;
+      over = true;
+      window.clearTimeout(timer);
+      resolve(out);
+    };
+    const timer = window.setTimeout(() => {
+      if (heard || blocked) return;
+      end({ said: false, rest: text, detail: "natural voice too slow", gone: false });
+      controller.abort();
+    }, limitMs);
+    controller.signal.addEventListener("abort", () => end(null), { once: true });
+    const { onBlocked } = hooks;
+    speakNatural(text, speak, voice, controller.signal, {
+      ...hooks,
+      onPlaying: () => {
+        heard = true;
+        hooks.onPlaying?.();
+      },
+      ...(onBlocked
+        ? {
+            onBlocked: (play: () => void) => {
+              blocked = true;
+              onBlocked(() => {
+                blocked = false;
+                play();
+              });
+            },
+          }
+        : {}),
+    }).then(
+      () => end(controller.signal.aborted ? null : { said: true }),
+      (err: unknown) => {
+        if (controller.signal.aborted) return end(null);
+        const cause = err instanceof NaturalVoiceError ? err.reason : err;
+        end({
+          said: false,
+          rest: err instanceof NaturalVoiceError ? err.rest : text,
+          detail: cause instanceof Error ? cause.message : "natural voice failed",
+          gone: naturalVoiceGone(cause),
+        });
+      },
+    );
+  });
 }
 
 // ---- clips worth keeping (D76): acknowledgements, an opening said the same way every time -------------------------
@@ -385,7 +480,7 @@ export async function cachedAck(voice: string, speed: number, avoid: string | nu
   return null;
 }
 
-type VoiceStatus = { available: boolean; voices: VoiceOption[]; default_voice: string };
+type VoiceStatus = { available: boolean; voices: VoiceOption[]; default_voice: string; can_choose?: boolean };
 const STATUS_TTL_MS = 10 * 60_000;
 let statusMemo: { api: object; at: number; status: Promise<VoiceStatus>; resolved?: VoiceStatus } | null = null;
 
@@ -414,46 +509,65 @@ function knownStatus(api: object): VoiceStatus | undefined {
   return statusMemo.resolved;
 }
 
+/** The voices (the first is hers) and pace a session uses; no voices: the device's. */
+export interface VoiceSetup {
+  voices: string[];
+  pace: VoicePace;
+}
+
 /**
- * The natural voice for a live panel: asks the server what's offered once, applies the saved choice, and returns the
- * source to hand to LivePanel (null = the device's voice).
+ * What the server's answer allows (D76, the owner: Aurora at the normal pace for everyone, the choice for the admin
+ * only): the server's default voice at the normal pace, whatever an older build saved on this device; the saved voice
+ * ("This device's voice" too) and pace only when the server says this account may choose. Null: the device's voice
+ * at the normal pace (the natural voice isn't offered).
+ */
+export function voiceSetup(status: VoiceStatus, saved: { choice: string | null; pace: VoicePace }): VoiceSetup | null {
+  const choosing = status.can_choose === true;
+  const voices = status.available ? orderVoices(status.voices, choosing ? saved.choice : null, status.default_voice) : null;
+  if (choosing) return { voices: voices ?? [], pace: saved.pace };
+  return voices ? { voices, pace: "normal" } : null;
+}
+
+/**
+ * The natural voice for a live panel: asks the server what's offered once (even with a saved "This device's voice":
+ * only the server knows whether it counts), and returns the source to hand to LivePanel (null = the device's voice
+ * at the normal pace).
  */
 export function useNaturalVoiceSource(api: {
-  voiceStatus: () => Promise<{ available: boolean; voices: VoiceOption[]; default_voice: string }>;
+  voiceStatus: () => Promise<VoiceStatus>;
   speak: SpeakFn;
-} | null, choice: string | null, enabled = true): NaturalVoiceSource | null {
+} | null, enabled = true): NaturalVoiceSource | null {
+  const [saved] = useState(() => ({ choice: safeLocal.getItem(VOICE_CHOICE_KEY), pace: savedPace() }));
   // undefined: still asking the server (the first question waits for the answer, up to STATUS_WAIT_MS).
-  const fromStatus = (s: VoiceStatus) => (s.available ? orderVoices(s.voices, choice, s.default_voice) : null);
-  const [voices, setVoices] = useState<string[] | null | undefined>(() => {
-    const known = api && enabled && choice !== DEVICE_VOICE ? knownStatus(api) : undefined;
-    return known ? fromStatus(known) : undefined;
+  const [setup, setSetup] = useState<VoiceSetup | null | undefined>(() => {
+    const known = api && enabled ? knownStatus(api) : undefined;
+    return known ? voiceSetup(known, saved) : undefined;
   });
   useEffect(() => {
-    if (!api || !enabled || choice === DEVICE_VOICE) {
-      setVoices(null);
+    if (!api || !enabled) {
+      setSetup(null);
       return;
     }
     const known = knownStatus(api);
     if (known) {
-      setVoices(fromStatus(known));
+      setSetup(voiceSetup(known, saved));
       return;
     }
     let live = true;
-    setVoices(undefined);
-    const giveUp = window.setTimeout(() => live && setVoices((v) => (v === undefined ? null : v)), STATUS_WAIT_MS);
+    setSetup(undefined);
+    const giveUp = window.setTimeout(() => live && setSetup((v) => (v === undefined ? null : v)), STATUS_WAIT_MS);
     warmVoiceStatus(api).then(
-      (s) => live && setVoices(fromStatus(s)),
-      () => live && setVoices(null),
+      (s) => live && setSetup(voiceSetup(s, saved)),
+      () => live && setSetup(null),
     );
     return () => {
       live = false;
       window.clearTimeout(giveUp);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fromStatus only reads `choice`
-  }, [api, choice, enabled]);
+  }, [api, enabled, saved]);
   return useMemo(() => {
-    if (!api || voices === null) return null;
-    if (voices === undefined) return { voices: [], speak: api.speak, pending: true };
-    return { voices, speak: api.speak };
-  }, [api, voices]);
+    if (!api || setup === null) return null;
+    if (setup === undefined) return { voices: [], speak: api.speak, pending: true };
+    return { voices: setup.voices, speak: api.speak, pace: setup.pace };
+  }, [api, setup]);
 }

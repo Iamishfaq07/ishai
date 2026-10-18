@@ -25,6 +25,14 @@ def _account(client: TestClient) -> dict[str, str]:
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 
+def _admin_is(monkeypatch: pytest.MonkeyPatch, uid: str | None) -> None:
+    """Only `uid` is the admin here (None: nobody), whoever registered first in the test run."""
+    async def admin(_db: Any, user: Any) -> bool:
+        return uid is not None and str(user.id) == uid
+
+    monkeypatch.setattr(voice, "is_admin", admin)
+
+
 def _deepgram(monkeypatch: pytest.MonkeyPatch, status: int = 200, seen: list[Any] | None = None) -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         if seen is not None:
@@ -39,21 +47,24 @@ def _deepgram(monkeypatch: pytest.MonkeyPatch, status: int = 200, seen: list[Any
 
 def test_without_a_key_the_device_voice_is_used(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     h = _account(client)
+    _admin_is(monkeypatch, None)
     monkeypatch.setattr(voice, "get_tts_provider", lambda: None)
     s = client.get("/v1/voice", headers=h).json()
-    assert s == {"available": False, "voices": [], "default_voice": "vesta", "chars_left": 0}
-    assert client.post("/v1/voice/speak", headers=h, json={"text": "Hi"}).status_code == 503
+    assert s == {"available": False, "voices": [], "default_voice": "aurora", "chars_left": 0, "can_choose": False}
+    off = client.post("/v1/voice/speak", headers=h, json={"text": "Hi"})
+    assert off.status_code == 503 and off.json()["detail"]["code"] == "voice_off"
 
 
 def test_speaks_through_the_api_and_counts_characters(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     h = _account(client)
+    _admin_is(monkeypatch, None)
     seen: list[httpx.Request] = []
     _deepgram(monkeypatch, seen=seen)
     s = client.get("/v1/voice", headers=h).json()
-    # A small choice of real Aura-2 voices (D76): two women's, two men's, Vesta first.
+    # Real Aura-2 voices (D76): two women's, two men's, Aurora (everyone's) first; the rest are a panel's.
     assert s["available"] is True and [v["model"] for v in s["voices"]] == [
-        "aura-2-vesta-en", "aura-2-aurora-en", "aura-2-pluto-en", "aura-2-arcas-en"]
-    assert s["default_voice"] == "vesta"
+        "aura-2-aurora-en", "aura-2-vesta-en", "aura-2-pluto-en", "aura-2-arcas-en"]
+    assert s["default_voice"] == "aurora" and s["can_choose"] is False
     assert s["chars_left"] == get_settings().tts_daily_chars
     r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "arcas"})
     assert r.status_code == 200, r.text
@@ -74,7 +85,8 @@ def test_the_daily_allowance_and_limits(client: TestClient, monkeypatch: pytest.
     monkeypatch.setattr(get_settings(), "tts_daily_chars", 30)
     assert client.post("/v1/voice/speak", headers=h, json={"text": "x" * 20}).status_code == 200
     over = client.post("/v1/voice/speak", headers=h, json={"text": "y" * 20})
-    assert over.status_code == 429 and "device's voice" in over.json()["detail"]
+    assert over.status_code == 429 and "device's voice" in over.json()["detail"]["message"]
+    assert over.json()["detail"]["code"] == "voice_allowance_used"  # the client stops asking for the session
     assert client.post("/v1/voice/speak", headers=h, json={"text": "x" * 801}).status_code == 422
     # A voice saved by an older client (uk, au) gets the one voice instead of failing.
     old_choice = client.post("/v1/voice/speak", headers=h, json={"text": "hi", "voice": "uk"})
@@ -84,6 +96,7 @@ def test_the_daily_allowance_and_limits(client: TestClient, monkeypatch: pytest.
 def test_a_pace_goes_to_deepgram_or_falls_back_to_the_normal_one(client: TestClient,
                                                                   monkeypatch: pytest.MonkeyPatch) -> None:
     h = _account(client)
+    _admin_is(monkeypatch, _uid(client, h))  # only the admin's pace is used (the next test)
     seen: list[httpx.Request] = []
     _deepgram(monkeypatch, seen=seen)
     r = client.post("/v1/voice/speak", headers=h, json={"text": "Tell me about yourself.", "speed": 0.9})
@@ -100,6 +113,25 @@ def test_a_pace_goes_to_deepgram_or_falls_back_to_the_normal_one(client: TestCli
     monkeypatch.setattr(voice, "get_tts_provider", lambda: provider)
     r = client.post("/v1/voice/speak", headers=h, json={"text": "Tell me about yourself.", "speed": 1.15})
     assert r.status_code == 200 and r.content == AUDIO and r.headers["x-orbit-speed"] == "1"
+
+
+def test_only_the_admin_picks_the_voice_and_pace(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Saba is Aurora at the normal pace for everyone (the owner, D76); the admin can still pick both, to test."""
+    admin, user = _account(client), _account(client)
+    _admin_is(monkeypatch, _uid(client, admin))
+    seen: list[httpx.Request] = []
+    _deepgram(monkeypatch, seen=seen)
+    assert client.get("/v1/voice", headers=admin).json()["can_choose"] is True
+    s = client.get("/v1/voice", headers=user).json()
+    assert s["can_choose"] is False and s["default_voice"] == "aurora"
+    # A pace an older client saved is ignored for anyone but the admin.
+    r = client.post("/v1/voice/speak", headers=user, json={"text": "Tell me about yourself.", "speed": 1.12})
+    assert r.status_code == 200 and "speed" not in seen[-1].url.params and r.headers["x-orbit-speed"] == "1"
+    r = client.post("/v1/voice/speak", headers=admin, json={"text": "Tell me about yourself.", "speed": 1.12})
+    assert r.status_code == 200 and seen[-1].url.params["speed"] == "1.12" and r.headers["x-orbit-speed"] == "1.12"
+    # No voice named: Aurora.
+    assert client.post("/v1/voice/speak", headers=user, json={"text": "Hi there."}).status_code == 200
+    assert seen[-1].url.params["model"] == "aura-2-aurora-en"
 
 
 def test_a_provider_failure_is_a_json_error_and_free(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
