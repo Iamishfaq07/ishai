@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { JobOfferRecord, OfferInput } from "@orbit/types";
-import { Spot, Check, CircleAlert, Copy, CosmicEmptyState, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
+import { Spot, CircleAlert, CopyButton, CosmicEmptyState, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
 import { Button, Card, ErrorNote, IconButton } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -187,12 +187,6 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
 
 function PlanView({ offer: o }: { offer: JobOfferRecord }) {
   const p = o.plan!;
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(`Subject: ${p.email.subject}\n\n${p.email.body}`).catch(() => undefined);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  };
   const raise = p.ask - o.fixed;
   const terms = offerTerms(useCountry());
   return (
@@ -212,9 +206,7 @@ function PlanView({ offer: o }: { offer: JobOfferRecord }) {
       <div>
         <div className="mb-1 flex items-center justify-between gap-2">
           <h3 className="text-sm font-semibold">The email after</h3>
-          <Button size="sm" variant="ghost" onClick={() => void copy()}>
-            {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />} {copied ? "Copied" : "Copy"}
-          </Button>
+          <CopyButton variant="ghost" text={`Subject: ${p.email.subject}\n\n${p.email.body}`} />
         </div>
         <div className="whitespace-pre-wrap rounded-lg border border-zinc-200 p-3 text-sm dark:border-white/10">
           <p className="mb-2 font-medium">Subject: {p.email.subject}</p>

@@ -59,7 +59,7 @@ function Choice({
       aria-pressed={pressed}
       onClick={onClick}
       className={cx(
-        "group flex w-full items-center gap-4 rounded-2xl p-4 text-left ring-1 transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.99] motion-reduce:transform-none",
+        "group flex w-full items-center gap-4 rounded-2xl p-4 text-left ring-1 transition-[background-color,box-shadow,transform] duration-quick active:scale-[0.99] motion-reduce:transform-none",
         pressed
           ? "bg-indigo-500/10 ring-2 ring-indigo-500 dark:bg-indigo-400/10 dark:ring-indigo-300"
           : "bg-white/80 ring-zinc-200 hover:bg-white hover:ring-indigo-400/50 dark:bg-white/[0.04] dark:ring-white/10 dark:hover:bg-white/[0.07]",
@@ -186,7 +186,7 @@ export function WelcomePage() {
             {Array.from({ length: QUESTIONS }, (_, i) => (
               <span
                 key={i}
-                className={cx("h-1.5 rounded-full transition-colors duration-300", i <= step ? "bg-indigo-600" : "bg-zinc-200 dark:bg-white/10")}
+                className={cx("h-1.5 rounded-full transition-colors duration-panel", i <= step ? "bg-indigo-600" : "bg-zinc-200 dark:bg-white/10")}
               />
             ))}
           </div>

@@ -65,6 +65,7 @@ import {
   safeLocal,
   contextDocumentIds,
   contextSessionFields,
+  MorphLabel,
 } from "@orbit/ui";
 import { getVersion } from "@tauri-apps/api/app";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -85,7 +86,7 @@ import {
 } from "../native";
 import { PreflightPanel, type LocalAudioState } from "../PreflightPanel";
 import { SignInAgain } from "../SignInAgain";
-import { TitleBar } from "../TitleBar";
+import { TitleBar, TitleBarButton } from "../TitleBar";
 import { roughDuration } from "../token";
 import { UpdateBanner } from "../UpdateBanner";
 import { confirmSessionDuringUpdate, useUpdatePhase } from "../updates";
@@ -586,22 +587,14 @@ export function SetupScreen({
   return (
     <div className="flex h-full flex-col">
       <TitleBar update={false}>
-        <button type="button" onClick={onBack} className={cx("inline-flex items-center gap-1 rounded px-1.5 text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200", focusRing)}>
+        <button type="button" onClick={onBack} className={cx("inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-800 active:bg-zinc-900/10 dark:hover:bg-white/10 dark:hover:text-zinc-200 dark:active:bg-white/15", focusRing)}>
           <ArrowLeft className="h-3.5 w-3.5" />
           Home
         </button>
-        <button type="button" onClick={onOpenDocuments} title="Documents" aria-label="Documents" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          <FileText className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={onOpenHistory} title="History" aria-label="History" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          <HistoryIcon className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={onOpenSettings} title="Settings" aria-label="Settings" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          <SettingsIcon className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={onSignOut} title="Sign out" aria-label="Sign out" className={cx("rounded p-1 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200", focusRing)}>
-          <LogOut className="h-4 w-4" />
-        </button>
+        <TitleBarButton icon={FileText} label="Documents" onClick={onOpenDocuments} />
+        <TitleBarButton icon={HistoryIcon} label="History" onClick={onOpenHistory} />
+        <TitleBarButton icon={SettingsIcon} label="Settings" onClick={onOpenSettings} />
+        <TitleBarButton icon={LogOut} label="Sign out" onClick={onSignOut} />
       </TitleBar>
       {notice}
       <UpdateBanner />
@@ -1126,26 +1119,24 @@ export function SetupScreen({
               )}
             </div>
           )}
-          <button
+          {/* The system's primary button: its press, a spinner with "Starting…" at the same width, and why it can't
+              start yet (the words on it say it; the tooltip repeats it for a negotiation without the offer). */}
+          <Button
             type="submit"
-            disabled={
-              starting ||
-              restartingToUpdate ||
-              (negotiation && offer.trim().length < 2) ||
-              (blockers.length > 0 && !overrideBlockers)
-            }
-            className={cx("w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-50", focusRing)}
+            className="w-full"
+            loading={starting}
+            loadingText="Starting…"
+            disabled={restartingToUpdate || (negotiation && offer.trim().length < 2) || (blockers.length > 0 && !overrideBlockers)}
+            disabledReason={negotiation && offer.trim().length < 2 && !restartingToUpdate && !(blockers.length > 0 && !overrideBlockers) ? "Add the offer you were given first" : undefined}
           >
-            {starting
-              ? "Starting…"
-              : restartingToUpdate
-                ? "Restarting to update…"
-                : blockers.length > 0 && !overrideBlockers
-                  ? outOfMinutes
-                    ? "Out of interview minutes"
-                    : `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
-                  : "Start Session"}
-          </button>
+            {restartingToUpdate
+              ? "Restarting to update…"
+              : blockers.length > 0 && !overrideBlockers
+                ? outOfMinutes
+                  ? "Out of interview minutes"
+                  : `Fix ${blockers.length} problem${blockers.length === 1 ? "" : "s"} to start`
+                : "Start Session"}
+          </Button>
           {outOfMinutes && !starting && (
             <Button className="w-full" variant="secondary" onClick={() => openBilling()}>
               <CreditCard className="h-4 w-4" />
@@ -1370,7 +1361,7 @@ function AudioTest({
             title="Copies a report with measurements and device settings only: no audio, transcript or account details"
             className={cx("rounded-lg px-2 py-1 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800", focusRing)}
           >
-            {copied ? "Copied" : "Copy diagnostics"}
+            <MorphLabel show={copied ? "copied" : "idle"} states={{ idle: "Copy diagnostics", copied: "Copied" }} />
           </button>
         )}
       </div>

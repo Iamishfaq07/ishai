@@ -78,6 +78,7 @@ import {
   Trash2,
   type SortDirection,
 } from "@orbit/ui";
+import { InteractionGallery } from "./InteractionGallery";
 import { TranscriptDemo } from "./TranscriptGallery";
 import { VoiceVisualizers } from "./VoiceGallery";
 import { KashSecContext, KashSecFeature, KashSecHomeCard } from "../../components/KashSec";
@@ -97,6 +98,7 @@ export function ComponentGalleryPage() {
         actions={<Button variant="secondary" onClick={() => document.documentElement.classList.toggle("dark")}>Toggle theme</Button>}
       />
       <Buttons />
+      <InteractionGallery />
       <Feedback />
       <Overlays />
       <Forms />

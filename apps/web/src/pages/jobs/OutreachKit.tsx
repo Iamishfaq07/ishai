@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { JobStatus, LinkedInProfile, NaukriProfile, OutreachInputs, OutreachKind, OutreachMessage, Resume } from "@orbit/types";
 import {
-  Copy,
+  CopyButton as SharedCopyButton,
   Sparkles,
   KIT_LIMITS,
   KIT_SHOWN_FIRST,
@@ -15,7 +15,6 @@ import {
   regionWords,
   shownFirst,
   skillList,
-  toast,
   WorkingState,
   type MessageKit,
 } from "@orbit/ui";
@@ -305,22 +304,9 @@ function Box({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+/** Copies a field; the button itself says "Copied" (the shared CopyButton). */
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
-  return (
-    <Button
-      size="sm"
-      variant="secondary"
-      disabled={!text.trim()}
-      onClick={() =>
-        void navigator.clipboard.writeText(text).then(
-          () => toast("Copied"),
-          () => toast({ message: "Couldn't copy", tone: "error" }),
-        )
-      }
-    >
-      <Copy className="h-3.5 w-3.5" /> {label}
-    </Button>
-  );
+  return <SharedCopyButton text={text} label={label} />;
 }
 
 /** A text the site limits by characters (`chars`) or words (`words`), with its count, what shows first, and Copy. */

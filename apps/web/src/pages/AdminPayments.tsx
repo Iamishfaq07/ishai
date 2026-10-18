@@ -81,8 +81,8 @@ export function AdminPaymentsPage() {
               : "Card payments: nothing waiting. Open orders are checked with Razorpay and PayPal automatically every few minutes."}
             {checked && <span role="status" className="mt-1 block text-xs">{checked}</span>}
           </p>
-          <Button size="sm" variant="secondary" onClick={() => void reconcile()} disabled={checking}>
-            {checking ? "Checking…" : "Check open orders now"}
+          <Button size="sm" variant="secondary" onClick={() => void reconcile()} loading={checking} loadingText="Checking…">
+            Check open orders now
           </Button>
         </div>
       )}

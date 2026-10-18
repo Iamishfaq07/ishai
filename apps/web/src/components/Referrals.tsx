@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { ReferralInvite, ReferralOffer } from "@orbit/types";
-import { Copy, MessageCircle, Send, Sparkles, Users, buttonClass, cx, focusRing, toast } from "@orbit/ui";
+import { CopyButton, MessageCircle, Send, Sparkles, Users, buttonClass, cx, focusRing, toast } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input } from "./ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -83,16 +83,6 @@ export function CodeEntry({ offer, canEnter, prefill, onApplied }: {
 
 /** Invite friends: the link, Copy / Share / WhatsApp, and how it's gone so far. */
 export function InviteFriends({ invite }: { invite: ReferralInvite }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(invite.link);
-      setCopied(true);
-      toast("Link copied");
-    } catch {
-      toast({ message: "Couldn't copy. Select the link and copy it.", tone: "error" });
-    }
-  };
   const share = async () => {
     try {
       await navigator.share({ title: "Orbit AI", text: invite.share_text });
@@ -119,9 +109,12 @@ export function InviteFriends({ invite }: { invite: ReferralInvite }) {
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <Input readOnly value={invite.link} aria-label="Your invite link" onFocus={(e) => e.currentTarget.select()} className="font-mono text-xs sm:text-sm" />
         <div className="flex shrink-0 gap-2">
-          <Button variant="secondary" onClick={() => void copy()}>
-            <Copy className="h-4 w-4" aria-hidden="true" /> {copied ? "Copied" : "Copy"}
-          </Button>
+          <CopyButton
+            size="md"
+            text={invite.link}
+            copiedLabel="Link copied"
+            onFailed={() => toast({ message: "Couldn't copy. Select the link and copy it.", tone: "error" })}
+          />
           {canShare && (
             <Button variant="secondary" onClick={() => void share()}>
               <Send className="h-4 w-4" aria-hidden="true" /> Share

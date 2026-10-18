@@ -6,7 +6,7 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
-  Copy,
+  CopyButton as SharedCopyButton,
   ShieldCheck,
   Sparkles,
   Target,
@@ -18,7 +18,6 @@ import {
   focusRing,
   practiceDocuments,
   practiceDrill,
-  toast,
   practiceMinutes,
   prepText,
   questionText,
@@ -471,23 +470,9 @@ function GapPanel({ resume, state, setState, hasJob, onShowJob }: {
   );
 }
 
+/** Copies a block; the button itself says "Copied" (the shared CopyButton). */
 function CopyButton({ text, label, small }: { text: string; label: string; small?: boolean }) {
-  return (
-    <Button
-      size="sm"
-      variant={small ? "ghost" : "secondary"}
-      className="whitespace-nowrap"
-      disabled={!text.trim()}
-      onClick={() =>
-        void navigator.clipboard.writeText(text).then(
-          () => toast("Copied"),
-          () => toast({ message: "Couldn't copy", tone: "error" }),
-        )
-      }
-    >
-      <Copy className="h-3.5 w-3.5" /> {label}
-    </Button>
-  );
+  return <SharedCopyButton text={text} label={label} variant={small ? "ghost" : "secondary"} className="whitespace-nowrap" />;
 }
 
 /** The editor's panel (ResumeEditor.tsx), for the same look. */

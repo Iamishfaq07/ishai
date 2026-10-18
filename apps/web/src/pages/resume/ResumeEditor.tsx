@@ -45,6 +45,7 @@ import {
   CosmicEmptyState,
   Spot,
   celebrate,
+  SelectCheck,
   type SpotKind,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
@@ -659,7 +660,7 @@ function ResumeEditor() {
 
   return (
     <AllowanceContext.Provider value={allowance}>
-    <div className="animate-fade-up">
+    <div>
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <Link to={RESUME_AI_HOME} aria-label="All resumes" className={cx("rounded-lg p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
           <ArrowLeft className="h-5 w-5" />
@@ -669,7 +670,9 @@ function ResumeEditor() {
           value={resume.title}
           maxLength={160}
           onChange={(e) => change((r) => ({ ...r, title: e.target.value }))}
-          className="min-w-0 flex-1 basis-48 font-display text-lg font-semibold sm:max-w-[16rem]"
+          // A page title (PageHeader's 24 px, semibold, tight) in a field the row's 38 px high. The field's own text-sm
+          // and py-2 would otherwise win the cascade, so these are marked important.
+          className="min-w-0 flex-1 basis-48 font-display !py-0.5 !text-2xl font-semibold tracking-tight sm:max-w-[20rem]"
         />
         {/* The save state and undo/redo wrap together, so a phone never strands undo on a line of its own. */}
         <div className="flex flex-wrap items-center gap-2">
@@ -1957,11 +1960,12 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
               aria-pressed={design.template === t.id}
               onClick={() => setDesign({ template: t.id })}
               className={cx(
-                "rounded-xl border p-3 text-left transition-colors",
-                design.template === t.id ? "border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500" : "border-zinc-200 hover:border-zinc-300 dark:border-white/10",
+                "relative rounded-xl border p-3 text-left transition-colors",
+                design.template === t.id ? "border-indigo-500 bg-indigo-500/5 ring-1 ring-indigo-500" : "border-zinc-200 hover:border-zinc-300 dark:border-white/10 dark:hover:border-white/20",
                 focusRing,
               )}
             >
+              <SelectCheck on={design.template === t.id} />
               <TemplateSketch template={t.id} accent={design.accent} />
               <span className="mt-2 block text-sm font-medium">{t.label}</span>
               <span className="block text-xs text-zinc-500 dark:text-zinc-400">{t.note}</span>
@@ -1986,6 +1990,7 @@ function DesignPanel({ design, setDesign }: { design: ResumeDesign; setDesign: (
                     "h-7 w-7 rounded-full ring-offset-2 dark:ring-offset-zinc-950",
                     design.accent === c ? "ring-2 ring-zinc-900 dark:ring-white" : "ring-1 ring-black/10 dark:ring-white/25",
                     focusRing,
+                    "focus-visible:outline-offset-4",
                   )}
                 />
               ))}

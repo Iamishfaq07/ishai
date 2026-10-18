@@ -327,8 +327,9 @@ export function Layout() {
               }
             />
           )}
-          {/* Keyed on the route so each page fades up in. */}
-          <div key={pathname} className="animate-fade-up">
+          {/* Keyed on the route so each page arrives the same way: a quick fade with a 4 px rise (a fade at Gentle,
+              nothing at Off). Pages don't add their own entrance on top. */}
+          <div key={pathname} className="animate-page-in">
             {/* Inside the layout, and reset by that key on every navigation: a page that fails to load (its code gone
                 after a deploy) or to render shows an error with Reload while the nav stays usable. */}
             <ErrorBoundary fallback={(error, reset) => <AppError error={error} reset={reset} />}>
@@ -451,7 +452,7 @@ function Sidebar({
     <aside
       aria-label="Orbit"
       className={cx(
-        "sticky top-0 z-30 hidden h-[100dvh] shrink-0 flex-col border-r border-zinc-200/70 bg-white transition-[width] duration-200 md:flex dark:border-white/5 dark:bg-zinc-950",
+        "sticky top-0 z-30 hidden h-[100dvh] shrink-0 flex-col border-r border-zinc-200/70 bg-white transition-[width] duration-panel ease-standard md:flex dark:border-white/5 dark:bg-zinc-950",
         collapsed ? "w-[4.25rem]" : "w-60",
       )}
     >
@@ -525,7 +526,7 @@ function Sidebar({
 
 function sideClass(active: boolean, collapsed: boolean): string {
   return cx(
-    "relative flex min-h-10 items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-150",
+    "relative flex min-h-10 items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-quick active:bg-zinc-900/[0.08] dark:active:bg-white/10",
     collapsed ? "justify-center px-0" : "px-3",
     active
       ? "bg-zinc-900/[0.06] text-zinc-900 dark:bg-white/[0.07] dark:text-white"

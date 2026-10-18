@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Check, Copy, Mail } from "@orbit/ui";
-import { Button, Card } from "./ui";
+import { CopyButton, Mail } from "@orbit/ui";
+import { Card } from "./ui";
 
 /**
  * After salary practice: the counter-offer email to send the recruiter, written from what was offered and what the
@@ -9,12 +9,6 @@ import { Button, Card } from "./ui";
 export function CounterOfferEmail({ email }: { email: { subject: string; body: string } }) {
   const [subject, setSubject] = useState(email.subject);
   const [body, setBody] = useState(email.body);
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`).catch(() => undefined);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
-  };
   return (
     <Card>
       <h2 className="flex items-center gap-2 font-display font-semibold">
@@ -31,10 +25,7 @@ export function CounterOfferEmail({ email }: { email: { subject: string; body: s
       <textarea id="counter-body" value={body} onChange={(e) => setBody(e.target.value)} rows={9}
         className="mt-1 w-full rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm leading-relaxed dark:border-white/10" />
       <div className="mt-2">
-        <Button size="sm" variant="secondary" onClick={() => void copy()}>
-          {copied ? <Check className="h-4 w-4" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
-          {copied ? "Copied" : "Copy email"}
-        </Button>
+        <CopyButton text={() => `Subject: ${subject}\n\n${body}`} label="Copy email" />
       </div>
     </Card>
   );

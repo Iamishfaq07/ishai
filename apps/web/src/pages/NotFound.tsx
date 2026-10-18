@@ -35,7 +35,7 @@ export function NotFoundPage() {
           <ellipse cx="70" cy="70" rx="62" ry="18" fill="none" stroke="rgb(var(--site-line-strong))" strokeWidth="1" strokeDasharray="3 5" />
           <circle cx="70" cy="70" r="24" fill="rgb(var(--site-surface))" stroke="rgb(var(--site-line-strong))" strokeWidth="1" />
           <path d="M52 62 a24 24 0 0 1 36 -6" fill="none" stroke="rgb(var(--accent-500))" strokeWidth="1.5" strokeLinecap="round" />
-          <g ref={probe} style={{ transition: "transform 240ms cubic-bezier(0.22, 1, 0.36, 1)" }}>
+          <g ref={probe} style={{ transition: "transform var(--dur-panel) var(--ease-standard)" }}>
             <g className="cosmic-float">
               <line x1="150" y1="44" x2="132" y2="58" stroke="rgb(var(--accent-500))" strokeOpacity="0.5" strokeWidth="1" strokeDasharray="2 3" />
               <rect x="150" y="30" width="22" height="16" rx="3" fill="rgb(var(--site-surface))" stroke="rgb(var(--accent-600))" strokeWidth="1.25" />

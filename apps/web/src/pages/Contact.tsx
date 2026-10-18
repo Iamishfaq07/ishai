@@ -345,8 +345,8 @@ export function ContactPage() {
                 {error && <ErrorNote>{error}</ErrorNote>}
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <Button type="submit" size="lg" loading={busy} disabled={!user && captcha === undefined} className="w-full sm:w-auto">
-                    <Send className="h-4 w-4" aria-hidden /> {busy ? "Sending…" : "Send message"}
+                  <Button type="submit" size="lg" loading={busy} loadingText="Sending…" disabled={!user && captcha === undefined} className="w-full sm:w-auto">
+                    <Send className="h-4 w-4" aria-hidden /> Send message
                   </Button>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     We keep your message to answer it.{" "}

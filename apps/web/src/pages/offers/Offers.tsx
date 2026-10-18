@@ -219,7 +219,7 @@ function PayCheck() {
         <Field label="City (optional)" htmlFor="pc-city">
           <Input id="pc-city" value={city} maxLength={80} onChange={(e) => setCity(e.target.value)} />
         </Field>
-        <Button type="submit" variant="secondary" disabled={busy || role.trim().length < 2}>{busy ? "Checking…" : "Check pay"}</Button>
+        <Button type="submit" variant="secondary" loading={busy} loadingText="Checking…" disabled={role.trim().length < 2} disabledReason="Add the role first">Check pay</Button>
       </form>
       {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
       {result === null && <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">Too few posts for that role showed pay to say. Try a broader title, or no city.</p>}

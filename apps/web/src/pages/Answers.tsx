@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { SavedAnswer, SavedAnswerInput } from "@orbit/types";
-import { Spot, CosmicEmptyState, LoadGate, MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog } from "@orbit/ui";
+import { Spot, CosmicEmptyState, LoadGate, MessageSquareQuote, PenLine, Plus, Search, Target, Trash2, confirmDialog, useFlip } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { answerPracticeSession } from "../lib/answerPractice";
 import { api } from "../lib/api";
@@ -48,8 +48,8 @@ function AnswerEditor({ initial, heading, onSave, onCancel }: {
         </Field>
         {error && <ErrorNote>{error}</ErrorNote>}
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving || !a.question.trim() || !a.answer.trim()}>
-            {saving ? "Saving…" : "Save answer"}
+          <Button type="submit" loading={saving} loadingText="Saving…" disabled={!a.question.trim() || !a.answer.trim()}>
+            Save answer
           </Button>
           <Button variant="ghost" onClick={onCancel}>
             Cancel
@@ -118,6 +118,8 @@ export function AnswersPage() {
     const q = query.trim().toLowerCase();
     return q ? list.filter((a) => `${a.question}\n${a.answer}`.toLowerCase().includes(q)) : list;
   }, [list, query]);
+  // Answers glide into place as one is saved, deleted, opened to edit or searched away (useFlip).
+  const gridRef = useFlip<HTMLDivElement>(shown.map((a) => (editing?.id === a.id ? "" : a.id)).join());
 
   const startNew = () => {
     setEditing({ id: null, initial: EMPTY, heading: "New answer" });
@@ -215,20 +217,21 @@ export function AnswersPage() {
           {shown.length === 0 ? (
             <EmptyState kind="no-results" title="No answers match" body="Try another word from the question or answer." />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div ref={gridRef} className="grid gap-4 md:grid-cols-2">
               {shown.map((a) =>
                 editing?.id === a.id ? null : (
-                  <AnswerCard
-                    key={a.id}
-                    saved={a}
-                    onEdit={() => {
-                      setEditing({ id: a.id, initial: { question: a.question, answer: a.answer }, heading: "Edit answer" });
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                    onDelete={() => void remove(a)}
-                    onPractise={() => void practise(a)}
-                    practising={practisingId === a.id}
-                  />
+                  <div key={a.id} data-flip={a.id} className="grid">
+                    <AnswerCard
+                      saved={a}
+                      onEdit={() => {
+                        setEditing({ id: a.id, initial: { question: a.question, answer: a.answer }, heading: "Edit answer" });
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      onDelete={() => void remove(a)}
+                      onPractise={() => void practise(a)}
+                      practising={practisingId === a.id}
+                    />
+                  </div>
                 ),
               )}
             </div>

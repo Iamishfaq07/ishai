@@ -94,10 +94,11 @@ type Cta = { label: string; to?: string; from?: string; onClick?: () => void; di
 
 function CtaButton({ cta }: { cta: Cta }) {
   const cls = cx(
-    "mt-6 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold transition",
+    // .btn: the system's colour easing and press (base.css); each a step darker when pressed.
+    "btn mt-6 inline-flex w-full items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold",
     cta.primary
-      ? "bg-indigo-600 text-white hover:bg-indigo-700"
-      : "bg-zinc-900/5 text-zinc-900 ring-1 ring-zinc-900/10 hover:bg-zinc-900/10 dark:bg-white/5 dark:text-white dark:ring-white/10 dark:hover:bg-white/10",
+      ? "bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800"
+      : "bg-zinc-900/5 text-zinc-900 ring-1 ring-zinc-900/10 hover:bg-zinc-900/10 active:bg-zinc-900/[0.14] dark:bg-white/5 dark:text-white dark:ring-white/10 dark:hover:bg-white/10 dark:active:bg-white/[0.14]",
     cta.disabled && "pointer-events-none opacity-50",
     focusRing,
   );

@@ -34,7 +34,7 @@ export function WindowButtons({ minimize, hide }: { minimize: () => void; hide: 
         type="button"
         onClick={minimize}
         aria-label="Minimize"
-        className={cx("inline-flex items-center rounded-lg p-1.5 text-xs text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-zinc-100", focusRing)}
+        className={cx("hit-area relative inline-flex items-center rounded-lg p-1.5 text-xs text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-800 active:bg-zinc-900/10 dark:hover:bg-white/10 dark:hover:text-zinc-100 dark:active:bg-white/15", focusRing)}
       >
         <Minus className="h-3.5 w-3.5" />
       </button>
@@ -43,7 +43,7 @@ export function WindowButtons({ minimize, hide }: { minimize: () => void; hide: 
         onClick={hide}
         aria-label="Close"
         title="Close — hide to tray or quit"
-        className={cx("inline-flex items-center rounded-lg p-1.5 text-xs text-zinc-500 hover:bg-rose-500/15 hover:text-rose-600 dark:hover:text-rose-300", focusRing)}
+        className={cx("hit-area relative inline-flex items-center rounded-lg p-1.5 text-xs text-zinc-500 hover:bg-rose-500/15 hover:text-rose-600 active:bg-rose-500/25 dark:hover:text-rose-300", focusRing)}
       >
         <X className="h-3.5 w-3.5" />
       </button>
@@ -60,7 +60,7 @@ export function TitleBarButton({ icon: Icon, label, onClick }: { icon: LucideIco
       title={label}
       aria-label={label}
       className={cx(
-        "inline-flex items-center rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-800 dark:hover:bg-white/10 dark:hover:text-zinc-100",
+        "hit-area relative inline-flex items-center rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-800 active:bg-zinc-900/10 dark:hover:bg-white/10 dark:hover:text-zinc-100 dark:active:bg-white/15",
         focusRing,
       )}
     >

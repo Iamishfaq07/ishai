@@ -168,8 +168,8 @@ export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () 
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" form={formId} disabled={busy || !ready || Boolean(info?.tracked)}>
-            {busy ? "Adding…" : "Add to tracker"}
+          <Button type="submit" form={formId} loading={busy} loadingText="Adding…" disabled={!ready || Boolean(info?.tracked)}>
+            Add to tracker
           </Button>
         </DialogActions>
       }

@@ -129,7 +129,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
             type="button"
             onClick={() => choose("tray")}
             className={cx(
-              "flex items-center gap-3 rounded-xl bg-indigo-600 px-3 py-2.5 text-left text-sm font-medium text-white hover:bg-indigo-500",
+              "flex items-center gap-3 rounded-xl bg-indigo-600 px-3 py-2.5 text-left text-sm font-medium text-white hover:bg-indigo-700 active:bg-indigo-800",
               focusRing,
             )}
           >
@@ -143,7 +143,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
             type="button"
             onClick={() => choose("quit")}
             className={cx(
-              "group flex items-center gap-3 rounded-xl border border-zinc-200 px-3 py-2.5 text-left text-sm font-medium text-zinc-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-rose-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-300",
+              "group flex items-center gap-3 rounded-xl border border-zinc-200 px-3 py-2.5 text-left text-sm font-medium text-zinc-700 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:border-rose-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 dark:active:bg-rose-950/70",
               focusRing,
             )}
           >
@@ -153,7 +153,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className={cx("rounded-xl px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800", focusRing)}
+            className={cx("rounded-xl px-3 py-2 text-sm text-zinc-600 hover:bg-zinc-100 active:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:active:bg-zinc-700", focusRing)}
           >
             Cancel
           </button>

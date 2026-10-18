@@ -331,8 +331,8 @@ function ContactForm({ initial, jobs, heading, onCancel, onSave }: {
           <Textarea id="pc-notes" rows={3} maxLength={4000} placeholder="Where you met, what they said, what you promised to send" value={f.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
         </Field>
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving || !f.name.trim()}>
-            {saving ? "Saving…" : "Save"}
+          <Button type="submit" loading={saving} loadingText="Saving…" disabled={!f.name.trim()} disabledReason="Add their name first">
+            Save
           </Button>
           <Button type="button" variant="ghost" onClick={onCancel}>
             Cancel
