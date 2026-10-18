@@ -28,12 +28,14 @@ import {
   CosmicEmptyState,
   roundLabel,
   celebrate,
+  useMediaQuery,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import type { AsyncState } from "../../lib/useAsync";
 import { useIndia } from "../../lib/country";
+import { useProgressiveCount } from "../../lib/useProgressive";
 import { resumePath } from "../resume/paths";
 import { AddJob } from "./AddJob";
 import { useJobsAi } from "./JobsAi";
@@ -131,6 +133,10 @@ export function JobTrackerPage() {
  */
 export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerEntry[]>; onAdd?: () => void }) {
   const india = useIndia();
+  // One layout is drawn, the one the screen shows: both (one hidden by CSS) doubled every card, 65,000 elements for
+  // 400 jobs. Long lists come a batch at a time (lib/useProgressive.ts), so the page answers while they draw.
+  const wide = useMediaQuery("(min-width: 1024px)");
+  const drawn = useProgressiveCount(tracker.data?.length ?? 0);
   const [filter, setFilter] = useState<JobStatus | "all">("all");
   const [error, setError] = useState<string | null>(null);
   const entries = tracker.data ?? [];
@@ -212,7 +218,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       {error && <ErrorNote>{error}</ErrorNote>}
 
       {/* Phones and tablets: one list, with a filter. */}
-      <div className="lg:hidden">
+      {!wide && <div className="lg:hidden">
         <div className="edge-fade-x -mx-4 mb-3 flex gap-1.5 overflow-x-auto px-4 pb-1" role="group" aria-label="Show">
           {(["all", ...STATUSES] as const).map((s) => (
             <button
@@ -231,16 +237,16 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
           ))}
         </div>
         <ul className="space-y-3">
-          {shown.map((e) => (
+          {shown.slice(0, drawn).map((e) => (
             <li key={e.id}>
               <TrackerCard entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
             </li>
           ))}
         </ul>
-      </div>
+      </div>}
 
       {/* Wide screens: a board, one column per status. */}
-      <div className="hidden gap-3 lg:grid lg:grid-cols-5">
+      {wide && <div className="hidden gap-3 lg:grid lg:grid-cols-5">
         {STATUSES.map((s) => (
           <section key={s} aria-label={STATUS_LABEL[s]} className="relative min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
             <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_MARK[s])} />
@@ -249,7 +255,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
               <span className="text-xs font-normal text-zinc-500 tabular-nums dark:text-zinc-400">{columns[s].length}</span>
             </h3>
             <ul className="space-y-2.5">
-              {columns[s].map((e) => (
+              {columns[s].slice(0, drawn).map((e) => (
                 <li key={e.id}>
                   <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
                 </li>
@@ -257,7 +263,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
             </ul>
           </section>
         ))}
-      </div>
+      </div>}
 
       {pickedEntries.length > 0 && (
         <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-popover backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
@@ -299,6 +305,8 @@ function TrackerCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [journey, setJourney] = useState(false);
+  // What's under More is drawn once it's opened: on a long board it was a third of every card, never seen.
+  const [more, setMore] = useState(false);
   const original = safeUrl(entry.url);
   const apply = safeUrl(entry.apply_url);
   const manual = isManual(entry);
@@ -405,7 +413,7 @@ function TrackerCard({
           </button>
         )}
       </div>
-      <details className="group mt-1.5 text-xs">
+      <details className="group mt-1.5 text-xs" onToggle={(e) => setMore(e.currentTarget.open)}>
         <summary
           className={cx(
             "inline-flex cursor-pointer list-none items-center gap-1 rounded font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 [&::-webkit-details-marker]:hidden",
@@ -414,7 +422,7 @@ function TrackerCard({
         >
           <MoreHorizontal className="h-3.5 w-3.5" aria-hidden /> More<span className="sr-only"> for {entry.title}</span>
         </summary>
-        <ul className="mt-1.5 space-y-1 border-l border-zinc-200 pl-3 dark:border-white/10">
+        {more && <ul className="mt-1.5 space-y-1 border-l border-zinc-200 pl-3 dark:border-white/10">
           {entry.resume_id && (
             <li>
               <Link to={resumePath(entry.resume_id)} className={cx(cardAction, focusRing)}>
@@ -467,7 +475,7 @@ function TrackerCard({
               </button>
             </li>
           )}
-        </ul>
+        </ul>}
       </details>
 
       {journey && <Journey entryId={entry.id} />}

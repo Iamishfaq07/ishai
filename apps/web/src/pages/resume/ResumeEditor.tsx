@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useParams } from "react-router-dom";
 import type { AtsCheck, AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
@@ -600,9 +600,22 @@ function ResumeEditor() {
   const [printing, setPrinting] = useState<"resume" | "letter">("resume");
   // The job post's keywords marked on the on-screen preview (never the printed copy).
   const [showKeywords, setShowKeywords] = useState(true);
+  // The preview and the print copy draw the resume a moment behind the form (React's deferred value): a keystroke
+  // repaints the field at once, and the two full-page renders (and the preview's layout measuring) follow when the
+  // browser is free, instead of every keystroke waiting for them (~340 ms a key on a mid-range phone).
+  const previewData = useDeferredValue(resume?.data ?? null);
+  const previewDesign = useDeferredValue(resume?.design ?? null);
+  const previewLetter = useDeferredValue(resume?.cover_letter ?? "");
+  // Printing draws the copy from the resume as it is this instant, not the deferred one.
+  const [printFresh, setPrintFresh] = useState(false);
+  const onFit = useLatestCallback((design: ResumeDesign) => change((r) => ({ ...r, design })));
+  const onShorten = useLatestCallback((linesOver: number) => void askAi("shorten", undefined, undefined, linesOver));
   const printDoc = (kind: "resume" | "letter") => {
     if (!resume) return;
-    flushSync(() => setPrinting(kind));
+    flushSync(() => {
+      setPrinting(kind);
+      setPrintFresh(true);
+    });
     const previous = document.title;
     document.title = fileName(resume, kind === "letter" ? "Cover letter" : "Resume");
     window.addEventListener(
@@ -610,6 +623,7 @@ function ResumeEditor() {
       () => {
         document.title = previous;
         setPrinting("resume");
+        setPrintFresh(false);
       },
       { once: true },
     );
@@ -884,15 +898,15 @@ function ResumeEditor() {
               </div>
             )}
             {tab === "letter" ? (
-              <ScaledLetter data={resume.data} design={resume.design} text={resume.cover_letter} />
+              <ScaledLetter data={previewData ?? resume.data} design={previewDesign ?? resume.design} text={previewLetter} />
             ) : (
               <div className="relative">
                 {scan > 0 && <span key={scan} aria-hidden="true" className="laser-scan absolute inset-0 z-10" />}
                 <ScaledPage
-                  data={resume.data}
-                  design={resume.design}
-                  onFit={(design) => change((r) => ({ ...r, design }))}
-                  onShorten={(linesOver) => void askAi("shorten", undefined, undefined, linesOver)}
+                  data={previewData ?? resume.data}
+                  design={previewDesign ?? resume.design}
+                  onFit={onFit}
+                  onShorten={onShorten}
                   shortening={aiBusy !== null}
                   highlight={tab === "ai" ? (queue[0] ? [queue[0].path] : []) : tab === "content" ? (editing ? [editing] : []) : tab === "score" ? pointing : []}
                   keywords={showKeywords ? (report?.keywords?.matched ?? []) : []}
@@ -902,7 +916,11 @@ function ResumeEditor() {
           </div>
         </div>
       </div>
-      <PrintCopy data={resume.data} design={resume.design} letter={printing === "letter" ? resume.cover_letter : null} />
+      <PrintCopy
+        data={printFresh ? resume.data : (previewData ?? resume.data)}
+        design={printFresh ? resume.design : (previewDesign ?? resume.design)}
+        letter={printing === "letter" ? (printFresh ? resume.cover_letter : previewLetter) : null}
+      />
     </div>
     </AllowanceContext.Provider>
   );
@@ -1081,7 +1099,7 @@ function useScaledPage(size: ResumeDesign["page"]) {
   return { box, page, scale, realHeight };
 }
 
-function ScaledLetter({ data, design, text }: { data: ResumeData; design: ResumeDesign; text: string }) {
+const ScaledLetter = memo(function ScaledLetter({ data, design, text }: { data: ResumeData; design: ResumeDesign; text: string }) {
   const { box, page, scale, realHeight } = useScaledPage(design.page);
   return (
     <div ref={box} className="w-full" aria-label="Cover letter preview" role="img" style={{ height: realHeight * scale }}>
@@ -1090,7 +1108,7 @@ function ScaledLetter({ data, design, text }: { data: ResumeData; design: Resume
       </div>
     </div>
   );
-}
+});
 
 /** The page at real size, scaled down to fit the column, with where page 2 (and 3…) would start when printed. */
 /** The preview element for a path: the line itself, else what it's part of ("experience.<id>.bullets.+" -> the role). */
@@ -1102,7 +1120,9 @@ function previewTarget(root: Element, path: string): HTMLElement | null {
   return null;
 }
 
-function ScaledPage({
+/** Re-drawn only when what it shows changes: its callbacks are stable (useLatestCallback) and the marked paths and
+ *  keywords are compared by value, as the editor builds new arrays every render. */
+const ScaledPage = memo(function ScaledPage({
   data,
   design,
   onFit,
@@ -1221,6 +1241,19 @@ function ScaledPage({
       )}
     </div>
   );
+}, (a, b) =>
+  a.data === b.data && a.design === b.design && a.onFit === b.onFit && a.onShorten === b.onShorten &&
+  a.shortening === b.shortening && (a.highlight ?? []).join("|") === (b.highlight ?? []).join("|") &&
+  (a.keywords ?? []).join("|") === (b.keywords ?? []).join("|"));
+
+/** A callback that is the same function every render but always runs the latest one it was given (so a memoized
+ *  child can take it without re-rendering, and never calls an outdated closure). */
+function useLatestCallback<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
+  const ref = useRef(fn);
+  useLayoutEffect(() => {
+    ref.current = fn;
+  });
+  return useCallback((...args: A) => ref.current(...args), []);
 }
 
 /** Designs to try, least change first: tighter spacing, then smaller text down to 9.5 pt. */
@@ -1262,7 +1295,7 @@ function FitMeasurer({ data, candidates, onDone }: { data: ResumeData; candidate
 }
 
 /** What "Download PDF" prints: the resume (or the cover letter) alone, at real size, on A4 or Letter. */
-function PrintCopy({ data, design, letter }: { data: ResumeData; design: ResumeDesign; letter: string | null }) {
+const PrintCopy = memo(function PrintCopy({ data, design, letter }: { data: ResumeData; design: ResumeDesign; letter: string | null }) {
   const flow = letter !== null || design.template !== "sidebar";
   return createPortal(
     <div className={cx("resume-print", flow && "resume-print-flow")}>
@@ -1271,7 +1304,7 @@ function PrintCopy({ data, design, letter }: { data: ResumeData; design: ResumeD
     </div>,
     document.body,
   );
-}
+});
 
 const LETTER_TONES: ReadonlyArray<{ id: CoverLetterTone; label: string }> = [
   { id: "professional", label: "Professional" },

@@ -113,6 +113,7 @@ export {
 } from "./live/hotkeys";
 export { formatElapsed, useElapsed } from "./hooks/useElapsed";
 export { useStickyScroll } from "./hooks/useStickyScroll";
+export { useMediaQuery } from "./hooks/useMediaQuery";
 export { isDialogOpen, useFocusTrap, type FocusTrapOptions } from "./hooks/useFocusTrap";
 export { AnswerCard, type AnswerCardProps } from "./components/AnswerCard";
 export { ChatInput, type ChatInputProps } from "./components/ChatInput";

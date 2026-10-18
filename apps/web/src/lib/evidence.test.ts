@@ -52,4 +52,12 @@ describe("evidenceFor", () => {
     expect(evidenceFor("", [latency])).toBeNull();
     expect(evidenceFor("Checkout latency", [latency])).toBeNull();
   });
+
+  it("works a claim out once, and again when its words change", () => {
+    const claim = item("Cut checkout latency by 40% with a pricing cache");
+    expect(evidenceFor("Cut checkout latency 40% with a pricing cache", [claim])).toBe(claim);
+    expect(evidenceFor("Cut checkout latency 40% with a pricing cache", [claim])).toBe(claim); // from what it kept
+    claim.claim = "Cut checkout latency by 60% with a pricing cache"; // edited in place: not the kept figures
+    expect(evidenceFor("Cut checkout latency 40% with a pricing cache", [claim])).toBeNull();
+  });
 });
