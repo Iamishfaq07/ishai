@@ -157,10 +157,13 @@ export interface LivePanelProps {
   /** Mock interview session: the AI interviewer's questions are shown and spoken instead of suggested answers. */
   mockInterview?: boolean;
   /**
-   * Orbit's own voice started/stopped (the mock interviewer, or "Read aloud"). Stop sending audio while it plays,
-   * so the speakers are never transcribed as part of the interview.
+   * Orbit's own voice can be heard / has stopped (the mock interviewer, or "Read aloud"). Hold the audio back while
+   * it plays, so the speakers are never transcribed as part of the interview (not while her voice is on its way:
+   * D76).
    */
   onInterviewerSpeaking?: (speaking: boolean) => void;
+  /** The candidate talked over Orbit's voice: what the page held back meanwhile (their first words) goes out now. */
+  onBargeIn?: () => void;
   /** The interviewer's natural voice (useNaturalVoiceSource); null or absent = the device's voice. */
   naturalVoice?: NaturalVoiceSource | null;
   /** A mock's practice language ("en", "hi", "hinglish"): which device voice reads the questions. */
@@ -219,10 +222,12 @@ export function LivePanel(props: LivePanelProps) {
     pace: props.voicePace ?? "normal",
     onEvent: voiceEvent,
   });
-  const { onInterviewerSpeaking } = props;
+  const { onInterviewerSpeaking, onBargeIn } = props;
   const reader = useReadAloud(readAloudLanguage(props.answerLanguage, answer?.answer.direct_answer));
+  // Heard now (the mic is held back) vs. on, from the request to the end (talking over her stops her).
+  const selfAudible = voice.audible || reader.status === "playing";
   const selfSpeaking = voice.speaking || reader.status === "playing";
-  useEffect(() => onInterviewerSpeaking?.(selfSpeaking), [selfSpeaking, onInterviewerSpeaking]);
+  useEffect(() => onInterviewerSpeaking?.(selfAudible), [selfAudible, onInterviewerSpeaking]);
   // Barge-in: talking over the AI's voice stops it (speech synthesis can't be turned down mid-sentence), so the mic
   // goes back to the transcriber at once, and the core shows an emerald listening ring for a moment.
   const [heard, setHeard] = useState(false);
@@ -233,6 +238,7 @@ export function LivePanel(props: LivePanelProps) {
     // Her own level, so her voice coming back through the speakers is never taken for the candidate (D76).
     output: voice.speaking ? () => voice.activity.level() : undefined,
     onBargeIn: () => {
+      onBargeIn?.();
       voice.interrupt();
       reader.stop();
       setHeard(true);

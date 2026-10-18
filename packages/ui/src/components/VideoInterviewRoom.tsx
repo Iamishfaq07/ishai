@@ -57,8 +57,12 @@ const MOOD_ANNOUNCED: Record<Mood, string> = {
   thinking: `${INTERVIEWER_NAME} is thinking`,
   paused: "Your mic is paused",
 };
-/** She acknowledges a finished answer ("Mm-hmm.") when her next line is this slow to come, every other turn at most. */
+/**
+ * She acknowledges what they just said ("Mm-hmm.") when her reply is this slow to start (still being written, or her
+ * voice on its way), at most every other time, and only right after they spoke (never before a check-in).
+ */
 const ACK_AFTER_MS = 450;
+const ACK_HEARD_WITHIN_MS = 3000;
 
 /** The transcript beside the call on wide screens: open or not, kept on this device. */
 const TRANSCRIPT_KEY = "orbit.videoTranscript";
@@ -567,20 +571,28 @@ export function VideoInterviewRoom({
       document.removeEventListener("keydown", go, { capture: true });
     };
   }, [voice.phase, unlock]);
-  // A short "Mm-hmm." when her next line is slow to come, every other answer at most (never twice in a row).
-  const ackedTurn = useRef(-2);
-  const turn = live.mock?.questionId ?? "";
-  const { ack } = voice;
+  // A short "Mm-hmm." when her reply is slow to start, right after they spoke, never twice in a row.
+  const heardAt = useRef(0);
   useEffect(() => {
-    if (!live.mockThinking || muted || done) return;
+    if (talking || candidateText) heardAt.current = performance.now();
+  }, [talking, candidateText]);
+  const ackedLast = useRef(false);
+  const { ack } = voice;
+  const waiting = live.mockThinking || voice.phase === "preparing";
+  const waitFor = voice.phase === "preparing" ? (line?.id ?? "") : "thinking";
+  useEffect(() => {
+    if (!waiting || muted || done) return;
     const t = window.setTimeout(() => {
-      const n = live.mock?.index ?? 0;
-      if (ackedTurn.current >= n - 1) return;
-      ackedTurn.current = n;
+      if (performance.now() - heardAt.current > ACK_HEARD_WITHIN_MS + ACK_AFTER_MS) return; // not an answer just given
+      if (ackedLast.current) {
+        ackedLast.current = false; // this time she just answers
+        return;
+      }
+      ackedLast.current = true;
       ack();
     }, ACK_AFTER_MS);
     return () => window.clearTimeout(t);
-  }, [live.mockThinking, turn, muted, done, ack, live.mock?.index]);
+  }, [waiting, waitFor, muted, done, ack]);
 
   const finishAnswer = () => {
     if (!q) return;

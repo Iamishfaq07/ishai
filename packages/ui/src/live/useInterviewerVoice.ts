@@ -4,7 +4,9 @@ import {
   ACKS,
   NaturalVoiceError,
   PACE_SPEED,
+  cachedAck,
   naturalVoiceGone,
+  playClip,
   speakNatural,
   voiceForSpeaker,
   warmAcks,
@@ -80,8 +82,14 @@ export type VoicePhase = "idle" | "preparing" | "speaking" | "blocked" | "unavai
 
 export interface InterviewerVoice {
   supported: boolean;
-  /** From the moment a line is asked for until it's done: the page doesn't send the mic's audio then. */
+  /** From the moment a line is asked for until it's done (talking over her then stops her). */
   speaking: boolean;
+  /**
+   * She can be heard now (a line, or an acknowledgement): the page holds the mic's audio back, so her voice from the
+   * speakers isn't transcribed as theirs. Not while her voice is on its way (D76: the candidate's last words were
+   * lost then, and the transcriber couldn't finish what they'd said until the mic came back).
+   */
+  audible: boolean;
   phase: VoicePhase;
   /** The line being (or last) said. */
   lineId: string | null;
@@ -142,6 +150,9 @@ export function useInterviewerVoice(
   const resume = useRef<(() => void) | null>(null);
   const current = useRef<string | null>(null); // the line id this hook is working on now
   const lastAck = useRef<string | null>(null);
+  const ackDone = useRef<Promise<void> | null>(null); // an acknowledgement being said: her line waits for it
+  const ackStop = useRef<AbortController | null>(null);
+  const [acking, setAcking] = useState(false);
   const warmed = useRef<string | null>(null);
   const events = useRef(onEvent);
   events.current = onEvent;
@@ -289,7 +300,7 @@ export function useInterviewerVoice(
       const voiceId = voiceForSpeaker(natural.voices, speaker ? speakers.current.get(speaker)! : 0)!;
       const controller = new AbortController();
       inFlight.current = controller;
-      setPhase("preparing"); // the mic is muted from the request on, as with the device's voice
+      setPhase("preparing"); // her voice is on its way: the mic still goes to the transcriber (D76)
       let heard = false;
       let blocked = false;
       const fallBack = (rest: string, detail: string) => {
@@ -305,6 +316,7 @@ export function useInterviewerVoice(
       }, PREPARE_LIMIT_MS));
       void speakNatural(text, natural.speak, voiceId, controller.signal, {
         speed,
+        before: () => ackDone.current ?? Promise.resolve(),
         onClip: (audio, clip, part) => tap.attach(audio, clip.blob, part),
         onPlaying: () => {
           heard = true;
@@ -367,53 +379,78 @@ export function useInterviewerVoice(
   useEffect(() => {
     if (!useNatural || !natural || phase !== "done") return;
     const voiceId = natural.voices[0];
-    if (!voiceId || warmed.current === `${voiceId}:${speed}`) return;
-    warmed.current = `${voiceId}:${speed}`;
-    void warmAcks(natural.speak, voiceId, speed);
+    const key = `${voiceId}:${speed}`;
+    if (!voiceId || warmed.current === key) return;
+    warmed.current = key;
+    void warmAcks(natural.speak, voiceId, speed).then((all) => {
+      if (!all && warmed.current === key) warmed.current = null; // some missing: again after her next line
+    });
   }, [useNatural, natural, phase, speed]);
 
+  const stopAck = useCallback(() => {
+    ackStop.current?.abort();
+    ackStop.current = null;
+  }, []);
   const stop = useCallback(() => {
     halt();
+    stopAck();
     tap.stop();
     if (current.current) setPhase("done");
-  }, [halt, tap]);
+  }, [halt, stopAck, tap]);
   const interrupt = useCallback(() => {
     const id = current.current;
+    stopAck();
     if (!id || (phaseRef.current !== "speaking" && phaseRef.current !== "preparing")) return;
     halt();
     tap.stop();
     setPhase("done");
     report("interrupted", id);
-  }, [halt, tap, report]);
+  }, [halt, stopAck, tap, report]);
   const repeat = useCallback(() => {
     if (line) say(line.id, line.text, line.speaker);
   }, [line, say]);
   const unlock = useCallback(() => resume.current?.(), []);
   const ack = useCallback(() => {
-    if (!enabled || phaseRef.current === "speaking" || phaseRef.current === "preparing") return;
+    if (!enabled || phaseRef.current === "speaking" || ackDone.current) return;
+    if (useNatural && natural) {
+      // Only one already cached (it plays at once); her line, if it arrives meanwhile, waits for it to finish.
+      const voiceId = natural.voices[0]!;
+      const controller = new AbortController();
+      ackStop.current = controller;
+      const run = (async () => {
+        const found = await cachedAck(voiceId, speed, lastAck.current);
+        if (!found || controller.signal.aborted || phaseRef.current === "speaking") return;
+        lastAck.current = found.text;
+        setAcking(true);
+        await playClip(found.clip, controller.signal, {
+          rate: found.clip.speed === speed ? 1 : speed / found.clip.speed,
+          onClip: (audio, clip) => tap.attach(audio, clip.blob, { text: "", offset: 0 }),
+        }).catch(() => undefined);
+      })().finally(() => {
+        setAcking(false);
+        if (ackStop.current === controller) ackStop.current = null;
+        ackDone.current = null;
+      });
+      ackDone.current = run;
+      return;
+    }
+    if (phaseRef.current === "preparing") return; // the device's voice can't wait its turn behind it
     const options = ACKS.filter((a) => a !== lastAck.current);
     const text = options[Math.floor(Math.random() * options.length)]!;
     lastAck.current = text;
-    if (useNatural && natural) {
-      const controller = new AbortController();
-      inFlight.current?.abort();
-      inFlight.current = controller;
-      void speakNatural(text, natural.speak, natural.voices[0]!, controller.signal, {
-        speed,
-        keep: true,
-        onClip: (audio, clip) => tap.attach(audio, clip.blob, { text: "", offset: 0 }),
-      }).catch(() => undefined);
-    } else if (synth && typeof SpeechSynthesisUtterance !== "undefined") {
+    if (synth && typeof SpeechSynthesisUtterance !== "undefined") {
       const u = new SpeechSynthesisUtterance(text);
       if (voice) u.voice = voice;
       u.rate = DEVICE_RATE[pace];
       synth.speak(u);
     }
   }, [enabled, useNatural, natural, speed, tap, synth, voice, pace]);
+  useEffect(() => () => ackStop.current?.abort(), []);
 
   return {
     supported: Boolean(synth) || useNatural,
     speaking: phase === "preparing" || phase === "speaking",
+    audible: phase === "speaking" || acking,
     phase,
     lineId,
     voiceName: useNatural ? null : (voice?.name ?? null),

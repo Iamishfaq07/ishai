@@ -257,18 +257,28 @@ export interface SpeakHooks {
   speed?: number;
   /** Keep this line's audio for next time (an acknowledgement, the same opening every time). */
   keep?: boolean;
+  /** Awaited before the first piece plays (an acknowledgement still being said finishes first). */
+  before?: () => Promise<void>;
 }
 
 /**
- * Says `text` in the natural voice, sentence by sentence (D76): every sentence is requested at once, the first plays
- * as soon as it arrives (it's short, so it starts sooner), the next is ready when it ends. Rejects with a
+ * Says `text` in the natural voice, in growing pieces (D76): the first two are requested at once, the first plays as
+ * soon as it arrives (it's short, so it starts sooner), and each later one is requested when the one before it starts
+ * playing, so it's ready when that ends and isn't made at all for a line she's cut off on. Rejects with a
  * NaturalVoiceError naming what wasn't heard.
  */
 export async function speakNatural(text: string, speak: SpeakFn, voice: string, signal: AbortSignal, hooks: SpeakHooks = {}): Promise<void> {
   const chunks = speechChunks(text);
   const speed = hooks.speed ?? 1;
-  const requests = chunks.map((c) => fetchClip(speak, c, voice, signal, speed, Boolean(hooks.keep)));
-  requests.forEach((r) => r.catch(() => undefined)); // awaited in order below; don't report a later one twice
+  const requests: Array<Promise<VoiceClip> | undefined> = [];
+  const request = (i: number) => {
+    if (i >= chunks.length || requests[i] || signal.aborted) return;
+    const r = fetchClip(speak, chunks[i]!, voice, signal, speed, Boolean(hooks.keep));
+    r.catch(() => undefined); // awaited in order below; don't report a later one twice
+    requests[i] = r;
+  };
+  request(0);
+  request(1);
   let offset = 0;
   let first = true;
   for (let i = 0; i < chunks.length; i++) {
@@ -278,12 +288,16 @@ export async function speakNatural(text: string, speak: SpeakFn, voice: string, 
     const partOffset = at >= 0 ? at : offset;
     offset = partOffset + part.length;
     try {
+      request(i);
       const clip = await requests[i]!;
+      if (i === 0 && hooks.before) await hooks.before();
+      if (signal.aborted) return;
       await playClip(clip, signal, {
         // A pace the provider didn't apply: the playback is paced instead (the pitch is kept).
         rate: clip.speed === speed ? 1 : speed / clip.speed,
         onClip: (audio, c) => hooks.onClip?.(audio, c, { text: part, offset: partOffset, index: i }),
         onPlaying: () => {
+          request(i + 1);
           if (first) hooks.onPlaying?.();
           first = false;
         },
@@ -336,18 +350,39 @@ async function keepClip(key: string, clip: VoiceClip): Promise<void> {
 /** Short acknowledgements she can say while she thinks of her next line (one at a time, never the same twice). */
 export const ACKS = ["Mm-hmm.", "Okay.", "Right.", "Got it.", "I see."] as const;
 
-/** Makes sure the acknowledgements are cached for `voice` (once per voice, in the background). */
-export async function warmAcks(speak: SpeakFn, voice: string, speed: number): Promise<void> {
+/**
+ * Makes sure the acknowledgements are cached for `voice` (in the background, one at a time). True when they all
+ * are; a miss is skipped (a real run's first one failed and none were ever said), and two give up until next time.
+ */
+export async function warmAcks(speak: SpeakFn, voice: string, speed: number): Promise<boolean> {
   const controller = new AbortController();
+  let misses = 0;
   for (const ack of ACKS) {
     const said = speakable(ack);
     if (await cachedClip(clipKey(voice, speed, said))) continue;
     try {
       await fetchClip(speak, ack, voice, controller.signal, speed, true);
     } catch {
-      return; // not now (the allowance, the network): they're optional
+      misses += 1; // not now (the allowance, the network): they're optional
+      if (misses >= 2) return false;
     }
   }
+  return misses === 0;
+}
+
+/**
+ * An acknowledgement to say at once: one already cached for `voice`, not `avoid` (the last one said). Never fetched
+ * now: made on demand it came a second and a half later, on top of her reply.
+ */
+export async function cachedAck(voice: string, speed: number, avoid: string | null): Promise<{ text: string; clip: VoiceClip } | null> {
+  const options = ACKS.filter((a) => a !== avoid);
+  const start = Math.floor(Math.random() * options.length);
+  for (let k = 0; k < options.length; k++) {
+    const text = options[(start + k) % options.length]!;
+    const clip = await cachedClip(clipKey(voice, speed, speakable(text)));
+    if (clip) return { text, clip };
+  }
+  return null;
 }
 
 type VoiceStatus = { available: boolean; voices: VoiceOption[]; default_voice: string };

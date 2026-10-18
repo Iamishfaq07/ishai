@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { AUDIO_CHANNEL, type OrbitSession } from "@orbit/types";
 import {
@@ -47,6 +47,7 @@ import {
   type SharedSurface,
 } from "../lib/audio";
 import { errorText } from "../lib/format";
+import { createMicGate } from "../lib/micGate";
 import { useAsync } from "../lib/useAsync";
 import type { LiveLaunchState } from "./SessionSetup";
 
@@ -126,11 +127,14 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
 
   // ── Audio capture ──────────────────────────────────────────────────────
   const pausedRef = useRef(false);
-  // Mock interviews: the mic is muted while the AI interviewer speaks (its voice comes out of the speakers).
+  // Mock interviews: the mic is held back while the AI interviewer can be heard (her voice comes out of the
+  // speakers), and what it held goes out if the candidate talks over her (micGate, D76).
   const interviewerSpeakingRef = useRef(false);
   const onInterviewerSpeaking = useCallback((speaking: boolean) => {
     interviewerSpeakingRef.current = speaking;
   }, []);
+  const micGate = useMemo(() => createMicGate((pcm) => client.sendAudio(AUDIO_CHANNEL.mic, pcm)), [client]);
+  const onBargeIn = useCallback(() => micGate.bargeIn(), [micGate]);
   pausedRef.current = live.state === "paused" || live.state === "ended";
   const micRef = useRef<AudioCapture | null>(null);
   const sysRef = useRef<AudioCapture | null>(null);
@@ -167,7 +171,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       const stream = await openMicrophone(launch.micDeviceId);
       const capture = await captureStream(stream, (f) => {
         sources.feed("mic", f.rms);
-        if (!pausedRef.current && !interviewerSpeakingRef.current) client.sendAudio(AUDIO_CHANNEL.mic, f.pcm);
+        if (!pausedRef.current) micGate.frame(f.pcm, interviewerSpeakingRef.current);
       });
       if (gen !== micGenRef.current) {
         capture.stop();
@@ -194,7 +198,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
           : `Microphone unavailable: ${errorText(err)}`,
       );
     }
-  }, [client, launch.micDeviceId, sources]);
+  }, [client, launch.micDeviceId, sources, micGate]);
 
   useEffect(() => {
     void startMic();
@@ -389,6 +393,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
       {...(cameraCoach ? { cameraCoach } : {})}
       ratings={ratings}
       onInterviewerSpeaking={onInterviewerSpeaking}
+      onBargeIn={onBargeIn}
       live={live}
       actions={actions}
       mode={mode}

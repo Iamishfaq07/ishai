@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { speakable, speechChunks, syllableCount, wordTimeline } from "./speechText";
+import { speakable, SECOND_CHUNK_CHARS, speechChunks, syllableCount, wordTimeline } from "./speechText";
 
 describe("text shaped for speech", () => {
   it("reads acronyms the way people say them", () => {
@@ -42,12 +42,23 @@ describe("sentence by sentence", () => {
     expect(speechChunks("  ")).toEqual([]);
   });
 
-  it("splits a long first sentence at a clause, and never makes more than four pieces", () => {
+  it("splits a long first sentence at a clause, and grows the pieces after it (at most three)", () => {
     const long = "So before we get into the technical part of today, I'd love to hear how you got into backend engineering in the first place.";
     const out = speechChunks(long);
     expect(out[0]).toBe("So before we get into the technical part of today,");
     expect(out.join(" ")).toBe(long);
-    expect(speechChunks("One two three. Four five six. Seven eight nine. Ten eleven twelve. Thirteen fourteen fifteen.").length).toBe(4);
+    // The opening and the plan from a real run: four requests a line before (D76), three now, the first one short.
+    const plan = "Glad to hear it. So, for the next 5 minutes or so, we'll focus on application security. I'll ask some questions and may dig into your answers. When you're done with one, just pause. To start, could you briefly introduce yourself and walk me through your background?";
+    const pieces = speechChunks(plan);
+    expect(pieces).toHaveLength(3);
+    expect(pieces[0]).toBe("Glad to hear it.");
+    expect(pieces[1]!.length).toBeLessThanOrEqual(SECOND_CHUNK_CHARS);
+    expect(pieces.join(" ")).toBe(plan);
+    expect(speechChunks("Hi Arjun, I'm Saba. Thanks for joining. How are you doing today?")).toEqual([
+      "Hi Arjun, I'm Saba.",
+      "Thanks for joining. How are you doing today?",
+    ]);
+    expect(speechChunks("One two three. Four five six. Seven eight nine. Ten eleven twelve. Thirteen fourteen fifteen.")).toHaveLength(2);
   });
 });
 

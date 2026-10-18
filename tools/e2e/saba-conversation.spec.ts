@@ -32,8 +32,9 @@ function voiceClip(seconds = 2.5): Buffer {
 
 /**
  * The page's sound, without a real microphone or speakers: speechSynthesis is a silent stand-in (the OS engine plays
- * past the browser's mute), every <audio> is noted with its own output level (captureStream), and the microphone is a
- * synthetic stream that's silent until the test "talks" (window.__talk).
+ * past the browser's mute), every <audio> is noted with its own output level (captureStream), the microphone is a
+ * synthetic stream that's silent until the test "talks" (window.__talk: syllables with dips between them, as real
+ * speech has; D76), and the mic audio the page sends the server is counted (window.__frames).
  */
 async function fakeAudio(context: BrowserContext) {
   await context.addInitScript(() => {
@@ -83,6 +84,13 @@ async function fakeAudio(context: BrowserContext) {
       }
       return play.apply(this, args);
     };
+    // The mic audio sent to the server (binary frames on the live socket).
+    w.__frames = 0;
+    const send = WebSocket.prototype.send;
+    WebSocket.prototype.send = function (this: WebSocket, data: string | ArrayBufferLike | Blob | ArrayBufferView) {
+      if (typeof data !== "string") (w.__frames as number)++;
+      return send.call(this, data);
+    };
     w.__playing = () => {
       const p = plays[plays.length - 1];
       return p ? { playing: !p.el.paused && !p.el.ended && p.el.currentTime > 0, t: p.el.currentTime, level: p.level() } : null;
@@ -102,7 +110,17 @@ async function fakeAudio(context: BrowserContext) {
         gain.gain.value = 0;
         osc.connect(gain).connect(out);
         osc.start();
-        w.__talk = (on: boolean) => gain.gain.setValueAtTime(on ? 0.3 : 0, ctx.currentTime);
+        // Talking: ~140 ms syllables with ~80 ms dips (a steady buzz passed where a real voice didn't stop her).
+        let timer = 0;
+        w.__talk = (on: boolean) => {
+          window.clearTimeout(timer);
+          if (!on) return gain.gain.setValueAtTime(0, ctx.currentTime);
+          const syllable = (up: boolean) => {
+            gain.gain.setValueAtTime(up ? 0.3 : 0.004, ctx.currentTime);
+            timer = window.setTimeout(() => syllable(!up), up ? 140 : 80);
+          };
+          syllable(true);
+        };
         return out.stream;
       };
     }
@@ -131,12 +149,12 @@ async function videoSession(context: BrowserContext, page: Page): Promise<string
   return (await created.json()).id as string;
 }
 
-type Sample = { ms: number; playing: boolean; t: number; level: number; words: number; label: string };
+type Sample = { ms: number; playing: boolean; t: number; level: number; words: number; label: string; frames: number };
 
 async function sample(page: Page, ms: number): Promise<Sample[]> {
   return page.evaluate(async (duration) => {
-    const w = window as unknown as { __playing: () => { playing: boolean; t: number; level: number } | null };
-    const out: Array<{ ms: number; playing: boolean; t: number; level: number; words: number; label: string }> = [];
+    const w = window as unknown as { __playing: () => { playing: boolean; t: number; level: number } | null; __frames: number };
+    const out: Array<{ ms: number; playing: boolean; t: number; level: number; words: number; label: string; frames: number }> = [];
     const t0 = performance.now();
     while (performance.now() - t0 < duration) {
       const p = w.__playing();
@@ -145,6 +163,7 @@ async function sample(page: Page, ms: number): Promise<Sample[]> {
         ms: Math.round(performance.now() - t0), playing: Boolean(p?.playing), t: p?.t ?? 0, level: p?.level ?? -1,
         words: cap ? cap.split(/\s+/).length : 0,
         label: document.querySelector("[data-mood-label]")?.textContent?.trim() ?? "",
+        frames: w.__frames,
       });
       await new Promise((r) => setTimeout(r, 80));
     }
@@ -169,6 +188,12 @@ test("Saba's voice plays and her words appear as she says them", async ({ page, 
   expect(rows.slice(0, first).every((r) => r.words === 0)).toBe(true);
   const shown = played.map((r) => r.words);
   expect(Math.max(...shown)).toBeGreaterThan(shown.find((n) => n > 0) ?? 0);
+  // The mic goes to the server while her voice is on its way (D76: the candidate's last words were lost then), and
+  // is held back while she can be heard.
+  const preparing = rows.filter((r) => /about to speak/.test(r.label));
+  if (preparing.length >= 2) expect(preparing.at(-1)!.frames, JSON.stringify(preparing)).toBeGreaterThan(preparing[0]!.frames);
+  const speaking = played.slice(2, -2);
+  if (speaking.length >= 3) expect(speaking.at(-1)!.frames - speaking[0]!.frames).toBeLessThanOrEqual(1);
   await context.request.post(`${API}/v1/sessions/${id}/end`);
 });
 

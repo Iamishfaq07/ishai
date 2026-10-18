@@ -8,7 +8,9 @@ import { useEffect, useRef } from "react";
  * count as the candidate (D76: it was stopping Saba a sentence in, which looked like "she doesn't talk"). The echo is
  * learnt from her voice itself: while she's audibly speaking, how much of her output level comes back in the mic
  * (`echo`, a ratio). From then on the mic has to be clearly above what her current level would leak, and above the
- * room's own noise, for HOLD_MS, before it's the candidate. The old way calibrated in the first 300 ms after the line
+ * room's own noise, through most of HOLD_MS (speech dips between syllables and words: a dip up to GAP_MS doesn't end
+ * the stretch, and it fires when at least VOICED of the readings in it were over), before it's the candidate. The old
+ * way calibrated in the first 300 ms after the line
  * was asked for: with the natural voice that's before any sound has come out (the clip is still on its way), so the
  * "echo floor" was the quiet room and her first loud syllable tripped it.
  */
@@ -17,18 +19,23 @@ export interface BargeInState {
   heardAt: number | null; // when her voice was first actually heard (her output level up)
   floor: number; // the room's noise in the mic, while she's quiet
   echo: number; // mic level per unit of her output level: her voice coming back through the speakers
-  above: number | null; // since when the mic has been over the threshold
+  above: number | null; // since when the candidate's stretch of speech began (null: none)
+  lastAbove: number | null; // the latest reading over the threshold
+  over: number; // readings over the threshold in this stretch
+  readings: number; // all readings in this stretch
 }
 
 export const CALIBRATE_MS = 500; // of her audibly speaking, learning the echo
 export const HOLD_MS = 300;
+export const GAP_MS = 180; // a dip between syllables or words: still the same stretch of speech
+export const VOICED = 0.5; // of the readings in the stretch
 export const MIN_LEVEL = 0.05; // RMS of a quiet but real voice close to a laptop mic
 export const OVER_ECHO = 2.4;
 const HEARD = 0.08; // her output level (0..1) that means sound is coming out
 const QUIET = 0.03;
 
 export function bargeInStart(now: number): BargeInState {
-  return { started: now, heardAt: null, floor: 0.01, echo: 0, above: null };
+  return { started: now, heardAt: null, floor: 0.01, echo: 0, above: null, lastAbove: null, over: 0, readings: 0 };
 }
 
 /** The mic's level the candidate has to be over now, given her output level now. */
@@ -44,16 +51,25 @@ export function bargeInStep(state: BargeInState, mic: number, output: number, no
   if (heardAt !== null && now - heardAt < CALIBRATE_MS) {
     // Learning her echo: what comes back in the mic for how loud she is.
     if (output >= HEARD) echo = Math.max(echo, (mic - floor) / output);
-    return { state: { ...state, heardAt, floor, echo, above: null }, fired: false };
+    return { state: { ...state, heardAt, floor, echo, above: null, lastAbove: null, over: 0, readings: 0 }, fired: false };
   }
   const threshold = bargeInThreshold({ ...state, floor, echo }, output);
   if (mic < threshold) {
     // Keep learning, slowly, while it's clearly her (the volume can change).
     if (output >= HEARD && heardAt !== null) echo = Math.max(echo * 0.998, (mic - floor) / output);
-    return { state: { ...state, heardAt, floor, echo, above: null }, fired: false };
+    // A dip between their syllables keeps the stretch; a longer quiet ends it.
+    if (state.above !== null && state.lastAbove !== null && now - state.lastAbove <= GAP_MS) {
+      return { state: { ...state, heardAt, floor, echo, readings: state.readings + 1 }, fired: false };
+    }
+    return { state: { ...state, heardAt, floor, echo, above: null, lastAbove: null, over: 0, readings: 0 }, fired: false };
   }
   const above = state.above ?? now;
-  return { state: { ...state, heardAt, floor, echo, above }, fired: now - above >= HOLD_MS };
+  const over = (state.above === null ? 0 : state.over) + 1;
+  const readings = (state.above === null ? 0 : state.readings) + 1;
+  return {
+    state: { ...state, heardAt, floor, echo, above, lastAbove: now, over, readings },
+    fired: now - above >= HOLD_MS && over / readings >= VOICED,
+  };
 }
 
 /**

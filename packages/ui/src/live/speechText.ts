@@ -119,31 +119,42 @@ export function speakable(text: string): string {
   return t.replace(/\s{2,}/g, " ").trim();
 }
 
+/** The second piece's length (characters): long enough to be worth a request, short enough to be ready in time. */
+export const SECOND_CHUNK_CHARS = 140;
+
 /**
- * How a line is said, sentence by sentence: the first sentence alone (split at a comma if it's long), so the voice
- * starts as soon as it can; the rest a sentence each, a very short one joined to the next; at most `max` pieces.
+ * How a line is said, in up to `max` growing pieces (D76): the first sentence alone (its first clause if it's long),
+ * so the voice starts as soon as it can; then the next sentences up to SECOND_CHUNK_CHARS, made while the first
+ * plays; then the rest, made while the second plays. A very short sentence ("Sure.") goes with its neighbour. Each
+ * piece is one request to the voice provider: a real call made one a sentence (36 for a short interview).
  */
-export function speechChunks(text: string, max = 4): string[] {
+export function speechChunks(text: string, max = 3): string[] {
   const sentences = text.trim().split(/(?<=[.!?])\s+(?=\S)/).map((x) => x.trim()).filter(Boolean);
   if (!sentences.length) return [];
-  const out: string[] = [];
+  const merged: string[] = [];
   for (const sentence of sentences) {
-    const last = out[out.length - 1];
-    // A very short sentence ("Hi.", "Okay.") goes with its neighbour: a clip that short is mostly its own silence.
+    const last = merged[merged.length - 1];
+    // A clip that short is mostly its own silence.
     const tinyLast = last !== undefined && last.split(/\s+/).length < 3;
-    const tinyThis = sentence.split(/\s+/).length < 3 && out.length > 1;
-    if (last !== undefined && (tinyLast || tinyThis)) out[out.length - 1] = `${last} ${sentence}`;
-    else out.push(sentence);
+    const tinyThis = sentence.split(/\s+/).length < 3 && merged.length > 1;
+    if (last !== undefined && (tinyLast || tinyThis)) merged[merged.length - 1] = `${last} ${sentence}`;
+    else merged.push(sentence);
   }
   // A long first sentence: its first clause on its own.
-  const first = out[0]!;
-  const words = first.split(/\s+/);
-  if (words.length > 16) {
+  const first = merged[0]!;
+  if (first.split(/\s+/).length > 16) {
     const comma = first.indexOf(", ", 30);
-    if (comma > 0 && comma < first.length - 20) out.splice(0, 1, first.slice(0, comma + 1), first.slice(comma + 2));
+    if (comma > 0 && comma < first.length - 20) merged.splice(0, 1, first.slice(0, comma + 1), first.slice(comma + 2));
   }
-  while (out.length > max) out.splice(max - 1, 2, `${out[max - 1]} ${out[max]}`);
-  return out;
+  const out = [merged[0]!];
+  let i = 1;
+  if (max > 2 && i < merged.length) {
+    let second = merged[i++]!;
+    while (i < merged.length && second.length + 1 + merged[i]!.length <= SECOND_CHUNK_CHARS) second += ` ${merged[i++]}`;
+    out.push(second);
+  }
+  if (i < merged.length) out.push(merged.slice(i).join(" "));
+  return out.slice(0, max);
 }
 
 /** Roughly how many syllables a word has (its vowel groups; other scripts by length). */
