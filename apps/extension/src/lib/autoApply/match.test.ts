@@ -94,6 +94,16 @@ describe("when the runner asks Orbit next", () => {
   });
 });
 
+describe("places", () => {
+  it("matches the server's \"City, CC\" to the one option for that city", () => {
+    const opts = ["Bengaluru, Karnataka, India", "Bengaluru Rural, Karnataka, India", "Bern, Switzerland"];
+    expect(pickPlace(opts, "Bengaluru, IN")).toBe(0);
+    expect(pickPlace(opts, "Bengaluru")).toBe(0);
+    expect(pickPlace(["Pune, India", "Pune, Maharashtra, India"], "Pune, IN")).toBe(-1); // two Punes: never guessed
+    expect(pickPlace(opts, "Berlin, DE")).toBe(-1);
+  });
+});
+
 describe("a result the server refused", () => {
   const big = {
     status: "submitted" as const,

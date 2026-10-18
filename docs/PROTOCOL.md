@@ -256,7 +256,7 @@ which the web app shows so the candidate knows the extension is on.
       resume: {filename, download_url},          // a signed link, 15 minutes, no session needed: a PDF
       cover_letter: string|null,                 // ends "Prepared with Orbit AI from my verified profile." unless off
       fields: {first_name, last_name, full_name, email, phone, location, linkedin, website, github,
-               current_company, current_title},  // "" when the candidate gave none
+               current_company, current_title, country},  // "" when the candidate gave none
       answers: [{question_id: string|null, label, kind, value: string|string[], source: "bank"|"profile"|"generated",
                  required, options}],            // question_id: Greenhouse `question_…` (the page may show the
                                                  // digits only), `demographic_<id>` (the page: `<id>`), the EEO

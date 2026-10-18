@@ -59,6 +59,8 @@ export interface ApplyFields {
   github: string;
   current_company: string;
   current_title: string;
+  /** The country's name ("India"), where the candidate lives. */
+  country: string;
   [key: string]: string;
 }
 

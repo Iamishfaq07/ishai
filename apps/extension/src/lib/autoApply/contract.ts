@@ -38,6 +38,8 @@ export interface PacketFields {
   github: string;
   current_company?: string;
   current_title?: string;
+  /** The country's name ("India"). */
+  country?: string;
   [key: string]: string | undefined;
 }
 

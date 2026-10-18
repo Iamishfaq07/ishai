@@ -287,9 +287,13 @@ export async function enter(ctx: FillContext, step: Step): Promise<Entered> {
         }
         return { ok: true, value: chosen };
       }
-      const search = typeof value === "string" ? value : null;
-      const choose = step.source === "field" ? (opts: string[]) => pickPlace(opts, String(value)) : (opts: string[]) => pickOption(opts, value);
-      const chosen = await chooseInCombobox(q, search, choose, step.source === "field");
+      // A place from the candidate's profile (location, country) is matched as a place; a bank answer exactly.
+      const place = step.source === "field" || (step.source === "answer" && step.answer.source === "profile");
+      const choose = place ? (opts: string[]) => pickPlace(opts, value) : (opts: string[]) => pickOption(opts, value);
+      let chosen = await chooseInCombobox(q, value, choose, place);
+      // Orbit's server sends a location as "City, CC" ("Bengaluru, IN"); location lists filter on the city.
+      const city = value.split(",")[0]!.trim();
+      if (!chosen && place && city && city !== value.trim()) chosen = await chooseInCombobox(q, city, (opts) => pickPlace(opts, value), true);
       return chosen ? { ok: true, value: chosen } : { ok: false, problem: "unknown" };
     }
     case "select":
@@ -332,7 +336,12 @@ export function pickPlace(options: string[], value: string): number {
   // "Bengaluru, Karnataka, India" for "Bengaluru", not "Bengaluru Rural, Karnataka, India".
   const head = unique(options.map((o, i) => (normalize(o.split(/[,(]/)[0] ?? "") === want ? i : -1)).filter((i) => i >= 0));
   if (head >= 0) return head;
-  return unique(options.map((o, i) => (normalize(o).startsWith(want + " ") ? i : -1)).filter((i) => i >= 0));
+  const starts = unique(options.map((o, i) => (normalize(o).startsWith(want + " ") ? i : -1)).filter((i) => i >= 0));
+  if (starts >= 0) return starts;
+  // "Bengaluru, IN" (a city and a country code, as Orbit's server sends it): the city, when only one option is it.
+  const [city, code] = value.split(",").map((p) => p.trim());
+  if (city && code && /^[A-Za-z]{2}$/.test(code)) return pickPlace(options, city);
+  return -1;
 }
 
 async function pickIndex(q: Question, index: number, options: string[]): Promise<Entered> {
