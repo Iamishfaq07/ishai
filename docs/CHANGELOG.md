@@ -27,7 +27,7 @@
   a 12-month default retention for rejected applicants, an append-only audit log, AI calls stored per company
   (`provider_requests.company_id`); Free / Starter / Growth limits enforced, plans granted by the Orbit admin
   (checkout not wired yet), and `/admin/business` for verification, suspension, take-downs and reports.
-- Migration `b75cd70a02a8` (new `biz_*` tables, `provider_requests.company_id`). Tests: 49 API (test_business_*) plus
+- Migration `b75cd70a02a8` (new `biz_*` tables, `provider_requests.company_id`). Tests: 48 API (test_business_*) plus
   the IDOR matrix's 12 public and 11 admin Business routes; web vitest (business model, worker careers pages). E2E:
   headless Chromium against the local API and `wrangler dev`, 30 checks (sign-up → verify → invite → publish →
   JSON-LD in the HTML → both applies → tracker → ranking → moves, reject with email, scorecard → analytics → export →
