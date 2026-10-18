@@ -618,7 +618,8 @@ export function VideoInterviewRoom({
                 )}
               </div>
               {captions && q && !(!wide && drawerOpen) && (
-                <div className="px-3 pb-3 sm:px-5 sm:pb-5" aria-live="polite">
+                // The question is announced once: by the transcript when it's showing, by the caption when it isn't.
+                <div className="px-3 pb-3 sm:px-5 sm:pb-5" aria-live={transcriptShown ? "off" : "polite"}>
                   <QuestionCaption
                     key={q.questionId}
                     text={q.text}
