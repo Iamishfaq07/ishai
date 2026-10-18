@@ -383,7 +383,7 @@ def test_finding8_the_migration_keeps_existing_links_working() -> None:
                              text=True, timeout=180)
         assert out.returncode == 0, out.stderr[-2000:]
 
-    alembic("upgrade", "b75cd70a02a8")
+    alembic("upgrade", "4a93a7c927ef")  # the parent of 25f71d009e96
     s = get_settings()
     secret = s.jwt_secret.get_secret_value()
     app_id = "00000000-0000-4000-8000-000000000001"
