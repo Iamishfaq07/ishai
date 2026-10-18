@@ -45,6 +45,25 @@ export function sections(state: LinkedInState): LinkedInSectionScore[] {
   });
 }
 
+/**
+ * Which section bars take both columns of the two-column grid, so it never has an empty cell: a section with its roles
+ * under it (a bar beside it would leave a gap under that bar), and a bar that would otherwise be alone on its row,
+ * before such a section or at the end (seven sections in two columns, say).
+ */
+export function wideBars(sections: Array<Pick<LinkedInSectionScore, "roles">>): boolean[] {
+  const wide = sections.map((s) => s.roles.length > 0);
+  let alone = 0;
+  for (let i = 0; i <= wide.length; i++) {
+    if (i < wide.length && !wide[i]) {
+      alone++;
+      continue;
+    }
+    if (alone % 2) wide[i - 1] = true;
+    alone = 0;
+  }
+  return wide;
+}
+
 /** The fixes worth most first: what each failing check would add if done. */
 export function topFixes(checks: LinkedInCheck[], n = 3): LinkedInCheck[] {
   const worth = (c: LinkedInCheck) => c.gain ?? c.max - c.points;

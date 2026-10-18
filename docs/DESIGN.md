@@ -294,7 +294,9 @@ every screen but the live overlay (`windowing.ts`); breakpoints are `sm` and `md
   view (see "Scenes"). LinkedIn AI uses the same set: its section bars fill from the left (`.chart-fill`, then move
   with a transform when the score changes), its score ring counts on from the old score with the change beside it,
   the section a fix lands in wears `.moved-flash`, and an applied suggestion's card gets one solid accent band
-  sweeping across it (`.li-sweep` in `apps/web/src/index.css`; a tint that fades at Gentle, nothing at Off).
+  sweeping across it (`.li-sweep` in `apps/web/src/index.css`; a tint that fades at Gentle, nothing at Off). The
+  bars sit two to a row from sm up with no empty cell: Experience with its roles under it, and a bar that would be
+  alone on its row, take the whole row (`wideBars` in `pages/linkedin/model.ts`).
 - **A mock of someone else's screen** (LinkedIn AI's recruiter-search preview) is drawn in Orbit's own style:
   initials, ink and the accent, a line saying it's Orbit's preview, and never the other site's logo, colours or
   wording.
@@ -629,7 +631,7 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
   plainly, the honest line where the product needs it, and the product itself on the right), `FactsBand`,
   `StepsWithUI` (three steps, each with a small render of the product), the page's own middle (the templates'
   `Carousel`, the rounds, where the jobs come from, the search preview), `ToolkitGrid` (cards that are working pieces
-  of the product), `ComparisonBlock` where a fair one exists, `PricingSection` where the product is bought with
+  of the product; a wide card takes two columns from md up, so no row is left with an empty cell), `ComparisonBlock` where a fair one exists, `PricingSection` where the product is bought with
   credits, `FaqBlock`, `CrossSell` (the products that pick up where this one stops) and `FinalCta`. One h1, the
   hero's.
 - **The headline is two-tone**: ink, then the accent, as solid colours (no gradient). The closing panel's title does

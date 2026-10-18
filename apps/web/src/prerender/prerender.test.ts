@@ -158,6 +158,34 @@ describe("the built public pages", () => {
     }
   });
 
+  it("leaves no empty cell in a product page's grids at any column count", () => {
+    // Auto-placement as the browser does it (no dense packing): a card that doesn't fit the rest of a row moves on.
+    const empty = (spans: number[], cols: number) => {
+      let col = 0;
+      let gaps = 0;
+      for (const span of spans.map((s) => Math.min(s, cols))) {
+        if (col + span > cols) [gaps, col] = [gaps + cols - col, 0];
+        col = (col + span) % cols;
+      }
+      return gaps + (col ? cols - col : 0);
+    };
+    const spans = (classes: string[], wide: RegExp) => classes.map((c) => (wide.test(c) ? 2 : 1));
+    for (const path of ["/resume-ai", "/jobs", "/linkedin-ai", "/interview-copilot", "/mock-interview"]) {
+      const html = files.get(workerFile(path))!;
+      const from = html.indexOf('id="toolkit"');
+      const cards = [...html.slice(from, html.indexOf("</section>", from)).matchAll(/<li class="([^"]*\bmk-surface p-5[^"]*)"/g)].map((m) => m[1]!);
+      expect(cards.length, path).toBeGreaterThanOrEqual(3);
+      expect(empty(spans(cards, /\bmd:col-span-2\b/), 2), `${path}: the toolkit at md`).toBe(0);
+      expect(empty(spans(cards, /\bmd:col-span-2\b/), 3), `${path}: the toolkit at lg`).toBe(0);
+    }
+    // LinkedIn AI's hero: its seven section bars in two columns (wideBars).
+    const linkedin = files.get(workerFile("/linkedin-ai"))!;
+    const at = linkedin.indexOf('aria-label="Your score by section"');
+    const bars = [...linkedin.slice(at, linkedin.indexOf("</ul>", at)).matchAll(/<li class="(-mx-1\.5[^"]*)"/g)].map((m) => m[1]!);
+    expect(bars.length).toBe(7);
+    expect(empty(spans(bars, /\bsm:col-span-2\b/), 2), "the LinkedIn AI hero's section bars").toBe(0);
+  });
+
   it("keeps each guide page light", () => {
     for (const [file, html] of files) if (file.startsWith("companies/") || file.startsWith("roles/")) expect(html.length, file).toBeLessThan(110_000);
   });

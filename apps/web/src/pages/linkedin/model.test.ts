@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { LinkedInCheck, LinkedInRead, LinkedInState, LinkedInSuggestion, ResumeAiAllowance } from "@orbit/types";
-import { aboutPreview, charState, chosenText, copyAll, fixCost, initials, placeholders, profileUrl, progressText, scoreWord, searchPreview, sections, topFixes } from "./model";
+import { aboutPreview, charState, chosenText, copyAll, fixCost, initials, placeholders, profileUrl, progressText, scoreWord, searchPreview, sections, topFixes, wideBars } from "./model";
 
 const c = (id: string, section: LinkedInCheck["section"], ok: boolean, points: number, max: number, more: Partial<LinkedInCheck> = {}): LinkedInCheck =>
   ({ id, section, ok, points, max, title: id, tip: "", ...more });
@@ -36,6 +36,29 @@ describe("LinkedIn AI model", () => {
   it("puts the fixes worth most first, by what they add to the score", () => {
     const checks = [c("a", "about", false, 2, 5, { gain: 2 }), c("s", "skills", false, 0, 9, { gain: 6 }), c("x", "photo", false, 0, 9, { known: false, gain: 9 }), c("h", "headline", false, 0, 5, { gain: 4 })];
     expect(topFixes(checks).map((x) => x.id)).toEqual(["s", "h", "a"]);
+  });
+
+  it("lays the section bars out in two columns with no empty cell", () => {
+    const bars = (spec: string) => wideBars([...spec].map((ch) => ({ roles: ch === "R" ? [{ index: 0, label: "Role", points: 1, max: 2 }] : [] })));
+    const shape = (spec: string) => bars(spec).map((w) => (w ? "W" : ".")).join("");
+    // The public page's sample: seven sections, the last one alone on its row.
+    expect(shape(".......")).toBe("......W");
+    expect(shape("......")).toBe("......");
+    // Experience with its roles takes the row; a lone bar before it or at the end takes its row too.
+    expect(shape("..R....")).toBe("..W....");
+    expect(shape("..R...")).toBe("..W..W");
+    expect(shape(".R..")).toBe("WW..");
+    expect(shape("R")).toBe("W");
+    expect(shape("")).toBe("");
+    // Every row is full: a wide bar never starts mid-row, and the last row isn't half empty.
+    for (const spec of [".......", "..R...", ".R.R.", "R.R", ".........R."]) {
+      let col = 0;
+      for (const w of bars(spec)) {
+        expect(w && col === 1).toBe(false);
+        col = w ? 0 : 1 - col;
+      }
+      expect(col).toBe(0);
+    }
   });
 
   it("names the score", () => {

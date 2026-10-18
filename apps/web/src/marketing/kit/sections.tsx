@@ -83,11 +83,15 @@ export interface Tool {
   icon?: ComponentType<{ className?: string; strokeWidth?: number }>;
   /** A working piece of the product: typing, bars that fill, chips that light, a ring that counts. */
   widget: ReactNode;
-  /** Two columns wide on large screens. */
+  /** Two columns wide: the whole row at md (two columns), two of the three at lg. */
   wide?: boolean;
 }
 
-/** "The whole toolkit": cards that are small working pieces of the product, each with what it does. */
+/**
+ * "The whole toolkit": cards that are small working pieces of the product, each with what it does. A wide card spans
+ * from md up so the grid has no empty cell at either column count: five cards with one wide fill 2 + 2 + 2 and 3 + 3
+ * (the prerender test checks every product page's).
+ */
 export function ToolkitGrid({ id, eyebrow, title, lead, tools, band = false, children }: {
   id: string;
   eyebrow?: string;
@@ -102,7 +106,7 @@ export function ToolkitGrid({ id, eyebrow, title, lead, tools, band = false, chi
       <SectionIntro id={id} eyebrow={eyebrow} title={title} lead={lead} />
       <ul className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {tools.map((t) => (
-          <li key={t.title} className={cx("flex min-w-0 flex-col rounded-2xl border mk-line mk-surface p-5 sm:p-6", t.wide && "lg:col-span-2")}>
+          <li key={t.title} className={cx("flex min-w-0 flex-col rounded-2xl border mk-line mk-surface p-5 sm:p-6", t.wide && "md:col-span-2")}>
             <div className="flex items-center gap-3">
               {t.icon && <IconTile icon={t.icon} />}
               <h3 className="text-base font-semibold text-zinc-950 dark:text-white">{t.title}</h3>
