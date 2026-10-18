@@ -910,3 +910,38 @@ buttons (the rule since D58 is that only the press moves); and a global page cro
 every route (the tabs would flash while a lazy page loads; the route keeps one short fade-in and View Transitions stay
 for morphs between two views). Nothing a page does changed: the same calls, the same results, the same words, now
 with feedback on the control itself.
+
+**D73 — The product audit: a blip is not a sign-out, every change to a sign-in is told, and money follows the edge.**
+The owner asked for an audit of the whole product ("fix every bug, missed item, wrong thing… make it prod ready
+enterprise"). Three personas drove every product on a local stack (a free user in India, a paying user in dollars,
+the admin) at three widths, light and dark, with axe; the fixes are in the changelog. The choices made on the way:
+- **Only the server saying "not signed in" signs anyone out.** The session check treated any error as signed out,
+  so an API restart sent signed-in people to the sign-in page. 401 and 403 sign out; anything else is "Can't reach
+  Orbit" with Try again (and again when the browser is back online) for anyone who has signed in on that browser;
+  a first visit still gets the public page.
+- **Every change to how an account is signed in to is told to its owner**, by email when the server can send it and
+  always in the app: a passkey added, two-step sign-in on or off, a password reset or changed (not sign-ins
+  themselves: too many to read). The alert names a coarse device ("Chrome on Windows"), never an IP or a place, and
+  says what to do if it wasn't them. Home shows the newest one from the last fortnight until "It was me" on that
+  device; a change made on the device is acknowledged there at once.
+- **The admin can turn two-step sign-in off, with a reason**, for someone who lost their phone and recovery codes:
+  how they checked it's really them goes in the audit log, every device is signed out, the owner is emailed (so an
+  owner who didn't ask hears at once), and passkeys stay. There's no self-service recovery without the codes.
+- **One open order carries a first-purchase discount.** The newest order takes it from unpaid ones (marked expired,
+  still credited at what they charged if paid after all, so no money is ever lost); while a payment is on its way
+  (a UTR with the admin, a capture pending) a new order is full price.
+- **In production an order is made only through the website.** The currency follows the country the Worker signs;
+  a direct call could name any account country and buy rupee prices from anywhere. Checked read-only on production
+  before the change: the site's /api/v1/region answers the visitor's country, a direct call with a forged header
+  null. The desktop app buys on the website (it opens /billing). `/pricing` shows both currencies through a
+  display-only `?currency=` on the public listings (nothing is buyable from it).
+- **Minutes left are rounded down, the same way everywhere** (15.9 is 15; 59.97 is 60): never more than there is.
+  Credits bought before a plan aren't spent while it runs, and the app now shows them as kept.
+- **Practice's one-tap rounds are a drill of their own kind ("set")**, asked with no lead line: "the questions from
+  your prep" was untrue when nothing was prepared. **Delete transcript** removes what was said wherever it's quoted
+  word for word, answers included; the report is kept and the dialog says it keeps its short quotes.
+- **Not done, on purpose**: `workers_dev`/`preview_urls` off in wrangler.jsonc (old desktop builds and any Railway
+  setting that still names orbit.ishfaq.workers.dev would break; the owner checks, then flips them); leaving Orbit's
+  own window out of "Capture diagram" (Rust capture, needs a run on Windows); a user-facing "What's new" (the
+  changelog is written for developers; it needs its own copy) and a notifications centre (the security activity and
+  the support chat's dot are the events there are).

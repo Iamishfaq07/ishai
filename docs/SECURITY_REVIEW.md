@@ -231,6 +231,10 @@ Production was only read: headers, TLS, `/docs`, `/ready` and the public update 
 - **Detection (Low).**
   - Email the owner when a passkey or two-step sign-in is added, or the password is reset.
   - Recovery for a lost authenticator plus lost recovery codes should be an audited admin action (D71).
+- **Done in the product audit (D73):** the owner's alerts (auth/alerts.py: email when SMTP is set, and always in
+  Settings and on Home), the audited admin "turn off two-step sign-in", security headers on the Worker's own
+  answers, one open discounted order per account, and orders only through the website in production. Still the
+  owner's: `workers_dev`/`preview_urls`, Cloudflare's minimum TLS 1.2, HSTS preload.
 - **Info:**
   - three `href`s in Jobs AI take server URLs without `safeUrl` (the server and React already block
     `javascript:`);
