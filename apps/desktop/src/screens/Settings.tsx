@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import type { AdminConfig, AdminConfigUpdate, Entitlements, User } from "@orbit/types";
 import {
-  ArrowLeft,
   AppearanceControls,
   Button,
   Card,
@@ -11,62 +10,155 @@ import {
   LatencyDiagnostics,
   CostDashboard,
   FeedbackDiagnostics,
-  PageHeader,
   Select,
   Spinner,
+  Spot,
   Toggle,
   useDesign, confirmDialog,
   Briefcase,
   CreditCard,
   FileText,
   ExternalLink,
+  CircleAlert,
+  Globe,
   UserCog,
+  cx,
+  focusRing,
   wholeMinutes,
 } from "@orbit/ui";
+import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
+import { SectionTitle } from "../bits";
 import { loadCloseAction, saveCloseAction, type CloseAction } from "../CloseDialog";
 import { GlassControls } from "../GlassControls";
 import { GlobalShortcutsCard } from "../GlobalShortcutsCard";
+import { replayOnboarding } from "../welcomeTour";
 import { useTheme, type ThemePref } from "../theme";
 import { TitleBar } from "../TitleBar";
+import { reportLink, webLink } from "../web";
 import { WindowPrivacyCard } from "../WindowPrivacyCard";
+import type { Chrome } from "./Home";
+
+/** The sections, in the page's order, for the rail. */
+const SECTIONS: Array<{ id: string; label: string }> = [
+  { id: "settings-plan", label: "Plan & credits" },
+  { id: "settings-account", label: "Account & privacy" },
+  { id: "settings-window", label: "Window privacy" },
+  { id: "settings-appearance", label: "Appearance" },
+  { id: "settings-shortcuts", label: "Shortcuts" },
+  { id: "settings-about", label: "About Orbit" },
+];
 
 function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/**
+ * Settings (DESIGN.md "The desktop app"): a rail of its sections beside them (from 768 px), each section a card
+ * headed by its spot. The window-privacy card is unchanged on purpose (the owner is deciding it, D8).
+ */
 export function SettingsScreen({
   user,
+  chrome,
   onUser,
   onSignOut,
-  onBack,
+  onReplayTour,
 }: {
   user: User;
+  chrome: Chrome;
   onUser: (u: User) => void;
   onSignOut: () => void;
-  onBack: () => void;
+  /** "Show the welcome tour again": it opens over Home. */
+  onReplayTour: () => void;
 }) {
+  const go = (id: string) => document.getElementById(id)?.scrollIntoView({ block: "start" });
   return (
     <div className="flex h-full flex-col">
-      <TitleBar title="Settings">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Button>
-      </TitleBar>
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-3xl space-y-6">
-          <PageHeader title="Settings" />
-          <UsageCard />
-          <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
-          <WindowPrivacyCard />
-          <AppearanceCard />
-          <GlobalShortcutsCard />
-          <AdvancedCard />
+      <TitleBar current="settings" {...chrome} />
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto grid max-w-5xl gap-6 px-5 py-5 sm:px-6 md:grid-cols-[11.5rem_minmax(0,1fr)]">
+          <nav aria-label="Settings sections" className="hidden md:block">
+            <div className="sticky top-5 space-y-0.5">
+              <h1 className="mb-3 px-2.5 text-2xl font-semibold tracking-tight">Settings</h1>
+              {SECTIONS.map((x) => (
+                <button
+                  key={x.id}
+                  type="button"
+                  onClick={() => go(x.id)}
+                  className={cx("block w-full rounded-lg px-2.5 py-1.5 text-left text-sm text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white", focusRing)}
+                >
+                  {x.label}
+                </button>
+              ))}
+            </div>
+          </nav>
+          <div className="min-w-0 space-y-5">
+            <h1 className="text-2xl font-semibold tracking-tight md:hidden">Settings</h1>
+            <div id="settings-plan" className="scroll-mt-5">
+              <UsageCard />
+            </div>
+            <div id="settings-account" className="scroll-mt-5">
+              <PrivacyCard user={user} onUser={onUser} onSignOut={onSignOut} />
+            </div>
+            <div id="settings-window" className="scroll-mt-5">
+              <WindowPrivacyCard />
+            </div>
+            <div id="settings-appearance" className="scroll-mt-5">
+              <AppearanceCard />
+            </div>
+            <div id="settings-shortcuts" className="scroll-mt-5">
+              <GlobalShortcutsCard />
+            </div>
+            <div id="settings-about" className="scroll-mt-5">
+              <AboutCard onReplayTour={onReplayTour} />
+            </div>
+            <AdvancedCard />
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** Which Orbit this is, the welcome tour again, and the web. */
+function AboutCard({ onReplayTour }: { onReplayTour: () => void }) {
+  const [version, setVersion] = useState<string | null>(null);
+  useEffect(() => {
+    getVersion()
+      .then(setVersion)
+      .catch(() => undefined);
+  }, []);
+  return (
+    <Card>
+      <SectionTitle art={<Spot kind="devices" />} title="About Orbit" line={version ? `Orbit ${version} for Windows. Updates install by themselves.` : "Orbit for Windows."} />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            replayOnboarding();
+            onReplayTour();
+          }}
+        >
+          Show the welcome tour again
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => void openUrl(webLink(WEB_URL, "/", "settings"))}>
+          <Globe className="h-3.5 w-3.5" />
+          Orbit on the web
+          <ExternalLink className="h-3 w-3 opacity-60" />
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => void openUrl(reportLink(WEB_URL))}>
+          <CircleAlert className="h-3.5 w-3.5" />
+          Report a problem
+          <ExternalLink className="h-3 w-3 opacity-60" />
+        </Button>
+      </div>
+      <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+        An answer that was inappropriate or harmful? Report it from the answer itself (thumbs down, then
+        “Inappropriate or harmful”), or tell us here: Report a problem opens the contact form in your browser.
+      </p>
+    </Card>
   );
 }
 
@@ -76,7 +168,7 @@ function AppearanceCard() {
   const [closeAction, setCloseAction] = useState<CloseAction>(loadCloseAction);
   return (
     <Card>
-      <h2 className="mb-4 font-semibold">Appearance</h2>
+      <SectionTitle art={<Spot kind="appearance" />} title="Appearance" line="Theme, accent, text size, motion and the window's see-through look." />
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-4">
           <label htmlFor="theme" className="text-sm font-medium">
@@ -137,10 +229,15 @@ function PrivacyCard({ user, onUser, onSignOut }: { user: User; onUser: (u: User
 
   return (
     <Card>
-      <h2 className="mb-4 font-semibold">Account &amp; privacy</h2>
-      <p className="mb-4 text-sm text-zinc-500">
-        Signed in as <span className="font-medium text-zinc-700 dark:text-zinc-200">{user.email}</span>
-      </p>
+      <SectionTitle
+        art={<Spot kind="account" />}
+        title="Account & privacy"
+        line={
+          <>
+            Signed in as <span className="font-medium text-zinc-700 dark:text-zinc-200">{user.email}</span>
+          </>
+        }
+      />
       <div className="space-y-4">
         <Toggle
           checked={user.store_transcripts}
@@ -231,14 +328,18 @@ function UsageCard() {
 
   return (
     <Card>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-semibold">{credits ? "Credits" : "Usage"}</h2>
-        <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/billing`)}>
-          <CreditCard className="h-3.5 w-3.5" />
-          {credits ? "Buy credits" : "Plan & billing"}
-          <ExternalLink className="h-3 w-3 opacity-60" />
-        </Button>
-      </div>
+      <SectionTitle
+        art={<Spot kind={credits ? "credits" : "plan"} />}
+        title={credits ? "Credits" : "Plan & usage"}
+        line={credits ? "Bought on the website, spent here and there." : "What your plan includes and what's used."}
+        actions={
+          <Button variant="secondary" size="sm" onClick={() => void openUrl(`${WEB_URL}/billing`)}>
+            <CreditCard className="h-3.5 w-3.5" />
+            {credits ? "Buy credits" : "Plan & billing"}
+            <ExternalLink className="h-3 w-3 opacity-60" />
+          </Button>
+        }
+      />
       {usage === null ? (
         error ? (
           <ErrorNote onRetry={load}>{error}</ErrorNote>

@@ -20,6 +20,12 @@
   }
 }
 
+/* A tab list scrolls sideways only: its tabs' 1 px overlap of the underline would otherwise give it a vertical
+   scrollbar in WebView2 (History's session tabs). */
+[role="tablist"] {
+  overflow-y: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

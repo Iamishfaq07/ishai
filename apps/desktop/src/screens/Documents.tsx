@@ -1,76 +1,62 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import {
-  ArrowLeft,
+  Badge,
   Button,
   Card,
   CosmicEmptyState,
+  DocumentsScene,
+  Dropzone,
   ErrorNote,
   Field,
   Input,
   LoadGate,
-  PageHeader,
+  MAX_SESSION_DOCUMENTS,
+  SearchInput,
+  SegmentedControl,
   Select,
   Sheet,
-  Spinner,
+  Skeleton,
   Textarea,
   confirmDialog,
-  Briefcase,
-  FileIcon,
-  FileText,
-  NotebookPen,
-  FileUp,
-  cx,
-  type LucideIcon,
+  toast,
 } from "@orbit/ui";
 import { api } from "../api";
+import { KIND_LABEL, KindMark } from "../bits";
 import { TitleBar } from "../TitleBar";
+import type { Chrome } from "./Home";
 
-// Each kind of document's icon and colour in the list (the same as the web app's): a resume green, a job
-// description blue, notes amber. Decorative: the line under the title names the kind.
-const KIND_MARK: Record<DocumentKind, { icon: LucideIcon; tile: string }> = {
-  resume: { icon: FileText, tile: "bg-emerald-500/15 text-emerald-800 ring-emerald-600/25 dark:bg-emerald-400/15 dark:text-emerald-200 dark:ring-emerald-300/20" },
-  job_description: { icon: Briefcase, tile: "bg-sky-500/15 text-sky-800 ring-sky-600/25 dark:bg-sky-400/15 dark:text-sky-200 dark:ring-sky-300/20" },
-  notes: { icon: NotebookPen, tile: "bg-amber-500/15 text-amber-800 ring-amber-600/25 dark:bg-amber-400/15 dark:text-amber-200 dark:ring-amber-300/20" },
-  other: { icon: FileIcon, tile: "bg-zinc-500/10 text-zinc-600 ring-zinc-500/20 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10" },
-};
-
-function KindMark({ kind }: { kind: DocumentKind }) {
-  const { icon: Icon, tile } = KIND_MARK[kind];
-  return (
-    <span aria-hidden="true" className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1", tile)}>
-      <Icon className="h-4 w-4" />
-    </span>
-  );
-}
-
-const KIND_LABEL: Record<DocumentKind, string> = {
-  resume: "Resume",
-  job_description: "Job description",
-  notes: "Notes",
-  other: "Other",
-};
 const MAX_MB = 10;
+type KindFilter = "all" | DocumentKind;
 
 function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-/** Full document manager for the desktop app: upload, paste, edit (re-chunk), delete. */
-export function DocumentsScreen({ onBack }: { onBack: () => void }) {
+function sizeText(bytes: number): string | null {
+  if (!bytes) return null;
+  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Documents (DESIGN.md "The desktop app"): add a file or pasted text, then the list, filtered by kind and searched
+ * by title, each with its kind's mark and state; edit (the text is read again) and delete. The documents scene heads
+ * the page once there's a list (the empty state carries its own).
+ */
+export function DocumentsScreen({ chrome }: { chrome: Chrome }) {
   const [docs, setDocs] = useState<OrbitDocument[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const [kind, setKind] = useState<DocumentKind>("resume");
   const [uploading, setUploading] = useState(false);
-  const [dragging, setDragging] = useState(false);
 
   const [pasteTitle, setPasteTitle] = useState("Job description");
   const [pasteKind, setPasteKind] = useState<DocumentKind>("job_description");
   const [pasteText, setPasteText] = useState("");
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<OrbitDocument | null>(null);
+  const [filter, setFilter] = useState<KindFilter>("all");
+  const [query, setQuery] = useState("");
 
   const reload = () => {
     setLoadError(null);
@@ -84,12 +70,6 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
   const add = (doc: OrbitDocument) => setDocs((prev) => [doc, ...(prev ?? [])]);
   const replace = (doc: OrbitDocument) => setDocs((prev) => (prev ?? []).map((d) => (d.id === doc.id ? doc : d)));
 
-  const onFilePicked = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (fileRef.current) fileRef.current.value = "";
-    if (file) await upload(file);
-  };
-
   const upload = async (file: File) => {
     setError(null);
     if (file.size > MAX_MB * 1024 * 1024) {
@@ -99,6 +79,7 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
     setUploading(true);
     try {
       add(await api.uploadDocument(file, kind, file.name));
+      toast({ message: `Added ${file.name}`, tone: "success" });
     } catch (err) {
       setError(errText(err));
     } finally {
@@ -117,6 +98,7 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
     try {
       add(await api.createTextDocument({ title: pasteTitle.trim() || KIND_LABEL[pasteKind], kind: pasteKind, text: pasteText }));
       setPasteText("");
+      toast({ message: "Saved to Documents", tone: "success" });
     } catch (err) {
       setError(errText(err));
     } finally {
@@ -134,166 +116,144 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
     }
   };
 
+  const counts = useMemo(() => {
+    const c: Record<KindFilter, number> = { all: 0, resume: 0, job_description: 0, notes: 0, other: 0 };
+    for (const d of docs ?? []) {
+      c.all += 1;
+      c[d.kind] += 1;
+    }
+    return c;
+  }, [docs]);
+  const shown = (docs ?? []).filter(
+    (d) => (filter === "all" || d.kind === filter) && (!query.trim() || d.title.toLowerCase().includes(query.trim().toLowerCase())),
+  );
+
   return (
     <div className="flex h-full flex-col">
-      <TitleBar title="Documents">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Button>
-      </TitleBar>
-      <div className="flex-1 overflow-y-auto p-6">
-        <PageHeader title="Documents" subtitle="Your resume, job descriptions, and notes — used to ground answers." />
-        {error && (
-          <div className="mb-4">
-            <ErrorNote>{error}</ErrorNote>
-          </div>
-        )}
-
-        <div className="mb-6 grid gap-4 lg:grid-cols-2">
-          <Card>
-            <h2 className="mb-3 font-semibold">Upload a file</h2>
-            <div className="space-y-3">
-              <Field label="Type" htmlFor="up-kind">
-                <Select id="up-kind" value={kind} onChange={(e) => setKind(e.target.value as DocumentKind)}>
-                  {Object.entries(KIND_LABEL).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <input
-                id="up-file"
-                ref={fileRef}
-                type="file"
-                accept={DOCUMENT_ACCEPT}
-                disabled={uploading}
-                aria-describedby="up-file-hint"
-                className="peer sr-only"
-                onChange={(e) => void onFilePicked(e)}
-              />
-              {/* The drop zone is the input's label: a click or Enter opens the file picker, a drop uploads. Dropping
-                  needs the window's own drop handler off (dragDropEnabled: false in tauri.conf.json). */}
-              <label
-                htmlFor="up-file"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (!uploading) setDragging(true);
-                }}
-                onDragLeave={(e) => {
-                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragging(false);
-                  const file = e.dataTransfer.files?.[0];
-                  if (file && !uploading) void upload(file);
-                }}
-                className={cx(
-                  "group flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed px-4 py-5 text-center transition-colors",
-                  "peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500 peer-focus-visible:ring-offset-2 dark:peer-focus-visible:ring-offset-zinc-950",
-                  dragging
-                    ? "border-indigo-500 bg-indigo-500/10 dark:border-indigo-400"
-                    : "border-zinc-300 bg-zinc-50/60 hover:border-indigo-400 hover:bg-indigo-500/[0.04] dark:border-white/15 dark:bg-white/[0.02] dark:hover:border-indigo-400/60",
-                  uploading && "pointer-events-none",
-                )}
-              >
-                {uploading ? (
-                  <Spinner label="Uploading" />
-                ) : (
-                  <>
-                    <span
-                      aria-hidden="true"
-                      className={cx(
-                        "flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20 transition-transform dark:text-indigo-300",
-                        dragging ? "motion-ok:-translate-y-1" : "motion-ok:group-hover:-translate-y-0.5",
-                      )}
-                    >
-                      <FileUp className="h-5 w-5" />
-                    </span>
-                    <span className="text-sm">
-                      <span className="font-medium">{dragging ? "Drop it here" : "Drop a file here"}</span>
-                      {!dragging && (
-                        <>
-                          {" "}
-                          or <span className="font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300">browse</span>
-                        </>
-                      )}
-                    </span>
-                    <span id="up-file-hint" className="text-xs text-zinc-500">
-                      PDF, DOCX, TXT or MD, up to {MAX_MB} MB
-                    </span>
-                  </>
-                )}
-              </label>
+      <TitleBar current="documents" {...chrome} />
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-5xl space-y-5 px-5 py-5 sm:px-6">
+          <header className="scene-host flex items-center gap-6">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+              <p className="mt-1 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
+                Your resume, job descriptions and notes: answers quote them, so they're about you. Pick up to{" "}
+                {MAX_SESSION_DOCUMENTS} for each session in New session.
+              </p>
             </div>
-          </Card>
+            {docs && docs.length > 0 && <DocumentsScene className="-my-4 hidden w-36 shrink-0 md:block" />}
+          </header>
 
-          <Card>
-            <h2 className="mb-3 font-semibold">Paste text</h2>
-            <form onSubmit={(e) => void savePaste(e)} className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Title" htmlFor="p-title">
-                  <Input id="p-title" value={pasteTitle} onChange={(e) => setPasteTitle(e.target.value)} />
-                </Field>
-                <Field label="Type" htmlFor="p-kind">
-                  <Select id="p-kind" value={pasteKind} onChange={(e) => setPasteKind(e.target.value as DocumentKind)}>
-                    {Object.entries(KIND_LABEL).map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
+          {error && <ErrorNote>{error}</ErrorNote>}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <h2 className="text-[15px] font-semibold">Add a file</h2>
+              <p className="mb-3 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">PDF, DOCX, TXT or MD, up to {MAX_MB} MB.</p>
+              <div className="space-y-3">
+                <SegmentedControl
+                  label="What it is"
+                  size="sm"
+                  options={(Object.keys(KIND_LABEL) as DocumentKind[]).map((k) => ({ value: k, label: KIND_LABEL[k] }))}
+                  value={kind}
+                  onChange={setKind}
+                />
+                {/* Dropping needs the window's own drop handler off (dragDropEnabled: false in tauri.conf.json). */}
+                <Dropzone accept={DOCUMENT_ACCEPT} busy={uploading} file={null} onFile={(f) => f && void upload(f)} hint={`It's saved as ${KIND_LABEL[kind].toLowerCase()}.`} />
               </div>
-              <Field label="Content" htmlFor="p-text">
-                <Textarea id="p-text" rows={5} value={pasteText} onChange={(e) => setPasteText(e.target.value)} placeholder="Paste the job description, company notes, or project notes…" />
-              </Field>
-              <Button type="submit" disabled={saving || pasteText.trim().length < 20}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-            </form>
-          </Card>
-        </div>
+            </Card>
 
-        {docs === null ? (
-          loadError ? (
-            <ErrorNote onRetry={reload}>{loadError}</ErrorNote>
+            <Card>
+              <h2 className="text-[15px] font-semibold">Paste text</h2>
+              <p className="mb-3 mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">A job post from a page, company notes, project notes.</p>
+              <form onSubmit={(e) => void savePaste(e)} className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Title" htmlFor="p-title">
+                    <Input id="p-title" value={pasteTitle} onChange={(e) => setPasteTitle(e.target.value)} />
+                  </Field>
+                  <Field label="Type" htmlFor="p-kind">
+                    <Select id="p-kind" value={pasteKind} onChange={(e) => setPasteKind(e.target.value as DocumentKind)}>
+                      {Object.entries(KIND_LABEL).map(([v, l]) => (
+                        <option key={v} value={v}>
+                          {l}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+                <Field label="Content" htmlFor="p-text">
+                  <Textarea id="p-text" rows={3} value={pasteText} onChange={(e) => setPasteText(e.target.value)} placeholder="Paste the job description, company notes, or project notes…" />
+                </Field>
+                <Button type="submit" loading={saving} loadingText="Saving…" disabled={pasteText.trim().length < 20}>
+                  Save
+                </Button>
+              </form>
+            </Card>
+          </div>
+
+          {docs === null ? (
+            loadError ? (
+              <ErrorNote onRetry={reload}>{loadError}</ErrorNote>
+            ) : (
+              <Card>
+                <Skeleton variant="line" count={4} label="Loading your documents" />
+              </Card>
+            )
+          ) : docs.length === 0 ? (
+            <CosmicEmptyState variant="documents" title="No documents yet" body="Add your resume and paste the job description so answers are specific to you." />
           ) : (
-            <Spinner />
-          )
-        ) : docs.length === 0 ? (
-          <CosmicEmptyState variant="documents" title="No documents yet" body="Upload your resume and paste the job description so answers are specific to you." />
-        ) : (
-          <Card className="p-0">
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              {docs.map((d) => (
-                <li key={d.id} className="flex items-center justify-between gap-4 px-5 py-3">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <KindMark kind={d.kind} />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium" title={d.filename ?? d.title}>
-                        {d.title}
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        {KIND_LABEL[d.kind]} · <StatusText doc={d} />
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>
-                      Edit
-                    </Button>
-                    <Button variant="danger" size="sm" onClick={() => void remove(d)}>
-                      Delete
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
+            <section aria-labelledby="docs-title" className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 id="docs-title" className="text-[15px] font-semibold">
+                  Your documents <span className="font-normal text-zinc-500 dark:text-zinc-400">· {docs.length}</span>
+                </h2>
+                <span className="flex-1" />
+                <SegmentedControl
+                  label="Show"
+                  size="sm"
+                  options={(["all", "resume", "job_description", "notes", "other"] as KindFilter[])
+                    .filter((k) => k === "all" || counts[k] > 0)
+                    .map((k) => ({ value: k, label: k === "all" ? `All ${counts.all}` : `${KIND_LABEL[k]} ${counts[k]}` }))}
+                  value={filter}
+                  onChange={setFilter}
+                />
+                <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search titles" aria-label="Search documents" className="w-48" />
+              </div>
+              <Card className="p-0">
+                {shown.length === 0 ? (
+                  <p className="px-5 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">No documents match.</p>
+                ) : (
+                  <ul className="divide-y divide-zinc-100 dark:divide-white/[0.06]">
+                    {shown.map((d) => (
+                      <li key={d.id} className="flex items-center gap-3 px-4 py-3">
+                        <KindMark kind={d.kind} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium" title={d.filename ?? d.title}>
+                            {d.title}
+                          </p>
+                          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                            {[KIND_LABEL[d.kind], d.filename && d.filename !== d.title ? d.filename : null, sizeText(d.size_bytes), new Date(d.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        </div>
+                        <StatusBadge doc={d} />
+                        <div className="flex shrink-0 gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>
+                            Edit
+                          </Button>
+                          <Button variant="danger" size="sm" onClick={() => void remove(d)}>
+                            Delete
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </section>
+          )}
+        </div>
       </div>
 
       {editing && (
@@ -310,10 +270,10 @@ export function DocumentsScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-function StatusText({ doc }: { doc: OrbitDocument }) {
-  if (doc.status === "ready") return <span className="text-emerald-600 dark:text-emerald-400">Ready</span>;
-  if (doc.status === "processing") return <span className="text-amber-600 dark:text-amber-400">Processing…</span>;
-  return <span className="text-rose-600 dark:text-rose-400">Couldn’t read file</span>;
+function StatusBadge({ doc }: { doc: OrbitDocument }) {
+  if (doc.status === "ready") return <Badge tone="success">Ready</Badge>;
+  if (doc.status === "processing") return <Badge tone="warning">Reading…</Badge>;
+  return <Badge tone="danger">Couldn’t read it</Badge>;
 }
 
 function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () => void; onSaved: (d: OrbitDocument) => void }) {
@@ -369,8 +329,8 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" form="edit-document" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
+            <Button type="submit" form="edit-document" loading={saving} loadingText="Saving…">
+              Save changes
             </Button>
           </div>
         ) : undefined
@@ -378,7 +338,9 @@ function EditModal({ doc, onClose, onSaved }: { doc: OrbitDocument; onClose: () 
     >
       <div className="px-5 py-4">
         {loading ? (
-          <LoadGate loading variant="line" count={6} label="Opening the document">{null}</LoadGate>
+          <LoadGate loading variant="line" count={6} label="Opening the document">
+            {null}
+          </LoadGate>
         ) : (
           <form id="edit-document" onSubmit={(e) => void save(e)} className="space-y-4">
             {error && <ErrorNote>{error}</ErrorNote>}

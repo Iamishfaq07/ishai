@@ -1,21 +1,27 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OrbitSession, SessionType, User } from "@orbit/types";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ApiError, ApprovalBanner, ConfirmHost, OrbitLogo, SpaceBackdrop, VerifyEmailBanner, confirmDialog } from "@orbit/ui";
+import { ApiError, ApprovalBanner, ConfirmHost, OrbitLogo, SpaceBackdrop, ToastHost, VerifyEmailBanner, confirmDialog } from "@orbit/ui";
 import { WEB_URL, api, setAccessToken, setUnauthorizedHandler } from "./api";
 import { CloseDialog } from "./CloseDialog";
+import { openBilling } from "./credits";
 import { stepGlass } from "./glass";
 import { useGlobalShortcuts, useShortcutHandler, type GlobalAction } from "./globalShortcuts";
 import { loadSavedAudio, rejoinLaunch, rememberLaunch, usesSystemAudio, type DesktopLaunch } from "./launch";
 import { clearToken, listAudioApps, loadToken } from "./native";
+import { Onboarding } from "./Onboarding";
+import { onboardingDone } from "./welcomeTour";
 import { DocumentsScreen } from "./screens/Documents";
 import { HistoryScreen } from "./screens/History";
-import { HomeScreen } from "./screens/Home";
+import { HomeScreen, type Chrome } from "./screens/Home";
 import { LiveScreen } from "./screens/Live";
 import { LoginScreen } from "./screens/Login";
 import { SettingsScreen } from "./screens/Settings";
 import { IS_MAC, SetupScreen } from "./screens/Setup";
+import type { NavTarget } from "./TitleBar";
+import { useTrayRequests } from "./tray";
 import { confirmSessionDuringUpdate, useUpdateChecks } from "./updates";
+import { webLink } from "./web";
 import { applyPanelMode, loadAlwaysOnTop, setAlwaysOnTop, toggleMainWindow } from "./windowing";
 
 function onAppShortcut(action: GlobalAction): void {
@@ -28,7 +34,7 @@ type Screen =
   | { name: "boot" }
   | { name: "login" }
   | { name: "home" }
-  | { name: "setup"; initialType?: SessionType }
+  | { name: "setup"; initialType?: SessionType; jobId?: string }
   | { name: "documents" }
   | { name: "history"; sessionId?: string }
   | { name: "settings" }
@@ -40,6 +46,8 @@ export function App() {
   useUpdateChecks();
   const [screen, setScreen] = useState<Screen>({ name: "boot" });
   const [user, setUser] = useState<User | null>(null);
+  // The welcome tour (Onboarding.tsx): once per device, over Home, after the first sign-in.
+  const [tour, setTour] = useState(false);
   // Paid features are locked until the email is verified — but only on servers that require it.
   const [verificationRequired, setVerificationRequired] = useState(false);
   useEffect(() => {
@@ -142,16 +150,50 @@ export function App() {
     if (!loadAlwaysOnTop()) void setAlwaysOnTop(false).catch(() => undefined);
   }, []);
 
-  // Sign-in, the hub and the management screens get room; the session config/overlay stay compact. Live sizes itself.
+  // Sign-in, the hub, Setup and the management screens get room; the live overlay sizes itself (compact or expanded).
   useEffect(() => {
-    if (["login", "home", "documents", "settings", "history"].includes(screen.name)) {
+    if (["login", "home", "setup", "documents", "settings", "history"].includes(screen.name)) {
       void applyPanelMode("expanded");
-    } else if (screen.name === "setup") {
-      void applyPanelMode("compact");
     }
   }, [screen.name]);
 
+  // The first Home after signing in on this device opens the welcome tour.
+  useEffect(() => {
+    if (screen.name === "home" && user && !onboardingDone()) setTour(true);
+  }, [screen.name, user]);
+
   const home = () => setScreen({ name: "home" });
+  const navigate = useCallback((to: NavTarget) => setScreen({ name: to } as Screen), []);
+  const chrome: Chrome = useMemo(
+    () => ({
+      onNavigate: navigate,
+      ...(user
+        ? {
+            account: {
+              name: user.name ?? null,
+              email: user.email,
+              onBilling: () => openBilling(),
+              onWeb: () => void openUrl(webLink(WEB_URL, "/", "settings")),
+              onSignOut: () => void signOut(),
+            },
+          }
+        : {}),
+    }),
+    [navigate, signOut, user],
+  );
+
+  // The tray's items: a screen (never leaving a live session), or the web in the browser.
+  useTrayRequests((request) => {
+    if (request === "web") {
+      void openUrl(webLink(WEB_URL, "/", "tray"));
+      return;
+    }
+    const now = screenRef.current.name;
+    if (now === "live" || now === "boot" || now === "login") return;
+    if (request === "new-session") setScreen({ name: "setup" });
+    else setScreen({ name: request } as Screen);
+  });
+
   const goLive = (session: OrbitSession, launch: DesktopLaunch) => {
     rememberLaunch(session.id, launch);
     setScreen({ name: "live", session, launch });
@@ -182,14 +224,23 @@ export function App() {
 
   return (
     <>
-      {/* Hidden while the window is see-through (index.css): then the desktop itself is the backdrop. */}
+      {/* Hidden in the workbench (html.app-shell) and while the window is see-through (index.css). */}
       <SpaceBackdrop className="space-backdrop" />
       {/* Keyed on the screen so every navigation fades the new screen in. */}
-      <div key={screen.name} className="h-full animate-fade-in">
+      <div key={screen.name} className="h-full animate-page-in">
         {renderScreen()}
       </div>
+      {tour && screen.name === "home" && (
+        <Onboarding
+          onDone={(next) => {
+            setTour(false);
+            if (next === "start") setScreen({ name: "setup" });
+          }}
+        />
+      )}
       <CloseDialog liveActive={screen.name === "live"} />
       <ConfirmHost />
+      <ToastHost />
     </>
   );
 
@@ -215,45 +266,44 @@ export function App() {
         return (
           <HomeScreen
             user={user}
+            chrome={chrome}
             notice={verifyNotice}
+            hidePromos={tour}
             onNewSession={(type) => setScreen({ name: "setup", ...(type ? { initialType: type } : {}) })}
+            onPrepareInterview={(entry) => setScreen({ name: "setup", initialType: "interview", jobId: entry.id })}
             onResume={resume}
-            onOpenDocuments={() => setScreen({ name: "documents" })}
             onOpenHistory={() => setScreen({ name: "history" })}
             onOpenSession={(id) => setScreen({ name: "history", sessionId: id })}
-            onOpenSettings={() => setScreen({ name: "settings" })}
-            onSignOut={() => void signOut()}
           />
         );
       case "setup":
         return (
           <SetupScreen
             user={user}
+            chrome={chrome}
             notice={verifyNotice}
-            initialType={screen.initialType}
-            onSignOut={() => void signOut()}
+            {...(screen.initialType ? { initialType: screen.initialType } : {})}
+            {...(screen.jobId ? { initialJobId: screen.jobId } : {})}
             onSignedInAgain={setUser}
-            onBack={home}
             onStart={goLive}
-            onOpenDocuments={() => setScreen({ name: "documents" })}
-            onOpenHistory={() => setScreen({ name: "history" })}
-            onOpenSettings={() => setScreen({ name: "settings" })}
           />
         );
       case "documents":
-        return <DocumentsScreen onBack={home} />;
+        return <DocumentsScreen chrome={chrome} />;
       case "history":
-        return (
-          <HistoryScreen
-            onBack={home}
-            onResume={resume}
-            onDrill={drill}
-            {...(screen.sessionId ? { initialSessionId: screen.sessionId } : {})}
-          />
-        );
+        return <HistoryScreen chrome={chrome} onResume={resume} onDrill={drill} {...(screen.sessionId ? { initialSessionId: screen.sessionId } : {})} />;
       case "settings":
         return user ? (
-          <SettingsScreen user={user} onUser={setUser} onSignOut={() => void signOut()} onBack={home} />
+          <SettingsScreen
+            user={user}
+            chrome={chrome}
+            onUser={setUser}
+            onSignOut={() => void signOut()}
+            onReplayTour={() => {
+              home();
+              setTour(true);
+            }}
+          />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-zinc-500">
             <p>Orbit can't reach your account right now. Check your internet connection.</p>

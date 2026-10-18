@@ -143,6 +143,8 @@ export interface LivePanelProps {
   dragRegion?: boolean;
   /** Extra header controls (e.g. desktop "always on top" toggle). */
   headerEnd?: ReactNode;
+  /** Desktop: the window's own buttons (minimize, close), at the very end of the header, after End. */
+  windowControls?: ReactNode;
   /** Banner area for capture prompts (e.g. web "share tab audio"). */
   notice?: ReactNode;
   /** Modal layer rendered over the panel (screenshot preview). */
@@ -428,9 +430,11 @@ export function LivePanel(props: LivePanelProps) {
         </span>
         {(compact || !wide) && <h1 className="sr-only">{props.title ?? "Orbit"}</h1>}
         {!compact && wide && (
+          // The title gives way first (shrink-[4]): the live status beside it matters more than the session's name.
           <h1
             data-tauri-drag-region={props.dragRegion ? "" : undefined}
-            className="max-w-[40%] truncate font-display text-sm font-semibold tracking-tight"
+            title={props.title ?? "Orbit"}
+            className="min-w-[3rem] max-w-[40%] shrink-[4] truncate font-display text-sm font-semibold tracking-tight"
           >
             {props.title ?? "Orbit"}
           </h1>
@@ -476,6 +480,7 @@ export function LivePanel(props: LivePanelProps) {
             End
           </button>
         )}
+        {props.windowControls}
       </header>
 
       <Banners

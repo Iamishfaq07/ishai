@@ -14,19 +14,25 @@ import {
   Input,
   PageHeader,
   ReportStatusNote,
+  SearchInput,
+  SegmentedControl,
   SessionReview,
   DebriefStudio,
   DeliveryCard,
   FollowUpCard,
+  Skeleton,
   Spinner,
+  TabPanel,
+  Tabs,
   useReportPolling, confirmDialog, ChevronRight, Clock, MessageCircle, reportLanguageNote, scriptLang,
   sessionLanguageLabel } from "@orbit/ui";
-import type { SessionType } from "@orbit/types";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { api } from "../api";
+import { ScorePip, TypeMark } from "../bits";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL, sessionKindLine } from "../format";
 import { SESSION_TYPE_ICON, sessionLine } from "../sessionIcons";
 import { TitleBar } from "../TitleBar";
+import type { Chrome } from "./Home";
 
 /** How a question reached Orbit, as the History list says it. */
 const SOURCE_LABEL: Record<string, string> = {
@@ -36,9 +42,9 @@ const SOURCE_LABEL: Record<string, string> = {
   screenshot: "From a screenshot",
 };
 
-/** Past sessions: a list, and a detail view with summary / transcript / Q&A. */
-export function HistoryScreen({ onBack, onResume, onDrill, initialSessionId }: {
-  onBack: () => void;
+/** Past sessions: a list (with each review's score), and a detail view with the review, summary, transcript and Q&A. */
+export function HistoryScreen({ chrome, onResume, onDrill, initialSessionId }: {
+  chrome: Chrome;
   onResume: (session: OrbitSession) => void;
   /** Opens a new re-drill session (mock, mic only). */
   onDrill: (session: OrbitSession) => void;
@@ -49,26 +55,34 @@ export function HistoryScreen({ onBack, onResume, onDrill, initialSessionId }: {
 
   return (
     <div className="flex h-full flex-col">
-      <TitleBar title="History">
-        <Button variant="ghost" size="sm" onClick={() => (selected ? setSelected(null) : onBack())}>
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back
-        </Button>
-      </TitleBar>
-      <div className="flex-1 overflow-y-auto p-6">
-        {selected ? (
-          <SessionDetailView id={selected} onDeleted={() => setSelected(null)} onDrill={onDrill} />
-        ) : (
-          <SessionList onOpen={setSelected} onResume={onResume} />
-        )}
+      <TitleBar current="history" {...chrome} />
+      <div className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-5xl px-5 py-5 sm:px-6">
+          {selected ? (
+            <>
+              <Button variant="ghost" size="sm" className="-ml-2 mb-3" onClick={() => setSelected(null)}>
+                <ArrowLeft className="h-3.5 w-3.5" />
+                All sessions
+              </Button>
+              <SessionDetailView id={selected} onDeleted={() => setSelected(null)} onDrill={onDrill} />
+            </>
+          ) : (
+            <SessionList onOpen={setSelected} onResume={onResume} />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
+type ListFilter = "all" | "copilot" | "practice";
+
 function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onResume: (session: OrbitSession) => void }) {
   const [sessions, setSessions] = useState<OrbitSession[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scores, setScores] = useState<Map<string, number>>(new Map());
+  const [filter, setFilter] = useState<ListFilter>("all");
+  const [query, setQuery] = useState("");
 
   const load = () => {
     setError(null);
@@ -76,87 +90,123 @@ function SessionList({ onOpen, onResume }: { onOpen: (id: string) => void; onRes
       .listSessions()
       .then(setSessions)
       .catch((e) => setError(errText(e)));
+    api
+      .progress()
+      .then((p) => setScores(new Map(p.points.filter((x) => x.overall_score !== null).map((x) => [x.id, x.overall_score!]))))
+      .catch(() => undefined);
   };
   useEffect(load, []);
 
+  const q = query.trim().toLowerCase();
+  const shown = (sessions ?? []).filter(
+    (s) =>
+      (filter === "all" || (filter === "practice") === (s.type === "mock")) &&
+      (!q || s.title.toLowerCase().includes(q) || (s.role ?? "").toLowerCase().includes(q) || (s.company ?? "").toLowerCase().includes(q)),
+  );
+  const scored = (sessions ?? []).filter((s) => scores.has(s.id));
+  const average = scored.length ? Math.round((scored.reduce((sum, s) => sum + scores.get(s.id)!, 0) / scored.length) * 10) / 10 : null;
+
   return (
     <div>
-      <PageHeader title="Sessions" subtitle="Transcripts, detected questions, answers, and summaries from past sessions." />
+      <PageHeader
+        title="History"
+        subtitle={
+          sessions && sessions.length > 0
+            ? `${sessions.length} session${sessions.length === 1 ? "" : "s"}${average !== null ? ` · average review ${average}/5` : ""}. Transcripts, answers and reviews.`
+            : "Transcripts, detected questions, answers and reviews from past sessions."
+        }
+      />
       {sessions === null ? (
         error ? (
           <ErrorNote onRetry={load}>{error}</ErrorNote>
         ) : (
-          <Spinner />
+          <Card>
+            <Skeleton variant="line" count={5} label="Loading your sessions" />
+          </Card>
         )
       ) : sessions.length === 0 ? (
         <CosmicEmptyState variant="copilot" title="No sessions yet" body="When you end a live session, its transcript and summary are saved here." />
       ) : (
-        <Card className="p-0">
-          <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {sessions.map((s) => (
-              <li key={s.id} className="flex items-center gap-3 px-5 py-4">
-                <button
-                  type="button"
-                  onClick={() => onOpen(s.id)}
-                  className={cx("group flex min-w-0 flex-1 items-center gap-3.5 rounded text-left", focusRing)}
-                >
-                  <TypeMark type={s.type} />
-                  <div className="grid min-w-0 flex-1 gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {s.title}
-                      {s.status !== "ended" && (
-                        <span className="ml-2 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                          {s.status === "live" ? "Unfinished" : "Not started"}
-                        </span>
-                      )}
-                    </p>
-                    <p className="truncate text-xs text-zinc-500">
-                      {sessionKindLine(s)}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 sm:justify-end">
-                    <span>{formatDate(s.started_at ?? s.created_at)}</span>
-                    {s.duration_seconds ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 tabular-nums text-zinc-600 dark:text-zinc-300">
-                        <Clock className="h-3 w-3" aria-hidden="true" />
-                        {formatDuration(s.duration_seconds)}
-                      </span>
-                    ) : null}
-                    {sessionLanguageLabel(s.language, s.answer_language) && (
-                      <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-zinc-600 dark:text-zinc-300">
-                        {sessionLanguageLabel(s.language, s.answer_language)}
-                      </span>
-                    )}
-                    <span
-                      className={cx(
-                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 tabular-nums",
-                        s.question_count > 0
-                          ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
-                          : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
-                      )}
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <SegmentedControl
+              label="Show"
+              size="sm"
+              options={[
+                { value: "all", label: "All" },
+                { value: "copilot", label: "Copilot" },
+                { value: "practice", label: "Practice" },
+              ]}
+              value={filter}
+              onChange={setFilter}
+            />
+            <span className="flex-1" />
+            <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search sessions" aria-label="Search sessions" className="w-56" />
+          </div>
+          <Card className="p-0">
+            {shown.length === 0 ? (
+              <p className="px-5 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">No sessions match.</p>
+            ) : (
+              <ul className="divide-y divide-zinc-100 dark:divide-white/[0.06]">
+                {shown.map((s) => (
+                  <li key={s.id} className="flex items-center gap-3 px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => onOpen(s.id)}
+                      className={cx("group flex min-w-0 flex-1 items-center gap-3.5 rounded-lg text-left", focusRing)}
                     >
-                      <MessageCircle className="h-3 w-3" aria-hidden="true" />
-                      {s.question_count} question{s.question_count === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  </div>
-                  {s.status === "ended" && (
-                    <ChevronRight
-                      aria-hidden="true"
-                      className="h-4 w-4 shrink-0 text-zinc-400 motion-ok:transition-transform motion-ok:group-hover:translate-x-0.5"
-                    />
-                  )}
-                </button>
-                {s.status !== "ended" && (
-                  <Button size="sm" onClick={() => onResume(s)}>
-                    Rejoin
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Card>
+                      <TypeMark type={s.type} />
+                      <div className="grid min-w-0 flex-1 gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4">
+                        <div className="min-w-0">
+                          <p className="flex items-center gap-2">
+                            <span className="truncate text-sm font-medium">{s.title}</span>
+                            {s.status !== "ended" && (
+                              <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-200">
+                                {s.status === "live" ? "Unfinished" : "Not started"}
+                              </span>
+                            )}
+                          </p>
+                          <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                            {sessionLine([sessionKindLine(s), formatDate(s.started_at ?? s.created_at)])}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-500 sm:justify-end">
+                          {s.duration_seconds ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 tabular-nums text-zinc-600 dark:text-zinc-300">
+                              <Clock className="h-3 w-3" aria-hidden="true" />
+                              {formatDuration(s.duration_seconds)}
+                            </span>
+                          ) : null}
+                          {sessionLanguageLabel(s.language, s.answer_language) && (
+                            <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-zinc-600 dark:text-zinc-300">
+                              {sessionLanguageLabel(s.language, s.answer_language)}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 rounded-full bg-zinc-500/10 px-2 py-0.5 tabular-nums text-zinc-600 dark:text-zinc-300">
+                            <MessageCircle className="h-3 w-3" aria-hidden="true" />
+                            {s.question_count} question{s.question_count === 1 ? "" : "s"}
+                          </span>
+                        </div>
+                      </div>
+                      {scores.has(s.id) ? <ScorePip score={scores.get(s.id)!} /> : <span className="w-8 shrink-0" aria-hidden="true" />}
+                      {s.status === "ended" && (
+                        <ChevronRight
+                          aria-hidden="true"
+                          className="h-4 w-4 shrink-0 text-zinc-400 motion-ok:transition-transform motion-ok:group-hover:translate-x-0.5"
+                        />
+                      )}
+                    </button>
+                    {s.status !== "ended" && (
+                      <Button size="sm" onClick={() => onResume(s)}>
+                        Rejoin
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
       )}
     </div>
   );
@@ -261,34 +311,24 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
       )}
 
       <ReportStatusNote status={session.report_status} onRetry={() => void retryReport()} />
-      <div role="tablist" className="mb-6 flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
-        {(
-          [
-            ["review", "Review"],
-            ["summary", "Summary"],
-            ["transcript", `Transcript (${detail.turns.length})`],
-            ["questions", `Questions & answers (${detail.questions.length + detail.answers.filter((a) => !a.question_id || !detail.questions.some((q) => q.id === a.question_id)).length})`],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            role="tab"
-            aria-selected={tab === key}
-            onClick={() => setTab(key)}
-            className={cx(
-              "-mb-px border-b-2 px-3 py-2 text-sm font-medium",
-              tab === key ? "border-indigo-500 text-zinc-900 dark:text-white" : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200",
-              focusRing,
-            )}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
+      <Tabs
+        label="Session"
+        idBase="session-detail"
+        className="mb-6"
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { value: "review", label: "Review" },
+          { value: "summary", label: "Summary" },
+          { value: "transcript", label: `Transcript (${detail.turns.length})` },
+          {
+            value: "questions",
+            label: `Questions & answers (${detail.questions.length + detail.answers.filter((a) => !a.question_id || !detail.questions.some((q) => q.id === a.question_id)).length})`,
+          },
+        ]}
+      />
       {tab === "review" && (
-        <div className="space-y-6">
+        <TabPanel idBase="session-detail" value="review" className="space-y-6">
         <SessionReview
           review={detail.summary?.review}
           practiceQueue={!session.negotiation}
@@ -314,11 +354,15 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
             openLink={(url) => void openUrl(url)}
           />
         )}
-        </div>
+        </TabPanel>
       )}
-      {tab === "summary" && <SummaryView summary={detail.summary} />}
-      {tab === "transcript" && <TranscriptTimeline detail={detail} />}
-      {tab === "questions" && <QuestionsView detail={detail} />}
+      {tab !== "review" && (
+        <TabPanel idBase="session-detail" value={tab}>
+          {tab === "summary" && <SummaryView summary={detail.summary} />}
+          {tab === "transcript" && <TranscriptTimeline detail={detail} />}
+          {tab === "questions" && <QuestionsView detail={detail} />}
+        </TabPanel>
+      )}
     </div>
   );
 }
@@ -392,11 +436,11 @@ function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
       <ol className="space-y-4">
         {turns.map((t) => (
           <li key={t.id} className="grid grid-cols-[4.5rem_1fr] gap-3 text-sm">
-            <span className="pt-0.5 font-mono text-xs tabular-nums text-zinc-400">{formatClock(t.start_ms)}</span>
+            <span className="pt-0.5 text-xs tabular-nums text-zinc-500 dark:text-zinc-400">{formatClock(t.start_ms)}</span>
             <div>
               <p
                 className={cx(
-                  "text-xs font-semibold uppercase tracking-wider",
+                  "text-xs font-semibold",
                   t.speaker === "candidate" ? "text-emerald-600 dark:text-emerald-400" : "text-indigo-600 dark:text-indigo-300",
                 )}
               >
@@ -479,23 +523,5 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
         </li>
       ))}
     </ol>
-  );
-}
-
-/** A session's type as a small icon tile: mock interviews in orange (Practice's colour), the rest in the accent. */
-function TypeMark({ type }: { type: SessionType }) {
-  const Icon = SESSION_TYPE_ICON[type];
-  return (
-    <span
-      aria-hidden="true"
-      className={cx(
-        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1",
-        type === "mock"
-          ? "bg-orange-500/15 text-orange-800 ring-orange-600/25 dark:bg-orange-400/15 dark:text-orange-200 dark:ring-orange-300/20"
-          : "bg-indigo-500/15 text-indigo-700 ring-indigo-500/25 dark:bg-indigo-400/15 dark:text-indigo-200 dark:ring-indigo-300/20",
-      )}
-    >
-      <Icon className="h-5 w-5" />
-    </span>
   );
 }

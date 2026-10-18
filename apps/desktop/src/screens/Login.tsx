@@ -10,7 +10,6 @@ import {
   FileText,
   MessagesSquare,
   OrbitWordmark,
-  PlanetHero,
   ShieldCheck,
   cx,
   focusRing,
@@ -109,8 +108,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
     <div className="flex h-full flex-col">
       <TitleBar />
       <div className="flex flex-1 overflow-y-auto">
-        <aside className="relative hidden w-[42%] shrink-0 flex-col justify-center overflow-hidden bg-gradient-to-br from-indigo-950 via-zinc-950 to-zinc-950 p-8 text-white sm:flex">
-          <PlanetHero className="pointer-events-none absolute right-5 top-5 w-24 opacity-90 motion-safe:animate-float" />
+        <aside className="relative hidden w-[42%] shrink-0 flex-col justify-center overflow-hidden bg-zinc-900 p-8 text-white sm:flex">
           <OrbitWordmark size={26} className="relative" />
           <p className="relative mt-3 max-w-xs font-display text-xl font-semibold leading-snug tracking-tight">
             Your interview copilot, Resume AI and Jobs AI, in one account.

@@ -2,12 +2,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AUDIO_CHANNEL, type OrbitSession, type User } from "@orbit/types";
 import {
   Button,
+  Contrast,
+  CopilotScene,
   CreditCard,
   Headphones,
+  CircleAlert,
+  MenuButton,
   Mic,
+  MoreHorizontal,
   SourceChip,
+  Smartphone,
   useSourceTracker,
-  OrbitLogo,
   Pin,
   PinOff,
   X,
@@ -28,6 +33,7 @@ import {
   selectDisplayedAnswer,
   useAnswerHistory,
   useLiveSession,
+  type MenuItem,
   type PanelMode,
   VISION_ENABLED,
   confirmDialog,
@@ -54,7 +60,9 @@ import {
 } from "../native";
 import { requestClose } from "../CloseDialog";
 import { useShortcutHandler, type GlobalAction } from "../globalShortcuts";
-import { GlassButton } from "../GlassControls";
+import { stepGlass } from "../glass";
+import { reportLink } from "../web";
+import { formatAccelerator, loadShortcuts } from "../globalShortcuts";
 import type { DesktopLaunch } from "../launch";
 import { SignInAgain } from "../SignInAgain";
 import { WindowButtons } from "../TitleBar";
@@ -394,11 +402,11 @@ export function LiveScreen({
     const outOfMinutes = endedWhy === "minutes";
     return (
       <div className="flex h-full flex-col">
-        <div data-tauri-drag-region="" className="flex h-10 shrink-0 items-center justify-end px-2">
+        <div data-tauri-drag-region="" className="flex h-10 shrink-0 items-stretch justify-end">
           <WindowButtons minimize={() => void win.minimize()} hide={requestClose} />
         </div>
         <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 px-6 pb-8 text-center">
-          <OrbitLogo size={36} />
+          <CopilotScene quiet className="w-40" />
           <h1 className="font-display text-lg font-semibold tracking-tight">{copy.title}</h1>
           <p className="max-w-xs text-sm text-zinc-600 dark:text-zinc-300">{copy.body}</p>
           <div className="mt-1 flex flex-wrap justify-center gap-2">
@@ -420,13 +428,61 @@ export function LiveScreen({
     );
   }
 
+  // The connection gone for good: the devices still hear, but nothing reaches Orbit, so it isn't "active".
+  const captureHealth = disconnected
+    ? "offline"
+    : Object.values(deviceHealth).includes("recovering")
+      ? "recovering"
+      : Object.values(deviceHealth).includes("active")
+        ? "active"
+        : "muted";
+  const compact = mode === "compact";
+  const keys = loadShortcuts();
+  // Compact: the window's own options fold into one menu, so the status, the clock, Expand and End keep their room
+  // (the header used to cut "Listening" to "Li…"); expanded keeps the phone's button out in the header too.
+  const report: MenuItem = {
+    label: "Report a problem",
+    icon: CircleAlert,
+    // Opens the browser's contact form on a report; the session carries on here.
+    onSelect: () => void openUrl(reportLink(WEB_URL)),
+  };
+  const windowMenu = (
+    <MenuButton
+      label="Window options"
+      icon={MoreHorizontal}
+      variant="ghost"
+      size="sm"
+      align="end"
+      menuClassName="glass-solid"
+      items={[
+        { label: onTop ? "Always on top: on" : "Always on top: off", icon: onTop ? Pin : PinOff, onSelect: () => setOnTop((v) => !v) },
+        { label: "More see-through", icon: Contrast, hint: formatAccelerator(keys.moreTransparent), onSelect: () => stepGlass(-0.1) },
+        { label: "Less see-through", icon: Contrast, hint: formatAccelerator(keys.lessTransparent), onSelect: () => stepGlass(0.1) },
+        ...(compact
+          ? [
+              {
+                label: "Follow on your phone",
+                icon: Smartphone,
+                disabled: ended,
+                // The phone's QR code lives in the expanded header (CompanionShare): open it there.
+                onSelect: () => {
+                  setMode("expanded");
+                  window.setTimeout(() => document.querySelector<HTMLButtonElement>("[data-companion] button")?.click(), 400);
+                },
+              },
+            ]
+          : []),
+        report,
+      ]}
+    />
+  );
+
   return (
     <LivePanel
       audioAmplitude={() => audioAmplitude.current}
-      captureHealth={
-        // The connection gone for good: the devices still hear, but nothing reaches Orbit, so it isn't "active".
-        disconnected ? "offline" : Object.values(deviceHealth).includes("recovering") ? "recovering" : Object.values(deviceHealth).includes("active") ? "active" : "muted"
-      }
+      // Only a problem gets its own pill: when capture is fine, the Mic and Interviewer chips already say so (the
+      // header said "Capture active" twice over).
+      {...(captureHealth !== "active" ? { captureHealth } : {})}
       mockInterview={session.type === "mock"}
       videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}
@@ -452,32 +508,26 @@ export function LiveScreen({
       title={session.title}
       dragRegion
       notice={<>{notice}{session.type !== "mock" && <DefenseWorkspace api={api} sessionId={session.id} capture={async () => base64ToBlob((await captureScreen()).pngBase64)} />}</>}
+      windowControls={<WindowButtons compact={compact} minimize={() => void win.minimize()} hide={requestClose} />}
       headerEnd={
         <>
           {/* Compact: hidden, but still listening, so a silent source's advice reaches the capture notes. */}
-          <span className={cx("flex items-center gap-1.5 text-[11px]", mode === "compact" && "hidden")}>
+          <span className={cx("flex items-center gap-1.5 text-[11px]", compact && "hidden")}>
             <SourceChip tracker={sources} channel="mic" icon={Mic} label="Mic" on={deviceHealth.mic === "active"} paused={live.state === "paused"}
                         onAdvice={(mic) => setSourceAdvice((a) => (a.mic === mic ? a : { ...a, mic }))} />
             <SourceChip tracker={sources} channel="system" icon={Headphones} label="Interviewer" on={launch.systemAudio && deviceHealth.system === "active"}
                         paused={live.state === "paused"} onAdvice={(system) => setSourceAdvice((a) => (a.system === system ? a : { ...a, system }))} />
           </span>
-          <CompanionShare api={api} sessionId={session.id} webUrl={WEB_URL} disabled={ended} />
-          <button
-            type="button"
-            onClick={() => setOnTop((v) => !v)}
-            aria-pressed={onTop}
-            title={onTop ? "Always on top: on" : "Always on top: off"}
-            className={cx(
-              "inline-flex items-center rounded px-1.5 py-1 text-xs",
-              onTop ? "text-indigo-600 dark:text-indigo-300" : "text-zinc-400",
-              "hover:bg-zinc-100 dark:hover:bg-zinc-800",
-              focusRing,
-            )}
-          >
-            {onTop ? <Pin className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
-          </button>
-          <GlassButton />
-          <WindowButtons minimize={() => void win.minimize()} hide={requestClose} />
+          {compact ? (
+            windowMenu
+          ) : (
+            <>
+              <span data-companion="">
+                <CompanionShare api={api} sessionId={session.id} webUrl={WEB_URL} disabled={ended} />
+              </span>
+              {windowMenu}
+            </>
+          )}
         </>
       }
     />
