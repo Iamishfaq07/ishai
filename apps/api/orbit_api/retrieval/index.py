@@ -52,6 +52,9 @@ class SessionIndex:
         self._chunks = chunks
         self._embedder = embedder
         self._bm25 = BM25([chunk_body(c.category, c.text) for c in chunks])
+        # The last query's scores over every chunk: retrieval searches the same question up to four times (all
+        # chunks, then the stories, the job post, the answer bank), each a subset of the first.
+        self._memo: tuple[str, Embedder, bool, dict[int, float] | None, list[float]] | None = None
 
     def __len__(self) -> int:
         return len(self._chunks)
@@ -73,15 +76,14 @@ class SessionIndex:
         score = dict.fromkeys(allowed, 0.0)
         matched: set[int] = set()
 
-        dense_ok = embedder.ready and any(self._chunks[i].embedding for i in allowed)
-        if dense_ok:
-            qv = embedder.embed_query(expanded)
-            sims = {i: cosine(qv, self._chunks[i].embedding) for i in allowed if self._chunks[i].embedding}
+        every_sim, lex = self._query_scores(expanded, embedder)
+        dense_ok = every_sim is not None and any(self._chunks[i].embedding for i in allowed)
+        if every_sim is not None and dense_ok:
+            sims = {i: every_sim[i] for i in allowed if self._chunks[i].embedding}
             for rank, i in enumerate(sorted(sims, key=lambda i: sims[i], reverse=True)):
                 score[i] += 1 / (RRF_K + rank + 1)
                 if sims[i] >= embedder.relevance_floor:
                     matched.add(i)
-        lex = self._bm25.scores(expanded)
         lexical = sorted((i for i in allowed if lex[i] > 0), key=lambda i: lex[i], reverse=True)
         for rank, i in enumerate(lexical):
             score[i] += 1 / (RRF_K + rank + 1)
@@ -91,6 +93,20 @@ class SessionIndex:
                 score[i] += _TIE_BREAK
         ranked = sorted(matched, key=lambda i: score[i], reverse=True)
         return [Hit(self._chunks[i], score[i]) for i in ranked[:k]]
+
+    def _query_scores(self, expanded: str, embedder: Embedder) -> tuple[dict[int, float] | None, list[float]]:
+        """(dense similarity of every chunk that has a vector, or None when there's no dense ranking; BM25 of every
+        chunk) for this query, from the memo when it's the last one asked."""
+        memo = self._memo
+        if memo is not None and memo[0] == expanded and memo[1] is embedder and memo[2] == embedder.ready:
+            return memo[3], memo[4]
+        sims: dict[int, float] | None = None
+        if embedder.ready and any(c.embedding for c in self._chunks):
+            qv = embedder.embed_query(expanded)
+            sims = {i: cosine(qv, c.embedding) for i, c in enumerate(self._chunks) if c.embedding}
+        lex = self._bm25.scores(expanded)
+        self._memo = (expanded, embedder, embedder.ready, sims, lex)
+        return sims, lex
 
     def by_category(self, doc_kind: str, categories: tuple[str, ...], limit: int) -> list[IndexedChunk]:
         return [c for c in self._chunks if c.doc_kind == doc_kind and c.category in categories][:limit]
