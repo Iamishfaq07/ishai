@@ -110,6 +110,8 @@ def test_independent_panel_feedback_is_hidden_until_own_submission(client: TestC
         db.add(BizMember(company_id=cid, user_id=uid(peer), role="interviewer"))
         app = await db.get(BizApplication, aid)
         app.interviewers = [uid(peer)]
+        db.add(BizNote(company_id=cid, application_id=aid, author_id=uid(owner),
+                       author_name="Owner", body="A later round's private recommendation.", mentions=[]))
     db_call(client, member)
     plan = save_plan(client, owner, cid, job["id"])
     body = feedback(plan)
@@ -125,6 +127,7 @@ def test_independent_panel_feedback_is_hidden_until_own_submission(client: TestC
     own = client.put(path + "/interview-feedback", headers=auth(peer), json={**body, "submit": True})
     assert own.status_code == 200, own.text
     assert len(own.json()["feedback"]) == 2 and not own.json()["feedback_locked"]
+    assert client.get(path, headers=auth(peer)).json()["notes"] == []
 
 
 def test_practical_challenge_is_two_phase_immutable_and_private(client: TestClient) -> None:

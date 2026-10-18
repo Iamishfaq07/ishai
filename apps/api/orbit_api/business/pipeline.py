@@ -321,8 +321,8 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
     visible = await hiring.visible_stages(db, ctx, app, job)
     if visible is not None:
         cards = [c for c in cards if c.author_id == ctx.user.id or c.stage_id in visible]
-        if not visible:
-            notes = [n for n in notes if n.author_id == ctx.user.id]
+        # Notes have no stage: showing them after one round could leak a later round's recommendations.
+        notes = [n for n in notes if n.author_id == ctx.user.id]
     events = (await db.scalars(select(BizEvent).where(BizEvent.application_id == app.id)
                                .order_by(BizEvent.created_at))).all()
     if visible is not None:
@@ -635,8 +635,6 @@ async def add_scorecard(application_id: str, body: ScorecardIn, ctx: CompanyCtx,
                         db: Annotated[AsyncSession, Depends(get_db)]) -> Detail:
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
-    from orbit_api.models import BizHiringPlan
-
     if await db.get(BizHiringPlan, job.id) is not None:
         raise HTTPException(409, "This job uses a structured interview plan. Submit evidence in the interview room.")
     if not any(s["id"] == body.stage_id for s in job.stages):

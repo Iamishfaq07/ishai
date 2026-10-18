@@ -14,6 +14,7 @@ This change is for company hiring and the associated applicant portal. It does n
 - **Independent panel feedback.** Interviewers see eligible peer submissions only after submitting their own for that
   stage. Owners, admins and recruiters can coordinate the debrief. Other people's drafts are never exposed, including
   to coordinators. The older application, scorecard, notes and ranking routes respect the same visibility boundary.
+  Unscoped peer notes stay hidden from independent reviewers; stage feedback is the channel for panel observations.
 - **Evidence coverage and debrief.** Unobserved criteria, panel disagreement, missing reviewers, old rubric versions
   and incomplete required challenges remain visible. A human records their rationale against the current evidence
   version. Final recommendations with gaps require acknowledgement. Recording a recommendation does not silently
