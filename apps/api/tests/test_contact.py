@@ -181,6 +181,15 @@ def test_a_reported_job_takes_its_details_from_the_job_cache(inbox: Any) -> None
     assert gone["listing_title"] == "Old post"
 
 
+def test_a_report_of_generated_content_reaches_the_inbox_under_its_own_topic(inbox: Any) -> None:
+    client, admin, _ = inbox
+    tag = _tag()
+    r = _send(client, _msg(tag, topic="report", message=f"The answer to the salary question was offensive. {tag}"))
+    assert r.status_code == 201, r.text
+    [item] = _find(client, admin, tag, topic="report")
+    assert item["topic"] == "report"
+
+
 def test_signed_in_the_app_and_latest_session_are_attached(inbox: Any) -> None:
     client, admin, _ = inbox
     h, _user = _register_named(client, f"diag-{uuid.uuid4().hex[:8]}@example.com")

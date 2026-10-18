@@ -1,5 +1,38 @@
 # Implementation log
 
+## The desktop app, redesigned, and its installer (2026-10-18)
+
+The Windows app and its installer, redesigned (DECISIONS D77; DESIGN.md "The desktop app"; WINDOWS_RELEASE.md "The
+installer").
+
+- **The workbench look**: the desktop app is `html.app-shell` like the signed-in web app. A 40 px title bar with the
+  mark, Home / Documents / History / Settings as tabs, the account menu (Plan & billing, Orbit on the web, Sign out),
+  transparency and Windows' own minimize, maximize and close.
+- **Home is a dashboard**: Start a session and Practise first; quick starts with their spots; recent sessions with
+  each review's score; Upcoming interviews from the Jobs AI tracker (Prepare opens New session with that interview);
+  minutes left; and "More from Orbit", one of Orbit's web tools per visit (hideable for good).
+- **New session in four visible steps**: Session (illustrated cards), Listen to (a tile per app with its own icon
+  and a live meter read from Windows' mixer, nothing captured; a tile per output and per microphone; Test your
+  audio), Documents (kind marks, the 20-document limit said up front) and Answers, with a step rail and Start always
+  in reach. Every earlier behaviour is kept. Deleting a document from here now asks first.
+- **A welcome tour** once per device: what the copilot does, what it hears and when, Orbit on the web, how to start.
+  Skippable; Settings → About replays it.
+- **The live overlay fits**: compact shows "Listening" in full (the window's options moved into one menu, the window
+  buttons to the header's end), expanded lets the title give way before the status, and "Capture active" no longer
+  repeats what the Mic and Interviewer chips say.
+- **Documents, History and Settings** use the shared components: kind filters and search, score rings, the
+  sliding-underline tabs, a section rail with spots, About Orbit with the version and Report a problem.
+- **The tray menu**: Orbit X.Y.Z, Open Orbit, New session…, Past sessions, Orbit on the web, Settings, Quit Orbit.
+- **The installer**: the brand's header and sidebar bitmaps and icon, Welcome and Finish pages in Orbit's words,
+  "What you get with Orbit" on the installing page, and an unticked "Explore Orbit's free tools on the web" on
+  Finish. Passive (the updater) and silent installs are unchanged: no extra page, no panel.
+- **Checked**: axe (WCAG 2.2 AA) finds nothing on Home, Documents, History (list and a session), Settings, New
+  session, the welcome tour and the live overlay, light and dark; the shared `Dropzone` is now named by the words it
+  shows.
+- **Microsoft Store policy**: "Inappropriate or harmful" on an answer's thumbs-down (11.16; API reason
+  `inappropriate`, in the admin's report, never a style hint), Report a problem (the contact form's new `report`
+  topic), and a one-time note in Setup to check that people on the call are okay with Orbit transcribing it (10.5.3).
+
 ## Microsoft Store submission: the package, the listing and the owner's steps (2026-10-18)
 
 Orbit for Windows on the Microsoft Store as **Orbit AI Career Assistant** (Store ID `9NJ1ZXGTCZKL`): free, and
@@ -40,6 +73,7 @@ Microsoft signs the MSIX (DECISIONS D78; owner guide `docs/MICROSOFT_STORE.md`).
 - **Tested:**
   - web: vitest (the badge is off by default and renders nothing; the direct-install link once live), tsc, eslint;
   - the scripts: an empty identity fails with the field names; `-Test` and Store packages pass every check.
+
 
 ## Product audit: every product driven end to end, and what it found (2026-10-18)
 

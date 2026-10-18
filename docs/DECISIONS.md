@@ -975,3 +975,34 @@ submissions would need our own certificate), so the owner registered, reserved "
   build switch-off is written down for a fast answer if certification flags it.
 - **The website's Microsoft Store badge waits for certification**: built behind `VITE_MS_STORE_LIVE` (off),
   Microsoft's own artwork, the installer kept beside it.
+
+**D77 — The desktop app is the workbench, its setup is four visible steps, and it shows Orbit's other tools one at a
+time, never someone else's.** The owner asked to redesign the desktop app and its installer ("make setup more
+graphical, and advertise our tools there while installing"). The choices:
+- **One look for both apps.** The desktop app sets `html.app-shell` itself: the web workbench's canvas, surfaces,
+  type and components (D58, D74), with a title bar that carries the app's places as tabs, the account and Windows'
+  own window buttons. Gradients, glows and the planet left the signed-in screens; the sign-in panel is a solid ink
+  panel.
+- **New session is a page of four numbered steps, not a wizard.** A returning user's saved setup is ready to start at
+  once, and a wizard would hide Start behind three Nexts. A step rail says what each step chose and which wants a
+  look; Start and the ready check never scroll away. Every behaviour stayed: per-app and output audio, Upcoming
+  interviews, the languages, saved setups, the quick starts, the microphone re-check.
+- **Live meters without recording.** The "Listen to" tiles read Windows' own mixer meters (`audio_levels`, the peak
+  of each app's session and each output, as the volume mixer shows them): nothing is captured and the microphone is
+  never opened, so the meters can move before a session or a test. The microphone's meter moves only in Test audio,
+  which captures, for 30 s at most. App icons are read from the program file (`app_icon`).
+- **Promotion is Orbit's own and one at a time.** Home's "More from Orbit" shows one web tool per visit, in the site's
+  own words, hideable for good; the welcome tour lists them once; links say where they were clicked
+  (`utm_source=orbit-desktop&utm_campaign=<placement>`; KashSec keeps D70's tags). No other company's products,
+  nothing during a session, never two in a view.
+- **The installer advertises while it installs, and only when someone is watching.** "What you get with Orbit" sits on
+  the installing page under the progress bar (no extra page, no extra click), in native text; the Finish page's
+  "Explore Orbit's free tools on the web" is unticked. Passive (the updater's `/P /UPDATE`) and silent installs show
+  none of it. The template is Tauri's with marked blocks, and a test compares the rest with the installed CLI's, so a
+  Tauri update can't silently drop or break them.
+- **The Store's rules for generative AI are met in the product**: a thumbs-down can say "Inappropriate or harmful"
+  (counted in the admin's quality report, never learned as a style), Report a problem opens the contact form on its
+  own topic (`report`), and the first Setup that hears a call reminds, once, to check that the people on it are okay
+  with Orbit transcribing it.
+- **Not changed, on purpose**: the window-privacy prompt and card (D8: the owner is deciding them) and the uninstall
+  hook (`hooks.nsh`).

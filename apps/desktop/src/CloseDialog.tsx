@@ -94,7 +94,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex animate-fade-in items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex animate-fade-in items-center justify-center bg-zinc-950/50 p-4"
       onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}
     >
       <div
@@ -102,7 +102,7 @@ export function CloseDialog({ liveActive }: { liveActive: boolean }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="close-title"
-        className="glass-solid w-full max-w-[320px] animate-scale-in rounded-2xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+        className="glass-solid w-full max-w-[320px] animate-dialog-in rounded-2xl border border-zinc-200 bg-white p-5 shadow-dialog dark:border-white/10 dark:bg-zinc-950"
       >
         <div className="mb-3 flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10">

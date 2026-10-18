@@ -199,6 +199,68 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   page puts its way back above the title (`back={<BackLink to=… >All offers</BackLink>}`). The icon tile shows from
   `sm` up, so a phone's title gets the width; a long title wraps, it isn't cut to one line. Actions are regular size.
 
+## The desktop app
+
+The Windows app (`apps/desktop/src`, DECISIONS D77) is the workbench too: `main.tsx` sets `html.app-shell` before the
+first paint, so it has the web app's canvas, opaque surfaces, type and components, and no sky. The see-through window
+(Settings → Appearance) still fades only backgrounds (`index.css`, `html.glass`). Its default window is 920 × 680 for
+every screen but the live overlay (`windowing.ts`); breakpoints are `sm` and `md` (the window is narrower than `lg`).
+
+- **Window chrome** (`TitleBar.tsx`): one 40 px bar. The mark and "Orbit", the four places as tabs (Home, Documents,
+  History, Settings: the one you're on in ink with the accent's bar under it, `.nav-mark`; icons only under 640 px),
+  the screen's own actions, the update pill, the account (initials; the menu has who's signed in, Plan & billing and
+  Orbit on the web, which open the browser, and Sign out), transparency, then Windows' own window buttons: 46 px wide
+  and the bar's full height, close red under the mouse (#C42B1C). Everything else drags the window; a double-click
+  maximizes. The full screens keep a maximized window; the compact live overlay comes out of it first.
+- **Home** (`screens/Home.tsx`): a greeting and one primary action (Start a session; Practise first beside it), then
+  Quick start (four tiles with their spots), Recent sessions with each review's score (`ScorePip` in `bits.tsx`, from
+  the progress points: no request per session), and an aside: Upcoming interviews (the Jobs AI tracker's next two
+  weeks; Prepare opens New session with that interview's job post and resume), the minutes left, and **More from
+  Orbit**. The copilot's scene is the view's one scene. The window-privacy prompt stays as it was (the owner decides
+  it, D8).
+- **More from Orbit** (`web.ts`): one of Orbit's own web tools per visit to Home, taking turns (`pickPromo`), each in
+  the public site's own words, with its spot (KashSec in its teal, D70) and a link that opens the browser; × hides that
+  tool on this device for good. Never another company's product, never during a session, never two in a view (the
+  welcome tour, which lists them all, hides it).
+- **New session** (`screens/Setup.tsx`, `screens/setup/*`): one page in four numbered sections (Session, Listen to,
+  Documents, Answers), not a wizard: a returning user's saved setup is ready to start at once, and everything stays
+  in view. A rail beside them (from 768 px) shows each step's number, a tick when it's done or amber when it wants a
+  look (`setup/steps.ts`: no microphone, a call that won't hear the interviewer, no resume), what it has chosen, and
+  jumps to it; the saved setup sits at its foot. The ready check and a large Start live in a footer that never
+  scrolls away.
+  - Session types are cards with their spot (`ChoiceTile`: a real radio inside a label, so arrows and screen readers
+    work; the chosen one has the accent ring and `SelectCheck`), then the role, and a mock round's own choices.
+    Upcoming interviews from the tracker sit above them; one picked shows what it loaded.
+  - **Listen to**: a tile per app that holds sound (its own icon from Windows, `app_icon`, else its initial; "Playing
+    sound" or "Quiet right now") and per output (default, call audio, a specific device in a disclosure), each with a
+    live five-bar meter from Windows' mixer (`audio_levels`: the engine's peak meters, nothing captured, the
+    microphone never opened, polled five times a second while Setup is visible). The microphone is a tile per
+    device. Test your audio (the only thing here that captures, for 30 s at most) shows two meters with their
+    verdicts. The first time it hears a call, a quiet note says to make sure the people on it are okay with Orbit
+    transcribing it, with Don't show again (Microsoft Store policy 10.5.3).
+  - **Documents**: tiles with each kind's mark and a tick, and the limit said up front ("A session reads up to 20
+    documents"; `MAX_SESSION_DOCUMENTS`, the API refuses more), with Upload and Paste in place.
+  - **Answers**: the languages, length and answering as segmented controls, the rest as fields with their hints.
+- **Documents, History, Settings**: the web's primitives (`Dropzone`, `SegmentedControl` filters, `SearchInput`,
+  `Badge`, `Tabs` with their sliding underline, `Card`). History's rows carry the score ring; transcript speakers are
+  sentence case. Settings has a rail of its sections (from 768 px), each card headed by its spot, and About Orbit:
+  the version, Show the welcome tour again, Orbit on the web and **Report a problem** (the contact form on
+  `?topic=report`, Microsoft Store policy 11.16; an answer's thumbs-down also has "Inappropriate or harmful").
+- **The live overlay**: the shared `LivePanel`, with the window's own buttons at the header's very end
+  (`windowControls`). Compact (380 px): orb, status, clock, then Expand, End, a "Window options" menu (always on top,
+  more or less see-through, follow on your phone, report a problem) and minimize and close, 32 px wide; the status
+  reads in full ("Listening", not "Li…"). Expanded adds the title (it gives way before the status), the Mic and
+  Interviewer chips and the phone. The capture pill shows only when something's wrong (the chips already say
+  "hearing").
+- **Welcome tour** (`Onboarding.tsx`): the first Home after signing in on a device opens four slides in the dialog:
+  what the copilot does (with the honest line), what Orbit hears and when (and the Windows microphone setting),
+  Orbit on the web (every tool, links), and how to start (the shortcuts as `Kbd`). Skip, × and Escape end it;
+  Settings → About replays it.
+- **Tray** (`src-tauri/src/lib.rs`, `tray.ts`): "Orbit X.Y.Z" (greyed), Open Orbit, New session…, Past sessions,
+  Orbit on the web, Settings, Quit Orbit. A screen item never leaves a live session.
+- **Links to the web** (`web.ts`): `webLink(WEB_URL, path, placement)` adds `utm_source=orbit-desktop` and
+  `utm_campaign=<placement>` (home-promo, home-upcoming, onboarding, tray, settings, report); KashSec keeps D70's tags.
+
 ## Motion
 
 - **Tokens** (`base.css`, Tailwind `duration-*` / `ease-*`): `press` 100 ms, `quick` 160, `panel` 240, `page` 280,

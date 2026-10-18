@@ -34,9 +34,11 @@ tauri-plugin-clipboard-manager = "2"
 windows = { version = "0.62", features = [
     "Win32_Devices_FunctionDiscovery",
     "Win32_Foundation",
+    "Win32_Graphics_Gdi", # app icons for Setup's "Listen to" tiles (app_icons.rs)
     "Win32_Security",
     "Win32_Storage_Packaging_Appx",
     "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints", # the mixer's peak meters (audio_levels)
     "Win32_System_Com",
     "Win32_System_Com_StructuredStorage",
     "Win32_System_Diagnostics_ToolHelp",

@@ -19,6 +19,7 @@ export const CONTACT_TOPICS: ReadonlyArray<{ id: ContactTopic; label: string; hi
   { id: "payment", label: "Payment or credits", hint: "Say how you paid, the amount and the date, and the ORB… reference from Your payments (or the 12-digit UTR for a UPI payment checked by hand)." },
   { id: "technical", label: "Technical problem", hint: "Say what you were doing, what happened, and on which device and browser." },
   { id: "report_job", label: "Report a job", hint: "Tell us what was wrong with the job. Never pay a fee or share an OTP for a job." },
+  { id: "report", label: "Report an answer or content", hint: "Something Orbit wrote or said was inappropriate, harmful or wrong: tell us what it was, and roughly when." },
   { id: "business", label: "Business or partnership", hint: "Colleges, placement cells and companies: tell us what you have in mind." },
   { id: "feedback", label: "Feedback", hint: "What works, what doesn't, what you'd like next." },
   { id: "other", label: "Other", hint: "Anything else." },

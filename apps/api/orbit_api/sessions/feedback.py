@@ -26,7 +26,9 @@ from orbit_api.ratelimit import limit_user
 router = APIRouter(prefix="/v1", tags=["feedback"])
 
 Rating = Literal["up", "down"]
-Reason = Literal["too_long", "too_generic", "inaccurate", "off_topic", "too_formal"]
+# "inappropriate": the answer was inappropriate or harmful (Microsoft Store policy 11.16: a generative-AI app lets
+# people report what it generated). Counted in the admin report; never a learned style hint.
+Reason = Literal["too_long", "too_generic", "inaccurate", "off_topic", "too_formal", "inappropriate"]
 
 # Learned style hints: a reason given at least LEARN_MIN times among the user's last LEARN_WINDOW ratings.
 LEARN_WINDOW = 40

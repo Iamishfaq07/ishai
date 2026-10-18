@@ -112,6 +112,27 @@ export function listAudioApps(): Promise<AudioApp[]> {
   return invoke<AudioApp[]>("list_audio_apps").catch(() => []);
 }
 
+/**
+ * What's playing right now (Windows), 0..1: each app's loudest session (by its `AudioApp.pid`) and each output
+ * device. Read from the mixer's peak meters: nothing is captured or recorded and the microphone is never opened.
+ */
+export interface AudioLevels {
+  apps: Array<{ pid: number; peak: number }>;
+  outputs: Array<{ id: string; peak: number }>;
+  default_output: number;
+  communications: number;
+}
+
+/** Null where Windows can't say (macOS, or the audio service is down). */
+export function audioLevels(): Promise<AudioLevels | null> {
+  return invoke<AudioLevels>("audio_levels").catch(() => null);
+}
+
+/** The app's icon as a PNG data URL (Windows), or null: then the tile shows its initial. */
+export function appIcon(pid: number): Promise<string | null> {
+  return invoke<string | null>("app_icon", { pid }).catch(() => null);
+}
+
 export interface CaptureOptions {
   /** From `newCaptureId()`: `stopCapture(id)` then stops this capture and never one started after it. */
   captureId: number;

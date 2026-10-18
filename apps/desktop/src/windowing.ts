@@ -48,6 +48,12 @@ export function fitWindow(current: Rect, size: { width: number; height: number }
  */
 export async function applyPanelMode(mode: PanelMode): Promise<void> {
   const win = getCurrentWindow();
+  // Maximized (the title bar's button, or a double-click on it): the full screens keep it; the compact live overlay
+  // comes out of it first, or the resize would be ignored.
+  if (await win.isMaximized().catch(() => false)) {
+    if (mode === "expanded") return;
+    await win.unmaximize().catch(() => undefined);
+  }
   const scale = await win.scaleFactor();
   const want = { width: Math.round(SIZES[mode].width * scale), height: Math.round(SIZES[mode].height * scale) };
   const where = await Promise.all([currentMonitor(), win.innerPosition(), win.outerPosition(), win.innerSize()]).catch(

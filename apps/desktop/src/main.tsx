@@ -7,6 +7,8 @@ import { initWindowPrivacy } from "./windowPrivacy";
 import { initTheme } from "./theme";
 import "./index.css";
 
+// The desktop app is the workbench (DESIGN.md "Two places"): one still canvas, opaque surfaces, no sky.
+document.documentElement.classList.add("app-shell");
 initTheme();
 initDesign();
 initGlass();

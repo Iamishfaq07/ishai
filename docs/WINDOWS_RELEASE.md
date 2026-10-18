@@ -180,6 +180,71 @@ an empty service name; `secrets.rs` now also treats an empty value as unset. To 
 it), run the exe with an isolated `WEBVIEW2_USER_DATA_FOLDER` and call `load_token` over CDP: a real build finds the
 installed app's saved sign-in (read-only).
 
+## The installer (what people see)
+
+The NSIS installer is Orbit's own (DECISIONS D77), built by Tauri from `bundle.windows.nsis` in `tauri.conf.json`:
+
+| Setting | File | What it is |
+|---|---|---|
+| `template` | `src-tauri/windows/installer.nsi` | Tauri's own template with Orbit's blocks added (below) |
+| `headerImage` | `src-tauri/windows/installer/header.bmp` | 150 × 57: the wordmark, at the header's right |
+| `sidebarImage` | `src-tauri/windows/installer/sidebar.bmp` | 164 × 314: the mark on the app icon's ink, for Welcome and Finish |
+| `installerIcon`, `uninstallerIcon` | `src-tauri/icons/icon.ico` | the app's icon (NSIS's own otherwise) |
+| `installerHooks` | `src-tauri/windows/hooks.nsh` | unchanged: "Delete the application data" also removes the sign-in |
+
+`bundle.homepage` (https://orbitanswer.com) is the Support link in Windows' installed apps.
+
+**The bitmaps** come from the brand: `node marketing/brand/render-installer.mjs` (headless Chrome, system Chrome
+needed) renders them and writes 8-bit palette BMPs, uncompressed (RLE bitmaps don't load everywhere): 9.7 KB and
+52.6 KB instead of 26 KB and 154 KB at 24-bit; the installer LZMA-compresses them again.
+
+**The pages**, in order:
+1. **Welcome**: "Welcome to Orbit", what it does, and that it installs for this user only with no admin rights.
+2. *(Already installed: Tauri's maintenance page, unchanged.)*
+3. **Install location**, Tauri's.
+4. **Installing**: "Installing Orbit", and under the progress bar **What you get with Orbit**: the app's icon and
+   Orbit's own tools in native text (Interview copilot, Practice with Saba, Resume AI, Jobs AI, LinkedIn AI, Learning
+   AI, KashSec Academy, and Code AI and Offer AI on the web), sharp at any scaling and read by screen readers. It stays
+   in view once installed ("Orbit is installed", Next); "Show details" still shows the log over it.
+5. **Finish**: "Orbit is ready", **Open Orbit** and **Create desktop shortcut** (Tauri's, ticked as before), and
+   **Explore Orbit's free tools on the web**: an opt-in, unticked, that opens
+   `https://orbitanswer.com/?utm_source=orbit-desktop&utm_campaign=installer-finish` on Finish. Nothing else is
+   offered, bundled or ticked for anyone.
+
+The bottom line of every page reads "Orbit · orbitanswer.com" instead of NSIS's name.
+
+**Passive and silent installs show none of it.** The updater installs with `/P /UPDATE` (`installMode: "passive"`):
+only the progress page, without the panel (its function returns at once when `$PassiveMode` or `$UpdateMode` is set),
+then it closes and Orbit restarts. `/S` shows nothing at all. Welcome and Finish are skipped in passive mode by
+Tauri's own `SkipIfPassive`, so their words and the opt-in never appear there. Checked on 2026-10-18 with a test
+product (below): `/P /UPDATE` 0.5 s and `/P` 0.9 s, each one window with only "Installing Orbit"; `/S` no window.
+
+**The template is Tauri's plus Orbit's blocks**, each between `; ORBIT:BEGIN <name>` and `; ORBIT:END`; nothing of
+Tauri's is edited. `apps/desktop/src/installer-template.test.ts` checks that the file minus the blocks is the installed
+CLI's template line for line (`node apps/desktop/scripts/tauri-nsis-template.mjs` prints it), that the panel returns
+in passive and update modes, that no block adds a page, and that the opt-in starts unticked. **After a Tauri CLI
+update that test fails until the template is refreshed**: take the new template from that script, and put the
+blocks back where they were (each anchors to a line Tauri has kept for years: `BrandingText`, the header image
+defines, `MUI_PAGE_WELCOME`, `MUI_PAGE_INSTFILES`, `MUI_PAGE_FINISH` and `RunMainBinary`).
+
+**Testing the installer without touching the real install**: build a test product whose name, identifier and
+publisher all differ, from a config file (inline JSON breaks in PowerShell):
+
+```powershell
+# test-override.json: {"productName":"Orbit Redesign Test","identifier":"ai.orbit.desktop.redesigntest",
+#                      "bundle":{"publisher":"Orbit Redesign Test Publisher","createUpdaterArtifacts":false}}
+$env:ORBIT_KEYRING_SERVICE = "orbit-redesign-test"   # its own sign-in; remove the variable afterwards
+pnpm --filter @orbit/desktop tauri build --bundles nsis --config C:\path\to\test-override.json
+```
+
+It installs to `%LOCALAPPDATA%\Orbit Redesign Test` with its own uninstall key and shortcuts. Drive its pages by its
+process id only: capture its own window with `PrintWindow`, press its own buttons with `BM_CLICK` posted to the
+button (Finish sometimes ignores it: post `WM_COMMAND(IDOK)` to the installer's window), never `SendInput` or the
+real cursor. Untick Open Orbit before Finish with `BM_SETCHECK` (a posted click can be dropped) and check it took, so
+nothing launches. Remove it with `uninstall.exe /S` (silent
+uninstalls keep app data, so the hook below never runs). **Never tick "Delete the application data" on a test
+product**: `hooks.nsh` removes the real app's sign-in (`access_token.ai.orbit.desktop`) whatever the product's name.
+
 ## Install, upgrade, uninstall
 
 Orbit installs per-user to `%LOCALAPPDATA%\Orbit` (no admin prompt). User state lives outside the install folder:

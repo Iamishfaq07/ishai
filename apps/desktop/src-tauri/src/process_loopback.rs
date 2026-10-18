@@ -21,6 +21,7 @@ use serde::Serialize;
 use tauri::ipc::Channel;
 use windows::core::{implement, Interface, Ref, HRESULT};
 use windows::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0};
+use windows::Win32::Media::Audio::Endpoints::IAudioMeterInformation;
 use windows::Win32::Media::Audio::{
     eRender, ActivateAudioInterfaceAsync, AudioSessionStateActive,
     IActivateAudioInterfaceAsyncOperation, IActivateAudioInterfaceCompletionHandler,
@@ -45,7 +46,7 @@ use windows::Win32::System::Variant::VT_BLOB;
 
 use crate::audio::{CaptureEvent, CHANNEL_SYSTEM};
 use crate::wasapi_capture::{
-    pump, start_stream, status, Com, Ended, Flow, FIRST_BACKOFF, MAX_BACKOFF,
+    default_id, device_id, pump, start_stream, status, Com, Ended, Flow, FIRST_BACKOFF, MAX_BACKOFF,
 };
 
 #[derive(Clone, Serialize)]
@@ -223,6 +224,140 @@ pub async fn list_audio_apps() -> Result<Vec<AudioApp>, String> {
         unsafe { output_sessions() }
             .map(|sessions| group_apps(&sessions, &table, own_root))
             .map_err(|e| format!("Couldn't list audio apps: {e}"))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+/// What's playing right now, as Windows' volume mixer shows it: each app's loudest session and each output
+/// device's level, 0..1. Read from the audio engine's own peak meters (IAudioMeterInformation): no sound is
+/// captured, nothing is recorded or sent, and the microphone is never opened, so Setup can show live meters on its
+/// "Listen to" tiles before a session (or a test) starts capture.
+#[derive(Serialize, Default, Debug, PartialEq)]
+pub struct AudioLevels {
+    apps: Vec<AppLevel>,
+    outputs: Vec<OutputLevel>,
+    /// The default output's and the default communications device's level.
+    default_output: f32,
+    communications: f32,
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+struct AppLevel {
+    /// The app's process-tree root, the same pid `list_audio_apps` gives it.
+    pid: u32,
+    peak: f32,
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+struct OutputLevel {
+    id: String,
+    peak: f32,
+}
+
+/// Each app's level: the loudest of its sessions (an app plays through helper processes and on several devices),
+/// never Orbit's own.
+fn group_levels(
+    sessions: &[(u32, f32)],
+    table: &HashMap<u32, (u32, String)>,
+    own_root: u32,
+) -> Vec<AppLevel> {
+    let mut peaks: HashMap<u32, f32> = HashMap::new();
+    for &(pid, peak) in sessions {
+        let root = root_process(pid, table);
+        if root == own_root {
+            continue;
+        }
+        let entry = peaks.entry(root).or_insert(0.0);
+        *entry = entry.max(peak.clamp(0.0, 1.0));
+    }
+    let mut list: Vec<AppLevel> = peaks
+        .into_iter()
+        .map(|(pid, peak)| AppLevel { pid, peak })
+        .collect();
+    list.sort_by_key(|a| a.pid);
+    list
+}
+
+/// `(session pid, peak)` for every app session, `(endpoint id, peak)` for every active output device, and the
+/// default and communications outputs' ids.
+type RawLevels = (
+    Vec<(u32, f32)>,
+    Vec<(String, f32)>,
+    Option<String>,
+    Option<String>,
+);
+
+unsafe fn read_levels() -> windows::core::Result<RawLevels> {
+    let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+    let devices = enumerator.EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE)?;
+    let mut sessions = Vec::new();
+    let mut outputs = Vec::new();
+    for i in 0..devices.GetCount()? {
+        let Ok(device) = devices.Item(i) else {
+            continue;
+        };
+        if let (Ok(id), Ok(meter)) = (
+            device_id(&device),
+            device.Activate::<IAudioMeterInformation>(CLSCTX_ALL, None),
+        ) {
+            outputs.push((id, meter.GetPeakValue().unwrap_or(0.0)));
+        }
+        let Ok(manager) = device.Activate::<IAudioSessionManager2>(CLSCTX_ALL, None) else {
+            continue;
+        };
+        let Ok(list) = manager.GetSessionEnumerator() else {
+            continue;
+        };
+        for j in 0..list.GetCount().unwrap_or(0) {
+            let Ok(session) = list.GetSession(j) else {
+                continue;
+            };
+            let pid = session
+                .cast::<IAudioSessionControl2>()
+                .and_then(|c| c.GetProcessId())
+                .unwrap_or(0);
+            if pid == 0 {
+                continue; // system sounds
+            }
+            let peak = session
+                .cast::<IAudioMeterInformation>()
+                .and_then(|m| m.GetPeakValue())
+                .unwrap_or(0.0);
+            sessions.push((pid, peak));
+        }
+    }
+    let default = default_id(&enumerator, Flow::Output, false);
+    let comms = default_id(&enumerator, Flow::Output, true);
+    Ok((sessions, outputs, default, comms))
+}
+
+/// Live levels for Setup's tiles (see `AudioLevels`). Cheap enough to ask a few times a second.
+#[tauri::command]
+pub async fn audio_levels() -> Result<AudioLevels, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let _com = Com::init();
+        let (sessions, outputs, default, comms) =
+            unsafe { read_levels() }.map_err(|e| format!("Couldn't read audio levels: {e}"))?;
+        let table = process_table();
+        let own_root = root_process(std::process::id(), &table);
+        let level_of = |id: &Option<String>| {
+            id.as_ref()
+                .and_then(|id| outputs.iter().find(|(o, _)| o == id))
+                .map_or(0.0, |(_, p)| p.clamp(0.0, 1.0))
+        };
+        Ok(AudioLevels {
+            apps: group_levels(&sessions, &table, own_root),
+            default_output: level_of(&default),
+            communications: level_of(&comms),
+            outputs: outputs
+                .iter()
+                .map(|(id, peak)| OutputLevel {
+                    id: id.clone(),
+                    peak: peak.clamp(0.0, 1.0),
+                })
+                .collect(),
+        })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -535,7 +670,7 @@ fn wait_for_app(
 
 #[cfg(test)]
 mod tests {
-    use super::{find_target, group_apps, root_process};
+    use super::{find_target, group_apps, group_levels, root_process, AppLevel};
     use std::collections::HashMap;
 
     fn table(rows: &[(u32, u32, &str)]) -> HashMap<u32, (u32, String)> {
@@ -622,6 +757,21 @@ mod tests {
                 (10, "Google Chrome", true),
                 (20, "Microsoft Teams", false),
                 (30, "Slack", false),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_apps_level_is_its_loudest_session_and_orbit_is_left_out() {
+        // Chrome's speakers session is quiet, its headset session loud; Orbit's own sound never shows.
+        let sessions = [(11, 0.05), (11, 0.6), (21, 0.0), (41, 0.9), (30, 1.7)];
+        let levels = group_levels(&sessions, &system(), 40);
+        assert_eq!(
+            levels,
+            vec![
+                AppLevel { pid: 10, peak: 0.6 },
+                AppLevel { pid: 20, peak: 0.0 },
+                AppLevel { pid: 30, peak: 1.0 },
             ]
         );
     }
