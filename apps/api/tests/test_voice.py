@@ -49,16 +49,16 @@ def test_speaks_through_the_api_and_counts_characters(client: TestClient, monkey
     seen: list[httpx.Request] = []
     _deepgram(monkeypatch, seen=seen)
     s = client.get("/v1/voice", headers=h).json()
-    # A small choice of real Aura-2 voices (D76): two women's, two men's; "us" is still the first one people had.
+    # A small choice of real Aura-2 voices (D76): two women's, two men's, Vesta first.
     assert s["available"] is True and [v["model"] for v in s["voices"]] == [
-        "aura-2-vesta-en", "aura-2-thalia-en", "aura-2-pluto-en", "aura-2-arcas-en"]
-    assert s["default_voice"] == "vesta" and {v["id"] for v in s["voices"]} >= {"us", "vesta"}
+        "aura-2-vesta-en", "aura-2-aurora-en", "aura-2-pluto-en", "aura-2-arcas-en"]
+    assert s["default_voice"] == "vesta"
     assert s["chars_left"] == get_settings().tts_daily_chars
-    r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "us"})
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "arcas"})
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == "audio/mpeg" and r.content == AUDIO
     req = seen[0]
-    assert req.url.params["model"] == "aura-2-thalia-en" and req.url.params["encoding"] == "mp3"
+    assert req.url.params["model"] == "aura-2-arcas-en" and req.url.params["encoding"] == "mp3"
     assert "speed" not in req.url.params and r.headers["x-orbit-speed"] == "1"
     assert req.headers["authorization"] == "Token dg-secret-key"
     assert json.loads(req.content) == {"text": "Tell me about yourself."}  # whitespace tidied, nothing else sent

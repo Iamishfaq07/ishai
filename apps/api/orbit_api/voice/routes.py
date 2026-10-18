@@ -42,12 +42,13 @@ class Voice(BaseModel):
 
 
 # A small choice (D76): two women's and two men's Aura-2 voices that Deepgram describes as natural and suited to
-# interviews and conversation, picked after measuring how fast each starts. Every model name here was checked against
-# Deepgram's list (a name it doesn't have fails every request). "us" stays the id of the first one people had.
-# Deepgram has no Indian-English Aura-2 voice yet.
+# interviews and conversation. Measured from here they all start within the network's noise of each other (1.3-2.7 s
+# to the first byte for a sentence, one connection kept open), so Vesta, Deepgram's "patient, empathetic" interview
+# voice, is the default. Every model name was checked against Deepgram's list (a name it doesn't have fails every
+# request). An older client's "us" (Thalia) gets the default. Deepgram has no Indian-English Aura-2 voice yet.
 VOICES: dict[str, Voice] = {
     "vesta": Voice(id="vesta", label="Vesta · warm and patient", model="aura-2-vesta-en"),
-    "us": Voice(id="us", label="Thalia · clear and confident", model="aura-2-thalia-en"),
+    "aurora": Voice(id="aurora", label="Aurora · bright and lively", model="aura-2-aurora-en"),
     "pluto": Voice(id="pluto", label="Pluto · calm, deeper voice", model="aura-2-pluto-en"),
     "arcas": Voice(id="arcas", label="Arcas · natural and clear", model="aura-2-arcas-en"),
 }
