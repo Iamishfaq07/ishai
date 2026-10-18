@@ -8,6 +8,14 @@ export const JOBS_MATCHES = "/jobs/matches";
 export const JOBS_TRACKER = "/jobs/tracker";
 export const JOBS_OUTREACH = "/jobs/outreach";
 export const JOBS_PROFILE = "/jobs/profile";
+/** Orbit Apply (D84): its setup, and the Applications it prepared and sent. `?packet=<id>` opens one. */
+export const JOBS_AUTO_APPLY = "/jobs/auto-apply";
+export const JOBS_APPLICATIONS = "/jobs/applications";
+
+/** One Orbit Apply application, opened (the "Finish in one click" email links here). */
+export function applicationPath(packetId: string): string {
+  return `${JOBS_APPLICATIONS}?packet=${encodeURIComponent(packetId)}`;
+}
 
 /** One job's own page. */
 export function jobPath(id: string): string {

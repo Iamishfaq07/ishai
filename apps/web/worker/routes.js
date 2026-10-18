@@ -29,7 +29,7 @@ export const APP_ROUTES = [
   /^\/sessions\/[^/]+$/,
   /^\/documents\/(?:stories|evidence|answers)$/,
   /^\/resume-ai\/[^/]+$/,
-  /^\/jobs\/(?:matches|tracker|outreach|profile)$/,
+  /^\/jobs\/(?:matches|tracker|outreach|profile|auto-apply|applications)$/,
   /^\/jobs\/(?:listing|mission)\/[^/]+$/,
   /^\/jobs\/alerts\/off$/,
   /^\/code\/[^/]+$/,

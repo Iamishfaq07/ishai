@@ -14,6 +14,8 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/resume-ai\/jobs(\/|$)/, "Jobs AI"], // Jobs' old address, on its way to Jobs AI
   [/^\/resume-ai/, "Resume AI"],
   [/^\/jobs\/alerts\/off/, "Stop job alerts"],
+  [/^\/jobs\/auto-apply/, "Orbit Apply setup"],
+  [/^\/jobs\/applications/, "Applications"],
   [/^\/jobs(\/|$)/, "Jobs AI"],
   [/^\/offers(\/|$)/, "Offer AI"],
   [/^\/linkedin(\/|$)/, "LinkedIn AI"],

@@ -55,6 +55,8 @@ import {
   JobTrackerPage,
   JobOutreachPage,
   JobProfilePage,
+  AutoApplySetupPage,
+  ApplicationsPage,
   OffersPage,
   LinkedInPage,
   CodeHomePage,
@@ -303,6 +305,8 @@ export function App() {
           <Route path="tracker" element={<JobTrackerPage />} />
           <Route path="outreach" element={<JobOutreachPage />} />
           <Route path="profile" element={<JobProfilePage />} />
+          <Route path="auto-apply" element={<AutoApplySetupPage />} />
+          <Route path="applications" element={<ApplicationsPage />} />
           <Route path="*" element={<Navigate to={JOBS_AI_HOME} replace />} />
         </Route>
         <Route path="linkedin" element={<LinkedInPage />} />
