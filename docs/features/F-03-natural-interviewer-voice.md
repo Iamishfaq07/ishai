@@ -5,10 +5,12 @@ Status: shipped 16 Oct 2026. On automatically when `DEEPGRAM_API_KEY` is set (pr
 ## What it does
 - The mock interviewer reads each question with a neural voice (Deepgram Aura-2), streamed through the API and
   played as it arrives. The Deepgram key never leaves the server.
-- **One voice: Thalia (`aura-2-thalia-en`), Deepgram's default American English voice.** The British and Australian
-  model names couldn't be verified, and a model name Deepgram doesn't have fails every request, so they were removed
-  (17 Oct). A voice saved by an older client (`uk`, `au`) gets Thalia.
-- Settings → Interviewer voice: the natural voice or the device's own, and play a sample.
+- **One voice for everyone: Aurora (`aura-2-aurora-en`, "bright and lively") at the normal pace** (18 Oct, D76).
+  Before: Thalia, then a choice of four. Vesta, Pluto and Arcas stay for a panel (each interviewer gets the next
+  voice) and the admin's testing. A voice saved by an older client (`uk`, `au`) gets Aurora.
+- Settings → Interviewer voice and the video interview's camera check: **the admin only** (`can_choose` from
+  `GET /v1/voice`): a voice or the device's own, a pace, and a sample. Nobody else sees a setting, and a voice or
+  pace an older build saved on their device is ignored.
 - During a mock: **Mute voice** (remembered on the device), Repeat, Stop. The question is always on screen.
 - Talking over the voice stops it (the existing barge-in).
 
@@ -18,6 +20,8 @@ Status: shipped 16 Oct 2026. On automatically when `DEEPGRAM_API_KEY` is set (pr
 | No Deepgram key, or `ORBIT_NATURAL_VOICE=false` | The device's voice. |
 | Today's allowance used (429) | The device's voice for the rest of the session. |
 | Deepgram error, network drop, autoplay refused | The device's voice for that question; the next one tries again. |
+| A network drop or a 500/502/504 on one piece | Asked for once more first (if it failed within 4 s). |
+| No sound within 10 s of asking (a slow connection) | The device's voice for that line; the next one is natural again. |
 
 ## Cost control
 - `ORBIT_TTS_DAILY_CHARS` (default 20,000 characters, about 160 questions) per account per day; the admin has no cap.

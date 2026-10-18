@@ -1,5 +1,20 @@
 # Implementation log
 
+## Saba is Aurora for everyone, and keeps her natural voice (2026-10-18)
+
+Saba's voice is Aurora at the normal pace for everyone, with no setting to change it; only the admin can still pick a
+voice and pace, to test. She no longer switches to the device's voice after her greeting on a slow connection
+(DECISIONS D76).
+
+- **One voice**: Aurora ("bright and lively") is the default and comes first; `GET /v1/voice` says `can_choose` (the
+  admin only), a voice or pace saved on a device counts only then, and `/v1/voice/speak` ignores anyone else's pace.
+  The Interviewer voice card in Settings, its section link and the picker in the video interview's camera check are
+  the admin's only (marked Admin), with no loading flash for anyone else. A panel still gives each interviewer a
+  different voice.
+- **A natural voice that holds**: 10 s (was 7) before a line falls back to the device's voice; a piece that hits a
+  network drop or a 500, 502 or 504 is asked for once more; a long first sentence starts with its first clause, so
+  the first request is shorter; a slow or failed line falls back for that line only, and the next one is natural.
+
 ## Faster sign-in: the web app calls the API directly (2026-10-18)
 
 From India each call through the site's /api proxy took 1-7 s (Cloudflare's free plan routes it via London, Paris or

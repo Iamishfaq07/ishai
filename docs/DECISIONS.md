@@ -1082,6 +1082,22 @@ word, from here) is now most of the wait. Rejected: streaming her voice over Dee
 the second round), a face or avatar (Saba is a voice, D69), and turning her down instead of stopping her when talked
 over (speech synthesis can't be, and stopping is what a person does).
 
+**2026-10-18: one voice for everyone, and a natural voice that holds.** The owner: keep only Aurora ("bright and
+lively") at the normal pace, as the default, without showing it; the voice and speed settings for the admin only.
+Saba is Aurora (`aura-2-aurora-en`) at the normal pace for everyone, and only the admin sees a voice or pace setting
+(Settings' Interviewer voice card and its section link, the video interview's camera check), marked Admin; nobody
+else sees it, not even as a loading line. `GET /v1/voice` says `can_choose` (the admin only; an older API without it
+means no choice), the client applies a saved voice ("This device's voice" too) and pace only then, so what an older
+build saved on a device changes nothing, and `/v1/voice/speak` uses the normal pace for anyone else whatever a client
+sends. Vesta, Pluto and Arcas stay: a panel gives each interviewer the next voice. She had also switched to the
+device's voice after her greeting: production's speak requests took 1.0-3.7 s at the server and the web's proxy added
+1-7 s from India, so her lines crossed the 7 s limit. The limit is 10 s now ("about to speak…" meanwhile); a piece
+that fails with a network drop or a 500, 502 or 504 within 4 s is asked for once more before the line falls back
+(never after a 401, 403, 429 or 503); a first sentence over 12 words starts with its first clause of at least four
+words (a piece plays once all of it has arrived, so a shorter first request starts her sooner); and only a failure
+that won't come back turns the natural voice off for the session, so a slow or failed line is read by the device's
+voice for that line only (`sayNaturalLine`, tested). The web's API calls leaving the slow proxy is a separate change.
+
 **D80 — The web app calls the API at its own address (api.orbitanswer.com) with a cookie shared across the site,
 and keeps the edge proxy only for what the visitor's country decides.** The owner: "the login is slow, and login with
 Google is slow". Measured from India on 18 October 2026: a call through the site's /api proxy took 1-7.8 s (0.96-3.2 s
