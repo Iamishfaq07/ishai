@@ -39,6 +39,7 @@ from tests.business_helpers import (
     status_token,
     tag,
     uid,
+    wait_ranked,
 )
 
 
@@ -659,6 +660,7 @@ def test_finding16_blind_review_masks_email_subjects_answers_and_parsed_experien
                                            "see https://priya.dev. I build Python services."}]).raise_for_status()
     confirm_applicant(client, email)
     item = applications(client, owner, cid, job["id"])["items"][0]
+    wait_ranked(client, owner, cid, item["id"])  # the background parse would overwrite the parse set below
     base = f"/v1/business/companies/{cid}/applications/{item['id']}"
     client.post(f"{base}/email", headers=auth(owner),
                 json={"subject": "Hi {{candidate_name}}, next steps", "body": "Talk soon"}).raise_for_status()

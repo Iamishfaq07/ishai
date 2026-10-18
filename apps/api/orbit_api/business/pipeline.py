@@ -16,6 +16,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs as job_queue
@@ -612,15 +613,27 @@ async def add_scorecard(application_id: str, body: ScorecardIn, ctx: CompanyCtx,
     app, job = await application_for(db, ctx, application_id)
     if not any(s["id"] == body.stage_id for s in job.stages):
         raise HTTPException(422, "That stage isn't in this job's pipeline.")
-    card = await db.scalar(select(BizScorecard).where(BizScorecard.application_id == app.id,
-                                                      BizScorecard.stage_id == body.stage_id,
-                                                      BizScorecard.author_id == ctx.user.id))
     ratings = [r.model_dump() for r in body.ratings]
+
+    async def mine() -> BizScorecard | None:
+        card: BizScorecard | None = await db.scalar(select(BizScorecard).where(
+            BizScorecard.application_id == app.id, BizScorecard.stage_id == body.stage_id,
+            BizScorecard.author_id == ctx.user.id).execution_options(populate_existing=True))
+        return card
+
+    # One scorecard per member per stage: a double submit updates it (an insert that loses the race, in a savepoint,
+    # falls back to updating the winner's row).
+    card = await mine()
     if card is None:
-        db.add(BizScorecard(company_id=ctx.company.id, application_id=app.id, stage_id=body.stage_id,
-                            author_id=ctx.user.id, author_name=ctx.actor_name, ratings=ratings,
-                            notes=body.notes.strip(), recommendation=body.recommendation))
-    else:
+        try:
+            async with db.begin_nested():
+                db.add(BizScorecard(company_id=ctx.company.id, application_id=app.id, stage_id=body.stage_id,
+                                    author_id=ctx.user.id, author_name=ctx.actor_name, ratings=ratings,
+                                    notes=body.notes.strip(), recommendation=body.recommendation))
+                await db.flush()
+        except IntegrityError:
+            card = await mine()
+    if card is not None:
         card.ratings, card.notes, card.recommendation = ratings, body.notes.strip(), body.recommendation
     timeline(db, app, "scorecard", ctx.user, recommendation="hire" if body.recommendation == "hire" else "no hire")
     audit(db, ctx.company.id, ctx.user, "application.scorecard", app.reference, job_id=job.id,
