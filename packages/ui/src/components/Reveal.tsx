@@ -68,12 +68,13 @@ const easeOut = (t: number) => 1 - (1 - t) ** 3;
 
 /**
  * A number that counts from `from` to `to` once `start` turns true (at Full motion; otherwise it's `to` straight
- * away). For scores and percentages drawn on illustrations.
+ * away). For scores and percentages drawn on illustrations. A render without the browser (the public pages built as
+ * HTML: no IntersectionObserver, and no effects run) draws `to`, the finished number, not the one it starts from.
  */
 export function useCountUp(to: number, start: boolean, { from = 0, duration = 1100 }: { from?: number; duration?: number } = {}): number {
   const motion = useMotion();
   const animate = motion === "full";
-  const [value, setValue] = useState(animate ? from : to);
+  const [value, setValue] = useState(animate && typeof IntersectionObserver !== "undefined" ? from : to);
   useEffect(() => {
     if (!animate) {
       setValue(to);

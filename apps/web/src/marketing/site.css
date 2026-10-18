@@ -290,3 +290,74 @@ html.dark .mk-google:hover {
 html.site {
   font-family: "IBM Plex Sans Variable", "Plex Fallback", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
 }
+
+/* The product pages' animated renders (marketing/kit, DECISIONS D79): real Orbit UI drawn in HTML whose parts play
+   one short sequence the first time they're in view (`.kp` gets data-shown, usePlay), then rest on the final frame.
+   At Full a part comes in from a few px (.kp-in; --x, --y), pops (.kp-pop), fades (.kp-fade), a bar fills from the
+   left (.kp-fill) or a chip lights up (.kp-lit: its colours ease in); --d delays it. Gentle, Off, print, data saver
+   and the built HTML (`data-still`, no data-motion) show the final frame at once, the words and numbers finished:
+   the hidden "before" state exists only in CSS, behind data-motion="full". Only opacity and transform move. */
+:root[data-motion="full"] .kp:not([data-shown], [data-still]) :is(.kp-in, .kp-pop, .kp-fade, .kp-fill) {
+  opacity: 0;
+}
+:root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-in {
+  animation: scene-in 560ms var(--ease-enter) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-pop {
+  animation: scene-pop 420ms var(--ease-enter) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-fade {
+  animation: orbit-fade 420ms var(--ease-standard) var(--d, 0ms) both;
+}
+.kp-fill {
+  transform-origin: 0 50%;
+}
+:root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-fill {
+  animation: kp-fill 900ms var(--ease-enter) var(--d, 0ms) both;
+}
+:root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-lit {
+  animation: kp-lit 360ms var(--ease-standard) var(--d, 0ms) both;
+}
+@keyframes kp-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes kp-lit {
+  from {
+    background-color: transparent;
+    color: rgb(var(--ink-500));
+    box-shadow: inset 0 0 0 1px rgb(var(--site-line-strong));
+  }
+}
+@media print {
+  .kp :is(.kp-in, .kp-pop, .kp-fade, .kp-fill, .kp-lit) {
+    opacity: 1 !important;
+    animation: none !important;
+  }
+}
+/* A template carousel's track: native scrolling with snap points, no scrollbar drawn (the buttons and a swipe move it). */
+.kp-track {
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.kp-track::-webkit-scrollbar {
+  display: none;
+}
+.kp-track > * {
+  scroll-snap-align: start;
+}
+/* Saba's bars in the video room's render (pages/PracticePublicArt): they rise and fall with her question a few times,
+   then rest on the listening wave. Full motion only; a transform, never a loop. */
+.kp-voice {
+  transform-origin: 50% 50%;
+}
+:root[data-motion="full"] .kp[data-shown]:not([data-still]) .kp-voice {
+  animation: kp-voice 460ms ease-in-out var(--d, 0ms) 6;
+}
+@keyframes kp-voice {
+  50% {
+    transform: scaleY(var(--v, 2));
+  }
+}
