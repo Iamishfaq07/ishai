@@ -14,8 +14,9 @@ export const PUBLIC_APP_PAGES = ["/", "/resume-ai", "/jobs", "/warmup", "/contac
 /** The policies: plain HTML files in public/, served at their address without ".html". */
 export const POLICY_PAGES = ["/privacy", "/terms", "/cookies", "/refund"];
 
-/** Sections whose pages are built files (the question bank's guides): what isn't among the files there is a 404. */
-export const PUBLIC_SECTIONS = ["/companies", "/roles"];
+/** Sections whose pages are built files (the question bank's guides, Orbit's articles): what isn't among the files
+ *  there is a 404. */
+export const PUBLIC_SECTIONS = ["/companies", "/roles", "/guides"];
 
 /**
  * The app's own pages, signed in or on the way in: what React Router draws (App.tsx), as patterns over the path.
@@ -85,6 +86,8 @@ export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/_prerender/", "/live/", "/sess
  * app's own redirects (pages/resume/paths.ts movedResumePath, pages/jobs/paths.ts movedJobsPath).
  */
 export function movedPath(pathname, search = "") {
+  // security.txt's old address (RFC 9116 moved it under /.well-known/).
+  if (pathname === "/security.txt") return { pathname: "/.well-known/security.txt", search: "" };
   // Without regard to case, like React Router; an id keeps its own case.
   if (/^\/resume-maker$/i.test(pathname)) return { pathname: "/resume-ai", search };
   const resume = /^\/documents\/resumes(?:\/([^/]+))?$/i.exec(pathname);

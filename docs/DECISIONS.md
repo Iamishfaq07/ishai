@@ -774,3 +774,24 @@ own scrolls from yours, and keeps the newest 200 lines in the page while followi
 face (no fake people), a WebGL blob (heavier, and hard to keep flat and accessible), and driving the bars from React
 state (a render per frame). The cost: a second audio path to keep (analyser or decoded samples), and the device voice's
 bars are an honest estimate of a voice rather than its sound.
+
+**D67 (continued) — Orbit's own articles start as drafts the owner approves; the theme script is inline; a
+security.txt with no bounty.** The articles at `/guides/<slug>` (pages/guides/articles.ts: the "tell me about
+yourself" answer for freshers, HR-round questions, what happened to Google's Interview Warmup) are written in Orbit's
+own words, say they were drafted with AI help, and carry a "last reviewed" date. Each has `published: false` until
+the owner has read it: the page is built and reachable at its address, so it can be reviewed on the real site, but
+it's noindex, out of the sitemap and linked from nowhere; `/guides` itself stays noindex while it would list only
+drafts. Publishing is flipping that flag (the byline then says the Orbit team checked it). The alternative, indexing
+on merge, would put text nobody at Orbit has approved in front of search engines and AI assistants under Orbit's
+name. Company and role guides now also link to each other (a company's guide to the role guides for the kinds of job
+it's known for, a role's to companies of the matching kinds): reading suggestions from a fixed table, not a claim
+about who hires whom.
+
+The theme script (dark or light before the first paint) is written into the built index.html instead of loaded as
+a file: Lighthouse counted it as render-blocking on every page, and the CSP already allows the built page's inline
+scripts by hash, so nothing else about the policy changes. Fonts are not preloaded: they swap in (text paints at once
+in a fallback), so a preload would only compete with the stylesheet on a slow phone connection for no LCP gain.
+
+`/.well-known/security.txt` (RFC 9116) names the contact form, not a personal email, and offers no bounty; its
+Expires date is fixed (renew it yearly; a test fails 30 days ahead as the reminder). The old `/security.txt` address
+redirects there.

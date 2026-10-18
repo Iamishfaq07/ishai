@@ -4,6 +4,8 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { inlineTheme } from "./inlineTheme.js";
+import { policyPages } from "./policyPages.js";
 import { questionBank } from "./questionBank.js";
 
 const TURNSTILE = "https://challenges.cloudflare.com";
@@ -115,7 +117,7 @@ function mediapipeWasm(): Plugin {
 }
 
 export default defineConfig(({ mode, isSsrBuild }) => ({
-  plugins: [react(), questionBank(), ...(isSsrBuild ? [] : [securityHeaders(mode), mediapipeWasm()])],
+  plugins: [react(), questionBank(), ...(isSsrBuild ? [] : [inlineTheme(), securityHeaders(mode), mediapipeWasm(), policyPages()])],
   server: { port: 5173, strictPort: true },
   // `vite build --ssr src/prerender/entry.tsx`: the public pages' build-time render (scripts/prerender.mjs runs it).
   // Everything is bundled into one Node file, so it runs from .prerender/ without resolving packages there.

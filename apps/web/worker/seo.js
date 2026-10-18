@@ -118,6 +118,29 @@ export function robotsTxt(env, url) {
   ].join("\n");
 }
 
+// ---------------------------------------------------------------- security.txt
+
+/**
+ * When security.txt stops being current (RFC 9116 wants it renewed within a year). Move it a year on when it nears:
+ * seo.test.js fails 30 days before, as the reminder.
+ */
+export const SECURITY_TXT_EXPIRES = "2027-10-17T00:00:00.000Z";
+
+/** /.well-known/security.txt (RFC 9116): where to report a security problem. No bug bounty is offered or implied. */
+export function securityTxt(env) {
+  const origin = originOf(env);
+  return [
+    "# How to report a security problem in Orbit: orbitanswer.com, the Orbit apps and their API.",
+    '# Use the contact form, choose "Technical problem", and start the message with "Security". Please report it',
+    "# privately and give us time to fix it before sharing details.",
+    `Contact: ${origin}/contact`,
+    `Expires: ${SECURITY_TXT_EXPIRES}`,
+    "Preferred-Languages: en",
+    `Canonical: ${origin}/.well-known/security.txt`,
+    "",
+  ].join("\n");
+}
+
 // ---------------------------------------------------------------- head tags
 
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -329,6 +352,11 @@ export async function withSeo(request, env, url, serve) {
   if (readable && path === "/robots.txt") {
     return new Response(method === "HEAD" ? null : robotsTxt(env, url), {
       headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600", "x-content-type-options": "nosniff" },
+    });
+  }
+  if (readable && path === "/.well-known/security.txt") {
+    return new Response(method === "HEAD" ? null : securityTxt(env), {
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff" },
     });
   }
 

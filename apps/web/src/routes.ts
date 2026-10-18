@@ -15,6 +15,8 @@ const loaders = {
   warmup: () => import("./pages/bank/WarmupRoute"),
   // The question bank's public pages: /companies, /roles and a guide per company and role.
   bank: () => import("./pages/bank/BankPages"),
+  // Orbit's interview-prep articles: /guides and one page per article (pages/guides).
+  guides: () => import("./pages/guides/GuidesPages"),
   contact: () => import("./pages/Contact"),
   notFound: () => import("./pages/NotFound"),
   technical: () => import("./pages/Technical"),
@@ -61,6 +63,8 @@ export const CompaniesPage = page(loaders.bank, (m) => m.CompaniesPage);
 export const CompanyPage = page(loaders.bank, (m) => m.CompanyPage);
 export const RolesPage = page(loaders.bank, (m) => m.RolesPage);
 export const RolePage = page(loaders.bank, (m) => m.RolePage);
+export const GuidesHubPage = page(loaders.guides, (m) => m.GuidesHubPage);
+export const GuideArticlePage = page(loaders.guides, (m) => m.GuideArticlePage);
 export const ContactPage = page(loaders.contact, (m) => m.ContactPage);
 // An address that isn't a page: rare, so its code (and the public layout it brings) stays out of the first download.
 export const NotFoundPage = page(loaders.notFound, (m) => m.NotFoundPage);
@@ -111,6 +115,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],
   [/^\/(companies|roles)(\/|$)/, "bank"],
+  [/^\/guides(\/|$)/, "guides"],
   [/^\/contact\/?$/, "contact"],
   [/^\/technical\/?$/, "technical"],
   [/^\/start/, "setup"],

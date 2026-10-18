@@ -52,7 +52,7 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 - Always free: building and editing a resume, its ATS score, Word and PDF downloads, job matches, the tracker, a few AI fit checks a day, and practice questions without an account.
 - Paid: credit packs (interview minutes and AI credits) and plans for a fixed time (a week, a month or a year). Each is paid once. Nothing renews, and what you buy never expires.
 - Prices are shown in Indian rupees (INR) in India and in US dollars (USD) elsewhere, in the "Pricing" section of https://orbitanswer.com/. Prices change from time to time, so that page is the source.
-- In India, payment by UPI, debit or credit card, netbanking or wallet. Outside India, by card in US dollars.
+- In India, payment by UPI, debit or credit card, netbanking or wallet. Outside India, in US dollars (the terms of use say how: https://orbitanswer.com/terms).
 - Refunds for a pack that hasn't been used and for payments that went wrong: https://orbitanswer.com/refund.
 
 ## Privacy and data
@@ -71,9 +71,17 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 - What happens to my resume and my calls? Audio is never stored; documents stay in the account and can be deleted at any time.
 - How do I contact Orbit? Through the form at https://orbitanswer.com/contact. Replies come by email.
 
+## Interview guides
+
+- Company guides (https://orbitanswer.com/companies): how 100 employers interview, from Indian IT services (TCS, Infosys, Wipro, Accenture, Cognizant) to product companies, banks and consulting firms. Each gives the rounds as candidates commonly report them, what interviewers listen for, practice questions with what a good answer covers, tips and a "last reviewed" date. Orbit isn't affiliated with these companies; the questions are practice questions in their style, not questions taken from their interviews.
+- Role guides (https://orbitanswer.com/roles): what interviews for each kind of job usually test, from campus placements and software engineering to nursing, teaching and sales.
+- Every guide links to the free warm-up on its questions and to a mock interview in that company's or role's style.
+
 ## Pages
 
 - [Front page](https://orbitanswer.com/)
+- [Company interview guides](https://orbitanswer.com/companies)
+- [Interview guides by role](https://orbitanswer.com/roles)
 - [Resume AI](https://orbitanswer.com/resume-ai)
 - [Jobs AI](https://orbitanswer.com/jobs)
 - [Free interview warm-up](https://orbitanswer.com/warmup)

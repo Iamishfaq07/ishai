@@ -73,6 +73,8 @@ import {
   CompanyPage,
   RolesPage,
   RolePage,
+  GuidesHubPage,
+  GuideArticlePage,
   prefetchLikelyRoutes,
   publicPageFor,
 } from "./routes";
@@ -221,6 +223,9 @@ export function App() {
       <Route path="/companies/:slug" element={<Prerendered><CompanyPage /></Prerendered>} />
       <Route path="/roles" element={<Prerendered><RolesPage /></Prerendered>} />
       <Route path="/roles/:slug" element={<Prerendered><RolePage /></Prerendered>} />
+      {/* Public: Orbit's interview-prep articles (pages/guides), built as HTML too. */}
+      <Route path="/guides" element={<Prerendered><GuidesHubPage /></Prerendered>} />
+      <Route path="/guides/:slug" element={<Prerendered><GuideArticlePage /></Prerendered>} />
       {/* Right after sign-up: the three welcome questions, outside the nav so nothing competes with them. */}
       <Route
         path="/welcome"

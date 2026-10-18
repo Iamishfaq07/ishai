@@ -21,7 +21,11 @@
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /icon-512.png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/icon-maskable-512.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /og-image.jpg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/og/*
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /mediapipe/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=604800

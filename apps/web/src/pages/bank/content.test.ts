@@ -4,9 +4,12 @@ import { describe, expect, it } from "vitest";
 import { companies, roles } from "virtual:question-bank/cards";
 import { BANK_DIR } from "../../../questionBank";
 import {
+  COMPANIES_FOR_ROLES,
   COMPANY_GROUPS,
+  ROLES_FOR_COMPANIES,
   ROLE_GROUPS,
   companyMockLink,
+  crossLinks,
   firstSentence,
   parseTrack,
   related,
@@ -122,5 +125,18 @@ describe("the guides' search, links and warm-up questions", () => {
   it("shortens a summary to its first sentence for a card", () => {
     expect(firstSentence("One thing. Two things.")).toBe("One thing.");
     expect(firstSentence("x".repeat(300)).length).toBeLessThanOrEqual(160);
+  });
+});
+
+describe("crossLinks (company guides <-> role guides)", () => {
+  it("names only guides that exist, and gives every guide some of the other kind", () => {
+    for (const slugs of Object.values(ROLES_FOR_COMPANIES)) for (const s of slugs) expect(roles.some((r) => r.slug === s), s).toBe(true);
+    for (const groups of Object.values(COMPANIES_FOR_ROLES)) for (const g of groups) expect(COMPANY_GROUPS.some(([id]) => id === g), g).toBe(true);
+    for (const c of companies) expect(crossLinks("company", c, { companies, roles }).length, c.slug).toBeGreaterThanOrEqual(3);
+    for (const r of roles) {
+      const links = crossLinks("role", r, { companies, roles });
+      expect(links.length, r.slug).toBeGreaterThan(0);
+      expect(new Set(links.map((l) => l.slug)).size).toBe(links.length);
+    }
   });
 });

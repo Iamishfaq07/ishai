@@ -12,7 +12,9 @@ for every address except the built files (`wrangler.jsonc` → `run_worker_first
 | Address | Answer |
 |---|---|
 | A public page (`/`, `/resume-ai`, `/jobs`, `/warmup`, `/contact`, `/technical`, the policies, `/companies`, `/roles` and each guide) | 200, its built HTML (src/prerender), with any head tags it lacks added: canonical, `hreflang` `en` + `x-default`, Open Graph/Twitter tags, JSON-LD, verification codes (front page) |
-| `/companies/<unknown>`, `/roles/<unknown>`, `/_prerender/*` | **404** (the built copies are served only at their own pages' addresses) |
+| `/companies/<unknown>`, `/roles/<unknown>`, `/guides/<unknown>`, `/_prerender/*` | **404** (the built copies are served only at their own pages' addresses) |
+| An article that's still a draft (`/guides/<slug>`, `published: false`) | 200, `<meta name="robots" content="noindex">`, not in the sitemap, linked from nowhere |
+| `/.well-known/security.txt` | RFC 9116: the contact form, an expiry date, the language, its canonical address (`/security.txt` → 301 there) |
 | One of the app's own pages (sign-in, the signed-in pages; list in `routes.js`) | 200 (the app), `X-Robots-Tag: noindex`, no canonical |
 | An invite link `/r/<code>` | 200, noindex, canonical `/` |
 | Anything else | **404**, noindex. The body is still the app, so people see its "This page isn't here" with links; crawlers read static links |
@@ -115,6 +117,20 @@ today; pages without a `lastmod` are never picked, and a failed ping never fails
 Create (or claim) Orbit's pages: LinkedIn company page, X, YouTube, Product Hunt, Microsoft Store (when listed),
 Instagram if used. Each should link to `https://orbitanswer.com`. Then add their addresses to `SAME_AS` in
 `apps/web/worker/site.js`: search engines use them to tie the profiles to the site (the knowledge panel).
+
+### 7. Approve the articles (and keep them true)
+
+The articles in `apps/web/src/pages/guides/articles.ts` are drafts until you've read them on the site:
+`/guides/tell-me-about-yourself-for-freshers`, `/guides/hr-interview-questions-for-freshers` and
+`/guides/google-interview-warmup-alternatives`. For each one you're happy with, set `published: true` (and change
+`reviewed` to the day you checked it), deploy, then submit it with IndexNow and Search Console's URL inspection. Once
+one is published, `/guides` is indexable too; add it to the footer's links then. Re-read each article at least once
+a year (and the Interview Warmup one whenever Google changes that page), and update `reviewed` when you do.
+
+### 8. Once a year
+
+Renew `/.well-known/security.txt`: move `SECURITY_TXT_EXPIRES` in `apps/web/worker/seo.js` a year on. A test fails
+30 days before it lapses, as the reminder.
 
 ## Checking it
 

@@ -48,6 +48,8 @@ export async function buildSite(
     }
     files.push({ file: route.file, contents: pageDocument(template, { path: route.path, head: route.head, html }) });
   }
-  files.push({ file: "sitemap.xml", contents: sitemapXml(routes.map((r) => ({ loc: url(r.path), lastmod: r.lastmod }))) });
+  // The sitemap lists what may be found in search: not a draft waiting for review (noindex).
+  const listed = routes.filter((r) => !r.head?.noindex);
+  files.push({ file: "sitemap.xml", contents: sitemapXml(listed.map((r) => ({ loc: url(r.path), lastmod: r.lastmod }))) });
   return files;
 }

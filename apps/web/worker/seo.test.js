@@ -2,7 +2,15 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import worker from "./index.js";
 import { APP_ROUTES, PUBLIC_APP_PAGES, POLICY_PAGES, isFixedAddress, movedPath, routeKind } from "./routes.js";
-import { BLOCKED_CRAWLERS, SEARCH_CRAWLERS, TRAINING_CRAWLERS, canonicalLocation, headAdditions, robotsTxt } from "./seo.js";
+import {
+  BLOCKED_CRAWLERS,
+  SEARCH_CRAWLERS,
+  SECURITY_TXT_EXPIRES,
+  TRAINING_CRAWLERS,
+  canonicalLocation,
+  headAdditions,
+  robotsTxt,
+} from "./seo.js";
 import { breadcrumbs, jsonLdText, structuredDataFor } from "./site.js";
 
 const SITE = "https://orbitanswer.com";
@@ -405,4 +413,35 @@ describe("llms.txt and llms-full.txt", () => {
       expect(text).not.toMatch(/deepseek|undetectable|stealth|invisible/i);
     });
   }
+});
+
+// ---------------------------------------------------------------- security.txt
+
+describe("security.txt (RFC 9116)", () => {
+  it("is served at /.well-known/ as text, with a contact, an expiry, the language and its own address", async () => {
+    const res = await get("/.well-known/security.txt");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    const text = await res.text();
+    const fields = Object.fromEntries(
+      text.split("\n").filter((l) => l && !l.startsWith("#")).map((l) => [l.slice(0, l.indexOf(":")), l.slice(l.indexOf(":") + 1).trim()]),
+    );
+    expect(fields).toEqual({
+      Contact: `${SITE}/contact`,
+      Expires: SECURITY_TXT_EXPIRES,
+      "Preferred-Languages": "en",
+      Canonical: `${SITE}/.well-known/security.txt`,
+    });
+    expect(text).not.toMatch(/@|bounty|reward/i); // no personal email, and no bounty promised
+  });
+
+  it("has an old address that moves there, and an expiry renewed in time", async () => {
+    const res = await get("/security.txt");
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe(`${SITE}/.well-known/security.txt`);
+    const days = (Date.parse(SECURITY_TXT_EXPIRES) - Date.now()) / 86_400_000;
+    // RFC 9116: less than a year ahead. Inside 30 days this fails on purpose: move SECURITY_TXT_EXPIRES on a year.
+    expect(days, "renew SECURITY_TXT_EXPIRES in apps/web/worker/seo.js").toBeGreaterThan(30);
+    expect(days).toBeLessThanOrEqual(366);
+  });
 });

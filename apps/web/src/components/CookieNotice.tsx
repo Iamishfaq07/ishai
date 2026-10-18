@@ -44,7 +44,7 @@ export function CookieNotice() {
       <Cookie className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
       <p className="min-w-0 flex-1">
         Only a sign-in cookie, no advertising.{" "}
-        <a href="/cookies.html" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+        <a href="/cookies" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
           Cookie policy
         </a>
       </p>

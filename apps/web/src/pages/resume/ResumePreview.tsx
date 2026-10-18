@@ -137,7 +137,12 @@ function Stacked({ title, dates, sub, side }: { title: string; dates: string; su
  * the app theme, because it's what gets printed to PDF. Headings use the standard section names ATS software
  * looks for.
  */
-export function ResumePreview({ data, design }: { data: ResumeData; design: ResumeDesign }) {
+/**
+ * `decorative`: the resume is an illustration inside another page (the public Resume AI page's sample), so its name
+ * isn't that page's heading: a paragraph instead of an `<h1>`, which stays for the editor's preview and the PDF.
+ */
+export function ResumePreview({ data, design, decorative = false }: { data: ResumeData; design: ResumeDesign; decorative?: boolean }) {
+  const NameTag = decorative ? "p" : "h1";
   const space = design.template === "campus" ? { ...SPACE[design.spacing], ...CAMPUS_GAPS[design.spacing] } : SPACE[design.spacing];
   const font = FONTS.find((f) => f.id === design.font)?.stack ?? FONTS[0]!.stack;
   const page = PAGE_MM[design.page];
@@ -383,9 +388,9 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
       <div style={style} className="resume-page flex">
         <aside style={{ background: tint(accent, 0.9), padding: space.pad, width: "34%" }} className="shrink-0">
           {photo && <div className="mb-[10pt]">{photoEl("30mm")}</div>}
-          <h1 data-rpath="basics.name" style={{ color: accent, fontSize: "1.9em", lineHeight: 1.1 }} className="font-bold">
+          <NameTag data-rpath="basics.name" style={{ color: accent, fontSize: "1.9em", lineHeight: 1.1 }} className="font-bold">
             {name}
-          </h1>
+          </NameTag>
           {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] font-medium">{data.basics.headline}</p>}
           <div data-rpath="basics" className="mt-[8pt] space-y-[2pt] break-words text-[0.92em]">
             {contacts.map((c, i) => (
@@ -407,18 +412,18 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     t === "campus" ? (
       <header data-rpath="basics" className="text-center">
         {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
-        <h1 data-rpath="basics.name" style={{ fontFamily: font, fontSize: "2.15em", lineHeight: 1.1, fontVariant: "small-caps", letterSpacing: "0.02em" }} className="font-bold">
+        <NameTag data-rpath="basics.name" style={{ fontFamily: font, fontSize: "2.15em", lineHeight: 1.1, fontVariant: "small-caps", letterSpacing: "0.02em" }} className="font-bold">
           {name}
-        </h1>
+        </NameTag>
         {data.basics.headline && <p data-rpath="basics.headline" className="mt-[1pt]">{data.basics.headline}</p>}
         <p className="mt-[2pt] text-zinc-700"><ContactLine items={contacts} sep=" | " /></p>
       </header>
     ) : t === "harvard" ? (
       <header data-rpath="basics" className="text-center">
         {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
-        <h1 data-rpath="basics.name" style={{ fontFamily: titleFont, fontSize: "1.9em", lineHeight: 1.15 }} className="font-bold">
+        <NameTag data-rpath="basics.name" style={{ fontFamily: titleFont, fontSize: "1.9em", lineHeight: 1.15 }} className="font-bold">
           {name}
-        </h1>
+        </NameTag>
         {data.basics.headline && <p data-rpath="basics.headline" className="mt-[2pt] italic">{data.basics.headline}</p>}
         <p className="mt-[3pt] text-zinc-700"><ContactLine items={contacts} sep="  •  " /></p>
       </header>
@@ -427,27 +432,27 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
       // the name and contacts last, which confuses ATS parsers. The photo is placed against the page instead.
       <header data-rpath="basics" className="text-center">
         {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
-        <h1 data-rpath="basics.name" style={{ fontSize: "2em", lineHeight: 1.15 }} className="font-bold tracking-tight">
+        <NameTag data-rpath="basics.name" style={{ fontSize: "2em", lineHeight: 1.15 }} className="font-bold tracking-tight">
           {name}
-        </h1>
+        </NameTag>
         {data.basics.headline && <p data-rpath="basics.headline" style={{ color: accent }} className="mt-[2pt] font-medium">{data.basics.headline}</p>}
         <p className="mt-[4pt] text-zinc-600"><ContactLine items={contacts} sep="  ·  " /></p>
       </header>
     ) : t === "elegant" ? (
       <header data-rpath="basics" className="text-center">
         {photo && <div className="absolute" style={{ top: space.pad, right: space.pad }}>{photoEl("22mm")}</div>}
-        <h1 data-rpath="basics.name" style={{ fontFamily: serif, fontSize: "2.2em", lineHeight: 1.1, letterSpacing: "0.04em" }} className="font-semibold">
+        <NameTag data-rpath="basics.name" style={{ fontFamily: serif, fontSize: "2.2em", lineHeight: 1.1, letterSpacing: "0.04em" }} className="font-semibold">
           {name}
-        </h1>
+        </NameTag>
         {data.basics.headline && <p data-rpath="basics.headline" style={{ color: accent, letterSpacing: "0.12em" }} className="mt-[3pt] text-[0.95em] uppercase">{data.basics.headline}</p>}
         <p className="mt-[5pt] text-zinc-600"><ContactLine items={contacts} sep="  ◆  " /></p>
       </header>
     ) : t === "minimal" ? (
       <header data-rpath="basics" className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 data-rpath="basics.name" style={{ fontSize: "2.1em", lineHeight: 1.1 }} className="font-light tracking-tight">
+          <NameTag data-rpath="basics.name" style={{ fontSize: "2.1em", lineHeight: 1.1 }} className="font-light tracking-tight">
             {name}
-          </h1>
+          </NameTag>
           {data.basics.headline && <p data-rpath="basics.headline" className="mt-[2pt] text-zinc-600">{data.basics.headline}</p>}
           <p className="mt-[5pt] text-[0.92em] text-zinc-500"><ContactLine items={contacts} sep="   " /></p>
         </div>
@@ -460,9 +465,9 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
         className="flex items-end justify-between gap-4 text-white"
       >
         <div className="min-w-0">
-          <h1 data-rpath="basics.name" style={{ fontSize: "2.3em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
+          <NameTag data-rpath="basics.name" style={{ fontSize: "2.3em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
             {name}
-          </h1>
+          </NameTag>
           {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] text-[1.1em] font-medium opacity-90">{data.basics.headline}</p>}
           <p className="mt-[5pt] opacity-90"><ContactLine items={contacts} sep="  |  " /></p>
         </div>
@@ -471,9 +476,9 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     ) : t === "executive" ? (
       <header data-rpath="basics" className="flex items-start justify-between gap-4 pb-[4pt]" style={{ borderBottom: `2px solid ${accent}` }}>
         <div className="min-w-0">
-          <h1 data-rpath="basics.name" style={{ fontFamily: serif, fontSize: "2.2em", lineHeight: 1.05 }} className="font-bold">
+          <NameTag data-rpath="basics.name" style={{ fontFamily: serif, fontSize: "2.2em", lineHeight: 1.05 }} className="font-bold">
             {name}
-          </h1>
+          </NameTag>
           {data.basics.headline && <p data-rpath="basics.headline" style={{ color: accent }} className="mt-[3pt] text-[1.1em] font-semibold">{data.basics.headline}</p>}
         </div>
         <div className="shrink-0 text-right text-[0.92em] text-zinc-600">
@@ -486,9 +491,9 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     ) : t === "modern" ? (
       <header data-rpath="basics" className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 data-rpath="basics.name" style={{ color: accent, fontSize: "2.2em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
+          <NameTag data-rpath="basics.name" style={{ color: accent, fontSize: "2.2em", lineHeight: 1.05 }} className="font-extrabold tracking-tight">
             {name}
-          </h1>
+          </NameTag>
           {data.basics.headline && <p data-rpath="basics.headline" className="mt-[3pt] text-[1.1em] font-medium">{data.basics.headline}</p>}
           <p className="mt-[5pt] text-zinc-600"><ContactLine items={contacts} sep="  |  " /></p>
         </div>
@@ -497,10 +502,10 @@ export function ResumePreview({ data, design }: { data: ResumeData; design: Resu
     ) : (
       <header data-rpath="basics" className="flex items-end justify-between gap-3 border-b pb-[4pt]" style={{ borderColor: accent }}>
         <div className="min-w-0">
-          <h1 data-rpath="basics.name" style={{ fontSize: "1.6em", lineHeight: 1.1 }} className="font-bold">
+          <NameTag data-rpath="basics.name" style={{ fontSize: "1.6em", lineHeight: 1.1 }} className="font-bold">
             {name}
             {data.basics.headline && <span className="font-normal text-zinc-600"> — {data.basics.headline}</span>}
-          </h1>
+          </NameTag>
           <p className="text-zinc-600"><ContactLine items={contacts} sep=" · " /></p>
         </div>
         {photoEl("16mm")}

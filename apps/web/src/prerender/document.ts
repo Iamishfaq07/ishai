@@ -41,6 +41,9 @@ export function pageDocument(template: string, page: { path: string; head: Head;
     out = content(out, "property", "og:image", head.ogImage);
     out = content(out, "name", "twitter:image", head.ogImage);
   }
+  if (head.noindex) {
+    out = swap(out, /<\/head>/, () => `  <meta name="robots" content="noindex" />\n  </head>`, "</head>");
+  }
   if (head.jsonLd) {
     const data = scriptJson(head.jsonLd);
     out = swap(out, /<\/head>/, () => `  <script type="application/ld+json">${data}</script>\n  </head>`, "</head>");
