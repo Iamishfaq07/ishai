@@ -436,16 +436,16 @@ const toInput = (j: BizJob): BizJobInput => ({
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"];
 const ASSISTANT_KEY = "orbit.biz.assistant";
 
-/** A field the assistant filled: a quiet violet ring and an "AI · Undo" mark until the person edits it. */
+/** A field the assistant filled: a quiet indigo ring and an "AI · Undo" mark until the person edits it. */
 function AiMark({ field, marks, onUndo, children, className }: { field: BizAssistField; marks: Marks; onUndo: (f: BizAssistField) => void; children: ReactNode; className?: string }) {
   const on = field in marks;
   return (
-    <div className={cx("relative rounded-lg transition-shadow", on && "ring-1 ring-violet-300 ring-offset-4 ring-offset-white dark:ring-violet-400/40 dark:ring-offset-zinc-900", className)} data-ai-field={on ? field : undefined}>
+    <div className={cx("relative rounded-lg transition-shadow", on && "ring-1 ring-indigo-300 ring-offset-4 ring-offset-white dark:ring-indigo-400/40 dark:ring-offset-zinc-900", className)} data-ai-field={on ? field : undefined}>
       {children}
       {on && (
-        <span className="absolute -top-3 right-0 z-[1] inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 py-0.5 pl-2 pr-0.5 text-[11px] font-medium text-violet-800 dark:border-violet-400/30 dark:bg-violet-950 dark:text-violet-200">
+        <span className="absolute -top-3 right-0 z-[1] inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 py-0.5 pl-2 pr-0.5 text-[11px] font-medium text-indigo-800 dark:border-indigo-400/30 dark:bg-indigo-950 dark:text-indigo-200">
           <Sparkles className="h-3 w-3" aria-hidden /> AI
-          <button type="button" onClick={() => onUndo(field)} aria-label={`Undo the AI's ${FIELD_LABEL[field]}`} className={cx("rounded-full px-1.5 py-px hover:bg-violet-100 dark:hover:bg-violet-900", focusRing)}>
+          <button type="button" onClick={() => onUndo(field)} aria-label={`Undo the AI's ${FIELD_LABEL[field]}`} className={cx("rounded-full px-1.5 py-px hover:bg-indigo-100 dark:hover:bg-indigo-900", focusRing)}>
             Undo
           </button>
         </span>
@@ -831,7 +831,7 @@ export function JobEditor() {
                 Close job
               </Button>
             )}
-            {Object.keys(marks).length > 0 && <span className="text-xs text-violet-700 dark:text-violet-300">{Object.keys(marks).length} AI-filled field{Object.keys(marks).length === 1 ? "" : "s"} to review</span>}
+            {Object.keys(marks).length > 0 && <span className="text-xs text-indigo-700 dark:text-indigo-300">{Object.keys(marks).length} AI-filled field{Object.keys(marks).length === 1 ? "" : "s"} to review</span>}
           </div>
         )}
       </form>

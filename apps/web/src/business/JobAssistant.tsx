@@ -9,8 +9,8 @@ import { EXAMPLES, REFINES, SALARY_HINT, turnFrom, type Applied, type PanelState
 import { errorText } from "./ui";
 
 const chip = cx(
-  "rounded-full border border-zinc-200 bg-white px-3 py-1 text-left text-xs text-zinc-700 transition-colors hover:border-violet-300 hover:bg-violet-50 hover:text-violet-900",
-  "dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:border-violet-400/40 dark:hover:bg-violet-500/10 dark:hover:text-violet-100",
+  "rounded-full border border-zinc-200 bg-white px-3 py-1 text-left text-xs text-zinc-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-900",
+  "dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:border-indigo-400/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-100",
   focusRing,
 );
 
@@ -81,10 +81,10 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
   };
 
   return (
-    <section aria-labelledby={`${id}-h`} className="overflow-hidden rounded-2xl border border-violet-200/70 bg-white shadow-sm dark:border-violet-400/20 dark:bg-zinc-900/70">
-      <div className="flex items-center justify-between gap-2 border-b border-violet-100 bg-gradient-to-r from-violet-50 to-white px-4 py-3 dark:border-violet-400/15 dark:from-violet-500/10 dark:to-transparent">
+    <section aria-labelledby={`${id}-h`} className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-sm dark:border-indigo-400/20 dark:bg-zinc-900/70">
+      <div className="flex items-center justify-between gap-2 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-white px-4 py-3 dark:border-indigo-400/15 dark:from-indigo-500/10 dark:to-transparent">
         <h2 id={`${id}-h`} className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
-          <span className="grid h-7 w-7 place-items-center rounded-lg bg-violet-600 text-white dark:bg-violet-500" aria-hidden>
+          <span className="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 text-white dark:bg-indigo-500" aria-hidden>
             <Sparkles className="h-4 w-4" />
           </span>
           Orbit assistant
@@ -123,7 +123,7 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
             ))}
           </div>
           <div>
-            <button type="button" aria-expanded={panel.more} aria-controls={`${id}-more`} onClick={() => set("more", !panel.more)} className={cx("rounded text-xs font-medium text-violet-700 hover:underline dark:text-violet-300", focusRing)}>
+            <button type="button" aria-expanded={panel.more} aria-controls={`${id}-more`} onClick={() => set("more", !panel.more)} className={cx("rounded text-xs font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
               {panel.more ? "Fewer details" : "Add details (optional)"}
             </button>
             {panel.more && (
