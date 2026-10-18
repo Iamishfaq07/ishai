@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Microsoft Store (MSIX) package for Orbit. Filled in by scripts/package-msix.ps1: {{IDENTITY_NAME}}, {{PUBLISHER}},
-  {{PUBLISHER_DISPLAY_NAME}} come from Partner Center (store-identity.json), {{VERSION}} is x.y.z.0.
-  A full-trust desktop app: audio capture, screenshots and the credential store behave as in the NSIS build.
+  Microsoft Store (MSIX) package for Orbit, filled in by scripts/package-msix.ps1:
+    {{IDENTITY_NAME}}, {{PUBLISHER}}, {{PUBLISHER_DISPLAY_NAME}}: Partner Center > Product identity (store-identity.json);
+    {{DISPLAY_NAME}}: the name reserved in Partner Center (the Store checks it matches); {{SHORT_NAME}}: tiles;
+    {{VERSION}}: x.y.z.0 (the Store keeps the fourth part at 0).
+  A full-trust desktop app: audio capture, screenshots and the credential store behave exactly as in the NSIS build.
+  Assets: marketing/brand/render-msix-assets.mjs renders windows/msix/Assets; makepri indexes their scale-* and
+  targetsize-* variants, so the names below carry no qualifiers. Capabilities and why: docs/MICROSOFT_STORE.md.
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
@@ -19,8 +23,11 @@
   </Properties>
 
   <Dependencies>
-    <!-- 19041 (Windows 10 2004): per-app audio capture (process loopback) needs it. -->
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+    <!-- 19041 (Windows 10 2004): per-app audio capture (process loopback) needs it. MaxVersionTested: Windows 11 26H2
+         (26300), the release every 0.1.4x build was smoke-tested on; 10.0.26100.0 is the fallback if Partner Center objects.
+         WebView2 isn't declared: Windows 11 has it built in and Windows 10 gets the Evergreen runtime from Microsoft
+         (docs/MICROSOFT_STORE.md, "WebView2"). -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26300.0" />
   </Dependencies>
 
   <Resources>
@@ -31,15 +38,31 @@
     <Application Id="Orbit" Executable="orbit-desktop.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         DisplayName="{{DISPLAY_NAME}}"
-        Description="Real-time interview and meeting copilot"
-        BackgroundColor="transparent"
+        Description="Interview practice, and a live interview assistant for calls where AI help is allowed"
+        BackgroundColor="#0B0F17"
         Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png" />
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile
+          ShortName="{{SHORT_NAME}}"
+          Square71x71Logo="Assets\Square71x71Logo.png"
+          Wide310x150Logo="Assets\Wide310x150Logo.png"
+          Square310x310Logo="Assets\Square310x310Logo.png">
+          <uap:ShowNameOnTiles>
+            <uap:ShowOn Tile="square150x150Logo" />
+            <uap:ShowOn Tile="wide310x150Logo" />
+            <uap:ShowOn Tile="square310x310Logo" />
+          </uap:ShowNameOnTiles>
+        </uap:DefaultTile>
+      </uap:VisualElements>
     </Application>
   </Applications>
 
   <Capabilities>
+    <!-- A desktop (Win32) app runs outside the app sandbox; the Store asks why (justification in MICROSOFT_STORE.md). -->
     <rescap:Capability Name="runFullTrust" />
+    <!-- Not needed for a full-trust app to reach the network; declared so the listing says Orbit uses the internet. -->
+    <Capability Name="internetClient" />
+    <!-- The user's own microphone (their side of the call). Windows' microphone privacy switches still apply. -->
     <DeviceCapability Name="microphone" />
   </Capabilities>
 </Package>

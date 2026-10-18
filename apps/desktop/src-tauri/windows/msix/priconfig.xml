@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  makepri's config for the MSIX (scripts/package-msix.ps1). It's `makepri createconfig /dq en-US /pv 10.0.0` without
+  the <packaging> section: that section splits the scale-125/150/200/400 images into resources.scale-*.pri resource
+  packs, which only an .msixbundle uses. A single .msix needs every candidate in its one resources.pri, or Windows
+  only ever finds the scale-100 tiles.
+-->
+<resources targetOsVersion="10.0.0" majorVersion="1">
+	<index root="\" startIndexAt="\">
+		<default>
+			<qualifier name="Language" value="en-US"/>
+			<qualifier name="Contrast" value="standard"/>
+			<qualifier name="Scale" value="100"/>
+			<qualifier name="HomeRegion" value="001"/>
+			<qualifier name="TargetSize" value="256"/>
+			<qualifier name="LayoutDirection" value="LTR"/>
+			<qualifier name="Theme" value="dark"/>
+			<qualifier name="AlternateForm" value=""/>
+			<qualifier name="DXFeatureLevel" value="DX9"/>
+			<qualifier name="Configuration" value=""/>
+			<qualifier name="DeviceFamily" value="Universal"/>
+			<qualifier name="Custom" value=""/>
+		</default>
+		<indexer-config type="folder" foldernameAsQualifier="true" filenameAsQualifier="true" qualifierDelimiter="."/>
+	</index>
+</resources>
