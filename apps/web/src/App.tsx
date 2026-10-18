@@ -7,7 +7,7 @@ import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
 import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
-import { Skeleton, toast } from "@orbit/ui";
+import { EmptyState, Skeleton, toast } from "@orbit/ui";
 import { signedInHereBefore, useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { servedHeadFor } from "./lib/servedHead";
@@ -95,7 +95,7 @@ export function PageLoading() {
  * page, and Resume AI's and Jobs AI's homes their product pages.
  */
 function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, unreachable, recheck } = useAuth();
   const location = useLocation();
   if (loading) {
     // A browser nobody has signed in on: the public face now, not a spinner until the session check answers (the
@@ -110,10 +110,27 @@ function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage
   }
   if (!user) {
     const page = publicPage?.(location.pathname);
+    // The session check got no answer (offline, the server restarting): someone who has signed in here is told so
+    // and can try again, instead of being sent to sign in by a blip. A first visit still gets the public page.
+    if (unreachable && (signedInHereBefore() || !page)) return <CantReach message={unreachable} onRetry={recheck} />;
     if (page) return page;
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   return <Signed>{children}</Signed>;
+}
+
+/** The whole page while the session can't be checked: what happened, and Try again (it also retries when back online). */
+function CantReach({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <main className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col justify-center px-5 py-16">
+      <EmptyState
+        kind="offline"
+        title="Can't reach Orbit"
+        body={`${message} If you were signed in, you still are.`}
+        onRetry={onRetry}
+      />
+    </main>
+  );
 }
 
 /** Signed in: warm the daily pages in the background so the next click doesn't wait for a download. A signed-in
