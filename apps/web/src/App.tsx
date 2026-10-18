@@ -213,8 +213,6 @@ export function App() {
   useRouteTitle();
   return (
     <Suspense fallback={<PageLoading />}>
-    <CookieNotice />
-    <SupportChat />
     <GoogleClaimNotice />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -318,6 +316,10 @@ export function App() {
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    {/* After the page in the DOM, so the first Tab stop is the page's "Skip to content", not the floating support
+        button or the cookie note (both are fixed in place, so where they sit in the markup doesn't move them). */}
+    <CookieNotice />
+    <SupportChat />
     </Suspense>
   );
 }

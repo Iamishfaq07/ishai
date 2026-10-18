@@ -22,8 +22,15 @@ export function AppError({ error, reset }: { error: Error; reset: () => void }) 
           ? reloading
             ? "Loading the new version…"
             : "This page is from the version before. Reload to get the new one: nothing you've saved is lost."
-          : error.message || "An unexpected error occurred."}
+          : "This part of the page hit a problem and couldn't be shown. Try again, or reload: nothing you've saved is lost."}
       </p>
+      {/* The technical words, for a support message (never the headline: "x.filter is not a function" means nothing). */}
+      {!stale && error.message && (
+        <details className="max-w-sm text-xs text-zinc-500 dark:text-zinc-400">
+          <summary className="cursor-pointer">Details for support</summary>
+          <p className="mt-1 break-words font-mono">{error.message.slice(0, 300)}</p>
+        </details>
+      )}
       {!reloading && (
         <div className="flex gap-2">
           {!stale && (
