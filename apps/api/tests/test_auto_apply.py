@@ -343,6 +343,8 @@ def test_lease_submit_with_proof_updates_the_tracker_and_counts_the_quota(app: T
     path = p["resume"]["download_url"].split("testserver", 1)[-1]
     pdf = app.get(path)
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF") and b"Asha Rao" in pdf.content
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert p["resume"]["filename"] == "Asha Rao - Resume.pdf"
     assert app.get(path.replace("sig=", "sig=0")).status_code == 403
     # Asking again from the same browser (a restarted service worker) gets the same packet back, lease unchanged and
     # not held twice; another browser of the same candidate is told it's busy (one application at a time).

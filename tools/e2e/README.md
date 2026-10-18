@@ -30,3 +30,11 @@ The older `resume-race.mjs` script remains available for manual route-switch dia
 recorded ATS forms, fixture jobs, mock AI) and Vite on 5202 with `VITE_API_URL=http://127.0.0.1:8039`, then
 `node tools/e2e/auto-apply.mjs`. It goes through the setup wizard, the planner, a needs_answer packet and a fake
 executor (`apps/api/scripts/fake_executor.py`), and runs axe on each screen. Screenshots go to `%TEMP%\orbit-autoapply-e2e\`.
+
+`apply-integrated.e2e.ts` is Orbit Apply with both halves together: it starts the real API
+(`apps/api/scripts/e2e_apply_integrated.py`, port 8147: temp SQLite, mock AI, fixture jobs on the recorded postings and
+the server-side copies of their forms in `apply-integrated/`), the web app (Vite, port 5247) and a local HTTPS fake ATS,
+builds the extension pointed at them and loads it into headless Chromium with a throwaway profile, connected through
+the web app's Connect page. Only the four ATS hostnames resolve (to the fake ATS). Run it with its own config:
+`pnpm exec playwright test -c tools/e2e/apply-integrated.config.ts` (needs `uv`, `pnpm` and `openssl` on PATH; ports
+can be changed with `APPLY_E2E_API_PORT` / `APPLY_E2E_WEB_PORT`). Screenshots go to `%TEMP%\orbit-apply-integrated\`.

@@ -110,7 +110,7 @@ function start(cmd: string, args: string[], cwd: string, env: Record<string, str
 }
 
 const shot = async (page: Page, name: string) => {
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(900);
   await page.screenshot({ path: join(SHOTS, `${name}.png`), fullPage: true });
 };
 
@@ -450,6 +450,8 @@ test("GitLab: answered once, sent with proof; the captcha one needs you, by emai
   expect(submitted(URLS.gitlab)).toBe(1);
   const sent = submissions.find((s) => s.url.startsWith(URLS.gitlab))!.data;
   expect(sent).toMatchObject({ first_name: "Asha", question_38624170002: "No", question_38624174002: "India", gender: "Decline To Self Identify" });
+  // The tailored resume, from the signed link (a PDF, no session), under the name Orbit gave it.
+  expect(String(sent.resume)).toMatch(/^file:Asha Rao - Resume\.pdf:[1-9]\d+$/);
   expect(b).toMatchObject({ status: "needs_you", result_reason: "captcha" });
   expect(submitted(URLS.gitlabCaptcha)).toBe(0);
   const mail = await expect.poll(() => readFileSync(outbox, "utf8")).toContain("Orbit Apply needs you").then(() => readFileSync(outbox, "utf8"));
