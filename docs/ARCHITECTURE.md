@@ -24,6 +24,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | **Job posting from a link** (Prep): SSRF-safe fetch, schema.org JobPosting or main-content extraction, save as a document | ✅ tested |
 | **Salary negotiation practice**: AI recruiter presents your offer and negotiates back (flexible/realistic/tough); review graded on negotiation skill | ✅ tested |
 | **Preflight** (`GET /v1/preflight` + local device checks) before a session starts | ✅ |
+| **Orbit for Business AI** (`orbit_api/business_ai`, a module with no routes of its own): JD writer, applicant resume parsing, ranking with checked evidence, a fixed score formula and protected attributes redacted first; never rejects (D83) | ✅ tested + live eval |
 | Session memory, follow-up stitching, chat mode, manual answer, pin / clear, cancellation, answer history | ✅ tested |
 | Session report (background DB job), review scores, transcript, Markdown export, privacy toggles | ✅ tested |
 | Entitlements (free / pro / unlimited), live-minute heartbeat metering + mid-session enforcement, config-driven LLM cost (cache hit/miss, peak/off-peak) | ✅ tested; plans can't be bought yet (no billing, D17) |

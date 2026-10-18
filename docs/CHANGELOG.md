@@ -1,5 +1,23 @@
 # Implementation log
 
+## Orbit for Business: the AI module (2026-10-19)
+
+- **`orbit_api/business_ai`**, a pure module the Business routes import (DECISIONS D83; no routes, models or
+  migrations): `write_job_description` (an inclusive 300-700 word draft in English or Hindi from a brief, nothing the
+  brief doesn't say), `parse_applicant_resume` (regex extraction first, the model only structures roles and
+  education, everything grounded in the source; Indian formats: CTC, notice period, "Mar'19 - Till date", B.Tech,
+  Class XII) and `rank_applicant` (requirement matches with quotes checked against the resume, a fixed score formula,
+  neutral cautions, `model_version` for the audit log, never a rejection). `redact_for_ranking()` takes the name,
+  contact details, gender, age, marital status, religion, caste, nationality, photo and health mentions out before
+  anything ranks. Each function has a deterministic path when the model is down, slow or answers badly twice.
+- The mock provider answers the three request types, so dev mode without a key gives working output.
+- `ParsedResume.summary`: the summary/profile/objective paragraph (regex first, the model only if it is missing and only in the resume's words), redacted like every other line and used as ranking evidence, work-authorisation statements included.
+- Tests: 74 (golden parses of 17 synthetic resumes, Indian and global, fresher to senior, messy PDF/DOCX text and a
+  pasted run-on line; 7 job specs; redaction; the evidence check; the score formula; model answers that invent
+  evidence, recommend rejection, time out or aren't JSON; the JD checks; and the bias consistency test: identity
+  swaps give the same prompt, score and matches). Opt-in live eval `scripts/eval_business_ai.py` (31 calls): 0 points
+  of score change across identity swaps and repeat runs, 100/100 quotes verified.
+
 ## The desktop app signs in with Google, in the browser (2026-10-19)
 
 - **Continue with Google on the desktop sign-in screen** (DECISIONS D81, docs/PROTOCOL.md "Desktop sign-in with

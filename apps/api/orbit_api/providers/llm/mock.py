@@ -372,6 +372,41 @@ def _mock_jobs(request_type: str, body: str) -> str:
                            {"requirement": gap, "status": "missing", "job_quote": gap, "resume_quote": ""}]})
 
 
+def _mock_business(request_type: str, body: str) -> str:
+    """Orbit for Business (business_ai/): a job draft that only restates the brief, an empty resume structure (the
+    deterministic parse stands), and a ranking that quotes the profile line sharing a word with each requirement."""
+    m = re.search(r"<reference_data[^>]*>\s*(.*?)\s*</reference_data>", body, re.S)
+    ref = m.group(1) if m else ""
+    if request_type == "business_jd":
+        try:
+            brief = json.loads(ref)
+        except ValueError:
+            brief = {}
+        title = str(brief.get("title") or "this role")
+        must = [str(x) for x in brief.get("must_haves") or []]
+        nice = [str(x) for x in brief.get("nice_to_haves") or []]
+        filler = ("(mock) This sentence stands in for the description the AI writes from your brief, using only "
+                  "what the brief says. ")
+        md = "\n\n".join([f"## About the role\n(mock) We're hiring a {title}. " + filler * 6,
+                          "## What you'll do\n" + filler * 6,
+                          "## What you need\n" + "\n".join(f"- {x}" for x in must),
+                          "## Nice to have\n" + "\n".join(f"- {x}" for x in nice),
+                          "## About us\n" + (str(brief.get("about_company") or "") or filler) + " " + filler * 5])
+        return json.dumps({"title": title, "summary": f"(mock) A {title} role.", "responsibilities": [filler.strip()],
+                           "must_haves": must, "nice_to_haves": nice, "description_markdown": md,
+                           "suggested_screening_questions": [{"text": f"Do you have: {x}?", "kind": "yes_no",
+                                                              "choices": None} for x in must[:4]]})
+    if request_type == "business_rank":
+        lines = [x.strip() for x in ref.split("\n") if x.strip()]
+        matches = []
+        for rid, req in re.findall(r"^([MN]\d+): (.+)$", body, re.M):
+            words = set(re.findall(r"[a-z]{4,}", req.lower())) - {"years", "with", "experience", "strong"}
+            line = next((x for x in lines if words & set(re.findall(r"[a-z]{4,}", x.lower()))), None)
+            matches.append({"id": rid, "met": "yes" if line else "no", "evidence": line})
+        return json.dumps({"matches": matches, "summary": "(mock) Compared with the requirements.", "cautions": []})
+    return json.dumps({"headline": None, "location": None, "experience": [], "education": [], "skills": []})
+
+
 def _shown(body: str) -> list[str]:
     found = re.search(r"Skills the post asks for that the resume shows: ([^.\n]*)", body)
     return [s.strip() for s in found.group(1).split(",") if s.strip() and s.strip() != "none found"] if found else []
@@ -428,6 +463,8 @@ class MockLLMProvider(LLMProvider):
             sentences = [x.strip() for x in re.split(r"(?<=[.!?])\s+", m.group(1) if m else "") if len(x.strip()) > 20]
             return json.dumps({"items": [{"claim": f"[mock] {q[:80]}", "quote": q} for q in sentences[:3]]
                                + [{"claim": "[mock] Invented claim", "quote": "words that are not in the source"}]})
+        if request.request_type.startswith("business_"):
+            return _mock_business(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_import":
             return _mock_resume_import(request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_suggest":
