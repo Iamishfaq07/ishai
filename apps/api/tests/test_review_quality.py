@@ -210,3 +210,21 @@ def test_a_stronger_answer_checks_spelled_out_numbers_too() -> None:
     assert ground_numbers(kept, said) == kept
     assert ground_numbers("One of the checks failed, in three-quarters of the time.", said) == (
         "One of the checks failed, in three-quarters of the time.")
+
+
+def test_their_questions_at_the_end_arent_graded_as_an_answer() -> None:
+    # The real call: "I'd start with the requirements…" (said after "Is there anything you'd like to ask me?") was
+    # quoted in the review as their answer to her last question.
+    from types import SimpleNamespace
+
+    from orbit_api.sessions.report import pair_questions_with_answers
+
+    at = datetime(2026, 10, 18, tzinfo=UTC)
+    q = SimpleNamespace(id="q1", text="Tell me about a late vulnerability.", created_at=at)
+    turns = [SimpleNamespace(speaker=s, text=x, start_ms=0, end_ms=1000, created_at=at + timedelta(seconds=n))
+             for n, s, x in [(1, "interviewer", "Tell me about a late vulnerability."),
+                             (2, "candidate", "We found an auth bypass two days before launch."),
+                             (3, "interviewer", "Got it, thank you. Is there anything you'd like to ask me?"),
+                             (4, "candidate", "How big is the team?")]]
+    pairs = pair_questions_with_answers([q], turns)  # type: ignore[arg-type]
+    assert pairs[0].answer == "We found an auth bypass two days before launch."

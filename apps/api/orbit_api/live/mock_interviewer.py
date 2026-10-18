@@ -432,6 +432,9 @@ class MockInterviewer:
         self._checked_in: set[str] = set()  # questions she already checked in on after a long silence
         self._patience_until = 0  # "give me a moment": don't check in or hurry them before this
         self._pending_intent: talk.Intent | None = None
+        self._pending_words = ""  # what they said for it, given back to the answer if they carry on ("Sure. I'm…")
+        self._latest_line: dict[str, str] = {}  # a question → her latest line for it (a repeat, a check-in…)
+        self._heard_lines: set[str] = set()  # lines the client said it started saying
         self._closing_answers = 0
         self._closing_reply: list[str] = []
         self._closing_id: str | None = None
@@ -561,11 +564,17 @@ class MockInterviewer:
         before = " ".join(self.asked[-1].answer)
         if intent in ("repeat", "rephrase", "wait") and len(before.split()) < MIN_ANSWER_WORDS:
             # A request, not an answer ("sorry, can you repeat that?"): it isn't graded as one.
-            self._pending_intent = intent
+            self._pending_intent, self._pending_words = intent, ""
             return
         if intent == "yes" and self.asked[-1].question_id in self._checked_in and not before:
-            self._pending_intent = "repeat"  # "Would you like me to repeat the question?" "Yes please."
+            # "Would you like me to repeat the question?" "Yes please." (or "Sure. I'm a security engineer…").
+            self._pending_intent, self._pending_words = "repeat", said
             return
+        if self._pending_intent in ("repeat", "rephrase", "wait"):
+            # They carried on: the request was the start of their answer (D76: she repeated over it).
+            if self._pending_words:
+                self.asked[-1].answer.append(self._pending_words)
+            self._pending_intent, self._pending_words = None, ""
         self.asked[-1].answer.append(said)
         if intent == "dont_know" and not before:
             self._pending_intent = "dont_know"
@@ -597,11 +606,30 @@ class MockInterviewer:
         play (logged by the engine)."""
         if not line_id:
             return
+        if event in ("started", "blocked", "unavailable"):
+            self._heard_lines.add(line_id)  # heard, or shown in full
         if event == "finished":
             self._spoken[line_id] = now_ms
         elif event == "interrupted" and self.asked and self.asked[-1].question_id == line_id:
             self._interrupted = line_id
             self._spoken[line_id] = now_ms
+
+    def retract(self, line_id: str) -> bool:
+        """Her line was cut off before a word of it was heard (they were still talking, D76): as if she hadn't said it.
+        A question goes back to the one before, their words carrying on as its answer; the opening question back to
+        the small talk; anything else is just dropped. True when it was a question taken back."""
+        if line_id in self._heard_lines or not self.asked or self.asked[-1].question_id != line_id:
+            return False
+        if self._phase == "interview" and len(self.asked) == 1 and self._talks:
+            self._phase = "smalltalk"  # "…a little nervous, but excited": the plan and the question come again
+        elif len(self.asked) == 1:
+            return False
+        self.asked.pop()
+        self._turn = max(0, self._turn - 1)
+        self._awaiting = True
+        self._partial_open = False
+        self._interrupted = None
+        return True
 
     def _spoken_end(self, line_id: str) -> int | None:
         """When she finished saying a line: as the client said, else an estimate from its length."""
@@ -774,34 +802,40 @@ class MockInterviewer:
         asked = self.asked[-1]
         self._said_ms.setdefault(asked.question_id, now_ms)
         question = asked.question or asked.text
+        quiet = self._quiet_ms(now_ms)
+        if self._pending_intent is not None and (self._partial_open or (quiet is not None
+                                                                       and quiet < talk.INTENT_QUIET_MS)):
+            return False  # they may be going on: a request is acted on once they've stopped
         intent, self._pending_intent = self._pending_intent, None
+        self._pending_words = ""
         seed = asked.question_id + str(len(self._said_ms))
+        qid = asked.question_id
         if intent == "repeat":
-            await self._say(talk.repeat_line(question, seed), "repeat", now_ms)
+            self._latest_line[qid] = await self._say(talk.repeat_line(question, seed), "repeat", now_ms)
             self._last_speech_ms = None
             return True
         if intent == "rephrase":
             await self._send("mock.thinking", {})
-            await self._say(await self._rephrase(question), "rephrase", now_ms)
+            self._latest_line[qid] = await self._say(await self._rephrase(question), "rephrase", now_ms)
             self._last_speech_ms = None
             return True
         if intent == "wait":
             self._patience_until = now_ms + talk.WAIT_PATIENCE_MS
             self._checked_in.add(asked.question_id)  # no check-in after they've asked for time
-            await self._say(talk.wait_line(seed), "wait", now_ms)
+            self._latest_line[qid] = await self._say(talk.wait_line(seed), "wait", now_ms)
             return True
         if intent == "dont_know":
             self._struggling = True  # the next line, written now, is kind: a hint and a simpler version, or move on
             await self._ask_next(now_ms)
             return True
-        # A long silence after she finished asking: she checks in, once per question.
-        spoken = self._spoken_end(asked.question_id)
+        # A long silence after she finished asking (or saying it again): she checks in, once per question.
+        spoken = self._spoken_end(self._latest_line.get(qid, qid))
         voice_quiet = self._voice_ms is None or now_ms - self._voice_ms >= talk.QUIET_FOR_CHECK_IN_MS
         if (not asked.answer and self._last_speech_ms is None and asked.question_id not in self._checked_in
                 and spoken is not None and now_ms >= self._patience_until and voice_quiet
                 and now_ms - spoken >= talk.CHECK_IN_AFTER_MS):
             self._checked_in.add(asked.question_id)
-            await self._say(talk.check_in(seed), "checkin", now_ms)
+            self._latest_line[qid] = await self._say(talk.check_in(seed), "checkin", now_ms)
             return True
         return False
 

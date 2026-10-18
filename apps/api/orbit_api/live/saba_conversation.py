@@ -19,6 +19,15 @@ from typing import Literal
 WRAPPED_UP_MS = 650  # "…so yeah", "that's it"
 COMPLETE_MS = 900  # ends a sentence (". ? !")
 DEFAULT_MS = 1100
+# A short answer so far is likely a first sentence ("Sure. I'm a security engineer…" paused 0.9 s, and she came in):
+# it gets longer to go on. Counted in words.
+SHORT_ANSWER_WORDS = 15
+MEDIUM_ANSWER_WORDS = 40
+SHORT_ANSWER_MS = 1400
+MEDIUM_ANSWER_MS = 1150
+# A request ("can you repeat that?", "yes please") is acted on once they've stopped this long: carrying on means it
+# was the start of an answer.
+INTENT_QUIET_MS = 700
 UNFINISHED_MS = 2600  # "…and", "so basically…", a comma: they're still going
 SMALLTALK_MS = 800
 # Their voice after the last words transcribed is still them talking, for this long (more is noise in the room, or a
@@ -57,8 +66,11 @@ def turn_end_ms(answer: str) -> int:
         return UNFINISHED_MS
     if _WRAPPED.search(text):
         return WRAPPED_UP_MS
+    words = len(text.split())
+    if words < SHORT_ANSWER_WORDS:
+        return SHORT_ANSWER_MS
     if _TERMINAL.search(text):
-        return COMPLETE_MS
+        return MEDIUM_ANSWER_MS if words < MEDIUM_ANSWER_WORDS else COMPLETE_MS
     return DEFAULT_MS
 
 

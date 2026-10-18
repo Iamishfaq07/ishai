@@ -93,14 +93,25 @@ class Room:
         self.mi.on_voice("finished", line_id, self.t)
 
 
+LONG_ANSWER = ("I led the migration of the ledger to an event log, wrote the rollout plan with the two team "
+               "leads, ran it service by service over six weeks, and it cut our nightly reconciliation from six "
+               "hours to forty minutes.")
+
+
 def test_a_turn_ends_like_a_person_ends_it() -> None:
-    assert talk.turn_end_ms("I led the migration and it cut costs by a third.") == talk.COMPLETE_MS
+    assert talk.turn_end_ms(LONG_ANSWER) == talk.COMPLETE_MS  # a full answer that ends a sentence
+    assert talk.turn_end_ms("I led the migration and it cut costs by a third, and I wrote the rollout plan myself "
+                            "with the team leads.") == talk.MEDIUM_ANSWER_MS
+    # A first sentence may be just that (a real call: "Sure. I'm a security engineer…", 0.9 s, and she came in).
+    assert talk.turn_end_ms("I led the migration and it cut costs by a third.") == talk.SHORT_ANSWER_MS
     assert talk.turn_end_ms("So yeah, that's it") == talk.WRAPPED_UP_MS
     assert talk.turn_end_ms("We moved to Kafka because") == talk.UNFINISHED_MS
     assert talk.turn_end_ms("so basically") == talk.UNFINISHED_MS
     assert talk.turn_end_ms("I used Postgres for that,") == talk.UNFINISHED_MS
-    assert talk.turn_end_ms("I used Postgres for it") == talk.DEFAULT_MS
+    assert talk.turn_end_ms("I used Postgres for it because the team knew it well and the data was relational "
+                            "anyway") == talk.DEFAULT_MS
     assert talk.WRAPPED_UP_MS < talk.COMPLETE_MS <= 1200 < talk.UNFINISHED_MS
+    assert talk.COMPLETE_MS < talk.MEDIUM_ANSWER_MS < talk.SHORT_ANSWER_MS < talk.UNFINISHED_MS
     assert talk.prefetch_after_ms("It worked.") < talk.prefetch_after_ms("and then")
 
 
@@ -174,10 +185,10 @@ async def test_no_reply_to_the_small_talk_is_fine() -> None:
 async def test_she_repeats_or_rephrases_when_asked_and_it_isnt_graded() -> None:
     room = Room(Scripted([{"question": "In simpler terms: what did you build?"}]))
     await room.to_first_question()
-    await room.say("Sorry, can you repeat that?", 300)
+    await room.say("Sorry, can you repeat that?", 900)
     assert room.kinds()[-1] == "repeat" and room.said[-1].endswith(VIDEO_OPENING_QUESTION)
     assert room.mi.asked[-1].answer == []  # the request isn't part of the answer
-    await room.say("Can you rephrase it?", 300)
+    await room.say("Can you rephrase it?", 900)
     assert room.kinds()[-1] == "rephrase" and room.said[-1] == "Let me put it another way. In simpler terms: what " \
                                                                  "did you build?"
     assert ("mock.thinking", {}) in room.sent
@@ -193,13 +204,13 @@ async def test_a_moment_to_think_and_a_check_in_after_a_long_silence() -> None:
     checks = room.kinds().count("checkin")
     await room.wait(talk.CHECK_IN_AFTER_MS + 300)
     assert room.kinds().count("checkin") == checks  # once per question
-    await room.say("Yes please", 200)
+    await room.say("Yes please", 900)
     assert room.kinds()[-1] == "repeat"
     # On the next question, "give me a moment" means no hurry and no check-in.
-    await room.say("I'm a backend engineer and I've spent four years on payments and ledgers.", 1200)
+    await room.say("I'm a backend engineer and I've spent four years on payments and ledgers.", 1600)
     assert len(room.questions) == 2
     room.spoke(room.mi.asked[-1].question_id)
-    await room.say("Give me a moment", 300)
+    await room.say("Give me a moment", 900)
     assert room.kinds()[-1] == "wait"
     await room.wait(talk.CHECK_IN_AFTER_MS + 2000)
     assert room.kinds()[-1] == "wait"
@@ -211,9 +222,9 @@ async def test_i_dont_know_gets_a_kind_hint_or_a_move_on() -> None:
                           {"reaction": "That's okay.", "question": "Here's a hint: think about indexes. How would "
                            "you speed up that query?", "is_follow_up": True}]))
     await room.to_first_question()
-    await room.say("I'm a backend engineer working on payments, mostly in Go and Postgres.", 1200)
+    await room.say("I'm a backend engineer working on payments, mostly in Go and Postgres.", 1600)
     before = len(room.llm.requests)
-    await room.say("Hmm, I don't know", 300)
+    await room.say("Hmm, I don't know", 900)
     assert len(room.llm.requests) > before
     assert "said they don't know" in room.llm.requests[-1].messages[0].content
     assert room.questions[-1][0].startswith("That's okay. Here's a hint")
@@ -223,7 +234,7 @@ async def test_she_reacts_to_what_they_said_before_the_next_question() -> None:
     room = Room(Scripted([{"reaction": "Four years on payments ledgers", "question": "What broke first when you "
                            "scaled it?", "is_follow_up": True, "last_answer_score": 4}]))
     await room.to_first_question()
-    await room.say("I've spent four years building payments ledgers in Go.", 1200)
+    await room.say("I've spent four years building payments ledgers in Go.", 1600)
     said, question = room.questions[-1]
     assert said == "Four years on payments ledgers. What broke first when you scaled it?"
     assert question == "What broke first when you scaled it?"  # graded as the question alone
@@ -288,6 +299,9 @@ async def test_the_engine_records_her_lines_and_the_voice_reports(caplog: pytest
     await sink.wait_for("mock.say")
     hello = sink.of("mock.say")[0]
     assert hello["text"].startswith("Hi Arjun")
+    assert ("interviewer", hello["text"]) not in spy.turns  # kept once she's heard (D76)
+    await eng._dispatch("mock.voice", {"event": "started", "line_id": hello["say_id"]})
+    await asyncio.sleep(0)
     assert ("interviewer", hello["text"]) in spy.turns  # in the transcript, like anything she says
     await eng.on_transcript("mic", TranscriptEvent("final", "Good, thanks.", 0, 900, endpoint=True))
     now["t"] += 1.5
@@ -348,10 +362,11 @@ async def test_a_pause_between_bursts_of_words_isnt_the_end_of_the_answer() -> N
     room.mi.on_candidate("I suggested we start in report only mode, and we agreed on a threshold after two weeks.",
                          room.t + 500, final=True)
     stopped = room.t
-    await room.wait(talk.COMPLETE_MS - 200)
+    ends = talk.turn_end_ms(" ".join(room.mi.asked[-1].answer))
+    await room.wait(ends - 200)
     assert len(room.questions) == asked
     await room.wait(400)
-    assert len(room.questions) == asked + 1 and room.t - stopped <= talk.COMPLETE_MS + 200
+    assert len(room.questions) == asked + 1 and room.t - stopped <= ends + 200
 
 
 async def test_the_turn_ends_when_their_voice_stops_not_when_the_words_come_in() -> None:
@@ -366,9 +381,9 @@ async def test_the_turn_ends_when_their_voice_stops_not_when_the_words_come_in()
     room.mi.on_candidate("I spent four years on payments and ledgers.", room.t, final=True)
     while len(room.questions) == asked and room.t < stopped + 4000:
         await room.wait(50, step=50)
-    # About COMPLETE_MS after they stopped talking, not COMPLETE_MS after the final came in (that was 0.6 s slower).
+    # The pause counted from when they stopped talking, not from when the final came in (0.6 s later).
     assert room.mi.asked[-1].question == "What broke first?"
-    assert room.t - stopped <= talk.COMPLETE_MS + 150
+    assert room.t - stopped <= talk.turn_end_ms("I spent four years on payments and ledgers.") + 150
 
 
 async def test_a_noise_that_never_stops_doesnt_hold_the_turn_open() -> None:
@@ -377,7 +392,8 @@ async def test_a_noise_that_never_stops_doesnt_hold_the_turn_open() -> None:
     asked = len(room.questions)
     room.mi.on_candidate("I mostly work in Go and Postgres.", room.t, final=True)
     said = room.t
-    await voice(room, said + talk.VOICE_AHEAD_MS + talk.COMPLETE_MS + 400)  # a fan, a TV: "voice" all along
+    ends = talk.turn_end_ms("I mostly work in Go and Postgres.")
+    await voice(room, said + talk.VOICE_AHEAD_MS + ends + 400)  # a fan, a TV: "voice" all along
     assert len(room.questions) == asked + 1
 
 
@@ -447,3 +463,94 @@ def test_a_repeat_skips_the_transition_and_the_close_thanks_them_first() -> None
     for seed in "abcdef":
         line = talk.closing_question("Arjun", seed)
         assert line.split(".")[0] in ("Thanks, that's helpful", "Got it, thank you", "Okay, thanks, Arjun")
+
+
+# ---- from the verification run (D76) ------------------------------------------------------------------------------
+
+async def test_a_request_that_turns_into_an_answer_isnt_acted_on() -> None:
+    # The real call: after her check-in, "Sure." began the answer ("Sure. I'm a security engineer…"); she repeated
+    # the question over it.
+    room = Room()
+    await room.to_first_question()
+    qid = room.mi.asked[-1].question_id
+    room.spoke(qid)
+    await room.wait(talk.CHECK_IN_AFTER_MS + 300)
+    assert room.kinds()[-1] == "checkin"
+    room.spoke(room.last("mock.say")["say_id"])
+    lines = len(room.said)
+    await room.say("Sure.", 0)
+    await voice(room, room.t + 500)  # they go on
+    room.mi.on_candidate("I'm a security engineer and I lead application security for our payments platform.",
+                         room.t, final=True)
+    await room.wait(400)
+    assert len(room.said) == lines  # no repeat
+    assert room.mi.asked[-1].answer[0] == "Sure."  # their answer, all of it
+
+
+async def test_the_check_in_counts_from_her_repeat_not_the_first_time_she_asked() -> None:
+    # The real call: her check-in cut off her own repeat, 10 s after she'd first asked.
+    room = Room()
+    await room.to_first_question()
+    room.spoke(room.mi.asked[-1].question_id)
+    await room.wait(6000)
+    await room.say("Sorry, can you repeat that?", 900)
+    assert room.kinds()[-1] == "repeat"
+    repeat_id = room.last("mock.say")["say_id"]
+    await room.wait(4000)  # 11 s after she first asked: still saying it again
+    assert room.kinds()[-1] == "repeat"
+    room.spoke(repeat_id)
+    await room.wait(talk.CHECK_IN_AFTER_MS - 500)
+    assert room.kinds()[-1] == "repeat"
+    await room.wait(800)
+    assert room.kinds()[-1] == "checkin"
+
+
+async def test_a_question_cut_off_before_a_word_was_heard_is_taken_back() -> None:
+    # The real call: she began her next question in a pause mid-answer; they carried on, so the room dropped it
+    # before a word was heard, and their words went to the question they hadn't heard.
+    room = Room(Scripted([{"reaction": "Payments.", "question": "What do you do day to day?", "is_follow_up": True},
+                          {"reaction": "Threat models.", "question": "Walk me through one.", "is_follow_up": True}]))
+    await room.to_first_question()
+    first = room.mi.asked[-1].question_id
+    await room.say("I'm a security engineer and I lead application security for our payments platform.", 1600)
+    assert len(room.mi.asked) == 2
+    unheard = room.mi.asked[-1].question_id
+    assert room.mi.retract(unheard)
+    room.mi.on_voice("interrupted", unheard, room.t)
+    assert room.mi.asked[-1].question_id == first
+    await room.say("Most of my time goes into threat modeling and building security checks into the pipeline, "
+                   "and I review the riskiest changes myself every week.", 1600)
+    assert room.mi.asked[0].answer == [
+        "I'm a security engineer and I lead application security for our payments platform.",
+        "Most of my time goes into threat modeling and building security checks into the pipeline, and I review "
+        "the riskiest changes myself every week."]
+    assert room.mi.asked[-1].question == "Walk me through one."
+    # A line that was heard isn't taken back.
+    heard = room.mi.asked[-1].question_id
+    room.mi.on_voice("started", heard, room.t)
+    assert not room.mi.retract(heard)
+
+
+async def test_the_room_keeps_a_line_once_shes_heard_and_never_one_cut_off_unheard() -> None:
+    now = {"t": 0.0}
+    sink, spy = Sink(), Spy()
+    eng = LiveEngine(SessionProfile("s3", "mock", "Backend Engineer", "en", "en", dev_mode=True,
+                                    mock=MockConfig(video=True, duration_minutes=10), candidate_name="Arjun Mehta"),
+                     LiveSettings(auto_answer=False), send=sink, llm=Scripted([{"question": "What broke first?"}]),
+                     stt=MockSTTProvider(), index=SessionIndex([]), recorder=spy,
+                     clock=lambda: now["t"])  # type: ignore[arg-type]
+    await eng.start()
+    await sink.wait_for("mock.say")
+    hello = sink.of("mock.say")[0]
+    await eng._dispatch("mock.voice", {"event": "started", "line_id": hello["say_id"]})
+    await eng.on_transcript("mic", TranscriptEvent("final", "Good, thanks.", 0, 900, endpoint=True))
+    now["t"] += 1.5
+    await sink.wait_for("mock.question")
+    question = sink.of("mock.question")[0]
+    texts = [t for _, t in spy.turns]
+    assert question["text"] not in texts
+    await eng._dispatch("mock.voice", {"event": "interrupted", "line_id": question["question_id"]})
+    await asyncio.sleep(0)
+    assert question["text"] not in [t for _, t in spy.turns]  # never heard: never kept
+    assert not eng._unheard
+    await eng.end()

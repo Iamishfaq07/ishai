@@ -145,13 +145,21 @@ class QAPair:
     turns: tuple[Any, ...] = ()
 
 
+# The video interview's closing line ("Do you have any questions for me?", live/saba_conversation.py): what follows
+# is their own questions, not an answer to grade (D76: a real review quoted them as one).
+_CLOSING_LINE = re.compile(r"(?:questions? for me|anything you'?d like to ask me|any for me)\?\s*$", re.IGNORECASE)
+
+
 def pair_questions_with_answers(questions: Sequence[Question], turns: Sequence[SessionTurn]) -> list[QAPair]:
-    """Each question gets the candidate turns recorded after it and before the next question."""
+    """Each question gets the candidate turns recorded after it and before the next question (or her closing line)."""
     qs = sorted(questions, key=lambda q: q.created_at)
     cands = sorted((t for t in turns if t.speaker == "candidate"), key=lambda t: (t.created_at, t.start_ms))
+    closing = next((t.created_at for t in sorted(turns, key=lambda t: t.created_at)
+                    if t.speaker == "interviewer" and qs and t.created_at >= qs[-1].created_at
+                    and _CLOSING_LINE.search(t.text.strip())), None)
     pairs: list[QAPair] = []
     for i, q in enumerate(qs):
-        nxt = qs[i + 1].created_at if i + 1 < len(qs) else None
+        nxt = qs[i + 1].created_at if i + 1 < len(qs) else closing
         mine = [t for t in cands if t.created_at >= q.created_at and (nxt is None or t.created_at < nxt)]
         said = [t.text.strip() for t in mine]
         span = max(t.end_ms for t in mine) - min(t.start_ms for t in mine) if mine else 0

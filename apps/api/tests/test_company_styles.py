@@ -177,7 +177,9 @@ async def test_saba_opens_the_video_interview_at_once_and_keeps_a_calls_pace() -
     mi.on_candidate("I built the checkout page and cut its load time in half using code splitting.", 2000,
                     final=True)
     assert answer_silence_ms(" ".join(mi.asked[-1].answer)) >= 3000
-    await mi.tick(2000 + 950)
+    from orbit_api.live import saba_conversation as talk
+
+    await mi.tick(2000 + talk.turn_end_ms(" ".join(mi.asked[-1].answer)) + 50)
     assert sent[-1][0] == "mock.question" and len([k for k, _ in sent if k == "mock.question"]) == 2
     # Hindi, a panel or a one-way round write their own opening.
     hindi = MockInterviewer(MockConfig(video=True), llm=_Recording(), index=SessionIndex([]), role=None, send=send,
