@@ -5,7 +5,8 @@ import type { ApplicationPacket, ApplyReason, ApplyStatus, ApplyStatusValue, Unk
 export interface AutoApplySettings {
   /** The candidate turned auto-apply on (and granted the ATS sites). */
   enabled: boolean;
-  /** Paused from the popup: nothing new starts until resumed. */
+  /** Unused: pausing is Orbit's own switch (POST /v1/apply/pause), the same in the web app and the popup. Kept so an
+   * older stored value reads cleanly. */
   paused: boolean;
 }
 
@@ -30,9 +31,13 @@ export interface CurrentRun {
   id: string;
   company: string;
   title: string;
+  url?: string;
+  ats?: string;
   tabId: number | null;
   windowId: number | null;
   startedAt: number;
+  /** When the form's submit button was pressed (set just before). */
+  submitAt?: number;
 }
 
 export interface Handoff {
@@ -49,6 +54,8 @@ export const KEYS = {
   handoffs: "autoApplyHandoffs",
   backoff: "autoApplyBackoff",
   outbox: "autoApplyOutbox",
+  /** Packets whose submit was pressed by a service worker that then stopped. */
+  recovered: "autoApplyRecovered",
   lastError: "autoApplyLastError",
   /** No new application before this time: a person's gap between applications. */
   nextAllowed: "autoApplyNextAllowed",

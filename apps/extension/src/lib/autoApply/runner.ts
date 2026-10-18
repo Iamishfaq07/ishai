@@ -4,9 +4,10 @@
 // submit button only when everything is filled and the page shows no errors, waits for the ATS's success state, and
 // reports back with proof. One application at a time; anything Orbit can't do becomes "Needs you".
 import { ATS_ORIGINS, onAtsHost } from "./adapters";
-import { MAX_SCREENSHOT_B64, type ApplicationPacket, type ApplyResult, type ApplyStatus } from "./contract";
+import { MAX_SCREENSHOT_B64, RESULT_GRACE_MS, type ApplicationPacket, type ApplyResult, type ApplyStatus } from "./contract";
 import type { PageCheck, ResumeFile, RunOutcome } from "./engine";
 import { verdict } from "./engine";
+import { slimmer } from "./result";
 import { nextDelay, MIN_DELAY, type Moment } from "./schedule";
 import { getHandoffs, getHistory, getSettings, HISTORY_MAX, KEYS, setSettings, type CurrentRun, type Handoff, type HistoryItem } from "./state";
 
@@ -60,30 +61,67 @@ async function getStatus(): Promise<ApplyStatus> {
   return status;
 }
 
-async function postResult(id: string, result: ApplyResult): Promise<boolean> {
-  for (let i = 0; i < 3; i++) {
+export type Posted = "ok" | "late" | "gone" | "queued";
+
+interface OutboxItem {
+  id: string;
+  result: ApplyResult;
+  /** When it was first tried: the server takes a result until 2 hours after the lease ended. */
+  at: number;
+}
+
+/**
+ * Reports a result. 200: done. 409: the server no longer has it leased to this browser and didn't take it (a late
+ * result is taken within 2 hours of the lease, so this one is later than that, or already reported): kept in the
+ * history, not sent again. 404/403: not this account's (any more). 413/422: sent again smaller. 401, 429, 5xx and
+ * network errors: kept and sent again on the next turn, while the server would still take it.
+ */
+export async function postResult(id: string, result: ApplyResult, at = Date.now()): Promise<Posted> {
+  let body = result;
+  for (let i = 0, step = 0; i < 6; i++) {
     try {
-      const res = await orbit(`/v1/apply/${encodeURIComponent(id)}/result`, { method: "POST", body: JSON.stringify(result) });
-      if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 429)) return res.ok;
+      const res = await orbit(`/v1/apply/${encodeURIComponent(id)}/result`, { method: "POST", body: JSON.stringify(body) });
+      if (res.ok) return "ok";
+      if (res.status === 409) return "late";
+      if (res.status === 404 || res.status === 403) return "gone";
+      if (res.status === 413 || res.status === 422) {
+        const smaller = slimmer(body, res.status, ++step);
+        if (!smaller) return "gone";
+        body = smaller;
+        continue;
+      }
     } catch (e) {
       if (e instanceof SignedOut) break;
     }
+    if (i >= 2) break;
     await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
   }
-  // Kept and sent again next time, so a result is never lost.
   const { [KEYS.outbox]: box } = await chrome.storage.local.get([KEYS.outbox]);
-  const outbox = (Array.isArray(box) ? box : []) as { id: string; result: ApplyResult }[];
-  outbox.push({ id, result });
+  const outbox = ((Array.isArray(box) ? box : []) as OutboxItem[]).filter((o) => o.id !== id);
+  outbox.push({ id, result: body, at });
   await chrome.storage.local.set({ [KEYS.outbox]: outbox.slice(-10) });
-  return false;
+  return "queued";
 }
 
 async function flushOutbox(): Promise<void> {
   const { [KEYS.outbox]: box } = await chrome.storage.local.get([KEYS.outbox]);
-  const outbox = (Array.isArray(box) ? box : []) as { id: string; result: ApplyResult }[];
+  const outbox = (Array.isArray(box) ? box : []) as OutboxItem[];
   if (!outbox.length) return;
   await chrome.storage.local.set({ [KEYS.outbox]: [] });
-  for (const item of outbox) await postResult(item.id, item.result);
+  // A lease is 15 minutes; past that and the server's 2-hour grace, a result can't be taken any more.
+  for (const item of outbox) {
+    const at = typeof item.at === "number" ? item.at : Date.now();
+    if (Date.now() - at < RESULT_GRACE_MS + 15 * 60_000) await postResult(item.id, item.result, at);
+  }
+}
+
+/** Pauses or resumes Orbit Apply on the server: the same switch the web app shows. */
+export async function setServerPaused(paused: boolean): Promise<boolean> {
+  const res = await orbit(paused ? "/v1/apply/pause" : "/v1/apply/resume", { method: "POST", body: "{}" });
+  if (!res.ok) throw new Error(`${paused ? "pause" : "resume"} ${res.status}`);
+  const out = (await res.json()) as { paused: boolean };
+  await getStatus().catch(() => undefined);
+  return out.paused;
 }
 
 function base64(buf: ArrayBuffer): string {
@@ -122,10 +160,12 @@ export async function updateBadge(): Promise<void> {
   }
   const waiting = (await getHistory()).filter((h) => h.status === "needs_you" && !h.handled).length;
   const settings = await getSettings();
+  const { [KEYS.status]: stored } = await chrome.storage.local.get([KEYS.status]);
+  const serverPaused = !!(stored as ApplyStatus | undefined)?.paused;
   await chrome.action.setBadgeBackgroundColor({ color: "#b45309" });
   await chrome.action.setBadgeText({ text: waiting ? String(Math.min(waiting, 99)) : "" });
   await chrome.action.setTitle({
-    title: waiting ? `Orbit: ${waiting} application${waiting === 1 ? "" : "s"} need you` : settings.enabled ? (settings.paused ? "Orbit (auto-apply paused)" : "Orbit (auto-apply on)") : "Orbit",
+    title: waiting ? `Orbit: ${waiting} application${waiting === 1 ? "" : "s"} need you` : settings.enabled ? (serverPaused ? "Orbit (auto-apply paused)" : "Orbit (auto-apply on)") : "Orbit",
   });
 }
 
@@ -164,6 +204,11 @@ async function addHistory(packet: ApplicationPacket, result: ApplyResult): Promi
   if (result.status === "needs_you") handoffs[packet.id] = { packet, reason: result.reason, savedAt: Date.now() };
   else delete handoffs[packet.id];
   await chrome.storage.local.set({ [KEYS.history]: history, [KEYS.handoffs]: handoffs });
+}
+
+async function noteHistory(id: string, note: string): Promise<void> {
+  const history = await getHistory();
+  await chrome.storage.local.set({ [KEYS.history]: history.map((h) => (h.id === id ? { ...h, detail: [h.detail, note].filter(Boolean).join(" ") } : h)) });
 }
 
 // ---- Tabs ---------------------------------------------------------------------------------------------------------
@@ -224,7 +269,7 @@ async function screenshot(windowId: number): Promise<string | null> {
   }
 }
 
-function emptyResult(status: ApplyResult["status"], reason: ApplyResult["reason"]): ApplyResult {
+export function emptyResult(status: ApplyResult["status"], reason: ApplyResult["reason"]): ApplyResult {
   return { status, reason, unknown_questions: [], confirmation_text: null, final_url: null, screenshot_png_b64: null, submitted: { fields: {}, answers: [] } };
 }
 
@@ -252,7 +297,7 @@ export async function applyPacket(packet: ApplicationPacket): Promise<ApplyResul
   } catch {
     /* tab groups unavailable: the window is still Orbit's own and the badge says so */
   }
-  const current: CurrentRun = { id: packet.id, company: packet.job.company, title: packet.job.title, tabId, windowId, startedAt: Date.now() };
+  const current: CurrentRun = { id: packet.id, company: packet.job.company, title: packet.job.title, url: packet.job.url || packet.job.apply_url, ats: packet.job.ats, tabId, windowId, startedAt: Date.now() };
   await chrome.storage.local.set({ [KEYS.current]: current });
   await updateBadge();
   let closedByPerson = false;
@@ -295,6 +340,14 @@ export async function applyPacket(packet: ApplicationPacket): Promise<ApplyResul
       return { ...emptyResult(outcome.status, outcome.reason), unknown_questions: outcome.unknown, submitted: outcome.submitted, final_url: (await chrome.tabs.get(tabId).catch(() => null))?.url ?? null };
     }
     const submitted = outcome.submitted;
+    // Never pressed once the lease is over: Orbit may have handed the packet to another browser by then.
+    const leaseEnd = Date.parse(packet.lease_expires_at ?? "");
+    if (Number.isFinite(leaseEnd) && Date.now() > leaseEnd - 30_000) {
+      lastDetail = "The lease on this application ran out before it was ready to submit.";
+      return { ...emptyResult("failed", "error"), submitted };
+    }
+    // Noted before the click: a service worker stopped after this point never fills or submits this one again.
+    await chrome.storage.local.set({ [KEYS.current]: { ...current, submitAt: Date.now() } satisfies CurrentRun });
     // The page may navigate as it submits: the click and the checks are separate calls.
     const pressed = await inPage<boolean>(tabId, "submit", [ats]).catch(() => true);
     if (!pressed) return { ...emptyResult("needs_you", "form_changed"), submitted };
@@ -335,14 +388,32 @@ async function hostsGranted(): Promise<boolean> {
   return chrome.permissions.contains({ origins: ATS_ORIGINS }).catch(() => false);
 }
 
-/** A run the service worker was stopped in the middle of: close its window and report it. */
-async function recoverStale(): Promise<void> {
+/**
+ * A run the service worker was stopped in the middle of: its window is closed. Before the submit button was pressed,
+ * nothing was sent: the lease is still this browser's, and /next hands the same packet back to be filled again from
+ * the start. After it was pressed, the site may have taken it: never pressed again; reported as needing the candidate
+ * to check, with the page it was on.
+ */
+export async function recoverStale(): Promise<void> {
   const { [KEYS.current]: cur } = await chrome.storage.local.get([KEYS.current]);
   const current = cur as CurrentRun | undefined;
   if (!current) return;
+  const tab = current.tabId !== null ? await chrome.tabs.get(current.tabId).catch(() => null) : null;
   if (current.windowId !== null) await chrome.windows.remove(current.windowId).catch(() => undefined);
   await chrome.storage.local.remove([KEYS.current]);
-  await postResult(current.id, emptyResult("failed", "error"));
+  if (!current.submitAt) return;
+  const detail = "The browser stopped Orbit after it pressed submit: check whether the site took the application.";
+  const result: ApplyResult = { ...emptyResult("needs_you", "error"), final_url: tab?.url ?? null };
+  const item: HistoryItem = { id: current.id, company: current.company, title: current.title, url: current.url ?? "", ats: current.ats ?? "", status: result.status, reason: result.reason, unknown: [], finalUrl: result.final_url, at: Date.now(), detail };
+  const history = [item, ...(await getHistory()).filter((h) => h.id !== current.id)].slice(0, HISTORY_MAX);
+  await chrome.storage.local.set({ [KEYS.history]: history, [KEYS.recovered]: [...(await recovered()), current.id].slice(-20) });
+  await postResult(current.id, result);
+}
+
+/** Packets whose submit was pressed by a service worker that then stopped: never run again, even if /next offers one. */
+async function recovered(): Promise<string[]> {
+  const { [KEYS.recovered]: r } = await chrome.storage.local.get([KEYS.recovered]);
+  return Array.isArray(r) ? (r as string[]) : [];
 }
 
 
@@ -360,7 +431,7 @@ export async function tick(): Promise<void> {
 
 async function turn(): Promise<void> {
   const settings = await getSettings();
-  if (!settings.enabled || settings.paused) {
+  if (!settings.enabled) {
     await chrome.alarms.clear(ALARM);
     return;
   }
@@ -379,22 +450,33 @@ async function turn(): Promise<void> {
   try {
     await recoverStale();
     await flushOutbox();
+    // Paused, quiet hours, today's limit: the server decides (and says why with a 204), the same for the web app.
     const status = await getStatus();
     if (status.paused) return await schedule({ kind: "paused", status });
-    if (status.today >= status.limit) return await schedule({ kind: "limit", status });
     const res = await orbit("/v1/apply/next");
     if (res.status === 204) {
       await failures(true);
-      return await schedule({ kind: "idle", status });
+      const retry = Number(res.headers.get("Retry-After"));
+      const retryAfterMs = retry > 0 ? retry * 1000 : undefined;
+      const why = res.headers.get("X-Orbit-Apply-Why");
+      if (why === "daily_limit") return await schedule({ kind: "limit", status, retryAfterMs });
+      if (why === "paused") return await schedule({ kind: "paused", status });
+      return await schedule({ kind: "idle", status, retryAfterMs });
     }
     if (!res.ok) throw new Error(`next ${res.status}`);
     const packet = (await res.json()) as ApplicationPacket;
+    if ((await recovered()).includes(packet.id)) {
+      // Its submit was pressed before the browser stopped Orbit: reported as needing the candidate, never sent twice.
+      await postResult(packet.id, emptyResult("needs_you", "error"));
+      return await schedule({ kind: "idle", status });
+    }
     const notBefore = Date.parse(packet.not_before);
     if (Number.isFinite(notBefore) && notBefore > Date.now() + 5_000) return await schedule({ kind: "not_before", at: notBefore });
     const result = await applyPacket(packet);
     if (result) {
       await addHistory(packet, result);
-      await postResult(packet.id, result);
+      const posted = await postResult(packet.id, result);
+      if (posted === "late" || posted === "gone") await noteHistory(packet.id, posted === "late" ? "Orbit didn't take this result: the lease had ended more than 2 hours before." : "Orbit no longer has this application.");
     }
     await failures(true);
     const gap = nextDelay({ kind: "after_apply" }, Date.now()) * PACE;

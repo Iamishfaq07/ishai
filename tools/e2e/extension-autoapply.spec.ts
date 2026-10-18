@@ -18,11 +18,11 @@ const WEB = "http://127.0.0.1:5173";
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 
 type Ats = "greenhouse" | "lever" | "ashby";
-type Answer = { question_id?: string; label: string; kind: string; value: string | string[] | boolean; source: string };
+type Answer = { question_id?: string; label: string; kind: string; value: string | string[]; source: string };
 type Result = { status: string; reason: string | null; unknown_questions: { label: string; kind: string; options?: string[] }[]; confirmation_text: string | null; final_url: string | null; screenshot_png_b64: string | null; submitted: { fields: Record<string, string>; answers: { question_id: string | null; label: string; value: unknown }[] } };
 
 // ---- Fake Orbit API -------------------------------------------------------------------------------------------------
-const api = { queue: [] as unknown[], results: [] as { id: string; body: Result }[], nextCalls: 0, resumeAuth: [] as string[] };
+const api = { queue: [] as unknown[], results: [] as { id: string; body: Result }[], nextCalls: 0, resumeAuth: [] as string[], paused: false, pauseCalls: [] as string[] };
 let server: Server;
 let atsServer: HttpsServer;
 const ATS_HOSTS = ["job-boards.greenhouse.io", "boards.greenhouse.io", "jobs.lever.co", "jobs.ashbyhq.com"];
@@ -46,7 +46,15 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
   }
   if (req.headers.authorization !== "Bearer e2e-token") return json(res, 401, { detail: "Not signed in" });
   if (url.pathname === "/v1/extension/me") return json(res, 200, { email: "asha@example.com", name: "Asha Rao" });
-  if (url.pathname === "/v1/apply/status") return json(res, 200, { today: api.results.filter((r) => r.body.status === "submitted").length, limit: 10, paused: false, next_due: null });
+  // The server's shape (apps/api auto_apply/routes.py StatusOut).
+  if (url.pathname === "/v1/apply/status") {
+    return json(res, 200, { configured: true, paused: api.paused, today: api.results.filter((r) => r.body.status === "submitted").length, limit: 10, next_due_at: null, why_not: api.paused ? "paused" : null, ready: api.queue.length, needs_you: 0, quota_left: 20, sites_paused: [], executor_seen_at: null });
+  }
+  if ((url.pathname === "/v1/apply/pause" || url.pathname === "/v1/apply/resume") && req.method === "POST") {
+    api.pauseCalls.push(url.pathname);
+    api.paused = url.pathname.endsWith("/pause");
+    return json(res, 200, { paused: api.paused });
+  }
   if (url.pathname === "/v1/apply/next") {
     api.nextCalls++;
     const next = api.queue.shift();
@@ -122,15 +130,16 @@ function packet(applyUrl: string, ats: Ats, answers: Answer[], company = "Acme")
     answers,
     eeo: "decline",
     not_before: new Date(Date.now() - 60_000).toISOString(),
-    expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
+    expires_at: new Date(Date.now() + 24 * 3600_000).toISOString(),
+    lease_expires_at: new Date(Date.now() + 15 * 60_000).toISOString(),
   };
 }
 const GITLAB_ANSWERS = [ans("Employment agreements", "No", "question_38624170002"), ans("Sponsorship", "No", "question_38624172002"), ans("Worked at GitLab", "No", "question_38624173002"), ans("Country of residence", "India", "question_38624174002")];
 const NOTETAKER = "As part of our interview process, we may use AI notetakers to transcribe conversations for accuracy and efficiency. Please see our candidate privacy policy for more information on how we process your data. Your decision to opt in or out of this tooling will not impact your candidacy.";
 const PALANTIR_ANSWERS = [
   ans("Language Skill(s) (Check all that apply)", ["English (ENG)", "Hindi (HIN)"]),
-  ans("Are you legally authorized to work in the country for which you are applying?", true),
-  ans("Will you now or in the future require sponsorship for employment visa status (e.g., H-1B, etc.)?", false),
+  ans("Are you legally authorized to work in the country for which you are applying?", "Yes"),
+  ans("Will you now or in the future require sponsorship for employment visa status (e.g., H-1B, etc.)?", "No"),
   ans('Which university are you currently attending or did you last attend? Please select "Other (School Not Listed)" if your school is not listed.', "Other - School Not Listed"),
   ans("Please tell us how you heard about this opportunity.", "LinkedIn"),
   ans(NOTETAKER, "No, I do not consent"),
@@ -263,6 +272,15 @@ test("opt-in asks for exactly the four ATS sites; opt-out gives them back; the s
   await expect(popup.getByText("Today: 0 of 10 applications.")).toBeVisible();
   await expect(popup.getByRole("button", { name: "Pause" })).toBeVisible();
   expect(await popup.evaluate(() => chrome.storage.local.get(["autoApply"]))).toEqual({ autoApply: { enabled: true, paused: false } });
+  // Pause is Orbit's own switch: the popup asks the server, and shows what it says.
+  await popup.getByRole("button", { name: "Pause" }).click();
+  await expect(popup.getByRole("button", { name: "Resume" })).toBeVisible();
+  await expect(popup.getByText("Paused in Orbit, here and in the web app.")).toBeVisible();
+  expect(api.paused).toBe(true);
+  await popup.getByRole("button", { name: "Resume" }).click();
+  await expect(popup.getByRole("button", { name: "Pause" })).toBeVisible();
+  expect(api.pauseCalls).toEqual(["/v1/apply/pause", "/v1/apply/resume"]);
+  expect(api.paused).toBe(false);
   await popup.getByRole("switch").click();
   await expect(popup.getByRole("button", { name: "Pause" })).toHaveCount(0);
   expect(await popup.evaluate(() => (window as unknown as { __calls: unknown[] }).__calls)).toEqual([
@@ -323,7 +341,7 @@ test("Lever: question cards, radios, the university list, resume, submit, thanks
 
 test("Ashby: location autocomplete, Yes/No buttons, EEO radios declined, in-place success", async () => {
   const url = "https://jobs.ashbyhq.com/notion/1fc309c8-da20-4ff2-84c7-8b863ece2b0a/application";
-  const answers = [ans("Anchor days", true, "e01a85db-feaa-42b3-a9ad-69b1dcbbab3f"), ans("Sponsorship", false, "790b5934-74f5-46f5-897a-675b7f37f2f3")];
+  const answers = [ans("Anchor days", "Yes", "e01a85db-feaa-42b3-a9ad-69b1dcbbab3f"), ans("Sponsorship", "No", "790b5934-74f5-46f5-897a-675b7f37f2f3")];
   const result = await applyOnce(packet(url, "ashby", answers, "Notion"));
   expect(result, JSON.stringify({ ...result, screenshot_png_b64: null })).toMatchObject({ status: "submitted" });
   expect(result.confirmation_text).toContain("successfully submitted");

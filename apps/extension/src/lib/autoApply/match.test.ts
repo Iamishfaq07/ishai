@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { PacketAnswer } from "./contract";
 import { asBoolean, declineOption, isConsent, isEeo, matchAnswer, normalize, pickOption, pickOptions } from "./match";
 import { pickPlace } from "./engine";
-import { nextDelay, MIN } from "./schedule";
+import { slimmer } from "./result";
+import { nextDelay, MIN, MIN_DELAY } from "./schedule";
 
 const a = (label: string, value: PacketAnswer["value"], question_id?: string): PacketAnswer => ({ label, value, question_id, kind: "text", source: "bank" });
 
@@ -14,12 +15,13 @@ describe("matching questions to approved answers", () => {
   });
 
   it("matches by question id first, then the exact label, then the normalized label", () => {
-    const answers = [a("Notice period", "30 days"), a("Why us?", "Because", "question_123"), a("Are you legally authorized to work in the US?", true)];
+    const answers = [a("Notice period", "30 days"), a("Why us?", "Because", "question_123"), a("Are you legally authorized to work in the US?", "Yes")];
     expect(matchAnswer({ questionId: "question_123", label: "Something else" }, answers)?.value).toBe("Because");
     expect(matchAnswer({ questionId: "123", label: "" }, answers)?.value).toBe("Because"); // Greenhouse ids with or without the prefix
+    expect(matchAnswer({ questionId: "456", label: "" }, [a("Gender", "Woman", "demographic_456")])?.value).toBe("Woman");
     expect(matchAnswer({ questionId: null, label: "Notice period" }, answers)?.value).toBe("30 days");
     expect(matchAnswer({ questionId: null, label: "NOTICE PERIOD*" }, answers)?.value).toBe("30 days");
-    expect(matchAnswer({ questionId: null, label: "Are you legally authorized to work in the US" }, answers)?.value).toBe(true);
+    expect(matchAnswer({ questionId: null, label: "Are you legally authorized to work in the US" }, answers)?.value).toBe("Yes");
   });
 
   it("never guesses: a similar question is not the same question, and disagreeing matches are no match", () => {
@@ -31,13 +33,13 @@ describe("matching questions to approved answers", () => {
     expect(matchAnswer({ questionId: null, label: "Notice Period" }, twice)).toBeNull();
   });
 
-  it("picks options exactly or normalized, and yes/no from booleans", () => {
+  it("picks options exactly or normalized, and yes/no from the server's Yes/No labels", () => {
     const options = ["Yes", "No", "Decline To Self Identify"];
     expect(pickOption(options, "No")).toBe(1);
     expect(pickOption(options, "decline to self-identify")).toBe(2);
-    expect(pickOption(options, true)).toBe(0);
-    expect(pickOption(options, false)).toBe(1);
-    expect(pickOption(["Yes, I consent", "No, I do not consent"], true)).toBe(-1); // not a plain yes: never guessed
+    expect(pickOption(options, "Yes")).toBe(0);
+    expect(pickOption(options, "no")).toBe(1);
+    expect(pickOption(["Yes, I consent", "No, I do not consent"], "Yes")).toBe(-1); // not a plain yes: never guessed
     expect(pickOption(["India +91", "Indonesia +62"], "India")).toBe(-1);
     expect(pickOptions(["English (ENG)", "French (FRA)", "Hindi (HIN)"], ["Hindi (HIN)", "english (eng)"])).toEqual([2, 0]);
     expect(pickOptions(["English (ENG)"], ["English", "Klingon"])).toBeNull();
@@ -77,7 +79,7 @@ describe("matching questions to approved answers", () => {
 
 describe("when the runner asks Orbit next", () => {
   const now = Date.parse("2026-10-19T10:00:00Z");
-  const status = (next_due: string | null) => ({ today: 1, limit: 10, paused: false, next_due });
+  const status = (next_due_at: string | null) => ({ configured: true, today: 1, limit: 10, paused: false, next_due_at, why_not: null, ready: 1, needs_you: 0, quota_left: 5, sites_paused: [] });
   it("waits for next_due within bounds, a person's gap after applying, and backs off on errors", () => {
     expect(nextDelay({ kind: "idle", status: status("2026-10-19T10:05:00Z") }, now)).toBe(5 * MIN);
     expect(nextDelay({ kind: "idle", status: status("2026-10-19T10:00:10Z") }, now)).toBe(2 * MIN);
@@ -89,5 +91,39 @@ describe("when the runner asks Orbit next", () => {
     expect(nextDelay({ kind: "error", failures: 1 }, now)).toBe(MIN);
     expect(nextDelay({ kind: "error", failures: 4 }, now)).toBe(8 * MIN);
     expect(nextDelay({ kind: "error", failures: 20 }, now)).toBe(30 * MIN);
+  });
+});
+
+describe("a result the server refused", () => {
+  const big = {
+    status: "submitted" as const,
+    reason: null,
+    unknown_questions: [],
+    confirmation_text: "Thanks",
+    final_url: "https://jobs.lever.co/x/y/thanks",
+    screenshot_png_b64: "iVBOR",
+    submitted: { fields: { email: "a@b.c" }, answers: [{ question_id: null, label: "Why?", value: "x".repeat(150_000) }] },
+  };
+  it("drops the screenshot, then cuts long values, then the payload, then gives up", () => {
+    const one = slimmer(big, 413, 1)!;
+    expect(one.screenshot_png_b64).toBeNull();
+    expect(one.submitted).toEqual(big.submitted);
+    const two = slimmer(one, 413, 1)!;
+    expect(String(two.submitted!.answers[0]!.value).length).toBe(2000);
+    expect(two.confirmation_text).toBe("Thanks");
+    const three = slimmer(two, 422, 3)!;
+    expect(three.submitted).toBeNull();
+    expect(three.status).toBe("submitted");
+    expect(slimmer(three, 422, 4)).toBeNull();
+    expect(slimmer(big, 500, 1)).toBeNull();
+  });
+});
+
+describe("the server's Retry-After", () => {
+  it("is when the runner asks again, within bounds", () => {
+    const now = Date.parse("2026-10-19T10:00:00Z");
+    expect(nextDelay({ kind: "idle", status: null, retryAfterMs: 90_000 }, now)).toBe(90_000);
+    expect(nextDelay({ kind: "idle", status: null, retryAfterMs: 1000 }, now)).toBe(MIN_DELAY);
+    expect(nextDelay({ kind: "limit", status: null as never, retryAfterMs: 8 * 3600_000 }, now)).toBe(8 * 3600_000);
   });
 });

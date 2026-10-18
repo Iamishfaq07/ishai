@@ -316,9 +316,28 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
 
       {(p.confirmation_text || p.final_url || shot) && (
         <section className="space-y-2">
-          <h3 className="font-semibold">Proof</h3>
-          {p.confirmation_text && <p className="rounded-xl bg-emerald-500/10 p-3 text-sm">{p.confirmation_text}</p>}
-          {p.final_url && <p className="break-all text-xs text-zinc-600 dark:text-zinc-400">Final page: {p.final_url}</p>}
+          <h3 className="font-semibold">{p.group === "applied" ? "Proof" : "Where it stopped"}</h3>
+          {p.confirmation_text && (
+            <blockquote className="rounded-xl bg-emerald-500/10 p-3 text-sm" data-testid="confirmation-text">
+              {p.group === "applied" && <span className="block text-xs font-medium text-emerald-800 dark:text-emerald-300">The site's confirmation</span>}
+              {p.confirmation_text}
+            </blockquote>
+          )}
+          {p.final_url && (
+            <p className="break-all text-xs text-zinc-600 dark:text-zinc-400">
+              {p.group === "applied" ? "Confirmation page" : "Last page"}:{" "}
+              {p.final_url.toLowerCase().startsWith("https://") ? (
+                <a href={p.final_url} target="_blank" rel="noopener noreferrer" className={textLink} data-testid="final-url">
+                  {p.final_url}
+                </a>
+              ) : (
+                p.final_url
+              )}
+            </p>
+          )}
+          {!p.screenshot_url && p.group === "applied" && (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">No picture of the page: the browser extension keeps the site's own confirmation and its address as the proof.</p>
+          )}
           {shot && <img src={shot} alt={`The page after applying to ${p.company}`} className="max-h-96 rounded-xl border border-zinc-200 dark:border-white/10" />}
         </section>
       )}

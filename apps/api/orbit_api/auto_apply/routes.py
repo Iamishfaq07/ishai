@@ -380,6 +380,12 @@ class PacketDetail(PacketSummary):
     tracker_id: str | None
 
 
+def _has_proof(p: ApplicationPacket, screenshot: bool) -> bool:
+    """A submission's proof: the site's own confirmation text and page address (the extension can't always take a
+    screenshot, and sends none then), and the screenshot when there is one."""
+    return screenshot or (p.status == "submitted" and bool(p.confirmation_text or p.final_url))
+
+
 def _summary(p: ApplicationPacket, has_proof: bool) -> dict[str, Any]:
     return dict(id=p.id, listing_id=p.listing_id, status=p.status, group=packets.GROUP_OF.get(p.status, "prepared"),
                 ats=p.ats, site=p.site, company=p.company, title=p.title, url=p.url, apply_url=p.apply_url,
@@ -391,7 +397,7 @@ def _summary(p: ApplicationPacket, has_proof: bool) -> dict[str, Any]:
 async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
     proof = await db.get(ApplyProof, p.id)
     return PacketDetail(
-        **_summary(p, proof is not None), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
+        **_summary(p, _has_proof(p, proof is not None)), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
         cover_letter=p.cover_letter, fields=p.fields or {}, answers=p.answers or [],
         missing_questions=p.missing or [], unknown_questions=p.unknown_questions or [], form_source=p.form_source,
         result_status=p.result_status, result_reason=p.result_reason, confirmation_text=p.confirmation_text,
@@ -411,7 +417,7 @@ async def list_packets(user: Annotated[User, Depends(current_user)], db: Annotat
     rows = (await db.scalars(q.order_by(ApplicationPacket.updated_at.desc()).limit(300))).all()
     proofs = set((await db.scalars(select(ApplyProof.packet_id).where(
         ApplyProof.packet_id.in_([p.id for p in rows])))).all()) if rows else set()
-    return [PacketSummary(**_summary(p, p.id in proofs)) for p in rows]
+    return [PacketSummary(**_summary(p, _has_proof(p, p.id in proofs))) for p in rows]
 
 
 @router.get("/packets/{packet_id}", response_model=PacketDetail, dependencies=[read_limit])

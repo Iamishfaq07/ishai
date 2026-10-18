@@ -679,6 +679,26 @@ def test_the_extension_pauses_and_resumes_the_same_switch_the_web_app_shows(app:
     assert app.get("/v1/apply/next", headers=ext).status_code == 200
 
 
+def test_a_submission_without_a_screenshot_keeps_the_confirmation_as_proof(app: TestClient) -> None:
+    # The extension can't capture the page (no access to every site): the confirmation text and address are the proof.
+    h, _ = account(app)
+    jobs(app)
+    plan(app, h)
+    ext = ext_token(app, h)
+    p = app.get("/v1/apply/next", headers=ext).json()
+    r = app.post(f"/v1/apply/{p['id']}/result", headers=ext, json={
+        "status": "submitted", "reason": None, "unknown_questions": [], "screenshot_png_b64": None,
+        "confirmation_text": "Thank you for applying.", "final_url": "https://jobs.ashbyhq.com/sarvam/x/application",
+        "submitted": {"fields": {"email": "asha@example.com"}, "answers": [{"question_id": "q1", "label": "Sponsorship",
+                                                                            "value": "No"}]}})
+    assert r.status_code == 200 and r.json()["charged"] is True
+    detail = app.get(f"/v1/apply/packets/{p['id']}", headers=h).json()
+    assert detail["has_proof"] is True and detail["screenshot_url"] is None
+    assert detail["confirmation_text"] == "Thank you for applying." and detail["final_url"].startswith("https://")
+    summary = next(x for x in app.get("/v1/apply/packets?group=applied", headers=h).json() if x["id"] == p["id"])
+    assert summary["has_proof"] is True
+
+
 def test_deleting_the_account_deletes_its_packets_and_proof(app: TestClient) -> None:
     h, _ = account(app)
     uid = user_id(app, h)

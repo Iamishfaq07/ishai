@@ -3,10 +3,10 @@
 // report back. Submitting and confirming are separate steps driven by the service worker (the page may navigate).
 import { classifyField, type ProfileKey } from "../fields";
 import type { Adapter } from "./adapters/types";
-import type { ApplicationPacket, ApplyReason, ApplyStatusValue, PacketAnswer, SubmittedPayload, UnknownQuestion } from "./contract";
+import type { AnswerValue, ApplicationPacket, ApplyReason, ApplyStatusValue, PacketAnswer, SubmittedPayload, UnknownQuestion } from "./contract";
 import { blocker, postingClosed } from "./detect";
 import { click, emit, fileFromBase64, keydown, mouse, pause, selectNative, setFile, setNativeValue, shown, sleep, text, typeInto, waitFor, winOf, pace } from "./dom";
-import { asBoolean, declineOption, isConsent, isEeo, matchAnswer, normalize, pickOption, pickOptions } from "./match";
+import { asBoolean, declineOption, isConsent, isEeo, matchAnswer, normalize, pickOption, pickOptions, withinOptions } from "./match";
 import { comboboxValue, hasValue, kindOf, questionShown, staticOptions, type Question } from "./questions";
 
 export interface ResumeFile {
@@ -15,11 +15,12 @@ export interface ResumeFile {
   type: string;
 }
 
+/** What was entered: text, an option's label, several labels, or a checkbox's state. */
 export type Value = string | string[] | boolean;
 
 export type Step =
   | { q: Question; source: "field"; key: string; value: string }
-  | { q: Question; source: "answer"; answer: PacketAnswer; value: Value }
+  | { q: Question; source: "answer"; answer: PacketAnswer; value: AnswerValue }
   | { q: Question; source: "eeo" }
   | { q: Question; source: "resume" }
   | { q: Question; source: "cover_letter"; value: string };
@@ -32,7 +33,8 @@ export interface Plan {
 const NOT_PROFILE = /preferred|nick ?name|pronoun|referr|emergency|reference/i;
 const EXTRA_FIELDS: [RegExp, string][] = [
   [/^(country|country of residence|phone country)$/, "country"],
-  [/^(current )?(company|employer)$|^current company$/, "current_company"],
+  [/^(current )?(company|employer)$|^current company$|^(current|most recent) employer$/, "current_company"],
+  [/^(current )?(job )?title$|^current (role|position|job title)$/, "current_title"],
 ];
 
 /** The packet's value for a standard field the question asks for, with the field's key. */
@@ -46,19 +48,21 @@ export function profileValue(q: Question, packet: ApplicationPacket): { key: str
   // A dropdown is only a standard field when it's the location.
   if (q.widget.type === "combobox" && key !== "location") return null;
   const f = packet.fields;
-  const value = key === "full_name" ? [f.first_name, f.last_name].filter(Boolean).join(" ") : (f[key as Exclude<ProfileKey, "full_name">] ?? "");
+  const value = key === "full_name" ? f.full_name || [f.first_name, f.last_name].filter(Boolean).join(" ") : (f[key as Exclude<ProfileKey, "full_name">] ?? "");
   return { key, value };
 }
 
 /** Whether an answer fits the question's options as shown now (comboboxes are checked once opened). */
-function answerFits(q: Question, value: Value): boolean {
+function answerFits(q: Question, answer: PacketAnswer): boolean {
+  if (!withinOptions(answer)) return false;
+  const value = answer.value;
   const w = q.widget;
   const options = staticOptions(w);
   switch (w.type) {
     case "text":
       return typeof value === "string" && value.trim() !== "";
     case "combobox":
-      return typeof value === "string" || typeof value === "boolean" || Array.isArray(value);
+      return true;
     case "select":
     case "radio":
     case "yesno":
@@ -81,6 +85,8 @@ export function plan(questions: Question[], packet: ApplicationPacket): Plan {
   for (const q of questions) {
     if (!questionShown(q)) continue;
     const w = q.widget;
+    // Required when the page says so, or when the server read it as required on the form.
+    if (!q.required && (matchAnswer(q, answers)?.required ?? false)) q.required = true;
     if (w.type === "file") {
       if (q.role === "resume") steps.push({ q, source: "resume" });
       else if (q.role === "cover_letter" && packet.cover_letter) steps.push({ q, source: "cover_letter", value: packet.cover_letter });
@@ -88,7 +94,7 @@ export function plan(questions: Question[], packet: ApplicationPacket): Plan {
       continue;
     }
     const byId = q.questionId ? matchAnswer({ questionId: q.questionId, label: "" }, answers) : null;
-    if (byId && answerFits(q, byId.value)) {
+    if (byId && answerFits(q, byId)) {
       steps.push({ q, source: "answer", answer: byId, value: byId.value });
       continue;
     }
@@ -108,11 +114,13 @@ export function plan(questions: Question[], packet: ApplicationPacket): Plan {
       }
     }
     const answer = matchAnswer(q, answers);
-    if (answer && answerFits(q, answer.value)) {
+    if (answer && answerFits(q, answer)) {
       steps.push({ q, source: "answer", answer, value: answer.value });
       continue;
     }
-    if (!consent && packet.eeo === "decline" && isEeo(q.label, q.section) && w.type !== "text") {
+    // Voluntary self-identification: "decline" declines; "as_answered" used the candidate's answer above, and declines
+    // a question they didn't answer.
+    if (!consent && isEeo(q.label, q.section) && w.type !== "text") {
       const options = staticOptions(w);
       if (w.type === "combobox" || declineOption(options) >= 0) {
         steps.push({ q, source: "eeo" });
@@ -261,7 +269,7 @@ export async function enter(ctx: FillContext, step: Step): Promise<Entered> {
     const index = declineOption(options);
     return index >= 0 ? pickIndex(q, index, options) : { ok: !q.required };
   }
-  const value: Value = step.value;
+  const value: AnswerValue = step.value;
   switch (w.type) {
     case "text": {
       const v = Array.isArray(value) ? value.join(", ") : typeof value === "boolean" ? (value ? "Yes" : "No") : value;
@@ -366,7 +374,7 @@ async function describeUnknown(qs: Question[]): Promise<UnknownQuestion[]> {
 function record(submitted: SubmittedPayload, step: Step, value: Value | undefined): void {
   if (value === undefined) return;
   if (step.source === "field") submitted.fields[step.key] = String(value);
-  else if (step.source !== "resume") submitted.answers.push({ question_id: step.q.questionId, label: step.q.label, value });
+  else if (step.source !== "resume") submitted.answers.push({ question_id: step.q.questionId, label: step.q.label, value: typeof value === "boolean" ? (value ? "Yes" : "No") : value });
 }
 
 export interface RunOptions {

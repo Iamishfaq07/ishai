@@ -116,23 +116,45 @@ async function render(box: HTMLElement, call: Call): Promise<void> {
     const { [KEYS.current]: cur, [KEYS.lastError]: lastError } = await chrome.storage.local.get([KEYS.current, KEYS.lastError]);
     const current = cur as CurrentRun | undefined;
     if (current) parts.push(h("p", { className: "ok", textContent: `Applying now: ${current.title} at ${current.company}.` }));
-    const pause = h("button", { textContent: settings.paused ? "Resume" : "Pause" });
-    pause.onclick = async () => {
-      await setSettings({ paused: !settings.paused });
-      refresh();
-    };
+    // Pause is Orbit's own switch (the web app shows the same one): the button waits for Orbit's answer.
+    const { [KEYS.status]: stored } = await chrome.storage.local.get([KEYS.status]);
+    let paused = !!(stored as ApplyStatus | undefined)?.paused;
+    const pause = h("button", { textContent: paused ? "Resume" : "Pause" });
     const now = h("button", { textContent: "Check now" });
+    const pausedNote = h("p", { className: "warn", textContent: "Paused in Orbit, here and in the web app. Nothing new starts until you resume." });
+    const showPaused = (p: boolean) => {
+      paused = p;
+      pause.textContent = p ? "Resume" : "Pause";
+      now.hidden = p;
+      pausedNote.hidden = !p;
+    };
+    showPaused(paused);
+    pause.onclick = async () => {
+      pause.disabled = true;
+      try {
+        const out = await call<{ paused: boolean }>(paused ? "/v1/apply/resume" : "/v1/apply/pause", { method: "POST", body: "{}" });
+        showPaused(out.paused);
+        send({ type: "autoApply:refresh" });
+      } catch {
+        note.textContent = "Couldn't reach Orbit to change that. Try again.";
+      } finally {
+        pause.disabled = false;
+      }
+    };
     now.onclick = () => {
       send({ type: "autoApply:refresh" });
       now.disabled = true;
     };
-    parts.push(h("div", { className: "row" }, pause, ...(settings.paused ? [] : [now])));
-    if (settings.paused) parts.push(h("p", { className: "warn", textContent: "Paused. Nothing new starts until you resume." }));
+    parts.push(h("div", { className: "row" }, pause, now), pausedNote);
     if (typeof lastError === "string" && lastError) parts.push(h("p", { className: "muted", textContent: `Last check: ${lastError}` }));
     call<ApplyStatus>("/v1/apply/status")
       .then((s) => {
-        const next = s.next_due ? new Date(s.next_due).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }) : null;
-        status.textContent = `Today: ${s.today} of ${s.limit} applications.` + (s.paused ? " Paused in Orbit." : next ? ` Next: ${next}.` : "");
+        showPaused(s.paused);
+        void chrome.storage.local.set({ [KEYS.status]: { ...s, fetchedAt: Date.now() } });
+        const next = s.next_due_at ? new Date(s.next_due_at).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" }) : null;
+        status.textContent =
+          `Today: ${s.today} of ${s.limit} applications.` +
+          (!s.configured ? " Set up Orbit Apply in the web app first: nothing is sent until you do." : s.paused ? "" : next ? ` Next: ${next}.` : "");
       })
       .catch((e: unknown) => {
         status.textContent = e instanceof Error && /404/.test(e.message) ? "Auto-apply isn't available on your Orbit account yet." : "Couldn't reach Orbit for today's count.";

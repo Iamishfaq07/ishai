@@ -237,16 +237,20 @@ apps: loopback redirect) with PKCE (RFC 7636, S256), on top of the web's server-
 
 ## Orbit Apply: the executor contract (REST, D84)
 The server plans each application; the candidate's own device submits it (the browser extension today, the Windows
-app later). Types: `packages/types/src/autoApply.ts`. All three routes take a Bearer token. An extension-scoped token
-(`POST /v1/extension/connect`) reaches these and nothing else of Orbit Apply (auth/security.py `SCOPED_PATHS` and
-`SCOPED_PATTERNS`); a full sign-in works too.
+app later). Types: `packages/types/src/autoApply.ts`; the extension's copy is `apps/extension/src/lib/autoApply/contract.ts`.
+All routes take a Bearer token. An extension-scoped token (`POST /v1/extension/connect`) reaches these three and
+`POST /v1/apply/pause|resume`, and nothing else of Orbit Apply (auth/security.py `SCOPED_PATHS` and `SCOPED_PATTERNS`); a
+full sign-in works too. A bearer-token call to `/next` or `/status` records `executor_seen_at` (at most once a minute),
+which the web app shows so the candidate knows the extension is on.
 
 1. `GET /v1/apply/next`
    - `204` when nothing is due. `Retry-After` (seconds) says when to ask again when Orbit knows, and
      `X-Orbit-Apply-Why` says why: `not_set_up`, `paused`, `quiet_hours`, `daily_limit`, `busy` (one is already
-     leased), `pacing` (60 s between any two, a random 3-8 min between two on the same ATS board), `no_quota` or
+     leased to another device of the candidate's; `Retry-After` is when that lease ends), `pacing` (60 s between any two, a random 3-8 min between two on the same ATS board), `no_quota` or
      `none`.
-   - `200`: the packet, now leased to this caller for 15 minutes:
+   - `200`: the packet, now leased to this caller for 15 minutes. Asking again from the same device (its session id,
+     `lease_holder`) while the lease runs returns the same packet, unchanged (same `lease_expires_at`, held once): a
+     restarted executor picks it up again. Don't press submit after `lease_expires_at`: it may be leased elsewhere then.
      ```
      {id, job: {url, apply_url, ats: "greenhouse"|"lever"|"ashby", company, title},
       resume: {filename, download_url},          // a signed link, 15 minutes, no session needed: a PDF
@@ -254,13 +258,18 @@ app later). Types: `packages/types/src/autoApply.ts`. All three routes take a Be
       fields: {first_name, last_name, full_name, email, phone, location, linkedin, website, github,
                current_company, current_title},  // "" when the candidate gave none
       answers: [{question_id: string|null, label, kind, value: string|string[], source: "bank"|"profile"|"generated",
-                 required, options}],            // question_id: Greenhouse `question_…`, Lever `cards[…][fieldN]`,
-                                                 // Ashby the field path; a select's value is the option's label
+                 required, options}],            // question_id: Greenhouse `question_…` (the page may show the
+                                                 // digits only), `demographic_<id>` (the page: `<id>`), the EEO
+                                                 // names (`gender`, `veteran_status`…); Lever `cards[…][fieldN]`;
+                                                 // Ashby the field path. A select's value is the option's label
+                                                 // (one of `options`); a boolean or checkbox is "Yes"/"No"
       eeo: "decline"|"as_answered", not_before, expires_at, lease_expires_at}
      ```
-     Fill the form from `fields` and `answers`. Leave a question out of `answers` blank. A *required* question
-     that's neither a standard field nor in `answers` is an `unknown_question`: report it, never guess. Don't submit
-     before `not_before`.
+     Fill the form from `fields` and `answers`. Leave a question out of `answers` blank. A *required* question (on the
+     page, or `required` in its answer) that's neither a standard field nor in `answers` (or whose answer doesn't fit) is
+     an `unknown_question`: report it, never guess. With `eeo: "as_answered"` a voluntary self-identification question
+     takes the candidate's answer from `answers`, and one without an answer is still declined. Don't submit before
+     `not_before`.
 2. `POST /v1/apply/{id}/result`
    ```
    {status: "submitted"|"needs_you"|"failed"|"skipped",
@@ -270,7 +279,10 @@ app later). Types: `packages/types/src/autoApply.ts`. All three routes take a Be
     submitted: {fields, answers}|null}           // what was actually put in the form
    ```
    - The answer is `200 {id, status, charged, tracker_id}`.
-   - `submitted` is the only status that's charged. It keeps the proof (the payload and the screenshot), moves the
+   - `unknown_questions[].kind` is one of the answer kinds above (`select` for a radio group, `multiselect` for a
+     checkbox group); anything else is a `422`.
+   - `submitted` is the only status that's charged. It keeps the proof (the payload, the confirmation text and final
+     address, and the screenshot when there is one: the extension usually can't take one and sends null), moves the
      Jobs AI tracker entry to Applied ("Applied (Orbit Apply)", `applied_via: "orbit_apply"`), and keeps the tailored
      resume as the version sent.
    - Every other status gives the lease's hold back. `needs_you` tells the candidate (in the app, and by email at
