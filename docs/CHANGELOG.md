@@ -1,5 +1,53 @@
 # Implementation log
 
+## Orbit Apply: auto-apply for candidates, the server side and the web app (2026-10-19)
+
+- **`orbit_api/auto_apply`** (DECISIONS D84, PROTOCOL.md "Orbit Apply"). The server plans each application and the
+  candidate's own browser submits it. The setup: the master resume approved by its content hash, the confirmed
+  facts (work authorisation and sponsorship per country, notice period, salary only if they give it), an answer
+  bank of ~37 common screening questions, filters, Automatic (the default) or Review first, a daily limit (10 by
+  default, 25 at most), quiet hours, the AI line, and versioned consent.
+- **The planner** picks from Jobs AI's own ranking. It applies the threshold (the reason is kept), freshness (30 days
+  at most, no re-dated or standing ads), the salary floor, excluded companies and two per company per 30 days, and
+  dedupes against packets, the tracker and the same job on other sources. It reads each employer's public form
+  (Greenhouse `questions=true`, Lever's apply page and question cards, Ashby's posting GraphQL) and answers it only
+  from approved data. A required question with no truthful answer stops the packet (`needs_answer`) until the
+  candidate answers once; the answer goes to the bank and unblocks every waiting packet. Legal attestations take only
+  an explicit answer, kept per company for agreements. Self-identification is "decline". LinkedIn, Indeed and Naukri
+  listings resolve to the employer's own ATS when Jobs AI has the same job, else they become a one-click hand-off.
+- **Tailoring** rewords through Resume AI's tailoring prompt and reorders bullets, skills and projects. A truth check
+  against the master drops anything adding a skill, a tool, a figure or a role, with a diff. A short cover letter and
+  "why this company" are written from true facts (template fallback), with the AI line on by default. A plain-text PDF
+  of the tailored resume is served by a 15-minute signed link.
+- **The executor contract**: `GET /v1/apply/next` (204 + `Retry-After` + why, or a packet leased for 15 minutes),
+  `POST /v1/apply/{id}/result` (proof, tracker "Applied (Orbit Apply)", the tailored resume kept as the version sent,
+  needs-you email at most every 6 hours) and `GET /v1/apply/status`. An extension-scoped token reaches these three
+  only (`SCOPED_PATTERNS` added for the id in the path).
+- **Server-enforced pacing**: one lease at a time, 60 s between any two, a random 3-8 minutes per ATS board, quiet
+  hours, the daily and per-company caps at lease time, and a per-site kill switch (40% of the last 20 results in a
+  day hitting a captcha, a block or a failure pauses the site for 6 hours; the admin can pause or lift it at
+  `/v1/admin/apply/sites`).
+- **Billing**: the plan's applications per 30-day window (Basic 60, Pro 150, Premium 300, Unlimited 750; Free a
+  5-application trial), then top-up credits of kind "apply". Only a confirmed submission is charged, and any other end
+  of a lease gives the hold back.
+- Migration `4a93a7c927ef` (on `b75cd70a02a8`, Orbit for Business): five new tables and `job_applications.applied_via`. The
+  tracker shows
+  "Applied (Orbit Apply)" in a job's journey.
+- **Web**: Jobs AI → Applications (`/jobs/applications`) and its setup wizard (`/jobs/auto-apply`), a chunk of its
+  own.
+- Tests: 41 new (recorded real forms from Anthropic's Greenhouse board, Meesho's Lever page, and Notion's and
+  Sarvam's Ashby postings). They cover each ATS's form and its answers, salary history and legal questions never
+  invented, per-country work authorisation, decline-by-default EEO, board hand-offs and ATS resolution, the planner's
+  filters, threshold, dedupe and company cap, needs_answer, Review first, the lease and result contract with proof,
+  the tracker and the quota, lease expiry and late results, pacing, the daily cap, quiet hours, the kill switch,
+  credits refunded on failure, tailoring that never adds a skill, and scoped-token isolation. Full suite: 2,914
+  passed.
+- E2E (`tools/e2e/auto-apply.mjs`, headless Chromium against `apps/api/scripts/e2e_auto_apply.py` on 8039, with
+  recorded forms and the mock AI, and Vite on 5202). The run: the setup wizard, the planner preparing 5 packets from
+  fixture jobs, a needs_answer packet answered once and ready, then `apps/api/scripts/fake_executor.py` with an
+  extension token. It submitted with a screenshot, its next ask was held for pacing, and it hit a captcha (needs
+  you). The Applications view showed the proof and "Finish in one click", and the tracker showed "applied via
+  orbit_apply". axe clean on 6 screens; 18/18 checks.
 ## Orbit for Business, Phase 1 core (2026-10-19)
 
 - **A company workspace on the same login** (DECISIONS D82, docs/PROTOCOL.md "Orbit for Business"): `/business`

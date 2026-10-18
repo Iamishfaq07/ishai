@@ -315,7 +315,8 @@ def about_account(user_id: str, payment_ids: list[str]) -> Any:
 
 
 # Prepaid single fixes (resumes/allowance.py) are bookkeeping inside a spent credit: not ledger lines of their own.
-_LEDGER_KINDS = CreditEntry.kind != "resume_fix"
+# Orbit Apply's holds and refunds (auto_apply/quota.py) aren't either: a lease takes one and gives it back.
+_LEDGER_KINDS = CreditEntry.kind.not_in(("resume_fix", "apply"))
 
 
 async def _detail(db: AsyncSession, u: User, admin: User) -> UserDetailOut:

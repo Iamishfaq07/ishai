@@ -467,7 +467,7 @@ class MockLLMProvider(LLMProvider):
             return _mock_business(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_import":
             return _mock_resume_import(request.messages[-1].content if request.messages else "")
-        if request.request_type == "resume_suggest":
+        if request.request_type in ("resume_suggest", "apply_tailor"):  # Orbit Apply tailors with the same prompt
             body = request.messages[-1].content if request.messages else ""
             m = re.search(r'<reference_data source="resume_fields">\s*(\[.*?\])\s*</reference_data>', body, re.S)
             try:
@@ -495,6 +495,18 @@ class MockLLMProvider(LLMProvider):
             return _mock_resume_kit(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "resume_skills":
             return json.dumps({"skills": ["Git", "Agile", "Jira", "Linux", "Code review", "Testing", "Communication"]})
+        if request.request_type == "apply_cover_letter":  # Orbit Apply's: finished text, no placeholders
+            body = request.messages[-1].content if request.messages else ""
+            m = re.search(r'"name": "([^"]*)"', body)
+            return ("Dear Hiring Manager,\n\nI'm applying for the role in your job post. My work building and "
+                    "running backend services is close to what you describe, and I'd bring the same care to your "
+                    "team.\n\nIn my current role I build the services and APIs other teams rely on, and I own them "
+                    "in production.\n\nI'd welcome the chance to talk.\n\nSincerely,\n"
+                    + ((m.group(1) if m else "") or "Me"))
+        if request.request_type == "apply_why":
+            return ("The role is the kind of backend work I already do every day: building services and APIs that "
+                    "other teams depend on and keeping them reliable in production. The post describes that work "
+                    "closely, and I'd like to do it on this team.")
         if request.request_type == "cover_letter":
             body = request.messages[-1].content if request.messages else ""
             m = re.search(r'"name": "([^"]*)"', body)

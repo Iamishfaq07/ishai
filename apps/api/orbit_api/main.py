@@ -27,6 +27,8 @@ from orbit_api.auth.passkeys import router as passkeys_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.auth.security import COOKIE_DOMAIN_HEADER, cookie_domain, share_cookie
 from orbit_api.auth.two_factor import router as two_factor_router
+from orbit_api.auto_apply.routes import admin_router as apply_admin_router
+from orbit_api.auto_apply.routes import router as apply_router
 from orbit_api.billing.monthly import monthly_plans as configured_monthly
 from orbit_api.billing.packs import packs as configured_packs
 from orbit_api.billing.referral_routes import router as referrals_router
@@ -375,6 +377,8 @@ def create_app() -> FastAPI:
     app.include_router(voice_router)
     app.include_router(camera_router)
     app.include_router(extension_router)
+    app.include_router(apply_router)
+    app.include_router(apply_admin_router)
     app.include_router(job_mission_router)
     app.include_router(job_plan_router)
     app.include_router(job_interview_router)

@@ -1,0 +1,152 @@
+{
+ "data": {
+  "jobPosting": {
+   "id": "c0406fe0-c8c0-44aa-aa3e-b879f2bf1049",
+   "title": "Engagement Manager, Chanakya",
+   "applicationForm": {
+    "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7",
+    "sections": [
+     {
+      "title": "Application details",
+      "fieldEntries": [
+       {
+        "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7__systemfield_name",
+        "field": {
+         "id": "31025ffc-0b4d-4e74-8e55-4beb553affe7",
+         "path": "_systemfield_name",
+         "humanReadablePath": "Name",
+         "title": "Name",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "String",
+         "__autoSerializationID": "StringField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7__systemfield_email",
+        "field": {
+         "id": "6505ed9b-3153-4739-a1b0-f4147c447494",
+         "path": "_systemfield_email",
+         "humanReadablePath": "Email",
+         "title": "Email",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "Email",
+         "__autoSerializationID": "EmailField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7_6f9c9903-0146-41b7-b6eb-35575104087b",
+        "field": {
+         "id": "6f9c9903-0146-41b7-b6eb-35575104087b",
+         "path": "6f9c9903-0146-41b7-b6eb-35575104087b",
+         "humanReadablePath": "",
+         "title": "Phone number",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "Phone",
+         "__autoSerializationID": "PhoneField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7__systemfield_resume",
+        "field": {
+         "id": "d50a1d6b-5b79-4dbf-9760-613dd69fe04a",
+         "path": "_systemfield_resume",
+         "humanReadablePath": "Resume",
+         "title": "Resume",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "File",
+         "__autoSerializationID": "FileField"
+        },
+        "isRequired": true,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7_21ee1315-088b-47f1-bfe9-091e141792f3",
+        "field": {
+         "id": "d06266a6-b929-4c67-aa26-0adfccea6dd1",
+         "path": "21ee1315-088b-47f1-bfe9-091e141792f3",
+         "humanReadablePath": "",
+         "title": "LinkedIn  Url",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "String",
+         "__autoSerializationID": "StringField"
+        },
+        "isRequired": false,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7_54de20b6-3976-4b62-a281-dddf833950aa",
+        "field": {
+         "id": "4dd7b1c1-1186-4103-a16c-8860bece4b2f",
+         "path": "54de20b6-3976-4b62-a281-dddf833950aa",
+         "humanReadablePath": "",
+         "title": "Github Url",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "String",
+         "__autoSerializationID": "StringField"
+        },
+        "isRequired": false,
+        "isHidden": null,
+        "descriptionHtml": null
+       },
+       {
+        "id": "a89e43c1-5d4a-479d-bf4b-c5de36c80ea7_3880a764-8b4d-40e0-a580-338c758111d9",
+        "field": {
+         "id": "458677fe-1baf-4a6c-b2c3-46e440446191",
+         "path": "3880a764-8b4d-40e0-a580-338c758111d9",
+         "humanReadablePath": "",
+         "title": "Why do you want to work at Sarvam AI?",
+         "isNullable": false,
+         "isPrivate": false,
+         "isDeactivated": false,
+         "isMany": false,
+         "metadata": {},
+         "type": "LongText",
+         "__autoSerializationID": "LongTextField"
+        },
+        "isRequired": false,
+        "isHidden": null,
+        "descriptionHtml": null
+       }
+      ]
+     }
+    ]
+   },
+   "surveyForms": []
+  }
+ }
+}

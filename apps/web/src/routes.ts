@@ -39,6 +39,8 @@ const loaders = {
   resumeAiPublic: () => import("./pages/resume/ResumeAiPublic"),
   jobs: () => import("./pages/jobs/JobsAiPages"),
   jobsAiPublic: () => import("./pages/jobs/JobsAiPublic"),
+  // Orbit Apply (D84): its setup and Applications, a chunk of their own so Jobs AI's other tabs don't carry them.
+  autoApply: () => import("./pages/jobs/autoapply/AutoApplyPages"),
   mock: () => import("./pages/Mock"),
   offers: () => import("./pages/offers/OffersPages"),
   linkedin: () => import("./pages/linkedin/LinkedIn"),
@@ -106,6 +108,8 @@ export const LinkedInPage = page(loaders.linkedin, (m) => m.LinkedInPage);
 export const OffersPage = page(loaders.offers, (m) => m.OffersPage);
 export const OfferDetailPage = page(loaders.offers, (m) => m.OfferDetailPage);
 export const JobProfilePage = page(loaders.jobs, (m) => m.JobProfilePage);
+export const AutoApplySetupPage = page(loaders.autoApply, (m) => m.AutoApplySetupPage);
+export const ApplicationsPage = page(loaders.autoApply, (m) => m.ApplicationsPage);
 export const JobsAiPublicPage = page(loaders.jobsAiPublic, (m) => m.JobsAiPublicPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);
 export const BillingPage = page(loaders.billing, (m) => m.BillingPage);

@@ -874,6 +874,8 @@ class JobApplication(TimestampMixin, Base):
     # The likely questions last generated for this job (Resume AI's interview prep, one credit), kept so they're paid
     # for once: {"version_id", "generated_at", "result"} (job_portal/interview.py).
     interview_questions: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    # How it was applied to, when Orbit did it: "orbit_apply" (auto_apply, D84). NULL: by the candidate.
+    applied_via: Mapped[str | None] = mapped_column(String(16))
 
 
 class ResumeSnapshot(TimestampMixin, Base):
@@ -1071,6 +1073,133 @@ class SupportMessage(TimestampMixin, Base):
     thread: Mapped[SupportThread] = relationship(back_populates="messages")
 
 
+# ---- Orbit Apply (orbit_api/auto_apply, docs/DECISIONS.md D84) ----------------------------------------------------
+
+
+class AutoApplySetup(TimestampMixin, Base):
+    """A candidate's Orbit Apply setup: the approved master resume, the facts they confirmed, the filters, the mode
+    and the daily limit, and their consent. Nothing is applied for anyone without `consent_at`."""
+
+    __tablename__ = "auto_apply_setups"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"))
+    # The master resume's content hash when the candidate approved it: an edit since needs approving again.
+    resume_hash: Mapped[str | None] = mapped_column(String(64))
+    resume_approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    profile: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # auto_apply/setup.py Facts
+    filters: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # auto_apply/setup.py Filters
+    mode: Mapped[str] = mapped_column(String(12), default="automatic")  # automatic | review
+    daily_limit: Mapped[int] = mapped_column(Integer, default=10)
+    threshold: Mapped[int] = mapped_column(Integer, default=60)  # the match score a job needs
+    ai_line: Mapped[bool] = mapped_column(Boolean, default=True)  # "Prepared with Orbit AI from my verified profile"
+    consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_version: Mapped[str | None] = mapped_column(String(16))
+    paused: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Quiet hours in the candidate's own time (minutes from midnight) and their offset from UTC in minutes.
+    quiet_start: Mapped[int | None] = mapped_column(Integer)
+    quiet_end: Mapped[int | None] = mapped_column(Integer)
+    tz_offset_min: Mapped[int] = mapped_column(Integer, default=0)
+    last_planned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # the last "needs you" email
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class AnswerBankEntry(TimestampMixin, Base):
+    """One answer in a candidate's answer bank: a common screening question (`key`, auto_apply/bank.py) or one a form
+    asked that the candidate answered once (`key` "custom", matched by `norm`). Only the candidate writes `value`;
+    Orbit's seed rows start empty, except the voluntary self-identification ones, which start as "decline"."""
+
+    __tablename__ = "answer_bank"
+    __table_args__ = (UniqueConstraint("user_id", "norm", name="uq_answer_bank_user_norm"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    key: Mapped[str] = mapped_column(String(40))
+    norm: Mapped[str] = mapped_column(String(200))  # the key, or a custom question's normalized words
+    label: Mapped[str] = mapped_column(String(500))
+    kind: Mapped[str] = mapped_column(String(12), default="text")  # text | textarea | yes_no | select | number | date
+    value: Mapped[str] = mapped_column(Text, default="")
+    legal: Mapped[bool] = mapped_column(Boolean, default=False)  # an attestation: only ever an explicit answer
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ApplicationPacket(TimestampMixin, Base):
+    """One prepared application (auto_apply/planner.py): the job, the tailored resume, the cover letter and the form's
+    answers, from the candidate's approved data only. The executor (the extension or the Windows app) leases it from
+    `GET /v1/apply/next` and reports back; `submitted` is the only status that's charged."""
+
+    __tablename__ = "application_packets"
+    __table_args__ = (UniqueConstraint("user_id", "listing_id", name="uq_application_packets_user_listing"),
+                      Index("ix_application_packets_user_status", "user_id", "status"),
+                      Index("ix_application_packets_ats_result", "ats", "result_at"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    listing_id: Mapped[str] = mapped_column(String(36))
+    application_id: Mapped[str | None] = mapped_column(ForeignKey("job_applications.id", ondelete="SET NULL"))
+    # needs_answer | review | ready | leased | submitted | needs_you | handoff | failed | skipped | cancelled | expired
+    status: Mapped[str] = mapped_column(String(16), default="ready")
+    ats: Mapped[str] = mapped_column(String(16))  # greenhouse | lever | ashby | orbit | board | other
+    tenant: Mapped[str] = mapped_column(String(160), default="")  # the ATS board: what pacing spaces out
+    job_ref: Mapped[str] = mapped_column(String(200), default="")  # the ATS's own job id
+    site: Mapped[str | None] = mapped_column(String(40))  # a hand-off's site ("LinkedIn")
+    company: Mapped[str] = mapped_column(String(200))
+    company_key: Mapped[str] = mapped_column(String(200), index=True)
+    title: Mapped[str] = mapped_column(String(300))
+    url: Mapped[str] = mapped_column(Text)
+    apply_url: Mapped[str] = mapped_column(Text)
+    dedupe_key: Mapped[str] = mapped_column(String(300), default="")
+    match_score: Mapped[int] = mapped_column(Integer, default=0)
+    match_reason: Mapped[str] = mapped_column(String(500), default="")
+    resume_title: Mapped[str] = mapped_column(String(160), default="")
+    resume_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # the tailored copy
+    resume_diff: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    cover_letter: Mapped[str | None] = mapped_column(Text)
+    generated: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # "why_company", for answering again
+    fields: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    answers: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    questions: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)  # the form, as read
+    missing: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)  # required, no truthful answer yet
+    form_source: Mapped[str] = mapped_column(String(12), default="fetched")  # fetched | standard
+    not_before: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    tenant_gap_s: Mapped[int] = mapped_column(Integer, default=300)  # this packet's random 3-8 min spacing
+    leased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    charge: Mapped[str | None] = mapped_column(String(8))  # plan | credit, while leased or once submitted
+    result_status: Mapped[str | None] = mapped_column(String(12))
+    result_reason: Mapped[str | None] = mapped_column(String(24))
+    result_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reason: Mapped[str] = mapped_column(String(300), default="")  # why it's skipped / needs you, in plain words
+    unknown_questions: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    confirmation_text: Mapped[str | None] = mapped_column(Text)
+    final_url: Mapped[str | None] = mapped_column(Text)
+    submitted_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ApplyProof(TimestampMixin, Base):
+    """The confirmation screenshot the executor took after submitting (PNG, at most 1.5 MB). Deleted with the packet
+    or the account."""
+
+    __tablename__ = "apply_proofs"
+    packet_id: Mapped[str] = mapped_column(ForeignKey("application_packets.id", ondelete="CASCADE"),
+                                           primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    png: Mapped[bytes] = mapped_column(LargeBinary)
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class ApplySiteState(Base):
+    """The per-site kill switch (greenhouse, lever, ashby): paused by the admin, or automatically for a while when
+    too many recent attempts there hit a captcha, a block or a failure."""
+
+    __tablename__ = "apply_site_state"
+    site: Mapped[str] = mapped_column(String(16), primary_key=True)
+    admin_paused: Mapped[bool] = mapped_column(Boolean, default=False)
+    auto_paused_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reason: Mapped[str] = mapped_column(String(300), default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 # ---- Orbit for Business (orbit_api/business, D82) ------------------------------------------------------------------
 # A company workspace is its own tenant. Every row below carries its company_id and is only ever read through it; a
 # candidate's own Orbit data (documents, resumes, sessions, practice, LinkedIn AI) never hangs off these tables: what an

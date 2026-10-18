@@ -25,6 +25,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | **Salary negotiation practice**: AI recruiter presents your offer and negotiates back (flexible/realistic/tough); review graded on negotiation skill | ✅ tested |
 | **Preflight** (`GET /v1/preflight` + local device checks) before a session starts | ✅ |
 | **Orbit for Business AI** (`orbit_api/business_ai`, a module with no routes of its own): JD writer, applicant resume parsing, ranking with checked evidence, a fixed score formula and protected attributes redacted first; never rejects (D83) | ✅ tested + live eval |
+| **Orbit Apply** (`orbit_api/auto_apply`, Jobs AI's Applications): one-time setup (approved master resume, confirmed facts, an answer bank of ~37 common questions, filters, Automatic or Review first, up to 25 a day, consent), a planner that reads each employer's public Greenhouse / Lever / Ashby form and answers it only from approved data (`needs_answer` otherwise), tailoring that only reorders and rewords, server-enforced caps, pacing and a per-site kill switch, and the executor contract the extension submits through (`/v1/apply/next`, `/{id}/result`, `/status`) with proof and the tracker updated. Job boards are a hand-off, never automated (D84) | ✅ tested + driven in headless Chrome |
 | Session memory, follow-up stitching, chat mode, manual answer, pin / clear, cancellation, answer history | ✅ tested |
 | Session report (background DB job), review scores, transcript, Markdown export, privacy toggles | ✅ tested |
 | Entitlements (free / pro / unlimited), live-minute heartbeat metering + mid-session enforcement, config-driven LLM cost (cache hit/miss, peak/off-peak) | ✅ tested; plans can't be bought yet (no billing, D17) |
@@ -65,7 +66,8 @@ All provider keys live only in the API process. Clients stream audio to the API,
 ## D. Data model
 `users, app_config, email_tokens, subscriptions, documents, document_chunks (embedding: pgvector on Postgres, JSON on
 SQLite), workspaces, workspace_documents, sessions, session_documents, session_turns, questions, answers,
-session_summaries, usage, failed_writes, jobs, provider_requests, audit_logs`. See `apps/api/orbit_api/models.py`.
+session_summaries, usage, failed_writes, jobs, provider_requests, audit_logs`, and for Orbit Apply (D84)
+`auto_apply_setups, answer_bank, application_packets, apply_proofs, apply_site_state`. See `apps/api/orbit_api/models.py`.
 User-owned rows hang off `users.id` with `ON DELETE CASCADE`, so deleting an account deletes all of that user's data.
 Orbit for Business (D82) adds `biz_companies, biz_members, biz_invites, biz_jobs, biz_applications, biz_notes,
 biz_scorecards, biz_events, biz_interviews, biz_templates, biz_notifications, biz_reports, biz_audit`, each keyed by

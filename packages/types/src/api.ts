@@ -2329,6 +2329,8 @@ export interface JobTrackerEntry {
   round_number?: number | null;
   /** The latest session started from this job (the tracker list fills it in). */
   last_round?: JobLastRound | null;
+  /** "orbit_apply": Orbit Apply sent it from the candidate's browser (D84). null: the candidate applied. */
+  applied_via?: string | null;
 }
 
 export interface JobTrackerUpdate {

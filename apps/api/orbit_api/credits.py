@@ -36,7 +36,8 @@ from orbit_api.models import CreditEntry, UsageEvent, User
 log = logging.getLogger(__name__)
 
 # "resume_fix": single AI fixes already paid for: a resume credit spent on a fix buys a few (resumes/allowance.py).
-Kind = Literal["resume", "interview_seconds", "resume_fix"]
+# "apply": Orbit Apply top-ups, one per confirmed application (auto_apply/quota.py).
+Kind = Literal["resume", "interview_seconds", "resume_fix", "apply"]
 INTERVIEW_METRICS = ("live_seconds", "mock_seconds")
 # `usage.pool` of interview time spent from the credits (entitlements.usage_pool).
 POOL = "credits"

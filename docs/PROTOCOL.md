@@ -235,6 +235,64 @@ apps: loopback redirect) with PKCE (RFC 7636, S256), on top of the web's server-
      doesn't match its challenge (which spends the code too), or when the account signed out everywhere since;
    - `403` for a suspended account or one no longer on a private server's allowlist; `429` when rate-limited.
 
+## Orbit Apply: the executor contract (REST, D84)
+The server plans each application; the candidate's own device submits it (the browser extension today, the Windows
+app later). Types: `packages/types/src/autoApply.ts`. All three routes take a Bearer token. An extension-scoped token
+(`POST /v1/extension/connect`) reaches these and nothing else of Orbit Apply (auth/security.py `SCOPED_PATHS` and
+`SCOPED_PATTERNS`); a full sign-in works too.
+
+1. `GET /v1/apply/next`
+   - `204` when nothing is due. `Retry-After` (seconds) says when to ask again when Orbit knows, and
+     `X-Orbit-Apply-Why` says why: `not_set_up`, `paused`, `quiet_hours`, `daily_limit`, `busy` (one is already
+     leased), `pacing` (60 s between any two, a random 3-8 min between two on the same ATS board), `no_quota` or
+     `none`.
+   - `200`: the packet, now leased to this caller for 15 minutes:
+     ```
+     {id, job: {url, apply_url, ats: "greenhouse"|"lever"|"ashby", company, title},
+      resume: {filename, download_url},          // a signed link, 15 minutes, no session needed: a PDF
+      cover_letter: string|null,                 // ends "Prepared with Orbit AI from my verified profile." unless off
+      fields: {first_name, last_name, full_name, email, phone, location, linkedin, website, github,
+               current_company, current_title},  // "" when the candidate gave none
+      answers: [{question_id: string|null, label, kind, value: string|string[], source: "bank"|"profile"|"generated",
+                 required, options}],            // question_id: Greenhouse `question_…`, Lever `cards[…][fieldN]`,
+                                                 // Ashby the field path; a select's value is the option's label
+      eeo: "decline"|"as_answered", not_before, expires_at, lease_expires_at}
+     ```
+     Fill the form from `fields` and `answers`. Leave a question out of `answers` blank. A *required* question
+     that's neither a standard field nor in `answers` is an `unknown_question`: report it, never guess. Don't submit
+     before `not_before`.
+2. `POST /v1/apply/{id}/result`
+   ```
+   {status: "submitted"|"needs_you"|"failed"|"skipped",
+    reason: "captcha"|"login"|"email_verification"|"unknown_question"|"form_changed"|"blocked"|"error"|null,
+    unknown_questions: [{label, kind?, options?}], confirmation_text: string|null, final_url: string|null,
+    screenshot_png_b64: string|null,             // PNG, 1.5 MB at most once decoded
+    submitted: {fields, answers}|null}           // what was actually put in the form
+   ```
+   - The answer is `200 {id, status, charged, tracker_id}`.
+   - `submitted` is the only status that's charged. It keeps the proof (the payload and the screenshot), moves the
+     Jobs AI tracker entry to Applied ("Applied (Orbit Apply)", `applied_via: "orbit_apply"`), and keeps the tailored
+     resume as the version sent.
+   - Every other status gives the lease's hold back. `needs_you` tells the candidate (in the app, and by email at
+     most every 6 hours) with "Finish in one click" (`/jobs/applications?packet=<id>`). With `unknown_question`, the
+     questions come back to the candidate to answer once (saved to their answer bank), and "Try again" requeues it.
+   - Errors: `409` when the packet isn't leased (a result for a lease that ran out is still taken within 2 hours: it
+     may have been submitted), `404` for anyone else's packet, `413` for a screenshot over 1.5 MB or a payload over
+     200k characters, and `422` for a screenshot that isn't a PNG or an unknown status.
+   - Captchas, logins and email checks are never solved, and job-site passwords are never asked for: report
+     `needs_you`.
+3. `GET /v1/apply/status`: `{configured, paused, today, limit, next_due_at, why_not, ready, needs_you, quota_left,
+   sites_paused}`, for the extension's popup. `today` counts submissions in the candidate's own day plus the one in
+   hand.
+
+The server enforces the rest: a daily limit of at most 25, two per company per 30 days, the spacing, quiet hours,
+and the per-site kill switch (8+ of the last 20 results in a day, with 40% or more a captcha, a block or a failure,
+pause that site for 6 hours; the admin can pause or lift it at `PUT /v1/admin/apply/sites/{site}`).
+
+The web app's own routes (a full sign-in only): `GET/PUT /v1/apply/setup`, `GET/PUT /v1/apply/bank`,
+`POST /v1/apply/plan`, `GET /v1/apply/packets?group=prepared|applied|needs_you|skipped`, `GET /v1/apply/packets/{id}`
+(and its `/screenshot`, `/resume.pdf`), and `POST /v1/apply/packets/{id}/answers|approve|dont-apply|retry|done`,
+`POST /v1/apply/pause|resume`.
 ## Orbit for Business (REST, D82)
 Not part of the live socket. TypeScript DTOs: `packages/types/src/business.ts`; source of truth
 `apps/api/orbit_api/business/`. A company is its own tenant on the same Orbit login. Every company route takes the

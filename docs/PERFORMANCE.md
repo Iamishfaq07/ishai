@@ -56,6 +56,13 @@ even when SQLite hides it.
   free line in the room it will need once the server answers, so nothing moves (CLS 0, below). The product pages
   carry it too, within their budgets; it's its own chunk, so the pages without it pay only its name in the preload map.
 
+  Orbit Apply (D84, 19 Oct 2026) is a lazy chunk of its own, `AutoApplyPages`, at 183.9 kB first load (about 11 kB
+  of its own; budget 193). Jobs AI's own chunk went from 276.8 to 277.3 kB, under its unchanged 280. The entry
+  grew about 0.3 kB: the new chunk's name in the preload map, the two routes and the Applications tab. The typed
+  Orbit Apply calls stay in the chunk, through the client's generic `call` / `callRaw`. Merged with Orbit for
+  Business (below), whose own budget raises cover the signed-in pages, the entry measures 171.0 kB, so its budget
+  went up 1 kB, to 172. Every page is within its budget.
+
   Orbit for Business (D82, 19 Oct 2026) raised Home, Sessions, Setup, Mock, Live and Resume AI by 1 kB each: the
   entry grew ~0.3 kB (the business routes and the one loader for every `/business` and `/company` address; the app
   itself, the careers pages and the admin screen are lazy chunks), and the table's sort-arrow icon became its own

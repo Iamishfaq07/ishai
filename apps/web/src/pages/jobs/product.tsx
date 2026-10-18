@@ -3,6 +3,7 @@ import {
   Building2,
   Gauge,
   LayoutGrid,
+  Rocket,
   Search,
   Send,
   SlidersHorizontal,
@@ -15,7 +16,7 @@ import {
   type LucideIcon,
 } from "@orbit/ui";
 import { ProductTabs, type ProductSection } from "../../components/products";
-import { JOBS_AI_HOME, JOBS_MATCHES, JOBS_OUTREACH, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
+import { JOBS_AI_HOME, JOBS_APPLICATIONS, JOBS_MATCHES, JOBS_OUTREACH, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
 
 /**
  * Orbit Jobs AI, Orbit's third product next to the interview copilot and Resume AI: what it does (its home and the
@@ -113,6 +114,8 @@ export function jobsAiSections(tracked = 0): ProductSection[] {
     { to: JOBS_AI_HOME, label: "Overview", icon: LayoutGrid, end: true },
     { to: JOBS_MATCHES, label: "Matches", icon: Sparkles, also: /^\/jobs\/listing\// },
     { to: JOBS_TRACKER, label: "Tracker", icon: BookmarkCheck, count: tracked },
+    // Orbit Apply (D84): its setup counts as this tab too.
+    { to: JOBS_APPLICATIONS, label: "Applications", icon: Rocket, also: /^\/jobs\/auto-apply/ },
     { to: JOBS_OUTREACH, label: "Outreach", icon: Send },
     { to: JOBS_PROFILE, label: "Profile", icon: SlidersHorizontal },
   ];

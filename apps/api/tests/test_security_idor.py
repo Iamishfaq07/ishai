@@ -456,6 +456,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/support/threads"), ("GET", "/v1/support/threads/{thread_id}"),
     ("POST", "/v1/support/threads/{thread_id}/messages"), ("POST", "/v1/support/threads/{thread_id}/handoff"),
     ("DELETE", "/v1/support/threads/{thread_id}"),
+    # Orbit Apply's tailored resume for the executor: the 15-minute HMAC link (exp + sig) is the credential.
+    ("GET", "/v1/apply/{packet_id}/resume.pdf"),
     # Orbit for Business (D82): the careers pages, their sitemap and a company's logo are public by design; applying
     # and reporting a job work signed out (rate-limited, the bot check when configured); an invite's lookup shows
     # only the company and a masked address; the applicant's status page is reached by its emailed HMAC link.
@@ -580,6 +582,8 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/v1/admin/referrals/export", {}),
     ("POST", "/v1/admin/referrals/codes", {"json": {"code": "I{target_code_tag}", "label": "x", "kind": "campus"}}),
     ("PATCH", "/v1/admin/referrals/codes/{target_code}", {"json": {"active": False}}),
+    ("GET", "/v1/admin/apply/sites", {}),
+    ("PUT", "/v1/admin/apply/sites/lever", {"json": {"paused": False}}),
     # Orbit for Business's review (D82): refused before any lookup, so ids that don't exist are enough.
     ("GET", "/v1/admin/business/companies", {}),
     ("GET", "/v1/admin/business/companies/{company_id}", {}),
@@ -600,7 +604,8 @@ def test_admin_route_inventory_is_complete() -> None:
     admin = {p for _, p in ROUTES if p.startswith("/v1/admin/")} - {"/v1/admin/status"}
     covered = {p.split("?", 1)[0].replace("{target}", "{user_id}").replace("{target_order}", "{payment_id}")
                .replace("{target_message}", "{message_id}").replace("{target_thread}", "{thread_id}")
-               .replace("{target_code}", "{code_id}") for _, p, _ in ADMIN_ROUTES}
+               .replace("{target_code}", "{code_id}").replace("/apply/sites/lever", "/apply/sites/{site}")
+               for _, p, _ in ADMIN_ROUTES}
     assert admin <= covered, f"admin routes missing from the matrix: {sorted(admin - covered)}"
 
 

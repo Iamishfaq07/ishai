@@ -11,7 +11,9 @@ import { gzipSync } from "node:zlib";
 /** kB of gzip (level 9, as Cloudflare serves the assets): the entry alone, and each page's first load in total. Set
  *  about 5% over what main measured on 18 Oct 2026 (docs/PERFORMANCE.md), so a real jump fails and a few lines don't. */
 export const BUDGETS = {
-  entry: 171, // +1 kB for D80: the API client's direct route (docs/PERFORMANCE.md)
+  // +1 kB for D80: the API client's direct route; +1 kB for D84: Orbit Apply's chunk in the preload map, its two
+  // routes and tab (its own calls stay in its chunk, through the client's generic `call`) (docs/PERFORMANCE.md).
+  entry: 172,
   css: 32,
   pages: {
     // +1 kB each for D79 (docs/PERFORMANCE.md): the product pages' shared pieces became chunks of their own, and each
@@ -33,6 +35,8 @@ export const BUDGETS = {
     Resumes: 206,
     ResumeEditor: 255,
     JobsAiPages: 280,
+    // Orbit Apply's setup and Applications (D84), a lazy chunk of their own under Jobs AI's section.
+    AutoApplyPages: 193, // 183.5 measured 2026-10-19, about 5% over
     // The public product pages (D79), signed out: the section kit and each page's own renders, lazy chunks.
     ResumeAiPublic: 226, // with the prices (PricingSection) and the real resume renderer
     JobsAiPublic: 209,
