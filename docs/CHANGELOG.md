@@ -14,6 +14,8 @@ voice and pace, to test. She no longer switches to the device's voice after her 
 - **A natural voice that holds**: 10 s (was 7) before a line falls back to the device's voice; a piece that hits a
   network drop or a 500, 502 or 504 is asked for once more; a long first sentence starts with its first clause, so
   the first request is shorter; a slow or failed line falls back for that line only, and the next one is natural.
+  Only today's allowance being used up or the voice being off turns it off for the call: the per-second limit or the
+  host restarting no longer does.
 
 ## Faster sign-in: the web app calls the API directly (2026-10-18)
 

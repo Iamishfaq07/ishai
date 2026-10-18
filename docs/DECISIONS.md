@@ -1096,7 +1096,10 @@ that fails with a network drop or a 500, 502 or 504 within 4 s is asked for once
 (never after a 401, 403, 429 or 503); a first sentence over 12 words starts with its first clause of at least four
 words (a piece plays once all of it has arrived, so a shorter first request starts her sooner); and only a failure
 that won't come back turns the natural voice off for the session, so a slow or failed line is read by the device's
-voice for that line only (`sayNaturalLine`, tested). The web's API calls leaving the slow proxy is a separate change.
+voice for that line only (`sayNaturalLine`, tested). "Won't come back" is now the API's word for it: a 429 or 503
+had turned her natural voice off for the rest of the call, but the per-second speak limit and a host restarting
+answer those too, so only `voice_allowance_used` (today's characters used) and `voice_off` (not set up), 401 and 403
+do. The web's API calls leaving the slow proxy is D80.
 
 **D80 — The web app calls the API at its own address (api.orbitanswer.com) with a cookie shared across the site,
 and keeps the edge proxy only for what the visitor's country decides.** The owner: "the login is slow, and login with
