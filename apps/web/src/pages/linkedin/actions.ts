@@ -30,7 +30,7 @@ export const fixKey = (input: { part: string; role?: number | null }): string =>
   `fix:${input.part}${input.role !== undefined && input.role !== null ? `:${input.role}` : ""}`;
 
 /** Brings a new suggestion's card into view and puts focus on its heading, so the change is seen and announced. */
-function reveal(id: string): void {
+export function reveal(id: string): void {
   window.requestAnimationFrame(() => {
     const card = document.getElementById(`li-s-${id}`);
     if (!card) return;

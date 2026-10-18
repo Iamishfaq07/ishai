@@ -5,7 +5,7 @@ import { Badge, SegmentedControl, Sparkles, Wand2, WorkingState, cx, safeLocal }
 import { Button, Card, Field, Input, Select } from "../../components/ui";
 import { AiErrorNote, useAllowance } from "../resume/allowance";
 import { RESUME_AI_HOME } from "../resume/paths";
-import { fixKey, type LinkedInActions } from "./actions";
+import { fixKey, reveal, type LinkedInActions } from "./actions";
 import { AI_PARTS, fixCost } from "./model";
 
 export type Source = "profile" | "resume" | "both";
@@ -59,8 +59,9 @@ export function RaiseIt({ state, actions, resumes, pick }: { state: LinkedInStat
   const { allowance } = useAllowance();
   const { source, setSource, resumeId, setResumeId } = pick;
   const rows = (state.audit?.raise_it ?? []).filter((r) => r.gain > 0 || r.part);
-  const has = (part: LinkedInPart, role: number | null) =>
-    (state.suggestions ?? []).some((s) => s.part === part && (role === null || s.role_key === roleKey(state, role)));
+  const written = (part: LinkedInPart, role: number | null) =>
+    (state.suggestions ?? []).find((s) => s.part === part && (role === null || s.role_key === roleKey(state, role)));
+  const has = (part: LinkedInPart, role: number | null) => Boolean(written(part, role));
   const run = (part: LinkedInPart, role: number | null = null, recipient = "") =>
     void actions.fix({ part, role, source, resume_id: source === "profile" ? null : resumeId, recipient });
   const errorFor = (key: string) => (actions.error?.key === key ? actions.error : null);
@@ -126,6 +127,9 @@ export function RaiseIt({ state, actions, resumes, pick }: { state: LinkedInStat
                   {r.part && r.part !== "recommendation" && (
                     <FixButton part={r.part} busy={busy} disabled={Boolean(actions.busy) && !busy} describedBy={AI_PARTS.has(r.part) ? "li-ai-cost" : undefined}
                                label={has(r.part, r.role) ? "Write again" : undefined} onClick={() => run(r.part!, r.role)} />
+                  )}
+                  {r.part && written(r.part, r.role) && (
+                    <Button size="sm" variant="ghost" aria-label={`See it: ${r.label}`} onClick={() => reveal(written(r.part!, r.role)!.id)}>See it</Button>
                   )}
                 </div>
                 {busy && <WorkingState compact kind="writing" label={WORKING[r.part!]} className="mt-2" />}
