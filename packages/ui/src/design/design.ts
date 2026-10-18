@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { safeLocal } from "../storage";
+import { initInteractions } from "./interactions";
 
 /** User-chosen look & feel, shared by the web and desktop apps (stored per device). */
 export type AccentName = "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
@@ -106,9 +107,11 @@ export function applyDesign(prefs: DesignPrefs, root: HTMLElement = document.doc
   root.setAttribute("data-motion", effectiveMotion(prefs.motion, env));
 }
 
-/** Call before React renders so the saved look applies without a flash. Follows the OS motion setting live. */
+/** Call before React renders so the saved look applies without a flash. Follows the OS motion setting live, and
+ *  starts the page-wide interaction helpers (interactions.ts). */
 export function initDesign(): void {
   applyDesign(loadDesign());
+  initInteractions();
   if (typeof window.matchMedia !== "function") return;
   window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", () => applyDesign(loadDesign()));
 }

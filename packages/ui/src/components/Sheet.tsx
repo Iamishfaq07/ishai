@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import { createPortal } from "react-dom";
 import { useFocusTrap } from "../hooks/useFocusTrap";
 import { currentMotion } from "../hooks/useMotion";
+import { usePresence } from "../hooks/usePresence";
 import { X } from "../icons";
 import { cx, focusRing } from "./cx";
 
@@ -20,19 +21,30 @@ const WIDTH: Record<SheetSize, string> = {
 // closes, in whatever order they close; each saving and restoring `overflow` itself would let the page scroll under
 // a panel still open when the one below it closed first.
 let locks = 0;
-let lockedFrom = "";
+let lockedFrom = { overflow: "", gutter: "" };
 
-/** Stops the page scrolling until every caller has released it. Returns the release. */
+/**
+ * Stops the page scrolling until every caller has released it. Returns the release. It holds the page's own scroller
+ * (<html>), not <body>: the app's html clips sideways (overflow-x), so a hidden overflow on body made body a box of
+ * its own a screen tall, and a page scrolled down showed blank (or jumped to its top) behind the dialog. A classic
+ * scrollbar's space stays reserved while it's hidden, so nothing shifts sideways either.
+ */
 export function lockScroll(): () => void {
+  const root = document.documentElement;
   if (locks++ === 0) {
-    lockedFrom = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockedFrom = { overflow: root.style.overflow, gutter: root.style.scrollbarGutter };
+    const bar = typeof window !== "undefined" ? window.innerWidth - root.clientWidth : 0;
+    if (bar > 0) root.style.scrollbarGutter = "stable";
+    root.style.overflow = "hidden";
   }
   let released = false;
   return () => {
     if (released) return;
     released = true;
-    if (--locks === 0) document.body.style.overflow = lockedFrom;
+    if (--locks === 0) {
+      root.style.overflow = lockedFrom.overflow;
+      root.style.scrollbarGutter = lockedFrom.gutter;
+    }
   };
 }
 
@@ -117,11 +129,17 @@ function useMorph(open: boolean) {
   return { panel, content };
 }
 
+/** A closing panel plays its exit for this long (--dur-quick) before it leaves the page. */
+const EXIT_MS = 160;
+
 /**
  * The one modal panel (also exported as `Dialog`). `placement="center"` (the default) is a sheet from the bottom on phones and a centred dialog
  * from `sm` up. `placement="end"` is a full-height panel from the right, under confirm dialogs. Rendered on
  * `document.body` so a sticky bar cannot cover it. Focus moves in, stays in, and returns on close. Escape, the
  * close button and a press on the backdrop close it. The page behind does not scroll.
+ * Closing plays a short exit (a dialog settles back as it fades, a phone sheet drops away, a side panel slides out;
+ * a fade at Gentle, nothing at Off): for that moment it shows what it last showed, is no longer a dialog to screen
+ * readers, and lets presses through to the page.
  */
 export function Sheet({
   open,
@@ -155,24 +173,32 @@ export function Sheet({
   const ref = useFocusTrap<HTMLDivElement>(open, { onEscape: onClose });
   const sweep = useSweep(open);
   const { panel, content } = useMorph(open);
+  const { mounted, leaving } = usePresence(open, EXIT_MS);
+  // While it leaves, it keeps showing what it showed when it was open (the caller may already have cleared it).
+  const shown = useRef({ title, children, footer, detail });
+  if (open) shown.current = { title, children, footer, detail };
+  const view = shown.current;
 
   useEffect(() => {
     if (!open) return;
     return lockScroll();
   }, [open]);
 
-  if (!open || typeof document === "undefined") return null;
+  if (!mounted || typeof document === "undefined") return null;
 
   const end = placement === "end";
   return createPortal(
     <div
-      className={
+      inert={leaving || undefined}
+      aria-hidden={leaving || undefined}
+      className={cx(
         end
-          ? "fixed inset-0 z-dialog flex animate-fade-in justify-end bg-zinc-950/40"
-          : "fixed inset-0 z-dialog flex animate-fade-in items-end justify-center bg-zinc-950/50 sm:items-center sm:p-4"
-      }
+          ? "fixed inset-0 z-dialog flex justify-end bg-zinc-950/40"
+          : "fixed inset-0 z-dialog flex items-end justify-center bg-zinc-950/50 sm:items-center sm:p-4",
+        leaving ? "pointer-events-none animate-fade-out" : "animate-fade-in",
+      )}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && !leaving) onClose();
       }}
     >
       <div
@@ -180,22 +206,24 @@ export function Sheet({
           ref.current = el;
           panel.current = el;
         }}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelId}
+        role={leaving ? undefined : "dialog"}
+        aria-modal={leaving ? undefined : "true"}
+        aria-labelledby={leaving ? undefined : labelId}
         className={
           end
             ? cx(
-                "relative flex h-full w-full max-w-2xl animate-panel-in flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-dialog dark:border-white/10 dark:bg-zinc-950",
+                "relative flex h-full w-full max-w-2xl flex-col overflow-hidden border-l border-zinc-200 bg-zinc-50 shadow-dialog dark:border-white/10 dark:bg-zinc-950",
+                leaving ? "animate-panel-out" : "animate-panel-in",
                 className,
               )
             : cx(
                 // Phones: a sheet that rises from the bottom edge. From sm: a dialog that fades in from a touch smaller.
                 // 88% of the screen as it is now (dvh), not of the screen with Safari's bars hidden (vh): the top of a
                 // tall sheet stayed under the address bar.
-                "relative flex max-h-[88vh] supports-[height:100dvh]:max-h-[88dvh] w-full animate-sheet-up flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-dialog sm:animate-dialog-in sm:rounded-2xl dark:border-white/10 dark:bg-zinc-950",
+                "relative flex max-h-[88vh] supports-[height:100dvh]:max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-dialog sm:rounded-2xl dark:border-white/10 dark:bg-zinc-950",
+                leaving ? "animate-sheet-down sm:animate-dialog-out" : "animate-sheet-up sm:animate-dialog-in",
                 WIDTH[size],
-                !footer && "pb-[env(safe-area-inset-bottom)]",
+                !view.footer && "pb-[env(safe-area-inset-bottom)]",
                 className,
               )
         }
@@ -210,17 +238,17 @@ export function Sheet({
           )}
         >
           <div className="min-w-0 flex-1">
-            <h2 id={labelId} className="truncate font-display text-lg font-semibold tracking-tight">
-              {title}
+            <h2 id={leaving ? undefined : labelId} className="truncate font-display text-lg font-semibold tracking-tight">
+              {view.title}
             </h2>
-            {detail}
+            {view.detail}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
             className={cx(
-              "-mr-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+              "hit-area relative -mr-1.5 flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 active:bg-zinc-900/10 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white dark:active:bg-white/10",
               focusRing,
             )}
           >
@@ -228,11 +256,11 @@ export function Sheet({
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <div ref={content}>{children}</div>
+          <div ref={content}>{view.children}</div>
         </div>
-        {footer && (
+        {view.footer && (
           <div className="shrink-0 border-t border-zinc-200 px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-white/10">
-            {footer}
+            {view.footer}
           </div>
         )}
       </div>

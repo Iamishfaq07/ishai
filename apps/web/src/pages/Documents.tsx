@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Spinner, Textarea } from "../components/ui";
-import { Badge, Briefcase, CosmicEmptyState, DialogActions, LoadGate, Skeleton, THead, Table, Td, Th, Tr, confirmDialog, cx, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
+import { Badge, Briefcase, CosmicEmptyState, DialogActions, LoadGate, Skeleton, THead, Table, Td, Th, Tr, confirmDialog, cx, useFlip, FileIcon, FileText, FileUp, FolderOpen, NotebookPen, type LucideIcon } from "@orbit/ui";
 import { PRODUCTS } from "../components/products";
 import { Sheet } from "../components/Sheet";
 import { api } from "../lib/api";
@@ -55,6 +55,8 @@ export function DocumentsPage() {
   const [pasteText, setPasteText] = useState("");
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState<OrbitDocument | null>(null);
+  // Rows glide up into a deleted one's place and a new one fades in at the top (useFlip).
+  const rowsRef = useFlip<HTMLTableSectionElement>((docs.data ?? []).map((d) => d.id).join());
 
   const add = (doc: OrbitDocument) => docs.setData((prev) => [doc, ...(prev ?? [])]);
   const replace = (doc: OrbitDocument) =>
@@ -232,8 +234,8 @@ export function DocumentsPage() {
                 placeholder="Paste the job description, company notes, or project notes…"
               />
             </Field>
-            <Button type="submit" disabled={saving || !pasteText.trim()}>
-              {saving ? "Saving…" : "Save"}
+            <Button type="submit" loading={saving} loadingText="Saving…" disabled={!pasteText.trim()} disabledReason="Paste some text first">
+              Save
             </Button>
           </form>
         </Card>
@@ -259,9 +261,9 @@ export function DocumentsPage() {
               </Th>
             </tr>
           </THead>
-          <tbody>
+          <tbody ref={rowsRef}>
             {(docs.data ?? []).map((d) => (
-              <Tr key={d.id}>
+              <Tr key={d.id} data-flip={d.id}>
                 <Td primary title={d.filename ?? d.title}>
                   <div className="flex items-center gap-3">
                     <KindMark kind={d.kind} />
@@ -382,8 +384,8 @@ function EditModal({
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" form="edit-document" disabled={saving}>
-              {saving ? "Saving…" : "Save changes"}
+            <Button type="submit" form="edit-document" loading={saving} loadingText="Saving…">
+              Save changes
             </Button>
           </DialogActions>
         ) : undefined

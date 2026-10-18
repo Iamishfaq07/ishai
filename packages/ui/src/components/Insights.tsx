@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from "react";
 import type { DeliveryStats, FollowUp, SessionCamera } from "@orbit/types";
-import { Check, CircleAlert, CircleCheck, Copy, Mail, RefreshCw } from "../icons";
+import { CircleAlert, CircleCheck, Mail, RefreshCw } from "../icons";
 import { cx, focusRing } from "./cx";
+import { CopyButton as SharedCopyButton } from "./CopyButton";
 import { Button, Card, ErrorNote } from "./ui";
 
 // Common speech-coaching bands (match apps/api/orbit_api/sessions/delivery.py).
@@ -159,29 +160,9 @@ export function DeliveryCard({ delivery }: { delivery: DeliveryStats | null | un
   );
 }
 
+/** Copies a block; the button itself says "Copied" or "Couldn't copy" (the shared CopyButton). */
 function CopyButton({ text, label }: { text: string; label: string }) {
-  const [done, setDone] = useState<"copied" | "failed" | null>(null);
-  const show = (result: "copied" | "failed") => {
-    setDone(result);
-    setTimeout(() => setDone(null), 1500);
-  };
-  return (
-    <Button
-      variant="secondary"
-      size="sm"
-      onClick={() => {
-        // Refused (no permission) or missing (insecure page): say so rather than fail silently.
-        if (!navigator.clipboard) return show("failed");
-        navigator.clipboard.writeText(text).then(
-          () => show("copied"),
-          () => show("failed"),
-        );
-      }}
-    >
-      {done === "copied" ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {done === "copied" ? "Copied" : done === "failed" ? "Couldn’t copy" : label}
-    </Button>
-  );
+  return <SharedCopyButton text={text} label={label} />;
 }
 
 const DEBRIEF: Array<{ key: keyof FollowUp["debrief"]; title: string }> = [

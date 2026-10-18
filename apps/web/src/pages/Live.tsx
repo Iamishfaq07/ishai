@@ -73,7 +73,7 @@ export function LivePage() {
     return (
       <div className="mx-auto max-w-md p-8">
         <ErrorNote onRetry={detail.reload}>{errorText(detail.error ?? new Error("Session not found."))}</ErrorNote>
-        <Link to="/" className="mt-4 inline-block text-sm text-indigo-600 underline">
+        <Link to="/" className="mt-4 inline-block text-sm text-indigo-700 underline hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200">
           Back home
         </Link>
       </div>
@@ -83,7 +83,7 @@ export function LivePage() {
     return (
       <div className="mx-auto max-w-md p-8 text-sm">
         <p>This session has ended.</p>
-        <Link to={`/sessions/${sessionId}`} className="mt-2 inline-block text-indigo-600 underline">
+        <Link to={`/sessions/${sessionId}`} className="mt-2 inline-block text-indigo-700 underline hover:text-indigo-800 dark:text-indigo-300 dark:hover:text-indigo-200">
           View transcript and summary
         </Link>
       </div>

@@ -115,7 +115,7 @@ export function OfferForm({ initial, busy, error, onSave, onCancel }: { initial:
         </Field>
         {error && <ErrorNote>{error}</ErrorNote>}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" disabled={busy || !ready}>{busy ? "Saving…" : "Save offer"}</Button>
+          <Button type="submit" loading={busy} loadingText="Saving…" disabled={!ready}>Save offer</Button>
           <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
         </div>
       </form>

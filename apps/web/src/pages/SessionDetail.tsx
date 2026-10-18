@@ -15,7 +15,7 @@ import {
   useAnswerRatings,
   useReportPolling,
   confirmDialog,
-  toast,
+  CopyButton,
   CosmicEmptyState,
   LoadGate,
   TabPanel,
@@ -289,18 +289,9 @@ function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
     return q ? detail.turns.filter((t) => t.text.toLowerCase().includes(q)) : detail.turns;
   }, [detail.turns, query]);
 
-  const copy = async () => {
-    const text = detail.turns
-      .map((t) => `${formatClock(t.start_ms)} ${t.speaker === "candidate" ? "Candidate" : "Interviewer"}\n${t.text}`)
-      .join("\n\n");
-    // Refused (no permission) or missing (insecure page): say so rather than fail silently.
-    try {
-      await navigator.clipboard.writeText(text);
-      toast("Copied");
-    } catch {
-      toast({ message: "Couldn't copy", tone: "error" });
-    }
-  };
+  // Says on the button whether it worked (refused or missing clipboard: "Couldn't copy").
+  const transcript = () =>
+    detail.turns.map((t) => `${formatClock(t.start_ms)} ${t.speaker === "candidate" ? "Candidate" : "Interviewer"}\n${t.text}`).join("\n\n");
 
   if (detail.turns.length === 0) {
     return <p className="text-sm text-zinc-500">No transcript was stored for this session.</p>;
@@ -309,9 +300,7 @@ function TranscriptTimeline({ detail }: { detail: SessionDetail }) {
     <div>
       <div className="mb-4 flex gap-2">
         <Input type="search" placeholder="Search transcript…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search transcript" />
-        <Button variant="secondary" onClick={() => void copy()}>
-          Copy
-        </Button>
+        <CopyButton size="md" icon={false} text={transcript} />
       </div>
       <ol className="space-y-4">
         {turns.map((t) => (

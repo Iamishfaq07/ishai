@@ -29,6 +29,7 @@ import {
   roundLabel,
   celebrate,
   useMediaQuery,
+  useFlip,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -147,6 +148,10 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   // The card that just changed stage, so it flashes where it lands.
   const [moved, setMoved] = useState<string | null>(null);
   const pickedEntries = picked.map((id) => entries.find((e) => e.id === id)).filter((e): e is JobTrackerEntry => Boolean(e));
+  // Cards glide to their new places when one moves stage, is added or removed, or the filter changes (useFlip).
+  const order = entries.map((e) => `${e.id}:${e.status}:${e.status_at}`).join();
+  const listRef = useFlip<HTMLUListElement>(`${filter}|${order}`);
+  const boardRef = useFlip<HTMLDivElement>(order);
   const compareFor = (e: JobTrackerEntry) => ({
     picked: picked.includes(e.id),
     full: pickedEntries.length >= MAX_COMPARE,
@@ -236,9 +241,9 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
             </button>
           ))}
         </div>
-        <ul className="space-y-3">
+        <ul ref={listRef} className="space-y-3">
           {shown.slice(0, drawn).map((e) => (
-            <li key={e.id}>
+            <li key={e.id} data-flip={e.id}>
               <TrackerCard entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
             </li>
           ))}
@@ -246,7 +251,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       </div>}
 
       {/* Wide screens: a board, one column per status. */}
-      {wide && <div className="hidden gap-3 lg:grid lg:grid-cols-5">
+      {wide && <div ref={boardRef} className="hidden gap-3 lg:grid lg:grid-cols-5">
         {STATUSES.map((s) => (
           <section key={s} aria-label={STATUS_LABEL[s]} className="relative min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
             <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_MARK[s])} />
@@ -256,7 +261,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
             </h3>
             <ul className="space-y-2.5">
               {columns[s].slice(0, drawn).map((e) => (
-                <li key={e.id}>
+                <li key={e.id} data-flip={e.id}>
                   <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
                 </li>
               ))}
@@ -544,8 +549,8 @@ export function EditEntry({ entry, onCancel, onSave }: { entry: JobTrackerEntry;
         <Button variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>
-        <Button size="sm" disabled={busy} onClick={() => void save()}>
-          {busy ? "Saving…" : "Save"}
+        <Button size="sm" loading={busy} loadingText="Saving…" onClick={() => void save()}>
+          Save
         </Button>
       </div>
     </div>

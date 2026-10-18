@@ -26,6 +26,7 @@ import {
   CostDashboard,
   type SpotKind,
   toast,
+  useFlash,
 } from "@orbit/ui";
 import { CountryField } from "../components/CountryField";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Toggle } from "../components/ui";
@@ -191,6 +192,7 @@ function AdvancedConfig() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [justSaved, flashSaved] = useFlash();
 
   useEffect(() => {
     if (cfg.data) setForm(cfg.data);
@@ -220,6 +222,7 @@ function AdvancedConfig() {
       setDeepseekKey("");
       setDeepgramKey("");
       setSaved(true);
+      flashSaved();
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -314,8 +317,8 @@ function AdvancedConfig() {
           </Field>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving…" : "Save advanced settings"}
+            <Button type="submit" loading={saving} loadingText="Saving…" done={justSaved}>
+              Save advanced settings
             </Button>
           </div>
         </form>
@@ -498,8 +501,8 @@ function AccountCard() {
             <Input id="confirm-password" type="password" autoComplete="current-password" required value={password}
                    onChange={(e) => setPassword(e.target.value)} />
           </Field>
-          <Button type="submit" variant="secondary" disabled={busy || !newEmail || !password}>
-            {busy ? "Sending…" : "Change email"}
+          <Button type="submit" variant="secondary" loading={busy} loadingText="Sending…" disabled={!newEmail || !password}>
+            Change email
           </Button>
         </form>
       )}
@@ -560,8 +563,8 @@ function PasswordChange() {
       <Field label={googleOnly ? "Password (10+ characters)" : "New password (10+ characters)"} htmlFor="pw-new">
         <Input id="pw-new" type="password" autoComplete="new-password" required minLength={10} value={next} onChange={(e) => setNext(e.target.value)} />
       </Field>
-      <Button type="submit" variant="secondary" disabled={busy || (!googleOnly && !current) || next.length < 10}>
-        {busy ? "Saving…" : googleOnly ? "Set password" : "Change password"}
+      <Button type="submit" variant="secondary" loading={busy} loadingText="Saving…" disabled={(!googleOnly && !current) || next.length < 10}>
+        {googleOnly ? "Set password" : "Change password"}
       </Button>
       {done && (
         <p role="status" className="text-sm text-emerald-700 sm:col-span-full dark:text-emerald-300">

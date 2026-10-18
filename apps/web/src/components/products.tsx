@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AudioLines, Briefcase, FileText, Target, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import type { ProductId } from "../lib/onboarding";
@@ -102,13 +102,43 @@ export function isCurrent(pathname: string, to: string, end = false): boolean {
   return path === to || (!end && path.startsWith(`${to}/`));
 }
 
+/** Where each strip's pill last stood (by the strip's label), so the next page's strip can slide it from there. */
+const lastPill = new Map<string, { left: number; width: number; at: number }>();
+/** Only a move between a strip's own tabs slides: coming back to a product later starts the pill in place. */
+const SLIDE_WITHIN_MS = 3000;
+
 /**
  * The tabs between a product's own pages, under its header. Nothing while it has only the one page. `action` sits at
- * the row's end (the interview pages' "Start live").
+ * the row's end (the interview pages' "Start live"). The pill under the page you're on slides over from the tab you
+ * came from (base.css .indicator: a glide at Full, a jump at Gentle and Off).
  */
 export function ProductTabs({ label, sections, action }: { label: string; sections: ProductSection[]; action?: ReactNode }) {
   const { pathname } = useLocation();
   const strip = useRef<HTMLElement>(null);
+  const row = useRef<HTMLDivElement>(null);
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(() => {
+    const last = lastPill.get(label);
+    return last && Date.now() - last.at < SLIDE_WITHIN_MS ? last : null;
+  });
+  useLayoutEffect(() => {
+    const box = row.current;
+    if (!box) return;
+    const read = () => {
+      const tab = box.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!tab) return setPill(null);
+      const next = { left: tab.offsetLeft, width: tab.offsetWidth };
+      lastPill.set(label, { ...next, at: Date.now() });
+      setPill((p) => (p && p.left === next.left && p.width === next.width ? p : next));
+    };
+    // A frame later, so a pill that starts where the last page left it has drawn there once and can glide.
+    const raf = requestAnimationFrame(read);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(read) : null;
+    ro?.observe(box);
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
+  }, [pathname, label, sections.length]);
   // A phone too narrow for every tab scrolls the strip; the page you're on is always scrolled fully into view
   // (centred when it was cut off), so the fifth tab is never clipped on its own page.
   useLayoutEffect(() => {
@@ -123,7 +153,14 @@ export function ProductTabs({ label, sections, action }: { label: string; sectio
   const tabs = (
     // Scrolls sideways rather than wrapping if a phone is ever too narrow for every tab.
     <nav ref={strip} aria-label={label} className={cx("edge-fade-x -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0", action ? "min-w-0" : "mb-6")}>
-      <div className="inline-flex gap-0.5 rounded-xl bg-zinc-500/10 p-1 sm:gap-1">
+      <div ref={row} className="relative inline-flex gap-0.5 rounded-xl bg-zinc-500/10 p-1 sm:gap-1">
+        {pill && (
+          <span
+            aria-hidden="true"
+            className="indicator absolute bottom-1 left-0 top-1 rounded-lg bg-white shadow-sm dark:bg-white/10"
+            style={{ width: pill.width, transform: `translateX(${pill.left}px)` }}
+          />
+        )}
         {sections.map(({ to, label: name, icon: Icon, end, also, count }) => {
           const current = isCurrent(pathname, to, end) || Boolean(also?.test(pathname));
           // Phones: a size smaller and tighter, and no count under 380 px, so Jobs AI's five tabs fit a 360 px screen.
@@ -133,10 +170,10 @@ export function ProductTabs({ label, sections, action }: { label: string; sectio
               to={to}
               aria-current={current ? "page" : undefined}
               className={cx(
-                "tap-y inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-[0.8125rem] font-medium transition-colors sm:px-3 sm:text-sm",
+                "tap-y relative z-[1] inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-[0.8125rem] font-medium transition-colors duration-quick sm:px-3 sm:text-sm",
                 current
-                  ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white"
-                  : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                  ? cx("text-zinc-900 dark:text-white", !pill && "bg-white shadow-sm dark:bg-white/10")
+                  : "text-zinc-500 hover:text-zinc-900 active:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                 focusRing,
               )}
             >

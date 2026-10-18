@@ -18,6 +18,7 @@ import { CodeBlock } from "./CodeBlock";
 import { SpokenWalkthrough } from "./SpokenWalkthrough";
 import { cx, focusRing } from "./cx";
 import { Orb } from "./Orb";
+import { MorphLabel } from "./ui";
 import { ArrowRight, Check, Circle, Feather, Maximize2, Minimize2, Pause, PenLine, Play, Square, Volume2 } from "../icons";
 import { safeLocal } from "../storage";
 
@@ -124,13 +125,18 @@ function CopyButton({ text }: { text: string }) {
         focusRing,
       )}
     >
-      {result === "copied" ? (
-        <span className="inline-flex animate-pop items-center gap-1">Copied <Check className="h-3.5 w-3.5" /></span>
-      ) : result === "failed" ? (
-        "Couldn’t copy"
-      ) : (
-        "Copy"
-      )}
+      {/* "Copied" takes the label's place at its width (MorphLabel); a rare refusal replaces the label instead. */}
+      <MorphLabel
+        show={result === "copied" ? "copied" : "idle"}
+        states={{
+          idle: result === "failed" ? "Couldn’t copy" : "Copy",
+          copied: (
+            <span className="inline-flex items-center gap-1">
+              Copied <Check className="h-3.5 w-3.5" />
+            </span>
+          ),
+        }}
+      />
     </button>
   );
 }

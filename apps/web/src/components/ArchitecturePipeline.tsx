@@ -109,7 +109,7 @@ export function ArchitecturePipeline() {
                 height="60"
                 rx="14"
                 className={cx(
-                  "transition-[stroke,fill] duration-200",
+                  "transition-[stroke,fill] duration-quick ease-standard",
                   on ? "fill-sky-500/15 stroke-sky-400" : "fill-zinc-100 stroke-zinc-300 dark:fill-white/[0.04] dark:stroke-white/15",
                 )}
                 strokeWidth="1.5"

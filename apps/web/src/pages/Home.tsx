@@ -303,7 +303,7 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
         strokeWidth="4"
         strokeLinecap="round"
         strokeDasharray={`${(done / total) * c} ${c}`}
-        className="stroke-emerald-500 transition-[stroke-dasharray] duration-500 motion-reduce:transition-none"
+        className="stroke-emerald-500 transition-[stroke-dasharray] duration-page ease-standard motion-reduce:transition-none"
       />
     </svg>
   );

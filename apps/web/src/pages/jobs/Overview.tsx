@@ -11,6 +11,7 @@ import {
   Sparkles,
   LoadGate,
   WorkingState,
+  CountUp,
   cx,
   focusRing,
 } from "@orbit/ui";
@@ -209,7 +210,7 @@ function TrackerSummary({ entries, loading }: { entries: JobTrackerEntry[] | nul
             {STATUSES.filter((s) => s !== "rejected").map((s) => (
               <li key={s}>
                 <Link to={JOBS_TRACKER} className={cx("block rounded-xl px-3 py-2 ring-1 ring-zinc-200 hover:ring-indigo-400/50 dark:ring-white/10", focusRing)}>
-                  <span className="stat-value block font-display text-xl font-semibold leading-tight">{columns[s].length}</span>
+                  <CountUp to={columns[s].length} className="stat-value block font-display text-xl font-semibold leading-tight" />
                   <span className="flex items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-400">
                     <span aria-hidden className={cx("h-1.5 w-1.5 rounded-full", STATUS_MARK[s])} />
                     {STATUS_LABEL[s]}

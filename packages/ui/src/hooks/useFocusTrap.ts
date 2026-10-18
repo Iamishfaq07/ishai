@@ -62,11 +62,13 @@ export function useFocusTrap<T extends HTMLElement>(active: boolean, options: Fo
     const focusable = () =>
       [...root.querySelectorAll<HTMLElement>(FOCUSABLE)].filter((el) => el.getClientRects().length > 0);
 
+    // Moving focus in and back out never scrolls the page: a focus() into a panel inside a sticky header (the public
+    // phone menu) scrolled the page under it, and back to its button again on close.
     const first = optionsRef.current.initialFocus?.() ?? focusable()[0];
-    if (first) first.focus();
+    if (first) first.focus({ preventScroll: true });
     else {
       if (!root.hasAttribute("tabindex")) root.tabIndex = -1;
-      root.focus();
+      root.focus({ preventScroll: true });
     }
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -90,7 +92,7 @@ export function useFocusTrap<T extends HTMLElement>(active: boolean, options: Fo
     return () => {
       document.removeEventListener("keydown", onKeyDown);
       dialog.release();
-      if (restore?.isConnected) restore.focus();
+      if (restore?.isConnected) restore.focus({ preventScroll: true });
     };
   }, [active]);
 

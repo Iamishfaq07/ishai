@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
-import { ArrowRight, ChevronDown, Menu, X, buttonClass, cx, floatingClass, focusRing, useDismiss, useFocusTrap } from "@orbit/ui";
+import { ArrowRight, ChevronDown, Menu, X, buttonClass, cx, floatingClass, focusRing, lockScroll, useDismiss, useFocusTrap } from "@orbit/ui";
 import { useAuth } from "../lib/auth";
 import { useIndia } from "../lib/country";
 import { BrandLogo } from "./BrandLogo";
@@ -214,14 +214,11 @@ export function MobileMenu({ authState, className }: { authState?: { from: strin
   const { user } = useAuth();
   const india = useIndia();
   useEffect(() => setOpen(false), [pathname, hash]);
-  // The page behind doesn't scroll while the sheet is open.
+  // The page behind doesn't scroll while the sheet is open, and stays where it was (lockScroll holds <html>; hiding
+  // body's overflow made the page jump).
   useEffect(() => {
     if (!open) return;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = overflow;
-    };
+    return lockScroll();
   }, [open]);
   const trap = useFocusTrap<HTMLDivElement>(open, { onEscape: () => setOpen(false) });
   const close = () => setOpen(false);

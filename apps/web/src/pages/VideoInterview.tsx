@@ -281,8 +281,8 @@ export function VideoInterviewPage() {
             <Button variant="ghost" onClick={() => setStep("setup")}>
               Back
             </Button>
-            <Button onClick={() => void join()} disabled={busy || !devicesOk}>
-              {busy ? "Starting…" : "Join the interview"}
+            <Button onClick={() => void join()} loading={busy} loadingText="Starting…" disabled={!devicesOk}>
+              Join the interview
             </Button>
           </div>
         </Card>

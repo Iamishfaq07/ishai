@@ -151,7 +151,7 @@ export function ResumeAiHomePage() {
           </div>
         </section>
       ) : (
-        <section aria-labelledby="resume-ai-title" className="mb-6 flex flex-wrap items-end justify-between gap-4 animate-fade-up">
+        <section aria-labelledby="resume-ai-title" className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div className="flex items-center gap-3">
             <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-300">
               <FileText className="h-5 w-5" />

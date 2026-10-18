@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { useFlip } from "../hooks/useFlip";
 import { currentMotion } from "../hooks/useMotion";
 
 /**
@@ -161,6 +162,8 @@ export function dismissToast(id: string): void {
 export function ToastHost() {
   const toasts = useSyncExternalStore(queue.subscribe, queue.snapshot, queue.snapshot);
   const list = useRef<HTMLOListElement>(null);
+  // A toast arriving or leaving moves the others: they glide to their new places (each toast plays its own entrance and exit).
+  useFlip(toasts.map((t) => t.id).join(" "), { ref: list, enter: false, exit: false });
   // A toast closed under the pointer or with focus inside it leaves without a pointerleave or blur: re-check both
   // whenever the list changes, so the clocks never stay stopped.
   useEffect(() => {

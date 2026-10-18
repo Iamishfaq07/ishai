@@ -446,8 +446,8 @@ function CustomMock({
               ? "The AI plays a recruiter who has just made you this offer. Negotiate out loud; your review grades how you anchored, justified and handled pushback. Only your microphone is used."
               : "Uses your resume and the job post picked above for context. Only your microphone is used."}
           </p>
-          <Button type="submit" disabled={busy || (negotiation && offer.trim().length < 2)}>
-            {busy ? "Starting…" : negotiation ? "Start the negotiation" : "Start mock interview"}
+          <Button type="submit" loading={busy} loadingText="Starting…" disabled={negotiation && offer.trim().length < 2} disabledReason="Add the offer you were given first">
+            {negotiation ? "Start the negotiation" : "Start mock interview"}
           </Button>
           {negotiation && offer.trim().length < 2 && <p className="text-xs text-zinc-500 dark:text-zinc-400">Type the offer to start.</p>}
         </form>

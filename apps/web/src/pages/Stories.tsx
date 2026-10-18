@@ -17,6 +17,7 @@ import {
   focusRing,
   splitPlaceholders,
   CosmicEmptyState,
+  useFlip,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Textarea } from "../components/ui";
 import { api } from "../lib/api";
@@ -122,8 +123,8 @@ function Coverage({ stories, onPick }: { stories: Story[]; onPick: (c: StoryComp
           </p>
           <div aria-hidden="true" className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
             <div
-              className="h-full rounded-full bg-emerald-500 motion-ok:transition-[width] motion-ok:duration-700 motion-ok:ease-out"
-              style={{ width: `${(covered.size / STORY_COMPETENCIES.length) * 100}%` }}
+              className="h-full w-full rounded-full bg-emerald-500 transition-transform duration-page ease-standard"
+              style={{ transform: `translateX(${(covered.size / STORY_COMPETENCIES.length) * 100 - 100}%)` }}
             />
           </div>
         </div>
@@ -262,8 +263,8 @@ function StoryEditor({
         ) : null}
         {error && <ErrorNote>{error}</ErrorNote>}
         <div className="flex gap-2">
-          <Button type="submit" disabled={saving || !s.title.trim()}>
-            {saving ? "Saving…" : "Save story"}
+          <Button type="submit" loading={saving} loadingText="Saving…" disabled={!s.title.trim()} disabledReason="Give the story a title first">
+            Save story
           </Button>
           <Button variant="ghost" onClick={onCancel}>
             Cancel
@@ -355,6 +356,9 @@ export function StoriesPage() {
   const [practiseError, setPractiseError] = useState<string | null>(null);
 
   const list = stories.data ?? [];
+  // Stories and drafts glide into place as one is saved, deleted or opened to edit (useFlip).
+  const savedRef = useFlip<HTMLDivElement>(list.map((s) => (editing?.id === s.id ? "" : s.id)).join());
+  const draftsRef = useFlip<HTMLDivElement>(drafts.map((d) => d.id).join());
 
   const practise = async (story: Story) => {
     setPractisingId(story.id);
@@ -515,9 +519,9 @@ export function StoriesPage() {
           <p className="mb-3 text-sm text-zinc-500 dark:text-zinc-400">
             Check each one matches what really happened and fill in the highlighted details. Only saved stories are used.
           </p>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div ref={draftsRef} className="grid gap-4 md:grid-cols-2">
             {drafts.map((d) => (
-              <div key={d.id} className="space-y-2">
+              <div key={d.id} data-flip={String(d.id)} className="space-y-2">
                 <StoryCard
                   story={d.story}
                   onEdit={() => {
@@ -568,20 +572,21 @@ export function StoriesPage() {
                     <ErrorNote>{practiseError}</ErrorNote>
                   </div>
                 )}
-                <div className="grid gap-4 md:grid-cols-2">
+                <div ref={savedRef} className="grid gap-4 md:grid-cols-2">
                   {list.map((s) =>
                     editing?.id === s.id ? null : (
-                      <StoryCard
-                        key={s.id}
-                        story={s}
-                        onEdit={() => {
-                          setEditing({ id: s.id, initial: s, heading: `Edit “${s.title}”` });
-                          window.scrollTo({ top: 0, behavior: "smooth" });
-                        }}
-                        onDelete={() => void remove(s)}
-                        onPractise={() => void practise(s)}
-                        practising={practisingId === s.id}
-                      />
+                      <div key={s.id} data-flip={s.id} className="grid">
+                        <StoryCard
+                          story={s}
+                          onEdit={() => {
+                            setEditing({ id: s.id, initial: s, heading: `Edit “${s.title}”` });
+                            window.scrollTo({ top: 0, behavior: "smooth" });
+                          }}
+                          onDelete={() => void remove(s)}
+                          onPractise={() => void practise(s)}
+                          practising={practisingId === s.id}
+                        />
+                      </div>
                     ),
                   )}
                 </div>

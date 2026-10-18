@@ -243,7 +243,8 @@ export function GhostPreview({ kind = "cards" }: { kind?: GhostKind }) {
 
 /**
  * A list of known shape: nothing for the first 150 ms (a fast load never flashes), the skeleton after that, then
- * `children` once loading has settled for at least 300 ms.
+ * `children` once loading has settled for at least 300 ms. Content that replaces a skeleton fades in where it stood
+ * (opacity only, so nothing shifts); content that came fast enough to need no skeleton is simply there.
  */
 export function LoadGate({
   loading,
@@ -261,7 +262,9 @@ export function LoadGate({
   children: ReactNode;
 }) {
   const phase = useLoadPhase(loading);
+  const [waited, setWaited] = useState(false);
+  if (phase === "skeleton" && !waited) setWaited(true);
   if (phase === "pending") return null;
   if (phase === "skeleton") return <Skeleton variant={variant} count={count} label={label} className={className} />;
-  return children;
+  return waited ? <div className="animate-fade-in">{children}</div> : children;
 }
