@@ -242,7 +242,7 @@ export function BillingPage() {
             <PricingTiers monthly={months} current={e ? { plan: e.plan, until: e.until ?? null } : null} onBuy={(m) => void buy(m)} busy={starting} />
           </div>
           <details className="group">
-            <summary className={cx("cursor-pointer text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>Compare plans</summary>
+            <summary className={cx("tap-y cursor-pointer text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>Compare plans</summary>
             <PlanComparison monthly={months} />
           </details>
         </section>

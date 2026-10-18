@@ -179,7 +179,7 @@ function FollowUpsCard({ tracker, limit = 3, hideWhenEmpty = false, className }:
         ))}
       </ul>
       {due.length > shown.length && (
-        <Link to={JOBS_TRACKER} className={cx(textLink, "mt-3 inline-block text-xs")}>
+        <Link to={JOBS_TRACKER} className={cx(textLink, "tap-y mt-3 inline-block text-xs")}>
           {due.length - shown.length} more on your tracker
         </Link>
       )}
@@ -203,7 +203,7 @@ function Shell({ children, className, link = false, count }: { children: React.R
             {count ? <span className="rounded-full bg-indigo-500/10 px-1.5 text-xs tabular-nums text-indigo-700 dark:text-indigo-200">{count}</span> : null}
           </h2>
           {link && (
-            <Link to={JOBS_TRACKER} className={cx(textLink, "text-xs")}>
+            <Link to={JOBS_TRACKER} className={cx(textLink, "tap-y text-xs")}>
               Open tracker
             </Link>
           )}

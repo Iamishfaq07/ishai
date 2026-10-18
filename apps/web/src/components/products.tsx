@@ -133,7 +133,7 @@ export function ProductTabs({ label, sections, action }: { label: string; sectio
               to={to}
               aria-current={current ? "page" : undefined}
               className={cx(
-                "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-[0.8125rem] font-medium transition-colors sm:px-3 sm:text-sm",
+                "tap-y inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-1.5 py-1.5 text-[0.8125rem] font-medium transition-colors sm:px-3 sm:text-sm",
                 current
                   ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white"
                   : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",

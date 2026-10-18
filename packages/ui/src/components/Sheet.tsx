@@ -191,7 +191,9 @@ export function Sheet({
               )
             : cx(
                 // Phones: a sheet that rises from the bottom edge. From sm: a dialog that fades in from a touch smaller.
-                "relative flex max-h-[88vh] w-full animate-sheet-up flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-dialog sm:animate-dialog-in sm:rounded-2xl dark:border-white/10 dark:bg-zinc-950",
+                // 88% of the screen as it is now (dvh), not of the screen with Safari's bars hidden (vh): the top of a
+                // tall sheet stayed under the address bar.
+                "relative flex max-h-[88vh] supports-[height:100dvh]:max-h-[88dvh] w-full animate-sheet-up flex-col overflow-hidden rounded-t-3xl border border-zinc-200 bg-white shadow-dialog sm:animate-dialog-in sm:rounded-2xl dark:border-white/10 dark:bg-zinc-950",
                 WIDTH[size],
                 !footer && "pb-[env(safe-area-inset-bottom)]",
                 className,

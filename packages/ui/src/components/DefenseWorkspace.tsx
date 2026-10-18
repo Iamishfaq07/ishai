@@ -25,7 +25,7 @@ export function DefenseWorkspace({ api, sessionId, capture }: { api: Client; ses
     finally { setBusy(false); }
   };
   return <details className="max-h-[min(60vh,36rem)] overflow-auto border-b border-zinc-200 px-4 py-3 dark:border-white/[0.06]">
-    <summary className={`cursor-pointer font-display text-sm font-semibold ${focusRing}`}>Critique architecture / diagram</summary>
+    <summary className={`tap-y cursor-pointer font-display text-sm font-semibold ${focusRing}`}>Critique architecture / diagram</summary>
     <div className="mt-4 space-y-3">
       <p className="text-xs text-zinc-500">Get a Defense Card before you explain the design. Uses one analysis from your screenshot allowance; failed assessments are refunded.</p>
       <label className="block text-sm">Architecture notes<Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} maxLength={file ? 5000 : 30_000}

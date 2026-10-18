@@ -52,7 +52,7 @@ export function CookieNotice() {
         type="button"
         onClick={accept}
         aria-label="Dismiss the cookie note"
-        className={cx("inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-500/10 hover:text-zinc-800 dark:hover:text-zinc-100", focusRing)}
+        className={cx("tap inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-500/10 hover:text-zinc-800 dark:hover:text-zinc-100", focusRing)}
       >
         <X className="h-4 w-4" aria-hidden />
       </button>

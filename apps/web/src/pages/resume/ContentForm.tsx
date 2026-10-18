@@ -46,7 +46,7 @@ function IconButton({ label, onClick, children, disabled }: { label: string; onC
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={cx("rounded-md p-1 text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 disabled:opacity-30 dark:hover:bg-white/10 dark:hover:text-white", focusRing)}
+      className={cx("tap-y rounded-md p-1 text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 disabled:opacity-30 coarse:p-2.5 dark:hover:bg-white/10 dark:hover:text-white", focusRing)}
     >
       {children}
     </button>
@@ -63,7 +63,7 @@ function ItemTools({ i, n, label, onMove, onRemove, onDuplicate }: {
   onDuplicate?: () => void;
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-0.5">
+    <div className="flex shrink-0 items-center gap-0.5 coarse:gap-1">
       <IconButton label={`Move ${label} up`} onClick={() => onMove(-1)} disabled={i === 0}>
         <ChevronDown className="h-4 w-4 rotate-180" />
       </IconButton>
@@ -187,7 +187,8 @@ function EvidenceMark({ text, items }: { text: string; items: EvidenceItem[] }) 
   );
 }
 
-const linkButton = cx("inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing);
+// 44 px tall on a touch screen (a note's actions sit right above the next field, so no invisible tap area).
+const linkButton = cx("inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline coarse:min-h-11 dark:text-indigo-300", focusRing);
 
 /**
  * What a recruiter would flag on this line, under it, with the fix: tech names are fixed on the spot, a repeated
@@ -213,7 +214,7 @@ function LineNotes({ path, text, checks, onRewrite, onSet, onRemove, className }
           <li key={i.kind}>{i.message}</li>
         ))}
       </ul>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 coarse:gap-y-0">
         {spelled !== null && (
           <button type="button" className={linkButton} onClick={() => onSet(spelled)}>
             Fix the spelling
@@ -272,7 +273,8 @@ function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
       </p>
       {bullets.map((b, i) => (
         <div key={i} className="space-y-1">
-          <div className="flex items-start gap-1">
+          {/* On a touch screen the bullet's tools sit in a row under it, finger-sized, instead of a column of small ones. */}
+          <div className="flex items-start gap-1 coarse:flex-wrap">
             <span aria-hidden className="mt-2.5 text-zinc-400">•</span>
             <Textarea
               aria-label={`Bullet ${i + 1}`}
@@ -285,7 +287,7 @@ function Bullets({ path, bullets, onChange, onRewrite, checks = NO_CHECKS }: {
               onKeyDown={(e) => onKey(i, e)}
               className="min-h-0 flex-1 scroll-mt-24"
             />
-            <div className="flex flex-col">
+            <div className="flex flex-col coarse:w-full coarse:flex-row coarse:justify-end coarse:gap-1">
               <IconButton label={`Move bullet ${i + 1} up`} onClick={() => onChange(move(bullets, i, -1))} disabled={i === 0}>
                 <ChevronDown className="h-3.5 w-3.5 rotate-180" />
               </IconButton>

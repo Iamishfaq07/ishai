@@ -427,7 +427,8 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   if (session.video && !endedWhy) return <div className="h-dvh min-h-0 bg-[#07070c]">{panel}</div>;
 
   return (
-    <div className="flex h-full flex-col">
+    // Clear of the home bar and a sideways phone's notch (viewport-fit=cover; the insets are 0 elsewhere).
+    <div className="flex h-full flex-col pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <nav aria-label="Session" className="flex items-center gap-3 px-4 py-2.5 text-xs text-zinc-500 dark:text-zinc-400">
         <Link
           to="/"

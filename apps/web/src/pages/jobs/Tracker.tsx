@@ -285,6 +285,8 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
 
 /** A card's own actions: small accent links, the same weight whether a link or a button. */
 const cardAction = "inline-flex items-center gap-1 rounded font-medium text-indigo-600 hover:underline dark:text-indigo-400";
+// A card's row or list of actions: on a touch screen each is a full 44 px tall to tap (with a mouse, as before).
+const rowAction = cx(cardAction, "coarse:min-h-11");
 
 function TrackerCard({
   entry,
@@ -379,16 +381,16 @@ function TrackerCard({
       {/* The card leads with one place to work on the job (its mission room) and the step its stage calls for (apply
           while saved, practise while interviewing); everything else waits under More, so a board of cards reads at
           a glance. A job picked for comparing says so on the card. */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs">
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs coarse:mt-1 coarse:gap-y-0">
         <Link
           to={missionPath(entry.id)}
           aria-label={`Open the mission room for ${entry.title} at ${entry.company}`}
-          className={cx("inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
+          className={cx("inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline coarse:min-h-11 dark:text-indigo-300", focusRing)}
         >
           Mission room <ArrowRight className="h-3 w-3" aria-hidden />
         </Link>
         {entry.status === "saved" && apply && (
-          <a href={apply} target="_blank" rel="noopener" className={cx(cardAction, focusRing)}>
+          <a href={apply} target="_blank" rel="noopener" className={cx(rowAction, focusRing)}>
             Apply <ArrowUpRight className="h-3 w-3" aria-hidden />
           </a>
         )}
@@ -396,36 +398,36 @@ function TrackerCard({
           <Link
             to={interviewPrepPath(entry.id)}
             aria-label={`Prepare for interview: ${entry.title} at ${entry.company}`}
-            className={cx(cardAction, focusRing)}
+            className={cx(rowAction, focusRing)}
           >
             <Target className="h-3 w-3" aria-hidden /> Prepare for interview
           </Link>
         ) : (
           entry.document_id && (
-            <Link to={practiceLink(entry, jobPath)} className={cx(cardAction, focusRing)}>
+            <Link to={practiceLink(entry, jobPath)} className={cx(rowAction, focusRing)}>
               <Target className="h-3 w-3" aria-hidden /> Practise
             </Link>
           )
         )}
         {compare?.picked && (
-          <button type="button" aria-pressed onClick={compare.onToggle} className={cx(cardAction, "!text-emerald-700 dark:!text-emerald-300", focusRing)}>
+          <button type="button" aria-pressed onClick={compare.onToggle} className={cx(rowAction, "!text-emerald-700 dark:!text-emerald-300", focusRing)}>
             <Check className="h-3 w-3" aria-hidden /> Comparing
           </button>
         )}
       </div>
-      <details className="group mt-1.5 text-xs" onToggle={(e) => setMore(e.currentTarget.open)}>
+      <details className="group mt-1.5 text-xs coarse:mt-0" onToggle={(e) => setMore(e.currentTarget.open)}>
         <summary
           className={cx(
-            "inline-flex cursor-pointer list-none items-center gap-1 rounded font-medium text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 [&::-webkit-details-marker]:hidden",
+            "inline-flex cursor-pointer list-none items-center gap-1 rounded font-medium text-zinc-500 hover:text-zinc-800 coarse:min-h-11 dark:text-zinc-400 dark:hover:text-zinc-100 [&::-webkit-details-marker]:hidden",
             focusRing,
           )}
         >
           <MoreHorizontal className="h-3.5 w-3.5" aria-hidden /> More<span className="sr-only"> for {entry.title}</span>
         </summary>
-        {more && <ul className="mt-1.5 space-y-1 border-l border-zinc-200 pl-3 dark:border-white/10">
+        {more && <ul className="mt-1.5 space-y-1 border-l border-zinc-200 pl-3 coarse:mt-0 coarse:space-y-0 dark:border-white/10">
           {entry.resume_id && (
             <li>
-              <Link to={resumePath(entry.resume_id)} className={cx(cardAction, focusRing)}>
+              <Link to={resumePath(entry.resume_id)} className={cx(rowAction, focusRing)}>
                 <FileText className="h-3 w-3" aria-hidden /> Tailored resume
               </Link>
             </li>
@@ -435,13 +437,13 @@ function TrackerCard({
             <Link
               to={outreachPath({ job: entry.listing_id, resume: entry.resume_id })}
               aria-label={`Write outreach for ${entry.title}`}
-              className={cx(cardAction, focusRing)}
+              className={cx(rowAction, focusRing)}
             >
               <Send className="h-3 w-3" aria-hidden /> Write outreach
             </Link>
           </li>
           <li>
-            <button type="button" aria-expanded={journey} onClick={() => setJourney((o) => !o)} className={cx(cardAction, focusRing)}>
+            <button type="button" aria-expanded={journey} onClick={() => setJourney((o) => !o)} className={cx(rowAction, focusRing)}>
               <Route className="h-3 w-3" aria-hidden /> {journey ? "Hide journey" : "Journey"}
             </button>
           </li>
@@ -453,7 +455,7 @@ function TrackerCard({
                 disabled={compare.full}
                 onClick={compare.onToggle}
                 title={compare.full ? `Compare up to ${MAX_COMPARE} at once` : undefined}
-                className={cx(cardAction, "disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline", focusRing)}
+                className={cx(rowAction, "disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline", focusRing)}
               >
                 <Columns3 className="h-3 w-3" aria-hidden /> Compare
               </button>
@@ -469,7 +471,7 @@ function TrackerCard({
                 }}
                 aria-label={`Add to calendar: ${nextDateTitle(entry)}, ${shortDate(entry.next_at)}`}
                 title="A calendar file for this date: opens in Google Calendar, Outlook or your phone's calendar"
-                className={cx(cardAction, focusRing)}
+                className={cx(rowAction, focusRing)}
               >
                 <CalendarPlus className="h-3 w-3" aria-hidden /> Add to calendar
               </button>

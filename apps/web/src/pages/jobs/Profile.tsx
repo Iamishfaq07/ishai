@@ -489,7 +489,7 @@ function ChipsField({
               type="button"
               onClick={() => onChange(items.filter((x) => x !== item))}
               aria-label={`Remove ${item}`}
-              className={cx("rounded-full p-0.5 hover:bg-indigo-500/20", focusRing)}
+              className={cx("tap rounded-full p-0.5 hover:bg-indigo-500/20", focusRing)}
             >
               <X className="h-3 w-3" />
             </button>

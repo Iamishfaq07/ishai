@@ -139,5 +139,9 @@ export default {
         "motion-ok",
         '@media (prefers-reduced-motion: no-preference) { :root:not([data-motion="reduced"]):not([data-motion="off"]) & }',
       ),
+    // `coarse:` styles apply on touch screens only (a finger, not a mouse): bigger tap targets on phones and tablets,
+    // nothing changes with a mouse. See also .tap / .tap-y in design/base.css.
+    ({ addVariant }: { addVariant: (name: string, definition: string) => void }) =>
+      addVariant("coarse", "@media (pointer: coarse)"),
   ],
 };

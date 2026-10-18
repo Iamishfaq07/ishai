@@ -540,7 +540,7 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
           <HistoryIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden />
           Recent sessions
         </h2>
-        <Link to="/sessions" className={cx("rounded text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+        <Link to="/sessions" className={cx("tap-y rounded text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
           View all
         </Link>
       </div>
