@@ -18,6 +18,7 @@ import {
   type ServerEvent,
   type Speaker,
   type MockRoundSummary,
+  type MockSayKind,
 } from "@orbit/types";
 import { SESSION_ENDED, type CloseInfo, type ConnectionStatus } from "./client";
 
@@ -146,6 +147,12 @@ export interface LiveViewState {
   } | null;
   mockCompleted: boolean;
   mockSummary: MockRoundSummary | null;
+  /**
+   * The AI video interview (D76): the line the interviewer is saying now, a question or one of her other lines (small
+   * talk, a repeat, a check-in, the goodbye), and whether she's writing her next one.
+   */
+  mockLine: { id: string; text: string; kind: "question" | MockSayKind; speaker?: string } | null;
+  mockThinking: boolean;
 }
 
 export type LocalAction =
@@ -192,6 +199,8 @@ export function initialLiveState(settings: Partial<LiveSettings> = {}): LiveView
     mock: null,
     mockCompleted: false,
     mockSummary: null,
+    mockLine: null,
+    mockThinking: false,
   };
 }
 
@@ -470,9 +479,16 @@ export function liveReducer(s: LiveViewState, action: LiveAction): LiveViewState
           ...(action.data.speaker ? { speaker: action.data.speaker } : {}),
           ...(action.data.one_way ? { oneWay: action.data.one_way } : {}),
                 index: action.data.index, total: action.data.total },
+        mockLine: { id: action.data.question_id, text: action.data.text, kind: "question",
+          ...(action.data.speaker ? { speaker: action.data.speaker.persona } : {}) },
+        mockThinking: false,
       };
+    case "mock.say":
+      return { ...s, mockLine: { id: action.data.say_id, text: action.data.text, kind: action.data.kind }, mockThinking: false };
+    case "mock.thinking":
+      return { ...s, mockThinking: true };
     case "mock.completed":
-      return { ...s, mockCompleted: true, mockSummary: action.data };
+      return { ...s, mockCompleted: true, mockSummary: action.data, mockThinking: false };
 
     case "usage.status":
       return {

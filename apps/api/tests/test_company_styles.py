@@ -157,21 +157,30 @@ async def test_saba_opens_the_video_interview_at_once_and_keeps_a_calls_pace() -
 
     mi = MockInterviewer(MockConfig(video=True, topic="React performance", duration_minutes=15), llm=llm,
                          index=SessionIndex([]), role="Frontend Engineer", company="Acme", send=send,
-                         on_question=_noop, on_finish=_noop)
+                         on_question=_noop, on_finish=_noop, candidate_name="priya sharma")
     await mi.start(0)
     assert llm.systems == []  # no model call before the first words
-    text = sent[0][1]["text"]
-    assert text.startswith("Hi, my name is Saba, and I'll be taking your interview today for the Frontend Engineer "
-                           "role at Acme.")
-    assert "about 15 minutes" in text and "about React performance" in text and "introduce yourself" in text
+    # Hello first, by name (D76), then the plan and the first question once they've answered.
+    assert sent[0][0] == "mock.say" and sent[0][1]["kind"] == "smalltalk"
+    assert sent[0][1]["text"].startswith(("Hi Priya, I'm Saba.", "Hi Priya! I'm Saba."))
+    mi.on_candidate("Pretty good, thanks!", 1000, final=True)
+    await mi.tick(1900)
+    text = sent[-1][1]["text"]
+    assert sent[-1][0] == "mock.question"
+    assert text.startswith(("Glad to hear it.", "Good to hear.", "Nice, glad it's going well."))
+    assert "15 minutes" in text and "React performance" in text and "introduce yourself" in text
+    assert llm.systems == []
     # Later questions come from the model, told it's Saba on a video call.
     await mi._generate()
     assert "your name is Saba" in llm.systems[0]
-    # A call's pace: an answer ends on a shorter pause than in the classic mock.
-    mi.on_candidate("I built the checkout page and cut its load time in half using code splitting", 1000, final=True)
-    pause = answer_silence_ms(" ".join(mi.asked[-1].answer))
-    await mi.tick(1000 + int(pause * 0.75))
-    assert len(sent) == 2 and sent[1][0] == "mock.question"
+    # A call's pace: an answer that sounds finished ends on a short pause, well under the classic mock's.
+    mi.on_candidate("I built the checkout page and cut its load time in half using code splitting.", 2000,
+                    final=True)
+    assert answer_silence_ms(" ".join(mi.asked[-1].answer)) >= 3000
+    from orbit_api.live import saba_conversation as talk
+
+    await mi.tick(2000 + talk.turn_end_ms(" ".join(mi.asked[-1].answer)) + 50)
+    assert sent[-1][0] == "mock.question" and len([k for k, _ in sent if k == "mock.question"]) == 2
     # Hindi, a panel or a one-way round write their own opening.
     hindi = MockInterviewer(MockConfig(video=True), llm=_Recording(), index=SessionIndex([]), role=None, send=send,
                             on_question=_noop, on_finish=_noop, language="hi")
@@ -247,8 +256,10 @@ async def test_the_opening_is_said_whole_but_kept_as_its_question() -> None:
     mi = MockInterviewer(MockConfig(video=True), llm=_Recording(), index=SessionIndex([]), role="Analyst",
                          send=_noop, on_question=on_question, on_finish=_noop)
     await mi.start(0)
+    assert recorded == []  # small talk first: not a question
+    await mi.next(100)  # "I'm done": on to the plan and the first question
     said, question = recorded[0]
-    assert said.startswith("Hi, my name is Saba") and said.endswith(VIDEO_OPENING_QUESTION[1:])
+    assert "Analyst" in said and said.endswith(VIDEO_OPENING_QUESTION[1:])
     assert question == VIDEO_OPENING_QUESTION
 
     class Opening(_Recording):

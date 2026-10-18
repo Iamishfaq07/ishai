@@ -7,6 +7,7 @@ own voice instead, so a mock never goes silent. Only the interviewer's text is s
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Annotated
@@ -28,6 +29,8 @@ from orbit_api.providers.tts import TTSError, get_tts_provider
 from orbit_api.ratelimit import limit_user
 from orbit_api.transactions import lock_account
 
+log = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/v1/voice", tags=["voice"])
 speak_limit = Depends(limit_user("voice-speak", rate_per_s=1, burst=20))
 METRIC = "tts_chars"
@@ -41,12 +44,20 @@ class Voice(BaseModel):
     model: str
 
 
-# One voice: Deepgram's own default Aura-2 voice, a clear American English one. Others weren't verifiable, and a
-# model name Deepgram doesn't have fails every request.
+# A small choice (D76): two women's and two men's Aura-2 voices that Deepgram describes as natural and suited to
+# interviews and conversation. Measured from here they all start within the network's noise of each other (1.3-2.7 s
+# to the first byte for a sentence, one connection kept open), so Vesta, Deepgram's "patient, empathetic" interview
+# voice, is the default. Every model name was checked against Deepgram's list (a name it doesn't have fails every
+# request). An older client's "us" (Thalia) gets the default. Deepgram has no Indian-English Aura-2 voice yet.
 VOICES: dict[str, Voice] = {
-    "us": Voice(id="us", label="Thalia · American English", model="aura-2-thalia-en"),
+    "vesta": Voice(id="vesta", label="Vesta · warm and patient", model="aura-2-vesta-en"),
+    "aurora": Voice(id="aurora", label="Aurora · bright and lively", model="aura-2-aurora-en"),
+    "pluto": Voice(id="pluto", label="Pluto · calm, deeper voice", model="aura-2-pluto-en"),
+    "arcas": Voice(id="arcas", label="Arcas · natural and clear", model="aura-2-arcas-en"),
 }
-DEFAULT_VOICE = "us"
+DEFAULT_VOICE = "vesta"
+# Speaking pace (Settings and the video interview's setup): slower, normal, brisk.
+MIN_SPEED, MAX_SPEED = 0.8, 1.25
 
 
 def _day_start() -> datetime:
@@ -81,6 +92,7 @@ class SpeakIn(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_CHARS)
     voice: str = Field(DEFAULT_VOICE, max_length=16)
     session_id: str | None = Field(None, max_length=36)
+    speed: float = Field(1.0, ge=MIN_SPEED, le=MAX_SPEED)
 
 
 @router.post("/speak", dependencies=[speak_limit])
@@ -105,17 +117,44 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
     spent = UsageEvent(user_id=user.id, session_id=session_id, metric=METRIC, quantity=float(len(text)))
     db.add(spent)
     await db.commit()
-    chunks = provider.stream(text, voice.model)
+    speed = round(body.speed, 2)
+    chunks = provider.stream(text, voice.model, speed) if speed != 1.0 else provider.stream(text, voice.model)
     try:
         first = await anext(chunks)  # fail here (a JSON error the client can fall back on), not mid-stream
-    except (TTSError, StopAsyncIteration, httpx.HTTPError, OSError) as err:
-        await db.execute(delete(UsageEvent).where(UsageEvent.id == spent.id))
-        await db.commit()
+    except TTSError as err:
+        if speed == 1.0:
+            log.warning("voice: the provider made no audio (%s)", err)
+            await _give_back(db, spent)
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
+        # A pace the provider won't take for this voice: the normal pace, and the client paces the playback itself.
+        speed = 1.0
+        chunks = provider.stream(text, voice.model)
+        try:
+            first = await anext(chunks)
+        except (TTSError, StopAsyncIteration, httpx.HTTPError, OSError) as again:
+            log.warning("voice: the provider made no audio (%s)", type(again).__name__)
+            await _give_back(db, spent)
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from again
+    except (StopAsyncIteration, httpx.HTTPError, OSError) as err:
+        log.warning("voice: the provider made no audio (%s)", type(err).__name__)
+        await _give_back(db, spent)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
 
     async def audio() -> AsyncIterator[bytes]:
-        yield first
-        async for chunk in chunks:
-            yield chunk
+        try:
+            yield first
+            async for chunk in chunks:
+                yield chunk
+        finally:
+            await chunks.aclose()  # a clip the client gave up on: the provider's response closes now, not at GC
 
-    return StreamingResponse(audio(), media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+    # X-Orbit-Speed: the pace the audio was made at (1 when the provider wouldn't take the one asked for).
+    return StreamingResponse(audio(), media_type="audio/mpeg",
+                             headers={"Cache-Control": "no-store", "X-Orbit-Speed": f"{speed:g}",
+                                      "Access-Control-Expose-Headers": "X-Orbit-Speed"})
+
+
+async def _give_back(db: AsyncSession, spent: UsageEvent) -> None:
+    """The provider made no audio: the characters taken for it are given back."""
+    await db.execute(delete(UsageEvent).where(UsageEvent.id == spent.id))
+    await db.commit()

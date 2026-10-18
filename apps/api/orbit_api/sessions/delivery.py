@@ -17,8 +17,15 @@ from orbit_api.live.multilingual import fold, words
 # Multi-word fillers first so "you know" isn't also counted as two words of something else.
 FILLER_PHRASES = ("you know", "i mean", "sort of", "kind of")
 FILLER_WORDS = ("um", "umm", "uh", "uhm", "erm", "er", "ah", "hmm", "basically", "literally")
+# A Hinglish (Latin script) or Hindi (Devanagari) round's own fillers, on top of the English ones (people mix).
+HINGLISH_FILLERS = ("matlab", "yaani", "yani", "achha", "accha", "acha")
+HINDI_FILLERS = ("मतलब", "यानी", "अच्छा")
 _PHRASE_RE = re.compile(r"\b(" + "|".join(re.escape(p) for p in FILLER_PHRASES) + r")\b", re.IGNORECASE)
 _WORD_RE = re.compile(r"\b(" + "|".join(FILLER_WORDS) + r")\b", re.IGNORECASE)
+_HINGLISH_RE = re.compile(r"\b(" + "|".join(HINGLISH_FILLERS) + r")\b", re.IGNORECASE)
+# Devanagari vowel signs aren't word characters to `\b`, so the edges are spelled out: no word or Devanagari
+# character on either side.
+_HINDI_RE = re.compile(r"(?<![\wऀ-ॿ])(" + "|".join(HINDI_FILLERS) + r")(?![\wऀ-ॿ])")
 _WORDS = re.compile(r"[A-Za-z0-9']+")
 
 SLOW_WPM, FAST_WPM = 110, 170
@@ -37,10 +44,39 @@ class TurnLike(Protocol):
     end_ms: int
 
 
-def count_fillers(text: str) -> Counter[str]:
+def count_fillers(text: str, language: str = "en") -> Counter[str]:
+    """Filler words and phrases in `text`; a Hindi or Hinglish round's own ("matlab", "यानी") as well as English's."""
     found: Counter[str] = Counter(m.group(1).lower() for m in _PHRASE_RE.finditer(text))
     found.update(m.group(1).lower() for m in _WORD_RE.finditer(_PHRASE_RE.sub(" ", text)))
+    if language in ("hi", "hinglish"):
+        found.update(m.group(1).lower() for m in _HINGLISH_RE.finditer(text))
+        found.update(m.group(1) for m in _HINDI_RE.finditer(text))
     return found
+
+
+MIN_ANSWER_SPEAKING_S = 5  # one answer: less than this isn't enough speech for a pace
+
+
+def answer_speaking(turns: Sequence[TurnLike], *, language: str = "en") -> dict[str, Any] | None:
+    """One answer's speaking stats from its own transcript lines: pace, fillers, and the long silences inside it
+    (3 s or more between two of its lines). None when the lines carry no timings or there's too little speech."""
+    mine = sorted((t for t in turns if t.speaker == "candidate" and t.text.strip()), key=lambda t: t.start_ms)
+    speaking_s = sum(_seconds(t) for t in mine)
+    if speaking_s < MIN_ANSWER_SPEAKING_S:
+        return None
+    count = _count_any if language == "hi" else _count_words
+    words = sum(count(t.text) for t in mine)
+    fillers: Counter[str] = Counter()
+    for t in mine:
+        fillers.update(count_fillers(t.text, language))
+    pauses = sum(1 for prev, cur in pairwise(mine) if (cur.start_ms - prev.end_ms) / 1000 >= LONG_PAUSE_S)
+    return {
+        "speaking_seconds": round(speaking_s),
+        "words_per_minute": round(words / (speaking_s / 60)),
+        "fillers": sum(fillers.values()),
+        "top_fillers": [w for w, _ in fillers.most_common(3)],
+        "long_pauses": pauses,
+    }
 
 
 def _seconds(t: TurnLike) -> float:
@@ -48,11 +84,12 @@ def _seconds(t: TurnLike) -> float:
 
 
 def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = (), *,
-                   english: bool = True) -> dict[str, Any] | None:
+                   english: bool = True, language: str = "en") -> dict[str, Any] | None:
     """`answers`: the candidate's answer to each question (for answer length), if paired. None = too little speech.
     `english=False` (a live session in another language): words are counted in any script, and the pace and filler
-    tips, whose thresholds and filler words are English, are left out."""
-    count = _count_words if english else _count_any
+    tips, whose thresholds and filler words are English, are left out. `language`: a mock round's practice language
+    ("hi" counts Devanagari words; "hi" and "hinglish" count their own fillers too)."""
+    count = _count_words if english and language != "hi" else _count_any
     mine = [t for t in turns if t.speaker == "candidate" and t.text.strip()]
     others = [t for t in turns if t.speaker != "candidate" and t.text.strip()]
     speaking_s = sum(_seconds(t) for t in mine)
@@ -61,7 +98,7 @@ def delivery_stats(turns: Sequence[TurnLike], answers: Sequence[str] = (), *,
     words = sum(count(t.text) for t in mine)
     fillers: Counter[str] = Counter()
     for t in mine:
-        fillers.update(count_fillers(t.text))
+        fillers.update(count_fillers(t.text, language))
     minutes = speaking_s / 60
     wpm = round(words / minutes) if minutes else 0
     filler_total = sum(fillers.values())

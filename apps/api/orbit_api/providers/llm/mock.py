@@ -50,7 +50,22 @@ def _mock_report(user: str) -> str:
     import json
     import re
 
-    items = [{"q": int(n), "feedback": f"[mock] feedback {n}", "score": 4, "better": f"[mock] better {n}",
+    said = dict(re.findall(r"^Q(\d+):.*?\nCANDIDATE SAID: (.*?)\n", user, flags=re.MULTILINE | re.DOTALL))
+
+    def rubric(n: str) -> dict[str, Any]:
+        # One quote from the answer itself (kept), one the candidate never said (dropped by the server's check).
+        own = " ".join(said.get(n, "").split()[:4])
+        return {"structure": {"score": 4, "reason": "[mock] A clear order", "quote": own or None},
+                "specifics": {"score": 2, "reason": "[mock] No numbers",
+                              "quote": "I single-handedly saved the company"},
+                "relevance": {"score": 5, "reason": "[mock] On the question", "quote": None},
+                "clarity": {"score": 4, "reason": "[mock] Easy to follow", "quote": None},
+                "conciseness": {"score": 3, "reason": "[mock] Some repetition", "quote": None}}
+
+    items = [{"q": int(n), "feedback": f"[mock] feedback {n}", "score": 4,
+              # A figure the candidate didn't give (37%) shows the server's placeholder check.
+              "better": f"[mock] better {n}: I led [the project] and cut the time by 37%.",
+              "improvement": f"[mock] Lead with the result in question {n}.", "rubric": rubric(n),
               "missing_points": ["[mock] Add the measurement baseline"], "delivery_score": 4, "clarity_score": 4,
               "dimensions": {"problem_framing": 4, "technical_depth": 4, "scalability": 3,
                              "edge_case_rigor": 3, "communication_clarity": 4}}
@@ -59,7 +74,10 @@ def _mock_report(user: str) -> str:
         "summary": "[mock] Session summary.", "topics": [], "important_follow_ups": [],
         "potential_weak_areas": [], "suggested_preparation": [],
         "review": {"overall_score": 4, "strengths": ["[mock] clear structure"], "improvements": ["[mock] add metrics"],
-                   "practice": ["[mock] rehearse STAR stories"], "items": items},
+                   "practice": ["[mock] rehearse STAR stories"], "items": items,
+                   "top_practice": [{"practice": "[mock] Give one number for every result", "questions": [1, 2]},
+                                    {"practice": "[mock] Open with the point, then the story", "questions": [1]},
+                                    {"practice": "[mock] Cut the repeats", "questions": []}]},
         **({"counter_offer_email": {"subject": "[mock] Following up on the offer",
                                     "body": "[mock] Thank you for the offer. Could we look at the base again?"}}
            if 'source="negotiation_setup"' in user else {}),
@@ -514,10 +532,22 @@ class MockLLMProvider(LLMProvider):
                      "answer": "[mock] Track offsets and reconcile with the durable source."}]})
         if request.request_type == "mock_question":
             body = request.messages[-1].content if request.messages else ""
+            system = request.messages[0].content if request.messages else ""
+            # The video interviewer's own requests (D76): the candidate's question at the end, a question put
+            # another way.
+            if 'source="their_question"' in body:
+                return json.dumps({"answer": "[mock] Good question. I don't have the details on that, so the "
+                                             "recruiter is the best person to ask."})
+            if system.startswith("Rephrase this interview question"):
+                return json.dumps({"question": "[mock] In simpler words: what did you build, and how did it go?"})
             n = body.count("Interviewer:") + 1
             follow = "follow-up on the last answer" in body and n > 1 and n % 2 == 0
-            return json.dumps({"question": f"[mock] Question {n}: tell me about a project you're proud of.",
-                               "is_follow_up": follow, "last_answer_score": 4 if n > 1 else None})
+            out: dict[str, Any] = {"question": f"[mock] Question {n}: tell me about a project you're proud of.",
+                                   "is_follow_up": follow, "last_answer_score": 4 if n > 1 else None}
+            if '"reaction"' in system:
+                said = body.rsplit("Candidate:", 1)[-1].split("</reference_data>", 1)[0].split()
+                out["reaction"] = "[mock] So " + " ".join(said[:5]).strip(".,") + "."
+            return json.dumps(out)
         if request.request_type == "classify":
             # Deterministic stand-in for the ambiguous-question classifier: statements about prices/values are
             # not questions; anything else in the band is answered as-is.

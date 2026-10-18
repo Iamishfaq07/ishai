@@ -39,6 +39,7 @@ type Mood = VoiceMood;
 
 const MOOD_LABEL: Record<Mood, string> = {
   joining: "joining the call…",
+  preparing: "about to speak…",
   speaking: "speaking",
   listening: "listening",
   hearing: "listening to you",
@@ -49,12 +50,19 @@ const MOOD_LABEL: Record<Mood, string> = {
 /** What a screen reader hears when the mood changes. Your own talking isn't announced: it would talk over you. */
 const MOOD_ANNOUNCED: Record<Mood, string> = {
   joining: `${INTERVIEWER_NAME} is joining the call`,
+  preparing: `${INTERVIEWER_NAME} is about to speak`,
   speaking: `${INTERVIEWER_NAME} is speaking`,
   listening: `${INTERVIEWER_NAME} is listening`,
   hearing: `${INTERVIEWER_NAME} is listening`,
   thinking: `${INTERVIEWER_NAME} is thinking`,
   paused: "Your mic is paused",
 };
+/**
+ * She acknowledges what they just said ("Mm-hmm.") when her reply is this slow to start (still being written, or her
+ * voice on its way), at most every other time, and only right after they spoke (never before a check-in).
+ */
+const ACK_AFTER_MS = 450;
+const ACK_HEARD_WITHIN_MS = 3000;
 
 /** The transcript beside the call on wide screens: open or not, kept on this device. */
 const TRANSCRIPT_KEY = "orbit.videoTranscript";
@@ -341,29 +349,55 @@ function tokenize(text: string): Token[] {
 }
 
 /**
- * What Saba asks, as captions. A new question's words come in one after another (at Full; the card fades in at
- * Gentle); while the device's voice reports word timing, the word she's saying is marked, with what she's said in white
- * and what's still to come in light grey. Without word timing (the natural voice) the whole question is white.
+ * How much of her current line to show (D76): all of it ("all": her voice is off, motion is Off, she can't be heard,
+ * or she's finished), what she's said so far, or nothing yet (she's about to speak). Never the whole line before she
+ * says it. Read from the voice without re-rendering anything else.
  */
-function QuestionCaption({ text, activity, dimmed, header }: { text: string; activity: VoiceActivity; dimmed: boolean; header: ReactNode }) {
+function useLineShown(activity: VoiceActivity, lineId: string | null, everything: boolean): number | "all" {
+  const subscribe = useCallback((listener: () => void) => activity.subscribe(listener), [activity]);
+  // A string snapshot: stable while nothing changes (useSyncExternalStore compares them).
+  const snap = useSyncExternalStore(
+    subscribe,
+    () => {
+      const r = activity.reveal();
+      return r ? `${r.id}\u0000${r.upTo}\u0000${r.done ? 1 : 0}` : "";
+    },
+    () => "",
+  );
+  if (everything || !lineId) return "all";
+  const [id, upTo, done] = snap.split("\u0000");
+  if (id !== lineId) return 0;
+  return done === "1" ? "all" : Number(upTo) || 0;
+}
+
+/**
+ * What Saba says, as captions, appearing as she says it (D76): each word as she reaches it (it fades in), the one
+ * she's on marked, nothing before she starts but a "…". When there's no voice to follow (hers is off, motion is Off,
+ * she can't be heard) the whole line comes in at once, word after word at Full. Screen readers get the whole line
+ * once, as it starts, never word by word.
+ */
+function LineCaption({ text, shown, activity, dimmed, header }: { text: string; shown: number | "all"; activity: VoiceActivity; dimmed: boolean; header: ReactNode }) {
   const tokens = useMemo(() => tokenize(text), [text]);
   const subscribe = useCallback((listener: () => void) => activity.subscribe(listener), [activity]);
   const current = useSyncExternalStore(subscribe, () => activity.word(), () => null);
+  const following = shown !== "all";
   return (
     <div className="animate-rise">
       <div className={cx("rounded-2xl bg-black/50 px-4 py-3 transition-opacity duration-page sm:px-5 sm:py-4", dimmed && "opacity-60")}>
         <p className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-indigo-200">{header}</p>
-        <p className={cx("max-h-48 overflow-y-auto font-medium leading-relaxed text-white", text.length > 220 ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
+        <p className="sr-only">{text}</p>
+        <p aria-hidden="true" data-caption="" className={cx("max-h-48 min-h-[1.75em] overflow-y-auto font-medium leading-relaxed text-white", text.length > 220 ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
+          {following && shown === 0 ? <span className="caption-soon mood-dot-busy">…</span> : null}
           {tokens.map((t, i) =>
             "space" in t ? (
-              t.space
-            ) : (
+              following && i > 0 && "start" in (tokens[i - 1] ?? {}) && (tokens[i - 1] as { start: number }).start >= shown ? null : t.space
+            ) : following && t.start >= shown ? null : (
               <span
                 key={i}
-                style={{ "--i": Math.min(t.word, 40) } as React.CSSProperties}
+                style={{ "--i": following ? 0 : Math.min(t.word, 40) } as React.CSSProperties}
                 className={cx(
                   "caption-word",
-                  current && (t.end <= current.start ? "text-white" : t.start >= current.end ? "text-zinc-300" : "caption-now"),
+                  following && current && t.start === current.start && "caption-now",
                 )}
               >
                 {t.text}
@@ -394,6 +428,28 @@ function useRoomTranscript(live: LiveViewState): TranscriptLine[] {
     }
     return out;
   }, [live.turnOrder, live.turns, started]);
+}
+
+/**
+ * Her current line in the transcript appears as she says it too (D76): not there before she starts, what she's said
+ * so far while she speaks (drawn as a line still being heard, so screen readers get it once, when it's whole), all of
+ * it once she's done.
+ */
+function useRevealedTranscript(lines: TranscriptLine[], text: string | null, shown: number | "all"): TranscriptLine[] {
+  return useMemo(() => {
+    if (shown === "all" || !text) return lines;
+    let at = -1;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (lines[i]!.speaker === "interviewer" && lines[i]!.text === text) {
+        at = i;
+        break;
+      }
+    }
+    if (at < 0) return lines;
+    if (shown === 0) return [...lines.slice(0, at), ...lines.slice(at + 1)];
+    const part = text.slice(0, shown).trimEnd();
+    return lines.map((l, i) => (i === at ? { ...l, text: part, final: false } : l));
+  }, [lines, text, shown]);
 }
 
 /**
@@ -463,7 +519,7 @@ export function VideoInterviewRoom({
     const t = window.setTimeout(() => setIntroDone(true), INTRO_MS);
     return () => window.clearTimeout(t);
   }, []);
-  // The shared voice context, asked for as the room opens, so the first tap anywhere unlocks it (mobile Safari).
+  // The decoder for her clips, ready before her first line.
   useEffect(() => voice.activity.prepare?.(), [voice.activity]);
 
   const motion = useMotion();
@@ -476,26 +532,71 @@ export function VideoInterviewRoom({
   // Your voice on the mic: the camera tile's ring, and "listening to you" the moment you speak (the transcript lags).
   // Not while Saba speaks: the mic hears her through the speakers then.
   const talking = useMicActivity(analyser, { enabled: !paused && !voice.speaking && !done, levelRef: selfTile, every: still ? 160 : undefined });
-  const mood: Mood = !q
+  // Her current line (a question, or small talk, a repeat, a check-in…): D76.
+  const line = live.mockLine;
+  const mood: Mood = !line
     ? "joining"
-    : voice.speaking
+    : voice.phase === "speaking"
       ? "speaking"
-      : waitingAfter === q.questionId
-        ? "thinking"
-        : paused
-          ? "paused"
-          : candidateText || talking
-            ? "hearing"
-            : "listening";
+      : voice.phase === "preparing"
+        ? "preparing"
+        : live.mockThinking || (q && waitingAfter === q.questionId)
+          ? "thinking"
+          : paused
+            ? "paused"
+            : candidateText || talking
+              ? "hearing"
+              : "listening";
   const onCoachFailed = useCallback(() => setCoaching(false), []);
-  const lines = useRoomTranscript(live);
+  // Her line appears as she says it: in full only when there's no voice to follow (D76).
+  const everything = muted || still || voice.phase === "blocked" || voice.phase === "unavailable";
+  const shown = useLineShown(voice.activity, line?.id ?? null, everything);
+  const lines = useRevealedTranscript(useRoomTranscript(live), line?.text ?? null, shown);
   const transcriptShown = wide ? sideOpen : drawerOpen;
   const setSide = (open: boolean) => {
     setSideOpen(open);
     safeLocal.setItem(TRANSCRIPT_KEY, open ? "open" : "closed");
   };
   const shortcut = (combo: string | undefined) => (combo ? formatHotkey(combo) : undefined);
-  const intro = !introDone || !q;
+  const intro = !introDone || !line;
+  const { unlock } = voice;
+  // The browser won't play her voice until a tap: any tap or key press anywhere plays it (and the button says so).
+  useEffect(() => {
+    if (voice.phase !== "blocked") return;
+    const go = () => unlock();
+    document.addEventListener("pointerdown", go, { capture: true, once: true });
+    document.addEventListener("keydown", go, { capture: true, once: true });
+    return () => {
+      document.removeEventListener("pointerdown", go, { capture: true });
+      document.removeEventListener("keydown", go, { capture: true });
+    };
+  }, [voice.phase, unlock]);
+  // A short "Mm-hmm." when her reply is slow to start, right after they spoke, never twice in a row.
+  const heardAt = useRef(0);
+  useEffect(() => {
+    if (talking || candidateText) heardAt.current = performance.now();
+  }, [talking, candidateText]);
+  const ackedLast = useRef(false);
+  const ackTurn = useRef(0); // the answer (by when they were last heard) the last chance to acknowledge was for
+  const { ack } = voice;
+  const waiting = live.mockThinking || voice.phase === "preparing";
+  const waitFor = voice.phase === "preparing" ? (line?.id ?? "") : "thinking";
+  useEffect(() => {
+    if (!waiting || muted || done) return;
+    const t = window.setTimeout(() => {
+      if (performance.now() - heardAt.current > ACK_HEARD_WITHIN_MS + ACK_AFTER_MS) return; // not an answer just given
+      // One chance per answer (thinking, then her voice on its way, is one wait), every other answer at most.
+      if (ackTurn.current === heardAt.current) return;
+      ackTurn.current = heardAt.current;
+      if (ackedLast.current) {
+        ackedLast.current = false; // this time she just answers
+        return;
+      }
+      ackedLast.current = true;
+      ack();
+    }, ACK_AFTER_MS);
+    return () => window.clearTimeout(t);
+  }, [waiting, waitFor, muted, done, ack]);
 
   const finishAnswer = () => {
     if (!q) return;
@@ -589,8 +690,8 @@ export function VideoInterviewRoom({
                 <span
                   className={cx(
                     "h-1.5 w-1.5 rounded-full transition-colors duration-quick",
-                    mood === "speaking" ? "bg-indigo-300" : mood === "hearing" ? "bg-zinc-100" : mood === "paused" ? "bg-amber-400" : "bg-zinc-400",
-                    (mood === "thinking" || mood === "joining") && "mood-dot-busy",
+                    mood === "speaking" || mood === "preparing" ? "bg-indigo-300" : mood === "hearing" ? "bg-zinc-100" : mood === "paused" ? "bg-amber-400" : "bg-zinc-400",
+                    (mood === "thinking" || mood === "joining" || mood === "preparing") && "mood-dot-busy",
                   )}
                 />
                 <span key={mood} className="animate-fade-in">
@@ -608,30 +709,60 @@ export function VideoInterviewRoom({
                     <p className="text-xs text-zinc-400">Your camera stays on this device.</p>
                   </div>
                 ) : (
-                  <VoiceVisualizer
-                    mood={mood}
-                    voice={voice.activity}
-                    mic={analyser}
-                    size={short || (!wide && drawerOpen) ? "sm" : "lg"}
-                    className="animate-scale-in"
-                  />
+                  <div className="flex flex-col items-center gap-3">
+                    <VoiceVisualizer
+                      mood={mood}
+                      voice={voice.activity}
+                      mic={analyser}
+                      size={short || (!wide && drawerOpen) ? "sm" : "lg"}
+                      className="animate-scale-in"
+                    />
+                    {voice.phase === "blocked" && (
+                      // The browser won't play sound until a tap (autoplay): say so and offer one, never stay silent.
+                      <div className="flex flex-col items-center gap-1.5 px-4 text-center animate-rise">
+                        <button
+                          type="button"
+                          onClick={unlock}
+                          className={cx(
+                            "flex items-center gap-2 rounded-full bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-[background-color,transform] duration-quick hover:bg-indigo-700 motion-ok:active:scale-[0.96]",
+                            focusRing,
+                          )}
+                        >
+                          <Volume2 className="h-4 w-4" aria-hidden />
+                          Tap to hear {INTERVIEWER_NAME}
+                        </button>
+                        <p className="text-xs text-zinc-300" role="status">
+                          Your browser paused her voice until you tap. Her words are below.
+                        </p>
+                      </div>
+                    )}
+                    {voice.phase === "unavailable" && !muted && (
+                      <p className="max-w-xs px-4 text-center text-xs text-zinc-300 animate-rise" role="status">
+                        {INTERVIEWER_NAME}'s voice is unavailable on this device right now. Read her questions below and
+                        answer out loud as usual.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
-              {captions && q && !(!wide && drawerOpen) && (
-                // The question is announced once: by the transcript when it's showing, by the caption when it isn't.
+              {captions && line && !(!wide && drawerOpen) && (
+                // The line is announced once: by the transcript when it's showing, by the caption when it isn't.
                 <div className="px-3 pb-3 sm:px-5 sm:pb-5" aria-live={transcriptShown ? "off" : "polite"}>
-                  <QuestionCaption
-                    key={q.questionId}
-                    text={q.text}
+                  <LineCaption
+                    key={line.id}
+                    text={line.text}
+                    shown={shown}
                     activity={voice.activity}
                     dimmed={mood === "thinking"}
                     header={
                       <>
                         {INTERVIEWER_NAME}
-                        <span className="font-normal text-zinc-300 sm:hidden">
-                          · Question {q.index} of {q.total}
-                          {q.isFollowUp ? " · follow-up" : ""}
-                        </span>
+                        {q && line.kind === "question" ? (
+                          <span className="font-normal text-zinc-300 sm:hidden">
+                            · Question {q.index} of {q.total}
+                            {q.isFollowUp ? " · follow-up" : ""}
+                          </span>
+                        ) : null}
                       </>
                     }
                   />

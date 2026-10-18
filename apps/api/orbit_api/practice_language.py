@@ -48,14 +48,17 @@ _INTERVIEWER: dict[str, str] = {
 
 _REPORT: dict[str, str] = {
     "hi": ("\nThe interview was in Hindi. Write every text value (summary, topics, follow-ups, weak areas, "
-           "preparation, strengths, improvements, practice, feedback, missing_points, better) in Hindi, in Devanagari "
-           "script, keeping technical words in English. Keep the JSON keys and scores exactly as specified. Grade the "
-           "same rubric as in English; an answer in Hindi, English or a mix is never marked down for its language."),
+           "preparation, strengths, improvements, practice, top_practice, feedback, missing_points, improvement, "
+           "the rubric's reasons, better) in Hindi, in Devanagari script, keeping technical words in English. A "
+           "rubric quote stays exactly as the candidate said it, in their own words and script. Keep the JSON keys "
+           "and scores exactly as specified. Grade the same rubric as in English; an answer in Hindi, English or a "
+           "mix is never marked down for its language."),
     "hinglish": ("\nThe interview was in Hinglish. Write every text value (summary, topics, follow-ups, weak areas, "
-                 "preparation, strengths, improvements, practice, feedback, missing_points, better) in Hinglish, in "
-                 "Latin script, the way the candidate spoke. Keep the JSON keys and scores exactly as specified. "
-                 "Grade the same rubric as in English; an answer in Hindi, English or a mix is never marked down for "
-                 "its language."),
+                 "preparation, strengths, improvements, practice, top_practice, feedback, missing_points, "
+                 "improvement, the rubric's reasons, better) in Hinglish, in Latin script, the way the candidate "
+                 "spoke. A rubric quote stays exactly as the candidate said it. Keep the JSON keys and scores exactly "
+                 "as specified. Grade the same rubric as in English; an answer in Hindi, English or a mix is never "
+                 "marked down for its language."),
 }
 
 
@@ -72,6 +75,11 @@ def report_instruction(language: str) -> str:
 # sized for English cuts a Hindi review's JSON off, and then there's no review at all.
 _TOKEN_FACTOR: dict[str, float] = {"hi": 2.5, "hinglish": 1.6}
 MAX_OUTPUT_TOKENS = 8_000
+
+
+def token_factor(language: str) -> float:
+    """How many more tokens the same text takes in the round's language than in English."""
+    return _TOKEN_FACTOR.get(language, 1.0)
 
 
 def max_tokens(english: int, language: str) -> int:

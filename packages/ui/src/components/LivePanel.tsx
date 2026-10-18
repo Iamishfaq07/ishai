@@ -6,6 +6,7 @@ import {
   type AnswerRating,
   type AnswerSize,
   type CodingLanguage,
+  type MockVoiceEvent,
 } from "@orbit/types";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -16,7 +17,7 @@ import { DEFAULT_HOTKEYS, useHotkeys, type HotkeyMap } from "../live/hotkeys";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { historyLabel, useAnswerHistory, type AnswerHistory } from "../live/useAnswerHistory";
 import { useInterviewerVoice, voiceLanguage } from "../live/useInterviewerVoice";
-import type { NaturalVoiceSource } from "../live/naturalVoice";
+import type { NaturalVoiceSource, VoicePace } from "../live/naturalVoice";
 import { useKeyPointProgress } from "../live/useKeyPointProgress";
 import { useReadAloud } from "../live/useReadAloud";
 import { readAloudLanguage, scriptLang } from "../live/languages";
@@ -156,14 +157,19 @@ export interface LivePanelProps {
   /** Mock interview session: the AI interviewer's questions are shown and spoken instead of suggested answers. */
   mockInterview?: boolean;
   /**
-   * Orbit's own voice started/stopped (the mock interviewer, or "Read aloud"). Stop sending audio while it plays,
-   * so the speakers are never transcribed as part of the interview.
+   * Orbit's own voice can be heard / has stopped (the mock interviewer, or "Read aloud"). Hold the audio back while
+   * it plays, so the speakers are never transcribed as part of the interview (not while her voice is on its way:
+   * D76).
    */
   onInterviewerSpeaking?: (speaking: boolean) => void;
+  /** The candidate talked over Orbit's voice: what the page held back meanwhile (their first words) goes out now. */
+  onBargeIn?: () => void;
   /** The interviewer's natural voice (useNaturalVoiceSource); null or absent = the device's voice. */
   naturalVoice?: NaturalVoiceSource | null;
   /** A mock's practice language ("en", "hi", "hinglish"): which device voice reads the questions. */
   practiceLanguage?: string;
+  /** The interviewer's speaking pace (Settings, the video interview's setup). */
+  voicePace?: VoicePace;
   /** What live answers are written in (the session's answer language, else its interview language): which device
    *  voice reads them aloud. Absent: English. */
   answerLanguage?: string;
@@ -190,26 +196,38 @@ export function LivePanel(props: LivePanelProps) {
   const paused = live.state === "paused";
   const answer = selectDisplayedAnswer(live);
   const question = selectDisplayedQuestion(live);
+  // The line the interviewer says now: a question, or (the video interview, D76) small talk, a repeat, a check-in…
   const mockQuestion = useMemo(
-    () => (live.mock && !live.mockCompleted
-      ? { id: live.mock.questionId, text: live.mock.text, ...(live.mock.speaker ? { speaker: live.mock.speaker.persona } : {}) }
+    () => (live.mockLine && !live.mockCompleted
+      ? { id: live.mockLine.id, text: live.mockLine.text, ...(live.mockLine.speaker ? { speaker: live.mockLine.speaker } : {}) }
       : null),
-    [live.mock, live.mockCompleted],
+    [live.mockLine, live.mockCompleted],
   );
   const [voiceMuted, setVoiceMuted] = useState(() => safeLocal.getItem(MUTE_KEY) === "1");
   const changeMuted = useCallback((m: boolean) => {
     setVoiceMuted(m);
     safeLocal.setItem(MUTE_KEY, m ? "1" : "0");
   }, []);
+  const { mockVoice } = actions;
+  const voiceEvent = useCallback(
+    (event: MockVoiceEvent, lineId: string, detail?: string) => {
+      if (props.mockInterview) mockVoice(event, lineId, detail);
+    },
+    [props.mockInterview, mockVoice],
+  );
   const voice = useInterviewerVoice(mockQuestion, {
     enabled: Boolean(props.mockInterview) && !voiceMuted,
     natural: props.naturalVoice ?? null,
     lang: voiceLanguage(props.practiceLanguage),
+    pace: props.voicePace ?? "normal",
+    onEvent: voiceEvent,
   });
-  const { onInterviewerSpeaking } = props;
+  const { onInterviewerSpeaking, onBargeIn } = props;
   const reader = useReadAloud(readAloudLanguage(props.answerLanguage, answer?.answer.direct_answer));
+  // Heard now (the mic is held back) vs. on, from the request to the end (talking over her stops her).
+  const selfAudible = voice.audible || reader.status === "playing";
   const selfSpeaking = voice.speaking || reader.status === "playing";
-  useEffect(() => onInterviewerSpeaking?.(selfSpeaking), [selfSpeaking, onInterviewerSpeaking]);
+  useEffect(() => onInterviewerSpeaking?.(selfAudible), [selfAudible, onInterviewerSpeaking]);
   // Barge-in: talking over the AI's voice stops it (speech synthesis can't be turned down mid-sentence), so the mic
   // goes back to the transcriber at once, and the core shows an emerald listening ring for a moment.
   const [heard, setHeard] = useState(false);
@@ -217,8 +235,11 @@ export function LivePanel(props: LivePanelProps) {
     active: selfSpeaking,
     analyser: props.analyser,
     amplitude: props.audioAmplitude,
+    // Her own level, so her voice coming back through the speakers is never taken for the candidate (D76).
+    output: voice.speaking ? () => voice.activity.level() : undefined,
     onBargeIn: () => {
-      voice.stop();
+      onBargeIn?.();
+      voice.interrupt();
       reader.stop();
       setHeard(true);
     },
@@ -379,6 +400,17 @@ export function LivePanel(props: LivePanelProps) {
     };
   }, [actions, againText, againVia, answerSize, followLive]);
   const mockStt = live.providers.stt?.state === "mock";
+  // Dev and test servers only (the mock speech-to-text, which production refuses): a page hook that plays one of the
+  // server's scripted conversations, so the e2e tests can "say" things to the video interviewer (no buttons there).
+  const { simulate } = actions;
+  useEffect(() => {
+    if (!mockStt) return;
+    const w = window as unknown as { __orbitDevSimulate?: (fixture: string, speed?: number) => void };
+    w.__orbitDevSimulate = (fixture, speed = 4) => simulate(fixture, speed);
+    return () => {
+      delete w.__orbitDevSimulate;
+    };
+  }, [mockStt, simulate]);
 
   if (props.videoInterview && props.mockInterview) {
     return (

@@ -3,6 +3,7 @@ server-side, counts characters against a daily allowance, and fails as JSON (so 
 
 import json
 import uuid
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
@@ -40,7 +41,7 @@ def test_without_a_key_the_device_voice_is_used(client: TestClient, monkeypatch:
     h = _account(client)
     monkeypatch.setattr(voice, "get_tts_provider", lambda: None)
     s = client.get("/v1/voice", headers=h).json()
-    assert s == {"available": False, "voices": [], "default_voice": "us", "chars_left": 0}
+    assert s == {"available": False, "voices": [], "default_voice": "vesta", "chars_left": 0}
     assert client.post("/v1/voice/speak", headers=h, json={"text": "Hi"}).status_code == 503
 
 
@@ -49,13 +50,17 @@ def test_speaks_through_the_api_and_counts_characters(client: TestClient, monkey
     seen: list[httpx.Request] = []
     _deepgram(monkeypatch, seen=seen)
     s = client.get("/v1/voice", headers=h).json()
-    assert s["available"] is True and [v["model"] for v in s["voices"]] == ["aura-2-thalia-en"]  # one real voice
+    # A small choice of real Aura-2 voices (D76): two women's, two men's, Vesta first.
+    assert s["available"] is True and [v["model"] for v in s["voices"]] == [
+        "aura-2-vesta-en", "aura-2-aurora-en", "aura-2-pluto-en", "aura-2-arcas-en"]
+    assert s["default_voice"] == "vesta"
     assert s["chars_left"] == get_settings().tts_daily_chars
-    r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "us"})
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "arcas"})
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == "audio/mpeg" and r.content == AUDIO
     req = seen[0]
-    assert req.url.params["model"] == "aura-2-thalia-en" and req.url.params["encoding"] == "mp3"
+    assert req.url.params["model"] == "aura-2-arcas-en" and req.url.params["encoding"] == "mp3"
+    assert "speed" not in req.url.params and r.headers["x-orbit-speed"] == "1"
     assert req.headers["authorization"] == "Token dg-secret-key"
     assert json.loads(req.content) == {"text": "Tell me about yourself."}  # whitespace tidied, nothing else sent
     assert "dg-secret-key" not in r.text
@@ -74,6 +79,27 @@ def test_the_daily_allowance_and_limits(client: TestClient, monkeypatch: pytest.
     # A voice saved by an older client (uk, au) gets the one voice instead of failing.
     old_choice = client.post("/v1/voice/speak", headers=h, json={"text": "hi", "voice": "uk"})
     assert old_choice.status_code == 200
+
+
+def test_a_pace_goes_to_deepgram_or_falls_back_to_the_normal_one(client: TestClient,
+                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    h = _account(client)
+    seen: list[httpx.Request] = []
+    _deepgram(monkeypatch, seen=seen)
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "Tell me about yourself.", "speed": 0.9})
+    assert r.status_code == 200 and seen[0].url.params["speed"] == "0.9" and r.headers["x-orbit-speed"] == "0.9"
+    assert client.post("/v1/voice/speak", headers=h, json={"text": "Hi", "speed": 3}).status_code == 422
+
+    # A voice that won't take a pace: the normal one, said so, and the client paces the playback itself.
+    def handle(request: httpx.Request) -> httpx.Response:
+        if "speed" in request.url.params:
+            return httpx.Response(400, json={"err_msg": "speed not supported"})
+        return httpx.Response(200, content=AUDIO, headers={"content-type": "audio/mpeg"})
+
+    provider = tts.DeepgramTTS("dg-secret-key", transport=httpx.MockTransport(handle))
+    monkeypatch.setattr(voice, "get_tts_provider", lambda: provider)
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "Tell me about yourself.", "speed": 1.15})
+    assert r.status_code == 200 and r.content == AUDIO and r.headers["x-orbit-speed"] == "1"
 
 
 def test_a_provider_failure_is_a_json_error_and_free(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -174,3 +200,42 @@ def test_two_requests_at_once_cant_both_spend_the_last_characters(client: TestCl
         return sorted(await asyncio.gather(*tasks))
 
     assert client.portal.call(race) == [200, 429]  # type: ignore[union-attr]
+
+
+async def test_a_kept_open_connection_the_provider_closed_is_tried_once_more() -> None:
+    import httpx
+
+    from orbit_api.providers.tts import DeepgramTTS
+
+    calls: list[httpx.Request] = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append(req)
+        if len(calls) == 1:
+            raise httpx.RemoteProtocolError("Server disconnected without sending a response.", request=req)
+        return httpx.Response(200, content=b"ID3 audio")
+
+    tts = DeepgramTTS("k", transport=httpx.MockTransport(handler))
+    assert b"".join([c async for c in tts.stream("Hi.", "aura-2-vesta-en")]) == b"ID3 audio" and len(calls) == 2
+
+
+async def test_a_clip_given_up_on_closes_the_providers_response_at_once() -> None:
+    import httpx
+
+    from orbit_api.providers.tts import DeepgramTTS
+
+    closed: list[bool] = []
+
+    class Body(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            for part in (b"one", b"two", b"three"):
+                yield part
+
+        async def aclose(self) -> None:
+            closed.append(True)
+
+    tts = DeepgramTTS("k", transport=httpx.MockTransport(lambda req: httpx.Response(200, stream=Body())))
+    chunks = tts.stream("Hello there.", "aura-2-vesta-en")
+    assert await anext(chunks) == b"one"
+    await chunks.aclose()
+    assert closed

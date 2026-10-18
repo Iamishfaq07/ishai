@@ -444,12 +444,44 @@ export interface ReviewItem {
   /** 1–5, or null when the question wasn't answered. */
   score: number | null;
   feedback: string;
-  /** A stronger way to say it (first person). */
+  /** A stronger way to say it (first person), built only from what was said and the documents: [placeholders]
+   *  stand for facts the candidate fills in. */
   better: string;
   /** How long the answer ran, first word to last (null when unanswered or unknown; absent on older reports). */
   answer_s?: number | null;
   /** Words in the answer (absent on older reports). */
   words?: number;
+  /** How it was answered, criterion by criterion (absent on older reports; empty when unanswered). */
+  rubric?: Partial<Record<RubricCriterion, RubricMark>>;
+  /** The single most useful change for next time, one sentence ("" when unanswered; absent on older reports). */
+  improvement?: string;
+  /** This answer's pace, fillers and long pauses, from its transcript timings; null without audio or speech. */
+  speaking?: AnswerSpeaking | null;
+}
+
+export type RubricCriterion = "structure" | "specifics" | "relevance" | "clarity" | "conciseness";
+
+export interface RubricMark {
+  /** 1–5, or null when it couldn't be judged. */
+  score: number | null;
+  reason: string;
+  /** The candidate's own words that show it (checked against the transcript by the server), or null. */
+  quote: string | null;
+}
+
+export interface AnswerSpeaking {
+  speaking_seconds: number;
+  words_per_minute: number;
+  fillers: number;
+  top_fillers: string[];
+  /** Silences of 3 s or more between two of the answer's lines. */
+  long_pauses: number;
+}
+
+/** One of the review's top three things to practise, most useful first, with the questions (1-based) that showed it. */
+export interface TopPractice {
+  practice: string;
+  questions: number[];
 }
 
 /** GET /v1/practice/queue — spaced repetition: questions answered weakly in a review, due again until answered well. */
@@ -477,6 +509,8 @@ export interface SessionReview {
   strengths: string[];
   improvements: string[];
   practice: string[];
+  /** The top three to practise, ranked (absent or empty on older reports: `practice` is shown instead). */
+  top_practice?: TopPractice[];
   items: ReviewItem[];
 }
 

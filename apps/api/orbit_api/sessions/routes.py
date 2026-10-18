@@ -1121,6 +1121,7 @@ async def live(ws: WebSocket, session_id: str, ticket: str = "") -> None:
             learned=await learned_preferences(db, user_id),
             company=company,
             country=user.country,
+            candidate_name=user.name,
         )
         settings = LiveSettings(auto_answer=row.auto_answer, length=row.length,
                                 style=row.style)

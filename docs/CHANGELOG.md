@@ -1,5 +1,30 @@
 # Implementation log
 
+## Saba talks like a person on a call (2026-10-18)
+
+Saba, the AI video interviewer, is heard or says why not, her words appear as she says them, and the call goes like
+a conversation (DECISIONS D76). Found with headless Chrome measuring her output on the page, then on a real call with
+the real speech-to-text, voice and AI model and a synthetic candidate.
+
+- **Never silent**: her own voice from the speakers no longer stops her; her audio never goes through Web Audio (a
+  suspended context made it silent); "Tap to hear Saba" when the browser won't play without a tap; natural voice,
+  then the device's, then a note; a stalled clip is restarted; each is logged to the API.
+- **In sync**: her line appears word by word as she says it, in the caption and the transcript ("about to speak…"
+  while her voice is on its way); in full when her voice is off or Motion is Off; screen readers hear it once.
+- **Turns**: a turn ends when the candidate's voice stops (the server hears it in the mic audio), not on the
+  transcriber's bursts, and a short answer gets longer to go on; talking over her stops her within about half a
+  second, and what they said meanwhile is kept; the mic isn't held back while her voice is on its way; a line cut off
+  before a word was heard is taken back (and never in the transcript); her reply comes in growing pieces with a
+  cached "Mm-hmm." when it's slow.
+- **Conversation**: hello with their first name and small talk, the plan, a specific reaction before each question,
+  repeat, rephrase or a moment when asked, a check-in after a long silence, a hint after "I don't know", "Do you have
+  any questions for me?" answered honestly, and a goodbye.
+- **Voices**: Vesta (default), Aurora, Pluto and Arcas, picked in the setup with a sample and a pace; one connection
+  to Deepgram kept open; text shaped for speech; even loudness.
+- **Review**: a rubric per answer quoting the candidate, one improvement, a stronger answer from their own words with
+  placeholders, speaking stats, the top three to practise and Practise again; its output budget now fits it (a real
+  review had been cut off mid-JSON).
+
 ## The desktop app, redesigned, and its installer (2026-10-18)
 
 The Windows app and its installer, redesigned (DECISIONS D77; DESIGN.md "The desktop app"; WINDOWS_RELEASE.md "The
@@ -73,7 +98,6 @@ Microsoft signs the MSIX (DECISIONS D78; owner guide `docs/MICROSOFT_STORE.md`).
 - **Tested:**
   - web: vitest (the badge is off by default and renders nothing; the direct-install link once live), tsc, eslint;
   - the scripts: an empty identity fails with the field names; `-Test` and Store packages pass every check.
-
 
 ## Product audit: every product driven end to end, and what it found (2026-10-18)
 

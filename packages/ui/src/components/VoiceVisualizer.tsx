@@ -6,7 +6,7 @@ import type { VoiceActivity } from "../live/voiceActivity";
 import { cx } from "./cx";
 
 /** What the interviewer is doing on the call (the video room's mood). */
-export type VoiceMood = "joining" | "speaking" | "listening" | "hearing" | "thinking" | "paused";
+export type VoiceMood = "joining" | "preparing" | "speaking" | "listening" | "hearing" | "thinking" | "paused";
 
 /** How the visualizer moves: the app's motion level, or Off / the OS asking for less: a still meter ("static"). */
 export type VoiceMotion = "full" | "reduced" | "static";
@@ -21,6 +21,8 @@ const LOOK: Record<VoiceMood, { bar: Ink; barAlpha: number; disc: Ink; discAlpha
   hearing: { bar: "voice", barAlpha: 0.92, disc: "voice", discAlpha: 0.05 },
   thinking: { bar: "accentSoft", barAlpha: 0.5, disc: "accent", discAlpha: 0.09 },
   joining: { bar: "accentSoft", barAlpha: 0.6, disc: "accent", discAlpha: 0.07 },
+  // About to speak (her line is on its way, D76): a slow breath in, in her colour.
+  preparing: { bar: "accentSoft", barAlpha: 0.75, disc: "accent", discAlpha: 0.1 },
   paused: { bar: "dim", barAlpha: 0.6, disc: "dim", discAlpha: 0.07 },
 };
 
@@ -122,6 +124,9 @@ function VoiceCanvas({
     let barAlpha = look.barAlpha;
     let discAlpha = look.discAlpha;
     let loud = 0;
+    // A listening nod (D76): a soft pulse on each new syllable of the candidate's voice.
+    let nod = 0;
+    let lastMic = 0;
     let moodNow = input.current.mood;
     let moodSince = performance.now();
     let width = 0;
@@ -206,6 +211,12 @@ function VoiceCanvas({
             target = gentle ? 0.07 : 0.06 + 0.13 * glow;
             break;
           }
+          case "preparing": {
+            // A breath in, every 1.6 s: the bars lift together, a little more in the middle.
+            const breath = 0.5 - 0.5 * Math.cos((2 * Math.PI * t) / 1.6);
+            target = 0.05 + (gentle ? 0.03 : 0.08) * breath * (1 - 0.45 * (k / half));
+            break;
+          }
           case "joining": {
             const rise = gentle ? 1 : ease((since - k * 32) / 480);
             target = rise * idle(k, t, 0.06);
@@ -220,6 +231,11 @@ function VoiceCanvas({
         glows[i] = follow(glows[i]!, glow, dt, 120, 220);
       }
       loud = follow(loud, lvl, dt, 60, 260);
+      if (m === "hearing") {
+        if (lvl - lastMic > 0.12 && lastMic < 0.4) nod = 1;
+        lastMic = follow(lastMic, lvl, dt, 40, 120);
+      }
+      nod *= Math.exp(-dt / 240);
       const goal = LOOK[m];
       const tint = (from: Rgb, to: Rgb) => {
         for (let c = 0; c < 3; c++) from[c] = follow(from[c]!, to[c]!, dt, 220, 220);
@@ -229,7 +245,7 @@ function VoiceCanvas({
       // Joining at Gentle fades the bars in instead of raising them.
       const fadeIn = m === "joining" && gentle ? ease(since / 400) : 1;
       barAlpha = follow(barAlpha, goal.barAlpha * fadeIn, dt, 220, 220);
-      discAlpha = follow(discAlpha, goal.discAlpha * (1 + (gentle ? 0.3 : 0.5) * loud), dt, 120, 300);
+      discAlpha = follow(discAlpha, goal.discAlpha * (1 + (gentle ? 0.3 : 0.5) * loud + 0.6 * nod), dt, 60, 300);
 
       // Draw: the presence disc, its hairline, then the bars, vertically centred so they go up and down.
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -237,7 +253,7 @@ function VoiceCanvas({
       const cx0 = width / 2;
       const cy0 = height / 2;
       const r0 = Math.min(width, height) / 2 - 1;
-      const r = r0 * (gentle ? 0.97 : 0.93 + 0.07 * loud);
+      const r = r0 * (gentle ? 0.97 : 0.93 + 0.07 * loud + 0.03 * nod);
       const rgba = (c: Rgb, alpha: number) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${Math.max(0, Math.min(1, alpha))})`;
       g.beginPath();
       g.arc(cx0, cy0, r, 0, Math.PI * 2);

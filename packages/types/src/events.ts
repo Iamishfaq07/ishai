@@ -160,6 +160,11 @@ export interface ClientEventMap {
   "mock.next": Record<string, never>;
   /** Mock interview: an answer typed instead of spoken (no microphone, or speech-to-text is down). 1–4000 chars. */
   "mock.answer": { text: string };
+  /**
+   * The AI video interview: what this device's voice did with one of the interviewer's lines (a question's id or a
+   * `mock.say` line's): started or finished saying it, the candidate talked over it, or it couldn't be heard.
+   */
+  "mock.voice": { event: MockVoiceEvent; line_id?: string | null; detail?: string | null };
   "answer.pin": { answer_id: string; pinned: boolean };
   "answer.clear": Record<string, never>;
   /** Stop writing the answer on screen, keeping what's there. */
@@ -170,6 +175,9 @@ export interface ClientEventMap {
   /** Mock STT only. speed: 0.5–50 (default 1). */
   "dev.simulate": { fixture: string; speed?: number };
 }
+export type MockVoiceEvent = "started" | "finished" | "interrupted" | "blocked" | "stalled" | "unavailable" | "fallback";
+/** The AI video interviewer's lines that aren't questions (DECISIONS D76). */
+export type MockSayKind = "smalltalk" | "repeat" | "rephrase" | "wait" | "checkin" | "closing" | "answer" | "goodbye";
 export type ClientEventType = keyof ClientEventMap;
 export type ClientEvent = {
   [K in ClientEventType]: Envelope<K, ClientEventMap[K]>;
@@ -277,6 +285,10 @@ export interface ServerEventMap {
   };
   /** Mock interview finished (planned questions or time used up); session.ended follows. */
   "mock.completed": MockRoundSummary;
+  /** The AI video interviewer says something that isn't a question: small talk, a repeat, a check-in, a goodbye. */
+  "mock.say": { say_id: string; text: string; kind: MockSayKind };
+  /** The AI video interviewer is writing her next line (the answer was judged complete). */
+  "mock.thinking": Record<string, never>;
   /** Live-minute quota (server-enforced): a warning when few minutes remain; at the limit the session ends. */
   /** `reason`: which limit — this month's allowance ("monthly") or this session's maximum length ("session"). */
   "usage.status": { minutes_remaining: number; limit_reached: boolean; reason?: "monthly" | "session" };
@@ -334,6 +346,8 @@ const SERVER_EVENT_TYPES: ReadonlySet<string> = new Set<ServerEventType>([
   "usage.status",
   "mock.question",
   "mock.completed",
+  "mock.say",
+  "mock.thinking",
   "error",
 ]);
 

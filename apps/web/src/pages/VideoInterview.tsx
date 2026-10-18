@@ -6,6 +6,7 @@ import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Textarea } f
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { VoicePicker } from "./InterviewerVoiceCard";
 import type { LiveLaunchState } from "./SessionSetup";
 
 type Source = "job" | "topic" | "resume";
@@ -282,9 +283,12 @@ export function VideoInterviewPage() {
           <DeviceCheck onReady={setDevicesOk} />
           <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-600 dark:text-zinc-300">
             <li>Sit facing a light, with the camera at eye level.</li>
-            <li>{INTERVIEWER_NAME} speaks each question; answer out loud, then press "I'm done answering" (or pause for a moment).</li>
+            <li>{INTERVIEWER_NAME} talks with you like an interviewer would: answer out loud, and pause when you're done (or press "I'm done answering"). Ask her to repeat or rephrase anytime.</li>
             <li>Use headphones if you can, so {INTERVIEWER_NAME}'s voice isn't picked up as your answer.</li>
           </ul>
+          <div className="border-t border-zinc-200 pt-4 dark:border-white/10">
+            <VoicePicker compact />
+          </div>
           {error && <ErrorNote>{error}</ErrorNote>}
           <div className="flex flex-wrap justify-between gap-2">
             <Button variant="ghost" onClick={() => setStep("setup")}>

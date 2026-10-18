@@ -1,13 +1,14 @@
 import { useState } from "react";
-import type { DepthDimension, DepthScores, ReviewItem, SessionReview as Review } from "@orbit/types";
-import { ArrowUpRight, Bookmark, BookmarkCheck, CircleCheck, RotateCcw, Target, type LucideIcon } from "../icons";
+import type { AnswerSpeaking, DepthDimension, DepthScores, ReviewItem, SessionReview as Review } from "@orbit/types";
+import { ArrowUpRight, Bookmark, BookmarkCheck, ChevronDown, CircleCheck, RotateCcw, Target, type LucideIcon } from "../icons";
 import { clock, reviewLength } from "../live/answerPace";
-import { cx } from "./cx";
+import { cx, focusRing } from "./cx";
 import { useCountUp } from "./Reveal";
+import { paceNote, rubricRows, splitPlaceholders, topPractice } from "./reviewText";
 import { CopilotScene } from "./scenes/CopilotScene";
 import { PracticeScene } from "./scenes/PracticeScene";
 import { WorkingScene } from "./scenes/WorkingScene";
-import { Button, Card, EmptyState, ErrorNote, Textarea } from "./ui";
+import { Badge, Button, Card, EmptyState, ErrorNote, Textarea } from "./ui";
 
 export interface SessionReviewProps {
   review: Review | null | undefined;
@@ -130,7 +131,8 @@ export function SessionReview({ review, ended, empty = false, answers = 0, onGen
               {answered} of {review.items.length} question{review.items.length === 1 ? "" : "s"} answered and scored
             </p>
           </div>
-          {onDrill && weak > 0 && (
+          {/* The drill lives with the top three to practise; here only when there's no such list to put it in. */}
+          {onDrill && weak > 0 && topPractice(review).length === 0 && (
             <Button size="sm" onClick={() => void drill()} disabled={busy}
                     title="A short mock round: your weakest questions again, with follow-ups, then a 30-second version">
               Drill {weak} weak question{weak === 1 ? "" : "s"}
@@ -147,11 +149,12 @@ export function SessionReview({ review, ended, empty = false, answers = 0, onGen
         )}
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Bullets title="What went well" tone="emerald" items={review.strengths} />
         <Bullets title="To improve" tone="amber" items={review.improvements} />
-        <Bullets title="Practice next" tone="indigo" items={review.practice} />
       </div>
+
+      <TopPractice review={review} weak={weak} busy={busy} onDrill={onDrill ? () => void drill() : undefined} />
 
       <div className="space-y-3">
         {review.items.map((item, i) => (
@@ -160,6 +163,63 @@ export function SessionReview({ review, ended, empty = false, answers = 0, onGen
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * The top three things to practise, most useful first, each with the questions that showed it (links to their
+ * cards), and "Practise these again": the re-drill of the weak questions (a short mock round with follow-ups).
+ */
+function TopPractice({ review, weak, busy, onDrill }: { review: Review; weak: number; busy: boolean; onDrill: (() => void) | undefined }) {
+  const items = topPractice(review);
+  if (!items.length) return null;
+  const t = TONE.indigo;
+  const Icon = t.icon;
+  return (
+    <Card className={cx("relative animate-fade-up overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-0.5", t.edge)}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <span className={cx("flex h-7 w-7 items-center justify-center rounded-lg ring-1", t.chip)} aria-hidden="true">
+            <Icon className="h-4 w-4" />
+          </span>
+          {review.top_practice?.length ? "Top 3 to practise" : "Practice next"}
+        </h2>
+        {onDrill && weak > 0 && (
+          <Button size="sm" onClick={onDrill} disabled={busy}
+                  title="A short mock round: your weakest questions again, with follow-ups, then a 30-second version">
+            <RotateCcw className="h-3.5 w-3.5" aria-hidden /> Practise these again
+          </Button>
+        )}
+      </div>
+      <ol className="mt-3 space-y-2">
+        {items.map((it, i) => (
+          <li key={i} className="flex gap-3 text-sm">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[11px] font-semibold tabular-nums text-white" aria-hidden="true">
+              {i + 1}
+            </span>
+            <span className="min-w-0 flex-1 text-zinc-800 dark:text-zinc-200">
+              {it.practice}
+              {it.questions.length > 0 && (
+                <span className="ml-2 inline-flex flex-wrap gap-1 align-middle">
+                  {it.questions.map((q) => (
+                    <a key={q} href={`#review-q${q}`}
+                       className={cx("rounded-md bg-zinc-100 px-1.5 py-px text-xs font-medium text-zinc-700 hover:bg-zinc-200 dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/15", focusRing)}>
+                      Q{q}
+                      <span className="sr-only"> (go to question {q})</span>
+                    </a>
+                  ))}
+                </span>
+              )}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {onDrill && weak > 0 && (
+        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+          Practise these again: {weak} weak question{weak === 1 ? "" : "s"} out loud, with a follow-up on what was missing.
+        </p>
+      )}
+    </Card>
   );
 }
 
@@ -215,17 +275,111 @@ function Bullets({ title, items, tone }: { title: string; items: string[]; tone:
   );
 }
 
-function Pips({ score }: { score: number | null }) {
+function Pips({ score, small = false }: { score: number | null; small?: boolean }) {
   return (
-    <span role="img" className="flex items-center gap-1" aria-label={score ? `${score} out of 5` : "Not scored"}>
+    <span role="img" className={cx("flex items-center", small ? "gap-0.5" : "gap-1")} aria-label={score ? `${score} out of 5` : "Not scored"}>
       {[1, 2, 3, 4, 5].map((n) => (
         <span
           key={n}
           aria-hidden="true"
-          className={cx("h-2 w-2 rounded-full", score && n <= score ? "bg-indigo-500" : "bg-zinc-200 dark:bg-zinc-700")}
+          className={cx("rounded-full", small ? "h-1.5 w-1.5" : "h-2 w-2", score && n <= score ? "bg-indigo-500" : "bg-zinc-200 dark:bg-zinc-700")}
         />
       ))}
     </span>
+  );
+}
+
+/**
+ * How the answer was given, criterion by criterion (structure, specifics, relevance, clarity, conciseness): each a
+ * 1–5 mark. Open one for the reason and the candidate's own words that show it (readable on a phone: no tooltips).
+ */
+function AnswerRubric({ item }: { item: ReviewItem }) {
+  const rows = rubricRows(item.rubric);
+  if (!rows.length) return null;
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">How you answered</p>
+      <ul className="mt-1 grid gap-x-6 sm:grid-cols-2">
+        {rows.map(([label, mark]) => {
+          const head = (
+            <>
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">{label}</span>
+              <span className="ml-auto flex items-center gap-2">
+                <Pips score={mark.score} small />
+                <span className="w-7 text-right tabular-nums text-zinc-500 dark:text-zinc-400" aria-hidden="true">
+                  {mark.score ? `${mark.score}/5` : "–"}
+                </span>
+              </span>
+            </>
+          );
+          return (
+            <li key={label} className="border-b border-zinc-100 dark:border-white/5">
+              {mark.reason || mark.quote ? (
+                <details className="group">
+                  <summary className={cx("flex cursor-pointer list-none items-center gap-2 rounded py-1.5 text-xs [&::-webkit-details-marker]:hidden", focusRing)}>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0 text-zinc-400 transition-transform duration-quick group-open:rotate-180" aria-hidden />
+                    {head}
+                  </summary>
+                  <div className="pb-2 pl-5 text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+                    {mark.reason}
+                    {mark.quote && <q className="mt-0.5 block italic text-zinc-700 dark:text-zinc-200">{mark.quote}</q>}
+                  </div>
+                </details>
+              ) : (
+                <div className="flex items-center gap-2 py-1.5 pl-5 text-xs">{head}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/** The stronger answer, with its [placeholders] (facts the candidate fills in) marked, and a word on where it came from. */
+function StrongerAnswer({ text }: { text: string }) {
+  const parts = splitPlaceholders(text);
+  const gaps = parts.some((p) => p.placeholder);
+  return (
+    <div className="mt-3 rounded-lg border-l-2 border-indigo-500 bg-indigo-500/5 px-3 py-2">
+      <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Try saying</p>
+      <p className="mt-0.5 text-sm text-zinc-800 dark:text-zinc-200">
+        {parts.map((p, i) =>
+          p.placeholder ? (
+            <mark key={i} className="rounded bg-amber-500/15 px-1 font-medium text-amber-900 dark:text-amber-200">
+              {p.text}
+              <span className="sr-only"> (fill in)</span>
+            </mark>
+          ) : (
+            <span key={i}>{p.text}</span>
+          ),
+        )}
+      </p>
+      {gaps && (
+        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+          Built only from what you said and your documents: fill in the highlighted parts with your own facts.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** This answer's pace, fillers and long pauses (from its transcript timings), flagged when the pace was off. */
+function SpeakingLine({ speaking }: { speaking: AnswerSpeaking }) {
+  const pace = paceNote(speaking.words_per_minute);
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  return (
+    <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
+      <span className="inline-flex items-center gap-1.5 tabular-nums">
+        {speaking.words_per_minute} words a minute
+        {pace && <Badge tone="warning">{pace === "fast" ? "Fast" : "Slow"}</Badge>}
+      </span>
+      <span className="tabular-nums">
+        {plural(speaking.fillers, "filler")}
+        {speaking.top_fillers.length > 0 && ` (${speaking.top_fillers.map((w) => `“${w}”`).join(", ")})`}
+      </span>
+      <span className="tabular-nums">{plural(speaking.long_pauses, "long pause")}</span>
+    </p>
   );
 }
 
@@ -239,7 +393,7 @@ function QuestionReview({ index, item, busy = false, queue = true, onRetry, onSa
 }) {
   const [saving, setSaving] = useState<"closed" | "open" | "saved">("closed");
   return (
-    <Card className="animate-fade-up">
+    <Card id={`review-q${index}`} className="animate-fade-up scroll-mt-24">
       <div className="flex items-start justify-between gap-3">
         <p className="font-medium">
           <span className="mr-2 text-zinc-400">Q{index}</span>
@@ -266,7 +420,18 @@ function QuestionReview({ index, item, busy = false, queue = true, onRetry, onSa
       ) : (
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">No answer was captured for this question.</p>
       )}
+      {item.speaking && <SpeakingLine speaking={item.speaking} />}
       {item.feedback && <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{item.feedback}</p>}
+      <AnswerRubric item={item} />
+      {item.improvement && (
+        <p className="mt-3 flex gap-2 text-sm text-zinc-800 dark:text-zinc-200">
+          <Target className="mt-0.5 h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-300" aria-hidden />
+          <span>
+            <span className="font-semibold">Next time: </span>
+            {item.improvement}
+          </span>
+        </p>
+      )}
       {(item.missing_points?.length ?? 0) > 0 && (
         <div className="mt-2">
           <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">What it missed</p>
@@ -281,12 +446,7 @@ function QuestionReview({ index, item, busy = false, queue = true, onRetry, onSa
         </div>
       )}
       <Rubric scores={item.dimensions} />
-      {item.better && (
-        <div className="mt-3 rounded-lg border-l-2 border-indigo-500 bg-indigo-500/5 px-3 py-2">
-          <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Try saying</p>
-          <p className="mt-0.5 text-sm text-zinc-800 dark:text-zinc-200">{item.better}</p>
-        </div>
-      )}
+      {item.better && <StrongerAnswer text={item.better} />}
       {(onRetry || onSaveAnswer) && saving !== "open" && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {onRetry && (

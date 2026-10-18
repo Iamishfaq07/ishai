@@ -1,25 +1,33 @@
-import { AnalyserReader, bandsFromSamples, voiceLevel } from "./audioLevel";
+import { AnalyserReader, bandsFromSamples, rms, voiceLevel } from "./audioLevel";
+import { speakable, syllableCount, wordTimeline, type TimedWord } from "./speechText";
 
 /**
  * Saba's voice as the screen follows it, outside React: how loud it is now, where its energy sits (bands, low to high),
- * and which word she's saying when the speech engine reports word timing. The video room's visualizer reads it every
- * frame; its captions subscribe to the word.
+ * which word she's saying, and how much of her line has been said (DECISIONS D69, D76). The video room's visualizer
+ * reads it every frame; its captions and transcript reveal her line as she says it.
  *
- * Where the level comes from:
- * - **The natural voice** is real audio (an MP3 in an <audio> element). Where Web Audio is running it plays through
- *   one shared AudioContext with an analyser in the way ("audio"). Where it isn't (no tap yet, or an iPhone, where
- *   Web Audio follows the ringer switch), the clip plays as before and its decoded samples are read at the element's
- *   current time ("decoded"), so the bars still follow the real voice.
- * - **The device's voice** (speechSynthesis) can't be captured. Its word-boundary events drive a speech-like envelope,
- *   each word a burst of syllables at a speaking pace with a little jitter, so it visibly talks in time with the
- *   words ("words"). An engine that sends no boundaries gets the same envelope on its own ("estimate").
+ * Where it comes from:
+ * - **The natural voice** is real audio, an MP3 in an <audio> element that plays straight to the speakers: nothing in
+ *   between that could silence it (Web Audio routing went silent whenever its context was suspended, D76). Its own
+ *   decoded samples, read at the element's current time, give the level ("decoded"); until they're decoded, a
+ *   speech-like envelope ("estimate"). The words are timed across the clip by their syllables (Aura gives no word
+ *   timestamps), so the caption keeps pace with her.
+ * - **The device's voice** (speechSynthesis) can't be captured. Its word-boundary events drive the envelope and the
+ *   caption ("words"); an engine that sends none gets an estimated pace ("estimate").
  */
 export type VoiceSource = "audio" | "decoded" | "words" | "estimate";
 
 export interface WordSpan {
-  /** Offsets into the question's text: the word being said is text.slice(start, end). */
+  /** Offsets into the line's text: the word being said is text.slice(start, end). */
   start: number;
   end: number;
+}
+
+/** How much of the line `id` has been said: text.slice(0, upTo). `done` once all of it was (or it was stopped). */
+export interface LineReveal {
+  id: string;
+  upTo: number;
+  done: boolean;
 }
 
 export interface VoiceActivity {
@@ -27,11 +35,13 @@ export interface VoiceActivity {
   source(): VoiceSource | null;
   /** Fills `bands` (0..1 each, low to high) for `now` (performance.now()) and returns the overall level, 0..1. */
   sample(bands: Float32Array, now: number): number;
-  /** The word being said, when the engine reports word timing; null otherwise. */
+  /** The word being said, when its timing is known; null otherwise. */
   word(): WordSpan | null;
-  /** Called when word() changes; returns the unsubscribe. */
+  /** How much of the current line has been said (captions reveal it as she speaks); null with no line. */
+  reveal(): LineReveal | null;
+  /** Called when word() or reveal() changes; returns the unsubscribe. */
   subscribe(listener: () => void): () => void;
-  /** Gets the audio ready ahead of the first clip, so the first tap anywhere can unlock it (mobile Safari). */
+  /** Gets the decoder ready ahead of the first clip. */
   prepare?(): void;
 }
 
@@ -49,12 +59,7 @@ export function seeded(seed: number): () => number {
 
 /** Roughly how many syllables a word has: its vowel groups (English-ish; enough for a voice's rhythm). */
 export function syllables(word: string): number {
-  const latin = word.toLowerCase().replace(/[^a-z]/g, "");
-  // Another script (Hindi in Devanagari): about one syllable per two or three letters.
-  if (!latin) return Math.max(1, Math.min(6, Math.round([...word.replace(/[\s\p{P}]/gu, "")].length / 2.5)));
-  const n = latin.match(/[aeiouy]+/g)?.length ?? 0;
-  const silentE = n > 1 && /[^aeiouy]e$/.test(latin) ? 1 : 0;
-  return Math.max(1, Math.min(6, n - silentE || 1));
+  return Math.min(6, syllableCount(word));
 }
 
 /** A syllable at a conversational pace (~5 a second), and the gap a sentence's end leaves. */
@@ -133,83 +138,85 @@ export function envelopeBands(level: number, now: number, bands: Float32Array): 
   }
 }
 
-// One AudioContext for every voice clip, made on first use and closed when the last voice lets go. Mobile Safari (and
-// a page nobody has touched yet) starts it suspended: the first tap or key press anywhere resumes it.
-let shared: { ctx: AudioContext; users: number; unlock: () => void } | null = null;
-const UNLOCK_EVENTS = ["pointerdown", "keydown", "touchend"] as const;
-
-function audioContextClass(): typeof AudioContext | undefined {
-  if (typeof window === "undefined") return undefined;
-  return window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-}
-
-export function acquireVoiceContext(): AudioContext | null {
-  const Ctx = audioContextClass();
-  if (!Ctx) return null;
-  if (!shared || shared.ctx.state === "closed") {
-    let ctx: AudioContext;
-    try {
-      ctx = new Ctx({ latencyHint: "interactive" });
-    } catch {
-      return null;
-    }
-    const unlock = () => {
-      if (ctx.state === "running" || ctx.state === "closed") {
-        UNLOCK_EVENTS.forEach((e) => document.removeEventListener(e, unlock, true));
-        return;
-      }
-      void ctx.resume().catch(() => undefined);
-    };
-    UNLOCK_EVENTS.forEach((e) => document.addEventListener(e, unlock, true));
-    shared = { ctx, users: 0, unlock };
+// One decoder for every clip: an OfflineAudioContext decodes without opening an audio device, without a tap, and
+// plays nothing (so it can never be the reason she's silent).
+let decoder: BaseAudioContext | null = null;
+function voiceDecoder(): BaseAudioContext | null {
+  if (decoder) return decoder;
+  if (typeof window === "undefined") return null;
+  const Offline = window.OfflineAudioContext ?? (window as unknown as { webkitOfflineAudioContext?: typeof OfflineAudioContext }).webkitOfflineAudioContext;
+  try {
+    decoder = Offline ? new Offline(1, 1, 24000) : null;
+  } catch {
+    decoder = null;
   }
-  shared.users += 1;
-  return shared.ctx;
+  return decoder;
 }
 
-export function releaseVoiceContext(ctx: AudioContext | null): void {
-  if (!ctx || !shared || shared.ctx !== ctx) return;
-  shared.users -= 1;
-  if (shared.users > 0) return;
-  const { unlock } = shared;
-  UNLOCK_EVENTS.forEach((e) => document.removeEventListener(e, unlock, true));
-  shared = null;
-  if (ctx.state !== "closed") void ctx.close().catch(() => undefined);
+/** Where speech starts and ends in decoded samples (seconds): the first and last 10 ms over a quiet threshold. */
+export function speechBounds(samples: Float32Array, rate: number): { from: number; to: number } {
+  const step = Math.max(1, Math.round(rate / 100));
+  let first = -1;
+  let last = -1;
+  for (let i = 0; i + step <= samples.length; i += step) {
+    if (rms(samples, i, i + step) > 0.015) {
+      if (first < 0) first = i;
+      last = i + step;
+    }
+  }
+  return first < 0 ? { from: 0, to: samples.length / rate } : { from: first / rate, to: last / rate };
 }
 
-/** iPhone and iPad (iPadOS says it's a Mac with touch). */
-function appleTouch(): boolean {
-  if (typeof navigator === "undefined") return false;
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+/** The clip's level for volume matching: clips that come out louder are brought down to the others (never up). */
+const TARGET_RMS = 0.11;
+export function clipVolume(samples: Float32Array, from: number, to: number, rate: number): number {
+  const level = rms(samples, Math.round(from * rate), Math.round(to * rate));
+  return level > 0 ? Math.max(0.55, Math.min(1, TARGET_RMS / level)) : 1;
+}
+
+/** The word containing (or just after) `pos` in `text`: [start, end). */
+function wordAt(text: string, pos: number): WordSpan | null {
+  const re = /\S+/g;
+  let m: RegExpExecArray | null;
+  let last: WordSpan | null = null;
+  while ((m = re.exec(text))) {
+    const span = { start: m.index, end: m.index + m[0].length };
+    if (span.end > pos) return span;
+    last = span;
+  }
+  return last;
+}
+
+/** A natural-voice clip of the line: its element, where its text starts in the line, and its words' timing. */
+interface Clip {
+  audio: HTMLAudioElement;
+  offset: number;
+  text: string;
+  samples: Float32Array | null;
+  rate: number;
+  timeline: TimedWord[];
+  volume: number;
 }
 
 /**
- * May an <audio> element play through Web Audio here without any risk of going silent? Only while the context runs (a
- * suspended one would mute it), and not on iPhone or iPad, where Web Audio follows the ringer switch and the mic's
- * audio session: there the clip plays as before and its decoded samples are read instead.
- */
-function canRoute(ctx: AudioContext): boolean {
-  return ctx.state === "running" && !appleTouch();
-}
-
-const BANDS_FFT = 1024;
-
-/**
- * Saba's voice activity, fed by useInterviewerVoice: attach() for each natural-voice clip, deviceStart/boundary/
- * deviceEnd for the device's voice, stop() when she stops. One per interviewer voice; dispose() on unmount.
+ * Saba's voice activity, fed by useInterviewerVoice: beginLine() when she's about to say a line, attach() for each of
+ * its natural-voice clips, deviceStart/boundary/deviceEnd for the device's voice, endLine() when it's all been said,
+ * stop() when she stops. One per interviewer voice; dispose() on unmount.
  */
 export class VoiceTap implements VoiceActivity {
   private mode: VoiceSource | null = null;
-  private ctx: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private readonly reader = new AnalyserReader();
-  private clip: { audio: HTMLAudioElement; samples: Float32Array | null; rate: number } | null = null;
+  private clip: Clip | null = null;
   private readonly envelope = new SpeechEnvelope();
   private span: WordSpan | null = null;
-  private text = "";
-  private offset = 0;
+  private line: { id: string; text: string; upTo: number; done: boolean } | null = null;
+  private spoken = ""; // what the device's voice is saying (the line, shaped for speech)
   private utterance: object | null = null;
+  private deviceAt = 0;
+  private deviceOffset = 0;
+  private estimate: { timeline: TimedWord[]; start: number } | null = null;
+  private timer = 0;
   private readonly listeners = new Set<() => void>();
+  private readonly scratch = new Float32Array(16);
 
   source(): VoiceSource | null {
     return this.mode;
@@ -219,57 +226,121 @@ export class VoiceTap implements VoiceActivity {
     return this.span;
   }
 
+  reveal(): LineReveal | null {
+    return this.line ? { id: this.line.id, upTo: this.line.upTo, done: this.line.done } : null;
+  }
+
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
-  private setWord(span: WordSpan | null): void {
-    if (span?.start === this.span?.start && span?.end === this.span?.end) return;
-    this.span = span;
+  private notify(): void {
     this.listeners.forEach((l) => l());
   }
 
-  /** Ask for the shared context: from the video room as it opens, so the first tap anywhere can unlock it. */
+  private setWord(span: WordSpan | null): void {
+    let changed = false;
+    if (span?.start !== this.span?.start || span?.end !== this.span?.end) {
+      this.span = span;
+      changed = true;
+    }
+    if (span && this.line && span.end > this.line.upTo) {
+      this.line.upTo = span.end;
+      changed = true;
+    }
+    if (changed) this.notify();
+  }
+
   prepare(): void {
-    this.ctx ??= acquireVoiceContext();
+    voiceDecoder();
+  }
+
+  /** She's about to say a line (the text appears only as she says it). */
+  beginLine(id: string, text: string): void {
+    this.stopTimer();
+    this.line = { id, text, upTo: 0, done: false };
+    this.span = null;
+    this.mode = null;
+    this.clip = null;
+    this.estimate = null;
+    this.envelope.clear();
+    this.notify();
+  }
+
+  /** All of the line is said, or there's no voice to say it with: all of it is shown. */
+  endLine(): void {
+    this.stopTimer();
+    if (this.line && !this.line.done) {
+      this.line.upTo = this.line.text.length;
+      this.line.done = true;
+    }
+    this.span = null;
+    this.mode = null;
+    this.clip = null;
+    this.estimate = null;
+    this.notify();
+  }
+
+  private startTimer(): void {
+    if (this.timer || typeof window === "undefined") return;
+    this.timer = window.setInterval(() => this.follow(), 40);
+  }
+
+  private stopTimer(): void {
+    if (this.timer) window.clearInterval(this.timer);
+    this.timer = 0;
+  }
+
+  /** Keeps the word and the reveal in step with the clip (or the estimate) while she speaks. */
+  private follow(): void {
+    const clip = this.clip;
+    if (clip) {
+      if (clip.audio.paused || clip.audio.ended || !clip.timeline.length) return;
+      const t = clip.audio.currentTime;
+      let i = 0;
+      while (i + 1 < clip.timeline.length && clip.timeline[i + 1]!.at <= t) i++;
+      const w = clip.timeline[i]!;
+      if (t >= w.at - 0.02) this.setWord({ start: clip.offset + w.start, end: clip.offset + w.end });
+      return;
+    }
+    if (this.estimate && this.line) {
+      const elapsed = (performance.now() - this.estimate.start) / 1000;
+      let i = -1;
+      while (i + 1 < this.estimate.timeline.length && this.estimate.timeline[i + 1]!.at <= elapsed) i++;
+      if (i >= 0) {
+        const w = this.estimate.timeline[i]!;
+        this.setWord({ start: w.start, end: w.end });
+      }
+    }
   }
 
   /**
-   * A natural-voice clip is about to play: analyse it. `blob` is its audio, for decoding when it can't go through
-   * the analyser. Returns the detach to call when it ends.
+   * A natural-voice clip of the line starts: `text` is its part of the line, from `offset`. Reads its samples (for
+   * the level, the words' timing and its volume) without being in its way. Returns how to follow a replacement
+   * element (the stall recovery) and the detach.
    */
-  attach(audio: HTMLAudioElement, blob?: Blob): () => void {
-    this.setWord(null);
+  attach(audio: HTMLAudioElement, blob: Blob | null, part?: { text: string; offset: number }): {
+    retarget: (next: HTMLAudioElement) => void;
+    detach: () => void;
+  } {
     this.utterance = null;
+    this.estimate = null;
     this.envelope.clear();
-    // Only once a screen that follows the voice asked for it (prepare: the video room). Elsewhere the clip plays
-    // exactly as before, with no audio graph.
-    const ctx = this.ctx;
-    let source: MediaElementAudioSourceNode | null = null;
-    if (ctx && canRoute(ctx)) {
-      try {
-        if (!this.analyser) {
-          this.analyser = ctx.createAnalyser();
-          this.analyser.fftSize = BANDS_FFT;
-          this.analyser.smoothingTimeConstant = 0.5;
-          this.analyser.minDecibels = -95;
-          this.analyser.maxDecibels = -20;
-          this.analyser.connect(ctx.destination);
-        }
-        source = ctx.createMediaElementSource(audio);
-        source.connect(this.analyser);
-      } catch {
-        source = null;
-      }
-    } else if (ctx?.state === "suspended") {
-      void ctx.resume().catch(() => undefined); // for the next clip
-    }
-    const clip = { audio, samples: null as Float32Array | null, rate: 48000 };
+    const text = part?.text ?? this.line?.text ?? "";
+    const clip: Clip = { audio, offset: part?.offset ?? 0, text, samples: null, rate: 24000, timeline: [], volume: 1 };
     this.clip = clip;
-    this.mode = source ? "audio" : "estimate";
-    if (!source && blob && ctx) {
-      // Read the clip's own samples instead: decoding needs no gesture and plays nothing.
+    this.mode = "estimate";
+    const time = (from: number, to: number) => {
+      clip.timeline = wordTimeline(text, from, to);
+    };
+    const onMeta = () => {
+      if (!clip.samples && Number.isFinite(clip.audio.duration)) time(0.04, Math.max(0.2, clip.audio.duration - 0.12));
+    };
+    audio.addEventListener("loadedmetadata", onMeta);
+    onMeta();
+    const ctx = voiceDecoder();
+    if (blob && ctx) {
       void blob
         .arrayBuffer()
         .then((buf) => ctx.decodeAudioData(buf))
@@ -277,64 +348,100 @@ export class VoiceTap implements VoiceActivity {
           if (this.clip !== clip) return;
           clip.samples = decoded.getChannelData(0);
           clip.rate = decoded.sampleRate;
+          const { from, to } = speechBounds(clip.samples, clip.rate);
+          time(from, to);
+          clip.volume = clipVolume(clip.samples, from, to, clip.rate);
+          clip.audio.volume = clip.volume;
           this.mode = "decoded";
         })
         .catch(() => undefined);
     }
-    return () => {
-      if (source) {
-        try {
-          source.disconnect();
-        } catch {
-          // already gone
+    this.startTimer();
+    return {
+      retarget: (next) => {
+        clip.audio.removeEventListener("loadedmetadata", onMeta);
+        clip.audio = next;
+        next.volume = clip.volume;
+      },
+      detach: () => {
+        clip.audio.removeEventListener("loadedmetadata", onMeta);
+        if (this.clip === clip) {
+          this.clip = null;
+          this.mode = null;
+          this.stopTimer();
+          // This part of the line is said.
+          if (this.line) this.setWord({ start: clip.offset, end: Math.min(this.line.text.length, clip.offset + text.length) });
         }
-      }
-      if (this.clip === clip) {
-        this.clip = null;
-        this.mode = null;
-      }
+      },
     };
   }
 
-  /** The device's voice started saying `text`, which begins at `offset` in the question. */
-  deviceStart(utterance: object, text: string, offset: number): void {
+  /**
+   * The device's voice started saying the line from `offset` (all of it, or the part the natural voice didn't get
+   * to): `spoken` is that part shaped for speech, which is what its boundaries index. `rate` is its speaking rate, for
+   * the estimate when the engine sends no word boundaries.
+   */
+  deviceStart(utterance: object, spoken: string, rate = 1, offset = 0): void {
     this.clip = null;
     this.utterance = utterance;
-    this.text = text;
-    this.offset = offset;
+    this.spoken = spoken;
+    this.deviceOffset = Math.max(0, offset);
+    this.deviceAt = performance.now();
     this.envelope.clear();
     if (this.mode !== "words") this.mode = "estimate";
+    // No boundary in the first moments: an estimated pace for the caption (replaced as soon as one arrives).
+    const line = this.line;
+    if (line) {
+      const rest = line.text.slice(this.deviceOffset);
+      const syll = (rest.match(/\S+/g) ?? []).reduce((n, w) => n + syllableCount(speakable(w)), 0);
+      const seconds = (syll * SYLLABLE_MS) / 1000 / Math.max(0.5, rate) + 0.4;
+      const timeline = wordTimeline(rest, 0.15, seconds).map((w) => ({ ...w, start: w.start + this.deviceOffset, end: w.end + this.deviceOffset }));
+      this.estimate = { timeline, start: this.deviceAt };
+    }
+    this.startTimer();
   }
 
-  /** A word boundary from the device's voice (charIndex/charLength into its text). */
+  /** A word boundary from the device's voice (charIndex/charLength into what it's saying). */
   boundary(utterance: object, charIndex: number, charLength: number, now = performance.now()): void {
     if (utterance !== this.utterance) return;
     let end = charIndex + charLength;
     if (!charLength) {
-      const rest = this.text.slice(charIndex).search(/\s/);
-      end = rest < 0 ? this.text.length : charIndex + rest;
+      const rest = this.spoken.slice(charIndex).search(/\s/);
+      end = rest < 0 ? this.spoken.length : charIndex + rest;
     }
-    const word = this.text.slice(charIndex, end);
+    const word = this.spoken.slice(charIndex, end);
     if (!word.trim()) return;
     this.mode = "words";
+    this.estimate = null; // real timing now
     this.envelope.word(now, word);
-    this.setWord(this.offset >= 0 ? { start: this.offset + charIndex, end: this.offset + end } : null);
+    const line = this.line;
+    if (!line) return;
+    // The spoken text is (the rest of) the line shaped for speech: the same place, proportionally, snapped to the
+    // line's word.
+    const span = line.text.length - this.deviceOffset;
+    const pos = this.deviceOffset + (this.spoken.length ? Math.round((charIndex / this.spoken.length) * span) : 0);
+    this.setWord(wordAt(line.text, pos));
   }
 
   deviceEnd(utterance: object): void {
     if (utterance !== this.utterance) return;
     this.utterance = null;
     this.mode = null;
-    this.setWord(null);
+    this.estimate = null;
+    this.stopTimer();
+    this.span = null;
+    this.notify();
   }
 
-  /** She stopped (Skip, the next question, mute, unmount). */
+  /** She stopped (Skip, the next question, mute, talked over, unmount): what's left of the line is shown. */
   stop(): void {
     this.utterance = null;
-    this.clip = null;
-    this.mode = null;
-    this.envelope.clear();
-    this.setWord(null);
+    this.endLine();
+  }
+
+  /** Her output level now (for telling her own echo from the candidate's voice). */
+  level(now = performance.now()): number {
+    return this.sample(this.scratch, now);
   }
 
   sample(bands: Float32Array, now: number): number {
@@ -343,23 +450,16 @@ export class VoiceTap implements VoiceActivity {
       bands.fill(0);
       return 0;
     }
-    if (mode === "audio" && this.analyser) return this.reader.read(this.analyser, bands);
-    if (mode === "decoded" && this.clip?.samples) {
-      const { audio, samples, rate } = this.clip;
-      if (audio.paused || audio.ended) {
-        bands.fill(0);
-        return 0;
-      }
-      return voiceLevel(bandsFromSamples(samples, rate, audio.currentTime, bands));
+    const clip = this.clip;
+    if (clip && (clip.audio.paused || clip.audio.ended)) {
+      bands.fill(0);
+      return 0;
     }
-    // The envelope: from word events, or on its own while the clip plays / the voice speaks without them.
-    if (mode === "estimate") {
-      if (this.clip && (this.clip.audio.paused || this.clip.audio.ended)) {
-        bands.fill(0);
-        return 0;
-      }
-      this.envelope.auto(now);
+    if (mode === "decoded" && clip?.samples) {
+      return voiceLevel(bandsFromSamples(clip.samples, clip.rate, clip.audio.currentTime, bands));
     }
+    // The envelope: from word events, or on its own while the clip decodes / the voice speaks without them.
+    if (mode === "estimate") this.envelope.auto(now);
     const level = this.envelope.level(now);
     envelopeBands(level, now, bands);
     return level;
@@ -367,15 +467,8 @@ export class VoiceTap implements VoiceActivity {
 
   dispose(): void {
     this.stop();
+    this.line = null;
     this.listeners.clear();
-    try {
-      this.analyser?.disconnect();
-    } catch {
-      // already gone
-    }
-    this.analyser = null;
-    releaseVoiceContext(this.ctx);
-    this.ctx = null;
   }
 }
 
@@ -386,6 +479,7 @@ export function analyserActivity(analyser: AnalyserNode): VoiceActivity {
     source: () => "audio",
     sample: (bands) => reader.read(analyser, bands),
     word: () => null,
+    reveal: () => null,
     subscribe: () => () => undefined,
   };
 }

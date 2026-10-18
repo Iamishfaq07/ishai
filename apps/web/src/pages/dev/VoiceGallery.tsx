@@ -13,6 +13,7 @@ import {
 
 const MOODS: Array<[VoiceMood, string]> = [
   ["joining", "Joining: the bars rise in from flat"],
+  ["preparing", "About to speak: a slow breath in"],
   ["speaking", "Speaking: her voice, in the accent"],
   ["listening", "Listening: a calm, low wave"],
   ["hearing", "Hearing you: your voice, in light ink"],
@@ -87,7 +88,8 @@ function useFakeWords(): VoiceTap {
     let timers: number[] = [];
     const speak = () => {
       const u = {};
-      tap.deviceStart(u, SAMPLE, 0);
+      tap.beginLine(`fake-${Date.now()}`, SAMPLE);
+      tap.deviceStart(u, SAMPLE);
       let t = 120;
       for (const m of SAMPLE.matchAll(/\S+/g)) {
         const at = m.index;
@@ -95,7 +97,10 @@ function useFakeWords(): VoiceTap {
         timers.push(window.setTimeout(() => tap.boundary(u, at, len), t));
         t += 120 + 42 * len + (/[.?!]$/.test(m[0]) ? 380 : /,$/.test(m[0]) ? 200 : 0);
       }
-      timers.push(window.setTimeout(() => tap.deviceEnd(u), t + 150));
+      timers.push(window.setTimeout(() => {
+        tap.deviceEnd(u);
+        tap.endLine();
+      }, t + 150));
       timers.push(window.setTimeout(speak, t + 1600));
     };
     speak();

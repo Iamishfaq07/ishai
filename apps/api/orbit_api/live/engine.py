@@ -38,6 +38,7 @@ from orbit_api.live.events import (
     LiveSettingsPatch,
     LiveState,
     MockAnswer,
+    MockVoice,
     QuestionType,
     SessionType,
     Speaker,
@@ -59,6 +60,7 @@ from orbit_api.live.routing import (
     estimate_complexity,
     step_size,
 )
+from orbit_api.live.voice_activity import VoiceActivity
 from orbit_api.providers.llm.base import (
     LLMError,
     LLMImage,
@@ -90,6 +92,8 @@ CLIENT_REQUESTS = frozenset({"answer.request", "chat.message", "mock.next", "moc
 ECHO_TRANSCRIPT_OVERLAP = 0.85
 ECHO_SUSPECT_OVERLAP = 0.5
 ECHO_CONFIRM_S = 1.5
+# A video-room line the client never says it started (an older client) is kept after this long anyway (D76).
+UNHEARD_LINE_S = 8.0
 # After the provider's UtteranceEnd, how long a turn whose last words were still provisional waits for their final.
 UTTERANCE_FINAL_WAIT_MS = 1500
 REQUEST_BURST = 5
@@ -255,6 +259,8 @@ class SessionProfile:
     # The country the user applies in (the account's, read when the session connects): the job market's words and
     # currency in answers, and the mock interview's panel and examples. None when they haven't said.
     country: str | None = None
+    # The candidate's name on their account (the video interviewer says their first name now and then).
+    candidate_name: str | None = None
 
 
 @dataclass
@@ -458,7 +464,15 @@ class LiveEngine:
             self._mock = MockInterviewer(profile.mock or MockConfig(), llm=llm, index=index, role=profile.role,
                                          send=self.send, on_question=self._on_mock_question,
                                          on_finish=self._on_mock_finish, record_usage=self._record_mock_usage,
-                                         company=profile.company, language=profile.language, country=profile.country)
+                                         company=profile.company, language=profile.language, country=profile.country,
+                                         candidate_name=profile.candidate_name, level=self._level,
+                                         on_say=self._on_mock_say)
+        # The AI interviewer's turn-taking, measured as the candidate feels it (live/metrics.py): when their speech
+        # ended (on the server clock), and each line's base for "her voice started".
+        self._candidate_end_ms: int | None = None
+        self._voice = VoiceActivity()  # the candidate's voice on the mic, for the AI interviewer's turns (D76)
+        self._unheard: dict[str, Callable[[], Awaitable[None]]] = {}  # the video room's lines not yet heard (D76)
+        self._line_after_speech: dict[str, int] = {}
         if resume is not None:  # a reconnect: pick up the conversation (and the mock round) where it was
             self.memory = resume.memory
             if self._mock is not None and resume.mock is not None:
@@ -580,6 +594,9 @@ class LiveEngine:
                 await self._commit_turn(ch, turn)
         for ch, turn in list(self._deferred.values()):  # still waiting to be told apart from the interviewer's echo
             await self._commit_turn(ch, turn, echo_checked=True)
+        for line_id in list(self._unheard):  # her last lines went out: kept
+            if (record := self._unheard.pop(line_id, None)) is not None:
+                await record()
         await self._stt.stop()
         for t in list(self._tasks):
             t.cancel()
@@ -611,6 +628,9 @@ class LiveEngine:
             # First audio on this channel: tell the client the server is actually hearing it.
             await self.send(f"audio.{channel}_status", {"state": "connected", "detail": "receiving"})
         self.channel_bytes[channel] += len(pcm)
+        if (self._mock is not None and channel == "mic" and self.profile.session_type != "phone"
+                and self._voice.voiced(pcm)):
+            self._mock.on_voice_activity(self.now_ms())  # their turn ends when they stop, not when the words do
         session = self._stt_sessions.get(channel)
         if session:
             await session.send_audio(pcm)
@@ -724,6 +744,8 @@ class LiveEngine:
                 typed = MockAnswer.model_validate(data).text.strip()
                 if self._mock is not None and typed and not self._paused:
                     await self._on_mock_typed(typed)
+            case "mock.voice":
+                self._on_mock_voice(MockVoice.model_validate(data))
             case "dev.simulate":
                 sim = DevSimulate.model_validate(data)
                 if not (self.profile.dev_mode and isinstance(self._stt, MockSTTProvider)):
@@ -803,6 +825,8 @@ class LiveEngine:
             return
         speaker = self._channel_speaker(channel, ev.speaker_hint)
         if self._mock is not None and speaker == "candidate" and ev.kind in ("partial", "final"):
+            if ev.kind == "final" and ev.end_ms:
+                self._candidate_end_ms = self._audio_clock[channel].server_time(ev.end_ms) or self.now_ms()
             self._mock.on_candidate(ev.text, self.now_ms(), final=ev.kind == "final")
         turn = self._turns[channel]
         # SpeechStarted and UtteranceEnd carry no speaker (no diarized words): they belong to whoever's turn is open
@@ -828,6 +852,8 @@ class LiveEngine:
                     # ends it; new words cancel it; the ticker ends it if neither comes.
                     turn.utterance_end_ms = self.now_ms()
                 else:
+                    if self._mock is not None and self._turn_speaker(channel, turn) == "candidate":
+                        self._mock.on_utterance_end()
                     await self._end_turn(channel, turn)
                 await self._sync_speculation()
             return
@@ -1028,16 +1054,78 @@ class LiveEngine:
 
     async def _on_mock_question(self, qid: str, text: str, is_follow_up: bool, question: str) -> None:
         """Record the AI interviewer's question like a real interviewer turn (transcript, questions, report). `text`
-        is what was said; `question` the question alone (a drill's without its lead line), for the questions list."""
+        is what was said; `question` the question alone (a drill's without its lead line), for the questions list.
+        In the video room, once she's heard (D76)."""
         turn_id = self._new_turn_id()
         now = self.now_ms()
-        await self.send("transcript.final", {"turn_id": turn_id, "speaker": "interviewer", "text": text,
-                                             "start_ms": now, "end_ms": now})
-        self.memory.add_turn("interviewer", text)
-        self.memory.questions.append(text)
-        qtype = QuestionType.follow_up if is_follow_up else self._speech.classify_type(question)
-        await self._rec.turn(turn_id, "interviewer", text, now, now)
-        await self._rec.question(qid, turn_id, question, qtype.value, 1.0, is_follow_up, "mock")
+
+        async def record() -> None:
+            await self.send("transcript.final", {"turn_id": turn_id, "speaker": "interviewer", "text": text,
+                                                 "start_ms": now, "end_ms": now})
+            self.memory.add_turn("interviewer", text)
+            self.memory.questions.append(text)
+            qtype = QuestionType.follow_up if is_follow_up else self._speech.classify_type(question)
+            await self._rec.turn(turn_id, "interviewer", text, now, now)
+            await self._rec.question(qid, turn_id, question, qtype.value, 1.0, is_follow_up, "mock")
+
+        await self._record_when_heard(qid, record)
+        if self._candidate_end_ms is not None:
+            self.latency.add("mock_reply_after_speech", now - self._candidate_end_ms)
+            self._line_after_speech[qid] = self._candidate_end_ms
+            self._candidate_end_ms = None
+
+    async def _on_mock_say(self, say_id: str, text: str) -> None:
+        """One of the AI interviewer's lines that isn't a question (small talk, a repeat, a check-in, the goodbye):
+        in the transcript like anything she says, never a question to grade."""
+        turn_id = self._new_turn_id()
+        now = self.now_ms()
+
+        async def record() -> None:
+            await self.send("transcript.final", {"turn_id": turn_id, "speaker": "interviewer", "text": text,
+                                                 "start_ms": now, "end_ms": now})
+            self.memory.add_turn("interviewer", text)
+            await self._rec.turn(turn_id, "interviewer", text, now, now)
+
+        await self._record_when_heard(say_id, record)
+        if self._candidate_end_ms is not None:
+            self._line_after_speech[say_id] = self._candidate_end_ms
+            self._candidate_end_ms = None
+
+    async def _record_when_heard(self, line_id: str, record: Callable[[], Awaitable[None]]) -> None:
+        """The video room's lines are kept once she's heard (the client says so), not when they go out: one cut off
+        before a word of it was heard (the candidate was still talking) is never in the transcript, the report or
+        what the model reads (D76). A client that never says is kept after a few seconds anyway."""
+        if self._mock is None or not self.profile.mock or not self.profile.mock.video:
+            await record()
+            return
+        self._unheard[line_id] = record
+        self._spawn(self._record_later(line_id))
+
+    async def _record_later(self, line_id: str) -> None:
+        await asyncio.sleep(UNHEARD_LINE_S)
+        if (record := self._unheard.pop(line_id, None)) is not None:
+            await record()
+
+    def _on_mock_voice(self, ev: MockVoice) -> None:
+        """The client's voice reports on a line (D76): when it started (the latency the candidate feels), when it
+        finished (her check-in waits from then), and anything that kept her from being heard, logged for us."""
+        now = self.now_ms()
+        base = self._line_after_speech.pop(ev.line_id, None) if ev.event == "started" and ev.line_id else None
+        if base is not None:
+            self.latency.add("mock_audio_after_speech", now - base)
+        if ev.event in ("blocked", "stalled", "unavailable", "fallback"):
+            log.warning("session %s: interviewer voice %s%s", self.profile.session_id, ev.event,
+                        f" ({ev.detail})" if ev.detail else "")
+        if ev.line_id and ev.event in ("started", "blocked", "unavailable", "finished"):
+            if (record := self._unheard.pop(ev.line_id, None)) is not None:
+                self._spawn(record())  # heard (or shown in full): kept
+        elif ev.line_id and ev.event == "interrupted" and self._unheard.pop(ev.line_id, None) is not None:
+            if self._mock is not None:
+                self._mock.retract(ev.line_id)  # cut off before a word of it was heard: as if not said
+        if self._mock is not None:
+            self._mock.on_voice(ev.event, ev.line_id, now)
+        while len(self._line_after_speech) > 50:
+            del self._line_after_speech[next(iter(self._line_after_speech))]
 
     async def _on_mock_typed(self, text: str) -> None:
         """An answer typed instead of spoken: recorded as the candidate's turn (transcript, report), then the
@@ -1051,6 +1139,8 @@ class LiveEngine:
         self.memory.add_turn("candidate", text)
         await self._rec.turn(turn_id, "candidate", text, now, now)
         self._mock.on_candidate(text, now, final=True)
+        if self._mock.pending_request:
+            return  # "Can you repeat that?" typed: she repeats it (next tick) rather than moving on
         self._spawn(self._mock.next(now))
 
     async def _on_mock_finish(self) -> None:

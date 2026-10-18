@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { READ_ALOUD_RATES, speechChunks } from "./readAloud";
+import { speakable } from "./speechText";
 import { pickVoice } from "./useInterviewerVoice";
 import { safeLocal } from "../storage";
 
 /**
  * "Read aloud" for an answer, on the platform's built-in speech engine (Windows voices in WebView2 / the browser):
- * local, free, and only ever started by the user. It plays through the speakers, so the page stops sending
+ * local, free, and only ever started by the user. The answer is shaped for speech first, as Saba's lines are (D76:
+ * acronyms, money and markdown read the way people say them); it stays on the device's voices because an answer is
+ * built from the user's own documents, and the natural voice only ever gets an interviewer's text. It plays through the speakers, so the page stops sending
  * audio while it's `playing` (see LivePanel `onInterviewerSpeaking`) — Orbit never transcribes its own voice.
  */
 export type ReadAloudStatus = "idle" | "playing" | "paused";
@@ -92,7 +95,7 @@ export function useReadAloud(lang = "en"): ReadAloud {
   const play = useCallback(
     (k: string, text: string) => {
       if (!synth) return;
-      const chunks = speechChunks(text);
+      const chunks = speechChunks(speakable(text));
       synth.cancel();
       const id = ++run.current;
       if (chunks.length === 0) {
