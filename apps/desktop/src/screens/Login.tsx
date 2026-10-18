@@ -1,9 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { User } from "@orbit/types";
+import type { AuthResponse, User } from "@orbit/types";
 import {
   AudioLines,
   Briefcase,
   Button,
+  ButtonSpinner,
   Code2,
   Eye,
   EyeOff,
@@ -17,8 +18,10 @@ import {
 } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { API_URL, DEFAULT_API_URL, WEB_URL, api, setAccessToken, setApiUrl, validateApiUrl } from "../api";
-import { saveToken } from "../native";
+import { cancelGoogleSignIn, googleSignIn, saveToken } from "../native";
+import { signInWithGoogle, type GoogleStep } from "../googleSignIn";
 import { TitleBar } from "../TitleBar";
+import googleG from "../google-g.svg";
 
 const input =
   "block w-full rounded-xl border border-zinc-200 bg-white/90 px-3.5 py-2.5 text-sm transition-colors hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950/60 dark:hover:border-white/20 dark:focus:border-indigo-400";
@@ -53,6 +56,18 @@ function useWelcome(): string | null {
   return text;
 }
 
+/** Whether this server has Continue with Google set up (GET /v1/auth/config); hidden until it says so. */
+function useGoogleOn(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    api
+      .authConfig()
+      .then((c) => setOn(Boolean(c.google)))
+      .catch(() => setOn(false));
+  }, []);
+  return on;
+}
+
 /** A saved server override (or a dev build) shows the server switch; otherwise Ctrl+Shift+S reveals it. */
 const CUSTOM_SERVER = API_URL !== DEFAULT_API_URL;
 
@@ -63,7 +78,12 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [challenge, setChallenge] = useState<string | null>(null);
+  // The authenticator step after Google (D81): no email or password on this screen to ask for again.
+  const [viaGoogle, setViaGoogle] = useState(false);
   const [code, setCode] = useState("");
+  const [google, setGoogle] = useState<GoogleStep>({ kind: "idle" });
+  const googleOn = useGoogleOn();
+  const googleBusy = google.kind === "waiting" || google.kind === "finishing";
   const [serverOpen, setServerOpen] = useState(false);
   const [serverShown, setServerShown] = useState(CUSTOM_SERVER || import.meta.env.DEV);
   const welcome = useWelcome();
@@ -80,23 +100,49 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // A sign-in still waiting for the browser ends with this screen, and one left by a page that reloaded (the server
+  // switch) ends when it opens.
+  useEffect(() => {
+    void cancelGoogleSignIn().catch(() => undefined);
+    return () => void cancelGoogleSignIn().catch(() => undefined);
+  }, []);
+
+  const finish = async (res: AuthResponse & { access_token: string }) => {
+    setAccessToken(res.access_token);
+    await saveToken(res.access_token).catch((err: unknown) =>
+      console.warn("Couldn't store token in the OS keychain; you'll need to sign in next launch.", err),
+    );
+    onSignedIn(res.user);
+  };
+
+  const withGoogle = async () => {
+    setError(null);
+    const outcome = await signInWithGoogle(
+      { open: googleSignIn, exchange: (c, verifier) => api.desktopExchange({ code: c, verifier }) },
+      API_URL,
+      setGoogle,
+    );
+    if (outcome.kind === "signed-in") await finish(outcome.auth);
+    else if (outcome.kind === "two-factor") {
+      setViaGoogle(true);
+      setChallenge(outcome.challenge);
+    }
+  };
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError(null);
+    setGoogle({ kind: "idle" });
     try {
-      // Two-step sign-in: the password is right; a code from the authenticator app finishes it.
+      // Two-step sign-in: the password (or Google) is right; a code from the authenticator app finishes it.
       const res = challenge ? await api.loginSecondStep(code, challenge) : await api.login({ email: email.trim(), password });
       if ("two_factor_required" in res) {
         setChallenge(res.challenge);
         return;
       }
       if (!res.access_token) throw new Error("Sign-in didn't finish. Please try again.");
-      setAccessToken(res.access_token);
-      await saveToken(res.access_token).catch((err: unknown) =>
-        console.warn("Couldn't store token in the OS keychain; you'll need to sign in next launch.", err),
-      );
-      onSignedIn(res.user);
+      await finish({ ...res, access_token: res.access_token });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sign-in failed. Please try again.");
     } finally {
@@ -116,7 +162,7 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
           <FeatureList className="relative mt-6" />
         </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center px-6 py-6">
+        <main className="flex min-w-0 flex-1 flex-col justify-center px-6 py-6">
           <div className="mx-auto w-full max-w-sm">
             <div className="sm:hidden">
               <OrbitWordmark size={26} className="mx-auto" />
@@ -124,36 +170,43 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
             <h1 className="mt-3 text-center font-display text-xl font-semibold tracking-tight sm:mt-0 sm:text-left">Welcome back</h1>
             <p className="mt-1 text-center text-xs text-zinc-500 sm:text-left dark:text-zinc-400">Sign in to start a live session.</p>
             <form onSubmit={(e) => void submit(e)} className="glass-panel mt-5 space-y-3 rounded-2xl p-4">
-              <label className="block text-xs font-medium">
-                Email
-                <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={cx(input, "mt-1", focusRing)} />
-              </label>
-              <div>
-                <label htmlFor="login-password" className="block text-xs font-medium">
-                  Password
-                </label>
-                <div className="relative mt-1">
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={cx(input, "pr-10", focusRing)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    aria-pressed={showPassword}
-                    title={showPassword ? "Hide password" : "Show password"}
-                    className={cx("absolute inset-y-0 right-0 flex items-center rounded-r-xl px-3 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100", focusRing)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+              {googleOn && !challenge && (
+                <GoogleContinue step={google} onStart={() => void withGoogle()} onCancel={() => void cancelGoogleSignIn()} />
+              )}
+              {!viaGoogle && (
+                <>
+                  <label className="block text-xs font-medium">
+                    Email
+                    <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={cx(input, "mt-1", focusRing)} />
+                  </label>
+                  <div>
+                    <label htmlFor="login-password" className="block text-xs font-medium">
+                      Password
+                    </label>
+                    <div className="relative mt-1">
+                      <input
+                        id="login-password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className={cx(input, "pr-10", focusRing)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-pressed={showPassword}
+                        title={showPassword ? "Hide password" : "Show password"}
+                        className={cx("absolute inset-y-0 right-0 flex items-center rounded-r-xl px-3 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-100", focusRing)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
               {challenge && (
                 <label className="block text-xs font-medium">
                   Code from your authenticator app
@@ -170,9 +223,23 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
                 </label>
               )}
               {error && <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">{error}</p>}
-              <Button type="submit" disabled={busy || (challenge !== null && code.trim().length < 6)} className="w-full">
+              <Button type="submit" disabled={busy || googleBusy || (challenge !== null && code.trim().length < 6)} className="w-full">
                 {busy ? "Signing in…" : challenge ? "Verify and sign in" : "Sign in"}
               </Button>
+              {viaGoogle && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChallenge(null);
+                    setViaGoogle(false);
+                    setCode("");
+                    setError(null);
+                  }}
+                  className={cx("mx-auto block text-xs text-zinc-500 hover:underline", focusRing)}
+                >
+                  Start over
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => void openUrl(`${WEB_URL}/forgot-password`)}
@@ -197,7 +264,47 @@ export function LoginScreen({ onSignedIn }: { onSignedIn: (user: User) => void }
               <ServerSwitch open={serverOpen} onOpen={() => setServerOpen(true)} onClose={() => setServerOpen(false)} />
             )}
           </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+/** Continue with Google (D81): the browser opens, and this waits for it with a Cancel. Drawn to Google's branding rules
+ * like the web's button (.google-button in index.css). */
+function GoogleContinue({ step, onStart, onCancel }: { step: GoogleStep; onStart: () => void; onCancel: () => void }) {
+  const waiting = step.kind === "waiting" || step.kind === "finishing";
+  return (
+    <div className="space-y-3">
+      {waiting ? (
+        <div role="status" className="flex items-center gap-3 rounded-xl border border-zinc-200 px-3 py-2.5 dark:border-white/10">
+          <ButtonSpinner className="text-indigo-600 dark:text-indigo-400" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">{step.kind === "finishing" ? "Signing in…" : "Waiting for your browser…"}</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">Finish signing in with Google in the browser tab that opened.</p>
+          </div>
+          {step.kind === "waiting" && (
+            <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
         </div>
+      ) : (
+        <button type="button" onClick={onStart} className={cx("google-button w-full", focusRing)}>
+          <img src={googleG} alt="" width={20} height={20} />
+          <span>Continue with Google</span>
+        </button>
+      )}
+      {step.kind === "error" && (
+        <p role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+          {step.message}
+        </p>
+      )}
+      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Opens in your browser. Then Orbit signs you in here.</p>
+      <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
+        or use email
+        <span className="h-px flex-1 bg-zinc-200 dark:bg-white/10" />
       </div>
     </div>
   );

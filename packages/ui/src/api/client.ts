@@ -5,6 +5,7 @@ import type {
   InterviewWrapUp,
   EngineeringTelemetry,
   TwoFactorChallenge,
+  DesktopExchangeRequest,
   TwoFactorStatus,
   Passkey,
   VoiceStatus,
@@ -512,6 +513,9 @@ export function createApiClient(options: ApiClientOptions) {
     /** The second step: a code from the authenticator app or a recovery code. After Google, `challenge` is in a cookie. */
     loginSecondStep: (code: string, challenge?: string | null) =>
       json<AuthResponse>("/v1/auth/login/2fa", { method: "POST", body: body({ code, challenge: challenge ?? null }) }),
+    /** The desktop app's Continue with Google (D81): the loopback code and its PKCE verifier, for a sign-in. */
+    desktopExchange: (req: DesktopExchangeRequest) =>
+      json<AuthResponse | TwoFactorChallenge>("/v1/auth/desktop/exchange", { method: "POST", body: body(req) }),
     twoFactorStatus: () => json<TwoFactorStatus>("/v1/auth/2fa"),
     twoFactorSetup: (password: string) =>
       json<{ secret: string; otpauth_uri: string }>("/v1/auth/2fa/setup", { method: "POST", body: body({ password }) }),

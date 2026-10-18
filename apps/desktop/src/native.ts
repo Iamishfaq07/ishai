@@ -198,6 +198,26 @@ export function captureScrolling(rect: { x: number; y: number; width: number; he
   return invoke<ScrollCapture>("capture_scrolling", rect);
 }
 
+/** What google_sign_in.rs hands back once the browser returns: the code and the PKCE verifier to trade for it. */
+export interface GoogleCode {
+  code: string;
+  verifier: string;
+}
+
+/**
+ * Continue with Google (google_sign_in.rs, D81): opens the browser at the API's Google sign-in and waits (up to five
+ * minutes) for it to come back to a listener on 127.0.0.1. Rejects with "cancelled", "timeout", the API's error code
+ * ("denied", "suspended", ...) or "failed: ...".
+ */
+export function googleSignIn(apiUrl: string): Promise<GoogleCode> {
+  // Each attempt is named: Tauri re-sends a command whose first request failed, and the repeat must join this attempt
+  // rather than open the browser again (google_sign_in.rs).
+  return invoke<GoogleCode>("google_sign_in", { apiUrl, attempt: crypto.randomUUID() });
+}
+export function cancelGoogleSignIn(): Promise<void> {
+  return invoke<void>("google_sign_in_cancel");
+}
+
 // Access token lives in the OS credential store (Keychain / Windows Credential Manager).
 export function saveToken(token: string): Promise<void> {
   return invoke<void>("save_token", { token });

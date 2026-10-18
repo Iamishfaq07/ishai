@@ -1,5 +1,27 @@
 # Implementation log
 
+## The desktop app signs in with Google, in the browser (2026-10-19)
+
+- **Continue with Google on the desktop sign-in screen** (DECISIONS D81, docs/PROTOCOL.md "Desktop sign-in with
+  Google"). It opens the user's own browser at the API's Google sign-in, and Orbit is signed in when the browser comes
+  back: the token goes to the keychain as an email/password sign-in's does. RFC 8252 loopback with PKCE: the app
+  (google_sign_in.rs) makes an S256 challenge and a state, listens once on 127.0.0.1 on a port the OS picks, waits
+  five minutes at most, one attempt at a time, with Cancel; the tab gets a plain "You're signed in to Orbit" page
+  (or "return to the app"), and Orbit comes forward. The button shows only when the server has Google set up.
+- **API**: `/v1/auth/google/start` takes `desktop_port`, `desktop_challenge` and `desktop_state` and carries them in
+  the signed state cookie. After Google a desktop sign-in gets no web session: a 60-second, single-use code (SHA-256 at
+  rest) bound to the challenge, sent to `http://127.0.0.1:<port>/callback` (only there; a malformed request goes to the
+  web sign-in page). Refusals (Cancel on Google's page, suspended, Google off, too many attempts...) go to the same
+  place with a code the app turns into words. New `POST /v1/auth/desktop/exchange` `{code, verifier}` answers as
+  `/v1/auth/login` does, two-step sign-in included (required, as on the web after Google). No new redirect URI in
+  Google's console: both today's (through the site's /api) and api.orbitanswer.com's work.
+- The sign-in screen's form column is now its `main` landmark (axe: landmark-one-main, region).
+- Tests: 27 API (full flow, PKCE mismatch, reuse, expiry, sign-out-everywhere, bad ports, every refusal, the rate limit,
+  suspended, 2FA, both redirect URIs), 10 Rust (PKCE vector, URL building, the listener, Cancel and the deadline, one
+  attempt at a time, Tauri's IPC retry joining its attempt), 13 vitest (the screen's states and messages). E2E: an
+  isolated test build over CDP against a local API with Google stubbed, the browser half in headless Edge: 28 checks
+  (sign-in into the keychain, Cancel, a reload while waiting, Google's Cancel, the 2FA step, axe clean in each state).
+
 ## Cloudflare Web Analytics is let through (2026-10-18)
 
 Cloudflare adds its Web Analytics beacon to every page it serves, and the site's Content-Security-Policy blocked it: a

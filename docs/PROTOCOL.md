@@ -206,3 +206,31 @@ It asks the reviewed session's weak questions again: those scored ≤ 3 or unans
 first two each get one live follow-up, generated from the new answer and steered by the old feedback. Then comes one
 "short version" drill. Errors are `409 no_review` (generate the review first) and `409 nothing_to_drill` (every
 question scored 4+). Plan limits and the mock feature gate apply as for `POST /v1/sessions`.
+
+## Desktop sign-in with Google (REST, D81)
+Not part of the live socket, but the one place the desktop app and the API agree on a handshake. RFC 8252 (native
+apps: loopback redirect) with PKCE (RFC 7636, S256), on top of the web's server-side Google flow.
+
+1. The app makes a verifier (32 random bytes, base64url: 43 characters), its challenge
+   `BASE64URL(SHA256(verifier))`, a state (24 random bytes, base64url), and listens on `127.0.0.1:<port>` (a port the
+   OS picks), for five minutes at most.
+2. It opens the system browser at
+   `GET /v1/auth/google/start?desktop_port=<1024-65535>&desktop_challenge=<43 chars>&desktop_state=<16-128 chars>`.
+   All three are carried in the signed `orbit_google` state cookie. If any is present but one is malformed (a port
+   outside 1024-65535, a challenge that isn't 43 base64url characters), the browser goes to the web sign-in page with
+   `?error=google`, never to a loopback.
+3. After Google, the API sends the browser to `http://127.0.0.1:<port>/callback?code=<code>&state=<state>`, always
+   127.0.0.1, never a host from the request. No web session cookie is set. The code lives 60 s, is single use, and is
+   kept only as a SHA-256 hash. A refusal goes to the same place as `?error=<code>&state=<state>`:
+   `denied` (Cancel on Google's page), `google_off`, `busy` (the sign-in rate limit), `suspended`, `unverified`,
+   `private` (an allowlisted server), `server`, or `google` (anything else). The app checks `state` and answers the tab
+   with a self-contained page.
+4. `POST /v1/auth/desktop/exchange` `{"code": "...", "verifier": "..."}` (the verifier is RFC 7636's 43-128
+   characters of `[A-Za-z0-9._~-]`). Rate-limited with the other sign-in routes. Answers exactly as
+   `POST /v1/auth/login` does for the desktop:
+   - `200 {"user": {...}, "access_token": "..."}`: a new device row ("Orbit for Windows" from the app's user agent);
+   - `200 {"two_factor_required": true, "challenge": "..."}` when the account has two-step sign-in on, finished at
+     `POST /v1/auth/login/2fa` `{"challenge", "code"}` as after a password;
+   - `400` "That sign-in expired or was already used…" for an unknown, expired, reused code, or a verifier that
+     doesn't match its challenge (which spends the code too), or when the account signed out everywhere since;
+   - `403` for a suspended account or one no longer on a private server's allowlist; `429` when rate-limited.

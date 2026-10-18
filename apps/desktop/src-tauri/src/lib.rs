@@ -1,6 +1,7 @@
 #[cfg(target_os = "windows")]
 mod app_icons;
 mod audio;
+mod google_sign_in;
 #[cfg(target_os = "windows")]
 mod process_loopback;
 mod screen;
@@ -153,7 +154,7 @@ fn set_window_privacy(app: tauri::AppHandle, shield: bool, hide_from_taskbar: bo
     protect_all(&app);
 }
 
-fn show_main(app: &tauri::AppHandle) {
+pub(crate) fn show_main(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         protect_window(&window);
         let _ = window.show();
@@ -193,6 +194,7 @@ pub fn run() {
         .manage(updater::PendingUpdate::default())
         .manage(QuitRequest::default())
         .manage(WindowPrivacy::default())
+        .manage(google_sign_in::GoogleAttempt::default())
         .on_window_event(|window, event| {
             if matches!(
                 event,
@@ -286,6 +288,8 @@ pub fn run() {
             secrets::save_token,
             secrets::load_token,
             secrets::clear_token,
+            google_sign_in::google_sign_in,
+            google_sign_in::google_sign_in_cancel,
             updater::check_update,
             updater::download_update,
             updater::install_update,
