@@ -6,6 +6,7 @@ the careers page with its JSON-LD; a paused or closed job's page says so and car
 jobs). A job past its valid_through closes itself (retention.py's sweep).
 """
 
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
@@ -13,6 +14,7 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import ratelimit
@@ -230,8 +232,12 @@ async def _check_team(db: AsyncSession, company_id: str, user_ids: list[str]) ->
     return ids
 
 
-async def _unique_job_slug(db: AsyncSession, company_id: str, title: str, job_id: str | None = None) -> str:
-    base = rules.slugify(title, 80)
+SLUG_TRIES = 5
+
+
+async def _unique_job_slug(db: AsyncSession, company_id: str, title: str, job_id: str | None = None,
+                           suffix: str = "") -> str:
+    base = rules.slugify(title, 74) + (f"-{suffix}" if suffix else "")
     slug, n = base, 2
     while True:
         other = await db.scalar(select(BizJob.id).where(BizJob.company_id == company_id, BizJob.slug == slug))
@@ -311,14 +317,23 @@ async def list_jobs(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)
 async def create_job(body: JobIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> JobOut:
     ctx.require("manage_jobs")
     ctx.writable()
-    job = BizJob(company_id=ctx.company.id, slug=await _unique_job_slug(db, ctx.company.id, rules.one_line(body.title)),
-                 title=rules.one_line(body.title), status="draft", created_by=ctx.user.id,
-                 stages=[dict(s) for s in rules.DEFAULT_STAGES], hiring_team=[])
+    title = rules.one_line(body.title)
     fields = set(body.model_fields_set) | {"description_html", "locations", "must_haves", "nice_to_haves",
                                             "questions"}
-    await _apply_fields(db, ctx, job, body, fields)
-    db.add(job)
-    await db.flush()
+    slug = await _unique_job_slug(db, ctx.company.id, title)
+    for attempt in range(SLUG_TRIES):
+        job = BizJob(company_id=ctx.company.id, slug=slug, title=title, status="draft", created_by=ctx.user.id,
+                     stages=[dict(s) for s in rules.DEFAULT_STAGES], hiring_team=[])
+        await _apply_fields(db, ctx, job, body, fields)
+        try:
+            async with db.begin_nested():  # the same title saved twice at once: the second takes the next slug
+                db.add(job)
+                await db.flush()
+            break
+        except IntegrityError:
+            if attempt == SLUG_TRIES - 1:
+                raise HTTPException(409, "Couldn't save the job just now. Try again.") from None
+            slug = await _unique_job_slug(db, ctx.company.id, title, suffix=secrets.token_hex(2))
     audit(db, ctx.company.id, ctx.user, "job.created", job.title, job_id=job.id)
     await db.commit()
     return await job_out(db, ctx.company, job)

@@ -196,8 +196,11 @@ def company_out(c: BizCompany, role: str) -> CompanyOut:
         permissions=Permissions(**rules.permissions(role)))
 
 
-async def _unique_slug(db: AsyncSession, name: str, taken_by: str | None = None) -> str:
-    base = rules.slugify(name, 60)
+SLUG_TRIES = 5
+
+
+async def _unique_slug(db: AsyncSession, name: str, taken_by: str | None = None, suffix: str = "") -> str:
+    base = rules.slugify(name, 54) + (f"-{suffix}" if suffix else "")
     slug, n = base, 2
     while True:
         owner = await db.scalar(select(BizCompany.id).where(BizCompany.slug == slug))
@@ -248,11 +251,20 @@ async def create_company(body: CompanyIn, user: Annotated[User, Depends(require_
     name = rules.one_line(body.name)
     if len(name) < 2:
         raise HTTPException(422, "Add the company's name.")
-    company = BizCompany(slug=await _unique_slug(db, name), name=name, website=website[:300],
-                         domain=domain, size=body.size, country=body.country.upper(), about=body.about.strip(),
-                         dns_token=secrets.token_hex(16), created_by=user.id)
-    db.add(company)
-    await db.flush()
+    slug = await _unique_slug(db, name)
+    for attempt in range(SLUG_TRIES):
+        company = BizCompany(slug=slug, name=name, website=website[:300],
+                             domain=domain, size=body.size, country=body.country.upper(), about=body.about.strip(),
+                             dns_token=secrets.token_hex(16), created_by=user.id)
+        try:
+            async with db.begin_nested():  # another company took the slug at the same moment: try the next one
+                db.add(company)
+                await db.flush()
+            break
+        except IntegrityError:
+            if attempt == SLUG_TRIES - 1:
+                raise HTTPException(409, "Couldn't save the company just now. Try again.") from None
+            slug = await _unique_slug(db, name, suffix=secrets.token_hex(2))
     db.add(BizMember(company_id=company.id, user_id=user.id, role="owner"))
     audit(db, company.id, user, "company.created", company.name, domain=domain)
     await db.commit()
