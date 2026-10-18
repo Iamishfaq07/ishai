@@ -291,6 +291,10 @@ export interface BizJobDraft {
   /** The same, as sanitized HTML for the editor. */
   description_html: string;
   suggested_screening_questions: Array<{ text: string; kind: BizQuestionKind; choices?: string[] }>;
+  /** Coded words the writer replaced, to show the recruiter. */
+  inclusive_language_notes: string[];
+  /** "template": the AI writer couldn't be reached, and this is the brief laid out. */
+  source: "ai" | "template";
 }
 
 // ─── Applications (company side) ─────────────────────────────────────────────
@@ -311,7 +315,7 @@ export interface BizRanking {
   nice_to_haves: BizRequirementMatch[];
   summary: string;
   cautions: string[];
-  model_version: string;
+  /** The model version is audit data (the company's audit log, the Orbit admin): never sent here. */
   ranked_at: string;
 }
 
@@ -339,6 +343,8 @@ export interface BizApplicationListItem {
   must_haves_total: number | null;
   /** "Matches 6/8 must-haves" */
   match_label: string | null;
+  /** Keyword matching alone (the AI model was unavailable): shown as "basic match". */
+  basic_match: boolean;
   deletion_requested: boolean;
 }
 

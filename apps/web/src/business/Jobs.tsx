@@ -400,8 +400,11 @@ function AiWriter({ open, onClose, initialTitle, about, onDraft }: { open: boole
   const [nice, setNice] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // After a draft: what the recruiter should know about it (the writer was unreachable, or wording it changed).
+  const [result, setResult] = useState<{ template: boolean; notes: string[] } | null>(null);
   useEffect(() => {
     if (open) setBrief((b) => ({ ...b, title: b.title || initialTitle }));
+    if (open) setResult(null);
   }, [open, initialTitle]);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -414,8 +417,14 @@ function AiWriter({ open, onClose, initialTitle, about, onDraft }: { open: boole
         { title: d.title, description_html: d.description_html || markdownToHtml(d.description_markdown), must_haves: d.must_haves, nice_to_haves: d.nice_to_haves },
         d.suggested_screening_questions.map((q) => ({ id: newId("q"), text: q.text, kind: q.kind, required: true, knockout: null, ...(q.kind === "choice" ? { choices: q.choices ?? [] } : {}) })),
       );
-      toast({ message: "Draft written. Read it through and change anything that isn't right.", tone: "success" });
-      onClose();
+      const template = d.source === "template";
+      const notes = d.inclusive_language_notes ?? [];
+      if (template || notes.length) {
+        setResult({ template, notes });
+      } else {
+        toast({ message: "Draft written. Read it through and change anything that isn't right.", tone: "success" });
+        onClose();
+      }
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -450,6 +459,30 @@ function AiWriter({ open, onClose, initialTitle, about, onDraft }: { open: boole
           <Textarea id={`${id}-x`} rows={2} maxLength={1500} value={brief.notes} onChange={(e) => setBrief({ ...brief, notes: e.target.value })} />
         </Field>
         {error && <Callout tone="error">{error}</Callout>}
+        {result && (
+          <div role="status" className="space-y-2">
+            {result.template && (
+              <Callout tone="warning">We couldn't reach the AI writer, so this is your brief laid out. It's in the editor: fill in the rest there.</Callout>
+            )}
+            {result.notes.length > 0 && (
+              <Callout tone="info">
+                <p className="font-medium">Wording changed to be more inclusive:</p>
+                <ul className="mt-1 list-disc pl-5">
+                  {result.notes.map((n) => (
+                    <li key={n}>{n}</li>
+                  ))}
+                </ul>
+              </Callout>
+            )}
+          </div>
+        )}
+        {result ? (
+          <DialogActions>
+            <Button type="button" onClick={onClose}>
+              Go to the editor
+            </Button>
+          </DialogActions>
+        ) : (
         <DialogActions>
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
@@ -458,6 +491,7 @@ function AiWriter({ open, onClose, initialTitle, about, onDraft }: { open: boole
             <Sparkles className="h-4 w-4" aria-hidden /> Write the draft
           </Button>
         </DialogActions>
+        )}
       </form>
     </Dialog>
   );

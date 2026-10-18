@@ -48,6 +48,7 @@ const app = (over: Partial<BizApplicationListItem>): BizApplicationListItem => (
   must_haves_met: 3,
   must_haves_total: 4,
   match_label: null,
+  basic_match: false,
   deletion_requested: false,
   ...over,
 });

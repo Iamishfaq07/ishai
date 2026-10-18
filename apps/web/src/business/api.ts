@@ -152,6 +152,7 @@ export const biz = {
 
   // Orbit admin
   adminCompanies: (q: { q?: string; status?: string } = {}) => api.call<BizAdminCompany[]>(`/v1/admin/business/companies${qs(q)}`),
+  adminAudit: (cid: string) => api.call<BizAuditEntry[]>(`/v1/admin/business/companies/${e(cid)}/audit`),
   adminCompany: (cid: string) => api.call<BizAdminCompanyDetail>(`/v1/admin/business/companies/${e(cid)}`),
   adminSuspend: (cid: string, reason: string) => api.call<BizAdminCompanyDetail>(`/v1/admin/business/companies/${e(cid)}/suspend`, post({ reason })),
   adminUnsuspend: (cid: string) => api.call<BizAdminCompanyDetail>(`/v1/admin/business/companies/${e(cid)}/unsuspend`, post()),

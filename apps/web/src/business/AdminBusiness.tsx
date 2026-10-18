@@ -1,7 +1,7 @@
 // Orbit for Business (D82), the Orbit admin's side: every company (verify by hand, suspend, grant a plan), its jobs
 // (take one down), and the "Report this job" queue. Job-scam protection lives here.
 import { useEffect, useId, useState } from "react";
-import type { BizAdminCompany, BizAdminCompanyDetail, BizJobReport, BizPlan } from "@orbit/types";
+import type { BizAdminCompany, BizAdminCompanyDetail, BizAuditEntry, BizJobReport, BizPlan } from "@orbit/types";
 import { Badge, Building2, Button, Callout, Dialog, ExternalLink, Field, Input, PageHeader, SearchInput, Select, Table, THead, Td, Th, Tr, cx, focusRing, toast } from "@orbit/ui";
 import { AdminTabs } from "../pages/admin/shared";
 import { biz } from "./api";
@@ -142,9 +142,40 @@ function Detail({ cid, onClose, onChanged }: { cid: string | null; onClose: () =
               <Reports items={d.reports} onChanged={() => cid && biz.adminCompany(cid).then(setD)} />
             </Panel>
           )}
+          {cid && <CompanyAudit cid={cid} />}
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** The company's own audit log, for the Orbit team: moves and rejections, and each ranking's model version (which
+ *  the company's members don't see anywhere else). */
+function CompanyAudit({ cid }: { cid: string }) {
+  const [rows, setRows] = useState<BizAuditEntry[] | null>(null);
+  useEffect(() => {
+    biz.adminAudit(cid).then(setRows).catch(() => setRows([]));
+  }, [cid]);
+  return (
+    <Panel title="Audit log">
+      {!rows ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Nothing yet.</p>
+      ) : (
+        <ul className="max-h-72 space-y-1 overflow-auto text-xs">
+          {rows.slice(0, 100).map((r) => (
+            <li key={r.id} className="flex flex-wrap gap-x-2">
+              <span className="text-zinc-500 dark:text-zinc-400">{relTime(r.created_at)}</span>
+              <span className="font-medium">{r.action}</span>
+              {r.target && <span>{r.target}</span>}
+              {typeof r.detail.model_version === "string" && <span className="font-mono">{r.detail.model_version}</span>}
+              <span className="text-zinc-500 dark:text-zinc-400">{r.actor ?? "Orbit"}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   );
 }
 

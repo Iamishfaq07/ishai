@@ -522,7 +522,7 @@ export function Candidate() {
                   </div>
                 )}
                 <p className="flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  <Sparkles className="h-3 w-3" aria-hidden /> Read from the resume and answers only (never name, photo, age or other personal traits). It sorts; your team decides. Model {a.ranking.model_version}, {relTime(a.ranking.ranked_at)}.
+                  <Sparkles className="h-3 w-3" aria-hidden /> Read from the resume and answers only (never name, photo, age or other personal traits). It sorts; your team decides.{a.basic_match ? " Basic match: keywords only, as the AI model wasn't available." : ""} Ranked {relTime(a.ranking.ranked_at)}.
                   {canMove && (
                     <button type="button" onClick={() => void rerank()} className={cx("inline-flex items-center gap-1 rounded underline", focusRing)}>
                       <RefreshCw className="h-3 w-3" aria-hidden /> Rank again
