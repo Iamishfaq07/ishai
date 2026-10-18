@@ -200,15 +200,22 @@ def wait_line(seed: str) -> str:
     return _pick(("Of course, take your time.", "Sure, take a moment.", "No problem, take your time."), seed)
 
 
+# A transition the model opened its question with ("Let's shift a bit."): said when the topic changed, not again.
+_TRANSITION = re.compile(r"^(?:(?:okay|alright|right|so)[,.]?\s+)?(?:let'?s (?:shift|switch|move|change|turn)[^.?!]*"
+                         r"[.!]|moving on[,.]|on a different note[,.])\s+", re.IGNORECASE)
+
+
 def repeat_line(question: str, seed: str) -> str:
-    return _pick(("Sure. ", "Of course. ", "Sure, no problem. "), seed) + question
+    asked = _TRANSITION.sub("", question.strip()) or question
+    return _pick(("Sure. ", "Of course. ", "Sure, no problem. "), seed) + asked
 
 
 def closing_question(name: str, seed: str) -> str:
     who = f", {name}" if name else ""
-    return _pick((f"That's all the questions I had{who}. Do you have any questions for me?",
-                  f"That's everything from my side{who}. Is there anything you'd like to ask me?",
-                  f"Okay{who}, that wraps up my questions. Do you have any for me?"), seed)
+    # Right after their last answer: a word for it first, as a person would.
+    return _pick((f"Thanks, that's helpful. That's all the questions I had{who}. Do you have any questions for me?",
+                  f"Got it, thank you. That's everything from my side{who}. Is there anything you'd like to ask me?",
+                  f"Okay, thanks{who}. That wraps up my questions. Do you have any for me?"), seed)
 
 
 def goodbye(name: str, seed: str) -> str:

@@ -436,3 +436,14 @@ async def test_the_engine_tells_her_when_their_voice_is_on_the_mic() -> None:
     await eng.handle_audio(b"\x00" + _tone(0.2))
     assert eng._mock._voice_ms == eng.now_ms()  # them
     await eng.end()
+
+
+def test_a_repeat_skips_the_transition_and_the_close_thanks_them_first() -> None:
+    # A real run: "Sure, no problem. Let's shift a bit. Can you walk me through…", and "That's all the questions I had"
+    # straight after their last answer, with no word for it.
+    said = talk.repeat_line("Let's shift a bit. Can you walk me through one specific finding?", "x")
+    assert said.endswith(" Can you walk me through one specific finding?") and "shift" not in said
+    assert talk.repeat_line("Could you introduce yourself?", "y").endswith(" Could you introduce yourself?")
+    for seed in "abcdef":
+        line = talk.closing_question("Arjun", seed)
+        assert line.split(".")[0] in ("Thanks, that's helpful", "Got it, thank you", "Okay, thanks, Arjun")
