@@ -10,6 +10,9 @@ interface ImportMetaEnv {
   readonly VITE_DESKTOP_DOWNLOAD_URL?: string;
   /** "true" once the Windows installer is Authenticode-signed: drops the Beta label (lib/desktop.ts). */
   readonly VITE_DESKTOP_SIGNED?: string;
+  /** "true" once the Microsoft Store listing has passed certification and is public: the Microsoft Store
+   * badge becomes the main Windows download, with the installer as the alternative (lib/desktop.ts). */
+  readonly VITE_MS_STORE_LIVE?: string;
   /** The browser extension's store listing (Chrome Web Store), once published: /extension/connect links it. */
   readonly VITE_EXTENSION_URL?: string;
 }

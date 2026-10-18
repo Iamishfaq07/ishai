@@ -16,8 +16,9 @@ import {
   cx,
   focusRing,
 } from "@orbit/ui";
+import { StoreBadge } from "../components/StoreBadge";
 import { USE_WHERE_ALLOWED } from "../lib/contact";
-import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL, MS_STORE_LIVE } from "../lib/desktop";
 import { useWelcomeGrant } from "../lib/welcome";
 import { CtaBand, FeatureGrid, ProductHero, inkButton, type Feature } from "../marketing/ProductPage";
 import { ProductShot } from "../marketing/ProductShot";
@@ -109,12 +110,16 @@ export function CopilotPublicPage() {
             </ol>
             <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2">
               <ArrowLink to="/technical">Measured answer speed</ArrowLink>
-              <a
-                href={DESKTOP_DOWNLOAD_URL}
-                className={cx("group inline-flex min-h-10 items-center gap-1.5 rounded-lg text-sm font-medium text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white", focusRing)}
-              >
-                <Download className="h-4 w-4" aria-hidden="true" /> Orbit for Windows{DESKTOP_BETA ? " (beta)" : ""}
-              </a>
+              {MS_STORE_LIVE ? (
+                <StoreBadge className="text-zinc-700 dark:text-zinc-300" />
+              ) : (
+                <a
+                  href={DESKTOP_DOWNLOAD_URL}
+                  className={cx("group inline-flex min-h-10 items-center gap-1.5 rounded-lg text-sm font-medium text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white", focusRing)}
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" /> Orbit for Windows{DESKTOP_BETA ? " (beta)" : ""}
+                </a>
+              )}
             </div>
           </div>
           <div className="rounded-2xl border mk-line mk-surface p-6 sm:p-8 lg:col-span-6">
