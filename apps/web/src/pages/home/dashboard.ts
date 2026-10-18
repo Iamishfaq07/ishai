@@ -5,6 +5,14 @@ import type { JobStatus, JobTrackerEntry, OrbitSession } from "@orbit/types";
  * hiring probability: only what happened (applications by stage, interviews on the calendar, practice done).
  */
 
+/** Home's hello for the hour where the user is: evening ends at midnight (at 2 a.m. it's not "Good evening"). */
+export function greetingFor(hour: number): string {
+  if (hour >= 5 && hour < 12) return "Good morning";
+  if (hour >= 12 && hour < 18) return "Good afternoon";
+  if (hour >= 18) return "Good evening";
+  return "Hello";
+}
+
 export const PIPELINE_STAGES: JobStatus[] = ["saved", "applied", "interviewing", "offer"];
 
 /** How many tracked jobs sit at each stage (rejections are counted apart: they aren't "in progress"). */

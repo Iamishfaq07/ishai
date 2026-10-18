@@ -211,11 +211,12 @@ export interface MockConfig {
   topic?: string | null;
   /** A one-way (recorded, HireVue-style) video interview: thinking time, then a fixed time to answer each prompt. */
   one_way?: { think_seconds: number; answer_seconds: number };
-  /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
+  /** A fixed list of questions, asked in order (re-drills; questions from interview prep: kind "prep"; a one-tap
+   *  round's usual questions, asked with no lead line: kind "set"). */
   drill?: Array<{
     question: string;
     /** "story": a question a story-bank story answers ("Practise telling it"), tested by its follow-up. */
-    kind?: "retry" | "concise" | "prep" | "story" | "answer";
+    kind?: "retry" | "concise" | "prep" | "story" | "answer" | "set";
     follow_up?: boolean;
     /** Steers the follow-up, never read out: what was weak last time, or (prep) where to push on the claim. */
     feedback?: string;
@@ -932,6 +933,8 @@ export interface AdminPayments {
   events_to_review?: number;
   /** Refunds whose payment isn't known here yet. */
   unlinked_refunds?: number;
+  /** Older payments past this page (ask again with an offset). */
+  has_more?: boolean;
 }
 
 /** A first-purchase discount: from an invite link or a creator's or campus's code (POST /v1/referrals/redeem). */
@@ -1092,6 +1095,8 @@ export interface Entitlements {
      * or this inbox, and nothing was bought or granted. The app says why the balance is zero. */
     welcome_missed?: boolean;
   } | null;
+  /** On a plan with its own allowance: credits bought or given before, kept (never expiring) for after it. */
+  saved_credits?: { resume: number; interview_minutes_left: number } | null;
 }
 
 export interface Usage {
@@ -1126,6 +1131,8 @@ export interface AdminUser {
   suspended_reason?: string | null;
   /** The admin wrote private notes on it. */
   has_note?: boolean;
+  /** Two-step sign-in is on (the admin can turn it off for someone locked out). */
+  two_factor?: boolean;
 }
 
 export interface AdminUsage {
@@ -1142,8 +1149,11 @@ export interface AdminUsage {
   /** Approved UPI payments. */
   paid_inr: number;
   packs: number;
-  /** The last time the account used Orbit (a session, interview time, resume AI or edits, Jobs AI); not sign-ins. */
+  /** The last time the account used Orbit (a session, interview time, resume AI or edits, Jobs AI, documents,
+   *  stories, answers, evidence, Code AI, offers); not sign-ins. */
   last_active: string | null;
+  /** The last time any of its signed-in devices was used (signing in counts). Older servers leave it out. */
+  last_seen?: string | null;
 }
 
 /** The whole server at a glance. */
@@ -2780,6 +2790,24 @@ export interface OfferScenario {
 }
 
 /** GET /v1/auth/sessions: a signed-in device or browser. No IP address is kept. */
+/** A change to how the account is signed in to (GET /v1/auth/security-activity), newest first. */
+export interface SecurityEvent {
+  id: string;
+  action: string;
+  /** "A passkey was added" */
+  text: string;
+  at: string;
+  /** Recent enough (and serious enough) to show on Home until acknowledged on this device. */
+  notice: boolean;
+}
+
+export interface SecurityActivity {
+  items: SecurityEvent[];
+  notice_days: number;
+  /** The server can send email, so each change is emailed too (otherwise the app is the only alert). */
+  emailed?: boolean;
+}
+
 export interface SignedInDevice {
   id: string;
   kind: "web" | "desktop" | "other";

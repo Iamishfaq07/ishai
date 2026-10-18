@@ -22,7 +22,7 @@ export function SessionsPage() {
     if (
       !(await confirmDialog({
         title: "End this session?",
-        body: "It can't be resumed afterwards. The transcript and report are saved to History.",
+        body: "It can't be resumed afterwards. The transcript and report are saved in Sessions.",
         confirmLabel: "End session",
         danger: true,
       }))

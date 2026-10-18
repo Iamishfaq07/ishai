@@ -19,7 +19,7 @@ import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { AccountHistory } from "./AccountHistory";
 import { CreditsAdjust } from "./CreditsAdjust";
-import { sinceText } from "./logic";
+import { seenText, sinceText } from "./logic";
 import { AccessBadge, Section, SuspendedBadge, Tag, inr, mins, when } from "./shared";
 
 const DURATIONS: Array<{ hours: number; label: string }> = [
@@ -92,6 +92,7 @@ export function UserDrawer({
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
               Joined {formatDate(u.created_at)} · {u.email_verified ? "email verified" : "email not verified"} · last active{" "}
               {sinceText(u.usage?.last_active ?? null).toLowerCase()}
+              {seenText(u.usage?.last_active ?? null, u.usage?.last_seen) ? ` (${seenText(u.usage?.last_active ?? null, u.usage?.last_seen)})` : ""}
             </p>
           </>
         ) : undefined
@@ -395,6 +396,7 @@ function SuspendedNote({ detail, onChange }: { detail: AdminUserDetail; onChange
 function DangerZone({ detail, onChange, onDeleted }: { detail: AdminUserDetail; onChange: Changed; onDeleted: () => void }) {
   const u = detail.user;
   const [reason, setReason] = useState("");
+  const [checked, setChecked] = useState(""); // how the admin made sure it's them (two-step sign-in off)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const live = detail.counts.sessions_open;
@@ -428,6 +430,35 @@ function DangerZone({ detail, onChange, onDeleted }: { detail: AdminUserDetail; 
           <LogOut className="h-3.5 w-3.5" /> Sign out everywhere
         </Button>
       </div>
+      {u.two_factor && (
+        <form
+          className="flex flex-wrap items-center gap-2"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const how = checked.trim();
+            if (how.length < 10) return;
+            const ok = await confirmDialog({
+              title: `Turn off two-step sign-in for ${u.email}?`,
+              body: "Only for someone who lost their phone and their recovery codes, once you've made sure it's really them. Their password alone signs in again, every device is signed out, and they're emailed. What you wrote is kept in the audit log.",
+              confirmLabel: "Turn it off",
+              danger: true,
+            });
+            if (ok)
+              await act(async () => {
+                onChange(await api.turnOffTwoFactor(u.id, how), "Two-step sign-in is off. They're emailed.");
+                setChecked("");
+              });
+          }}
+        >
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">How you checked it's really them (kept in the audit log)</span>
+            <Input value={checked} maxLength={300} onChange={(e) => setChecked(e.target.value)} placeholder="How you checked it's them (audit log)" />
+          </label>
+          <Button size="sm" variant="danger" type="submit" disabled={busy || checked.trim().length < 10}>
+            <KeyRound className="h-3.5 w-3.5" /> Turn off two-step sign-in
+          </Button>
+        </form>
+      )}
       {!u.suspended_at && (
         <form
           className="flex flex-wrap items-center gap-2"

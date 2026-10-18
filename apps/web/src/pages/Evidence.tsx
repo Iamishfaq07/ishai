@@ -67,11 +67,20 @@ export function EvidencePage() {
       setEditing(null);
     });
 
-  const remove = (item: EvidenceItem) =>
-    run(item.id, async () => {
+  // A confirmed claim is something the user vouched for: asked first, like a story or an answer. A suggestion they
+  // haven't confirmed is dismissed at once.
+  const remove = async (item: EvidenceItem) => {
+    if (item.status === "confirmed" && !(await confirmDialog({
+      title: "Delete this claim?",
+      body: `“${item.claim.length > 120 ? `${item.claim.slice(0, 117)}…` : item.claim}” goes from your vault, and live answers stop using it. This can't be undone.`,
+      confirmLabel: "Delete claim",
+      danger: true,
+    }))) return;
+    await run(item.id, async () => {
       await api.deleteEvidence(item.id);
       items.setData((prev) => (prev ?? []).filter((i) => i.id !== item.id));
     });
+  };
 
   const clear = async (only?: "suggested") => {
     const ok = await confirmDialog(

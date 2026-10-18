@@ -96,7 +96,7 @@ function AnswerCard({ saved, onEdit, onDelete, onPractise, practising }: {
       </p>
       <div className="mt-auto pt-4">
         <Button variant="secondary" size="sm" onClick={onPractise} disabled={practising}
-                aria-label={`Practise answering “${saved.question}” out loud`}>
+                aria-label={`${practising ? "Starting…" : "Practise it"}: answer “${saved.question}” out loud`}>
           <Target className="h-3.5 w-3.5" /> {practising ? "Starting…" : "Practise it"}
         </Button>
       </div>

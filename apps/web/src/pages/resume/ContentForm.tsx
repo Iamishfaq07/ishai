@@ -46,7 +46,7 @@ function IconButton({ label, onClick, children, disabled }: { label: string; onC
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={cx("tap-y rounded-md p-1 text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 disabled:opacity-30 coarse:p-2.5 dark:hover:bg-white/10 dark:hover:text-white", focusRing)}
+      className={cx("tap-y inline-flex min-h-6 min-w-6 items-center justify-center rounded-md p-1 text-zinc-500 hover:bg-zinc-900/5 hover:text-zinc-900 disabled:opacity-30 coarse:p-2.5 dark:hover:bg-white/10 dark:hover:text-white", focusRing)}
     >
       {children}
     </button>

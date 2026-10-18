@@ -1,19 +1,19 @@
 import type { ReactNode } from "react";
 import type { AdminUser } from "@orbit/types";
-import { Badge, Headphones, Inbox, IndianRupee, Megaphone, ScrollText, Users, cx } from "@orbit/ui";
+import { Badge, Headphones, Inbox, IndianRupee, Megaphone, ScrollText, Users, cx, rupees, wholeMinutes } from "@orbit/ui";
 import { ProductTabs } from "../../components/products";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 
 /** Pieces the admin pages share: their tabs, money and minutes in words, an account's badges. */
 
-export const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
-export const mins = (n: number) => `${Math.round(n).toLocaleString("en-IN")} min`;
+export const inr = rupees;
+export const mins = (n: number) => `${wholeMinutes(n).toLocaleString("en-IN")} min`;
 export const count = (n: number) => n.toLocaleString("en-IN");
 
 /** "30 Sep, 18:30", in the viewer's own time zone. */
 export function when(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 }
 
 /** "30 Sep 2026". */

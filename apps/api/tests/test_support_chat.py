@@ -306,3 +306,44 @@ def test_a_line_stays_after_one_already_dated_ahead(client: TestClient) -> None:
     assert sent.status_code == 200, sent.text
     texts = [m["text"] for m in sent.json()["messages"]]
     assert texts.index(greeting) < texts.index("The next line")
+
+
+def test_the_balance_is_said_in_whole_minutes_and_names_a_running_plan(client: TestClient) -> None:
+    """The bot said "317.3 interview minutes"; and on a plan it quoted the credit balance as if that were all."""
+    from datetime import timedelta
+
+    from orbit_api import entitlements
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import User
+    from orbit_api.support.routes import _minutes
+
+    assert _minutes(317.3) == "317 interview minutes"
+    assert _minutes(59.97) == "60 interview minutes"
+    assert _minutes(1250) == "1,250 interview minutes"
+    assert _minutes(1) == "1 interview minute"
+    assert _minutes(0.4) == "less than an interview minute"
+    assert _minutes(0) == "0 interview minutes"
+
+    headers, user = _register(client, f"planned-{uuid.uuid4().hex[:8]}@example.com")
+
+    async def grant(plan: str) -> None:
+        async with sessionmaker()() as db:
+            row = await db.get(User, user["id"])
+            assert row is not None
+            entitlements.clear_grants(row)
+            entitlements.add_grant(row, plan, timedelta(days=7), paid=True)
+            await db.commit()
+
+    def ask() -> str:
+        thread = client.post("/v1/support/threads", headers=headers).json()
+        r = client.post(f"/v1/support/threads/{thread['id']}/messages", headers=headers,
+                        json={"token": thread["token"], "choice": "balance"})
+        assert r.status_code == 200, r.text
+        return str(r.json()["messages"][-1]["text"])
+
+    client.portal.call(grant, "premium")  # type: ignore[union-attr]
+    text = ask()
+    assert text.startswith("You're on Premium until ") and "3,000 interview minutes left in this month's" in text
+    assert "kept for after it: 20 interview minutes and 1 Resume AI credit" in text
+    client.portal.call(grant, "unlimited")  # type: ignore[union-attr]
+    assert "with no limit on interview minutes" in ask()

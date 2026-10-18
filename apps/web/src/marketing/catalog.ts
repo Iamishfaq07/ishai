@@ -13,6 +13,10 @@ import {
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 
+/** The copilot's and Practice's own product pages (D73); signed in, the copilot starts at /start and Practice is /mock. */
+export const COPILOT_PAGE = "/interview-copilot";
+export const PRACTICE_PAGE = "/mock-interview";
+
 /**
  * The products as the public site names them: the header's Products menu, the phone menu and the footer read this one
  * list. The four main products have a section of the front page (or a page of their own); the other four tools sit in
@@ -31,8 +35,8 @@ export interface SiteProduct {
 
 export function siteProducts(india: boolean): SiteProduct[] {
   return [
-    { id: "copilot", name: "Interview copilot", line: "Live answers from your resume, in calls where AI help is allowed.", href: "/#copilot", icon: AudioLines, main: true },
-    { id: "practice", name: "Practice", line: "Mock and video interviews with an AI interviewer, then a scorecard.", href: "/#practice", icon: Target, main: true },
+    { id: "copilot", name: "Interview copilot", line: "Live answers from your resume, in calls where AI help is allowed.", href: COPILOT_PAGE, icon: AudioLines, main: true },
+    { id: "practice", name: "Practice", line: "Mock and video interviews with an AI interviewer, then a scorecard.", href: PRACTICE_PAGE, icon: Target, main: true },
     { id: "resume", name: "Resume AI", line: "An ATS score out of 100 and a tailored resume for every job.", href: RESUME_AI_HOME, icon: FileText, main: true },
     { id: "jobs", name: "Jobs AI", line: "New jobs that fit you, a tracker and messages for referrals.", href: JOBS_AI_HOME, icon: Briefcase, main: true },
     { id: "linkedin", name: "LinkedIn AI", line: "How your profile reads to a recruiter, and what to fix first.", href: "/#linkedin-ai", icon: IdCard, main: false },
@@ -63,7 +67,8 @@ export const PRODUCT_TILE: Record<SiteProduct["id"], string> = {
 
 /** The section links in the header and the footer. Router links: "/#pricing" scrolls once the front page is drawn. */
 export const SITE_LINKS = {
-  pricing: "/#pricing",
+  /** Its own page, both currencies (D73); the front page keeps its "Pricing" section too. */
+  pricing: "/pricing",
   security: "/#security",
   faq: "/#faq",
   howItWorks: "/technical",

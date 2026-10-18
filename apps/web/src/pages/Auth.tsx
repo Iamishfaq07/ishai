@@ -18,6 +18,7 @@ import { kashsecUrl } from "./learn/links";
 import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { storedRef } from "../lib/referral";
 import { InviteNote } from "../components/InviteNote";
+import { acknowledgeSecurityChanges } from "../lib/securityNotice";
 
 /** "Free to start: 20 interview minutes + 1 Resume AI credit", from the server (it decides the welcome credits). */
 function useWelcome(): string | null {
@@ -465,14 +466,14 @@ export function RegisterPage() {
         </Field>
         {captcha && <Captcha config={captcha} onToken={setCaptchaToken} />}
         {error && <ErrorNote>{error}</ErrorNote>}
-        <Button type="submit" disabled={busy || !agreed || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
-          {busy ? "Creating account…" : "Create account"}
-        </Button>
         <label className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300">
           <input
             type="checkbox"
             checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
+            onChange={(e) => {
+              setAgreed(e.target.checked);
+              if (e.target.checked) setError(null);
+            }}
             className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600"
           />
           <span>
@@ -491,6 +492,9 @@ export function RegisterPage() {
             .
           </span>
         </label>
+        <Button type="submit" disabled={busy || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
+          {busy ? "Creating account…" : "Create account"}
+        </Button>
       </form>
       <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
         Already have an account?{" "}
@@ -623,6 +627,7 @@ export function ResetPasswordPage() {
     setError(null);
     try {
       const res = await api.confirmPasswordReset(token, password);
+      acknowledgeSecurityChanges();
       // A reset link proves the inbox, not the authenticator: with two-step sign-in on, the code comes next (the
       // challenge waits in an httpOnly cookie, as after Google).
       if ("two_factor_required" in res) {

@@ -3,7 +3,7 @@ import contextlib
 import logging
 import os
 import time
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -21,6 +21,7 @@ from orbit_api.admin.overview import router as admin_overview_router
 from orbit_api.admin.routes import public_router as announcement_router
 from orbit_api.admin.routes import router as admin_router
 from orbit_api.answers.routes import router as answers_router
+from orbit_api.auth.alerts import router as security_alerts_router
 from orbit_api.auth.devices import router as devices_router
 from orbit_api.auth.passkeys import router as passkeys_router
 from orbit_api.auth.routes import router as auth_router
@@ -155,11 +156,26 @@ class ApiGZip(GZipMiddleware):
 class BodyLimit:
     """Refuses request bodies over `max_bytes` (413) before anything buffers them: by Content-Length up front, and by
     counting for chunked uploads. The upload route has its own, smaller per-file check; this bounds everything else
-    (a multi-GB multipart body would otherwise be spooled to disk before any route sees it)."""
+    (a multi-GB multipart body would otherwise be spooled to disk before any route sees it).
 
-    def __init__(self, app: Any, max_bytes: int) -> None:
+    It runs outside CORS, so its 413 carries the CORS headers itself for an allowed origin: without them the
+    browser hides the answer and the app can only say "Can't reach Orbit" instead of "too large"."""
+
+    def __init__(self, app: Any, max_bytes: int, allow_origins: Sequence[str] = (), file_limit_mb: int = 5) -> None:
         self.app = app
         self.max_bytes = max_bytes
+        self.allow_origins = frozenset(allow_origins)
+        self.file_limit_mb = file_limit_mb
+
+    def _too_large(self, scope: Scope) -> Response:
+        response = JSONResponse({"detail": f"That's too large to send. Files can be up to {self.file_limit_mb} MB."},
+                                status_code=413)
+        origin = dict(scope.get("headers") or []).get(b"origin", b"").decode("latin-1")
+        if origin and (origin in self.allow_origins or "*" in self.allow_origins):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Vary"] = "Origin"
+        return response
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -167,7 +183,7 @@ class BodyLimit:
             return
         length = dict(scope.get("headers") or []).get(b"content-length")
         if length is not None and (not length.isdigit() or int(length) > self.max_bytes):
-            await Response("Request body too large.", status_code=413)(scope, receive, send)
+            await self._too_large(scope)(scope, receive, send)
             return
         seen = 0
         started = False  # the app began its response: too late for a 413
@@ -190,7 +206,7 @@ class BodyLimit:
                     # A chunked upload past the cap: answer 413 here and stop reading, as the Content-Length branch
                     # does. (Raising inside receive() came back as a 400 or 500.)
                     if not started:
-                        await Response("Request body too large.", status_code=413)(scope, receive, send)
+                        await self._too_large(scope)(scope, receive, send)
                     refused = True
                     return {"type": "http.disconnect"}
             return message
@@ -266,7 +282,8 @@ def create_app() -> FastAPI:
     # Level 6 (zlib's default): a third less CPU than Starlette's 9 on the big lists, for 1-2% more bytes.
     app.add_middleware(ApiGZip, minimum_size=1024, compresslevel=6)
     # Outermost: an oversized body is refused before any other middleware or route reads it.
-    app.add_middleware(BodyLimit, max_bytes=s.max_upload_bytes + 1024 * 1024)
+    app.add_middleware(BodyLimit, max_bytes=s.max_upload_bytes + 1024 * 1024, allow_origins=s.cors_origins,
+                       file_limit_mb=max(1, s.max_upload_bytes // (1024 * 1024)))
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -332,6 +349,7 @@ def create_app() -> FastAPI:
     app.include_router(job_alerts_router)
     app.include_router(devices_router)
     app.include_router(two_factor_router)
+    app.include_router(security_alerts_router)
     app.include_router(passkeys_router)
     app.include_router(voice_router)
     app.include_router(camera_router)

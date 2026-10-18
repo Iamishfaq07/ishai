@@ -512,3 +512,58 @@ def test_with_referrals_off_nothing_is_attributed_or_discounted(client: TestClie
     # The admin can still make codes and see the values before switching it on.
     report = client.get("/v1/admin/referrals", headers=_admin(client))
     assert report.status_code == 200 and report.json()["enabled"] is False
+
+
+def test_one_open_order_carries_the_discount(client: TestClient, refs: Gateway,
+                                             monkeypatch: pytest.MonkeyPatch) -> None:
+    """A first-purchase discount on several open orders, all paid, would be a discount on everything (red team). The
+    newest order takes it from unpaid ones (still credited if paid after all), and a payment already on its way keeps
+    it, so an order meanwhile is full price."""
+    monkeypatch.setattr(get_settings(), "upi_id", "owner@okicici")
+    a, _ = _join(client, None)
+    b, _ = _join(client, _code(client, a))
+    india = {**b, "X-Orbit-Client-Country": "IN"}
+    starter, mini = _listed(client, india, "starter"), _listed(client, india, "mini")
+    card = client.post("/v1/billing/razorpay/orders", headers=india, json={"pack": "starter"}).json()
+    first = _payment(client, card["order_id"])
+    assert first.discount_minor and first.status == "awaiting_payment"
+
+    upi = client.post("/v1/billing/upi/orders", headers=india, json={"pack": "mini"})
+    assert upi.status_code == 201, upi.text
+    assert upi.json()["amount_inr"] == round(mini["offer_price"])  # the discount moved to the newest order
+    moved = _payment(client, card["order_id"])
+    assert moved.status == "expired" and "newer order" in (moved.note or "")
+    # Asked again for the same pack, UPI hands back the same order, discount and all.
+    assert client.post("/v1/billing/upi/orders", headers=india, json={"pack": "mini"}).json()["id"] == upi.json()["id"]
+
+    sent = client.post(f"/v1/billing/upi/orders/{upi.json()['id']}/utr", headers=india, json={"utr": "412345678901"})
+    assert sent.status_code == 200 and sent.json()["status"] == "submitted"
+    # A payment on its way to the admin keeps the discount: another order meanwhile is at the full price.
+    again = client.post("/v1/billing/razorpay/orders", headers=india, json={"pack": "starter"}).json()
+    assert again["amount_paise"] == round(starter["price"] * 100)
+
+    # The order that lost the discount, paid after all: still credited at what it charged.
+    assert _post(client, _captured(refs, card["order_id"], refs.pay(card["order_id"]))).status_code == 200
+    assert _payment(client, card["order_id"]).status == "approved"
+
+
+def test_orders_come_through_the_website_once_its_worker_signs(client: TestClient, refs: Gateway,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    """A direct caller could name any account country and buy at rupee prices from anywhere (red team): with the
+    proxy secret set, an order needs the website's signed request. The desktop app buys on the website already."""
+    from pydantic import SecretStr
+
+    monkeypatch.setattr(get_settings(), "upi_id", "owner@okicici")
+    monkeypatch.setattr(get_settings(), "proxy_secret", SecretStr("edge-secret"))
+    h, _ = _join(client, None)
+    # Outside production (development, these tests) nothing changes.
+    assert client.post("/v1/billing/upi/orders", headers=h, json={"pack": "mini"}).status_code == 201
+    monkeypatch.setattr(get_settings(), "env", "production")
+    monkeypatch.setattr(get_settings(), "allowed_emails", "*")  # a public server
+    direct = {**h, "X-Orbit-Client-Country": "IN"}  # believed only with the secret
+    for path in ("/v1/billing/upi/orders", "/v1/billing/razorpay/orders", "/v1/billing/paypal/orders"):
+        r = client.post(path, headers=direct, json={"pack": "mini"})
+        assert r.status_code == 409 and "/billing" in r.json()["detail"], (path, r.text)
+    signed = {**direct, "X-Orbit-Proxy-Secret": "edge-secret"}
+    assert client.post("/v1/billing/upi/orders", headers=signed, json={"pack": "starter"}).status_code == 201
+    assert client.post("/v1/billing/razorpay/orders", headers=signed, json={"pack": "mini"}).status_code == 201

@@ -30,7 +30,7 @@ from orbit_api.db import get_db
 from orbit_api.entitlements import current_grant, plan_named, running_until
 from orbit_api.models import AuditLog, ContactMessage, LaunchAccessClaim, Payment, PaymentEvent, PaymentRefund, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
-from orbit_api.ratelimit import limit, limit_user
+from orbit_api.ratelimit import limit, limit_user, proxy_signed
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1", tags=["billing"])
@@ -116,18 +116,36 @@ def _priced(items: list[dict[str, Any]], currency: str,
     return out
 
 
+# A price list asked for in a currency (the public /pricing page shows both): for reading only.
+ShownCurrency = Annotated[Literal["INR", "USD"] | None, Query()]
+
+
+def _shown_in(items: list[dict[str, Any]], currency: str) -> list[dict[str, Any]]:
+    """The price list in `currency`, as the pricing page shows it to anyone, anywhere: list prices (no first-purchase
+    discount) and nothing buyable from it. What an order charges still follows the country the website's edge saw
+    (the order endpoints and `priced_by_the_edge`), never this."""
+    return [{**item, "buyable": False} for item in _priced(items, currency)]
+
+
 @router.get("/billing/monthly")
 async def list_monthly(request: Request, user: Annotated[User | None, Depends(optional_user)],
-                       db: Annotated[AsyncSession, Depends(get_db)]) -> list[dict[str, Any]]:
+                       db: Annotated[AsyncSession, Depends(get_db)],
+                       currency: ShownCurrency = None) -> list[dict[str, Any]]:
     """The monthly plans for sale (public): a plan for 30 days, paid once; nothing renews. Priced in rupees in
-    India and US dollars elsewhere (billing/pricing.py)."""
+    India and US dollars elsewhere (billing/pricing.py); `?currency=` lists them in that one, to read only."""
+    if currency is not None:
+        return _shown_in(public_monthly(), currency)
     return _priced(public_monthly(), pricing.currency_for(request, user), await referrals.offer_for(db, user))
 
 
 @router.get("/billing/packs")
 async def list_packs(request: Request, user: Annotated[User | None, Depends(optional_user)],
-                     db: Annotated[AsyncSession, Depends(get_db)]) -> list[dict[str, Any]]:
-    """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set)."""
+                     db: Annotated[AsyncSession, Depends(get_db)],
+                     currency: ShownCurrency = None) -> list[dict[str, Any]]:
+    """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set).
+    `?currency=` lists them in that currency, to read only (the public pricing page)."""
+    if currency is not None:
+        return _shown_in(public_packs(), currency)
     return _priced(public_packs(), pricing.currency_for(request, user), await referrals.offer_for(db, user))
 
 
@@ -213,17 +231,52 @@ def _product(product_id: str) -> tuple[str, str, pricing.Priced, int, int, int]:
     raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
 
 
-async def _offered(db: AsyncSession, user: User, cost: pricing.Price) -> tuple[pricing.Price, dict[str, Any]]:
+def priced_by_the_edge(request: Request) -> None:
+    """In production, orders are made only through the website, whose Worker signs its requests (ORBIT_PROXY_SECRET):
+    the price's currency follows the country the edge saw, and a direct caller (the API's own address) could otherwise
+    name any account country and buy in rupees from anywhere (red team). The desktop app buys on the website already
+    (desktop/src/credits.ts opens /billing in the browser), and a branch preview has no secret. Checked on production
+    on 18 October 2026: the site's /api/v1/region answers the visitor's country (signed), a direct call null."""
+    s = get_settings()
+    if s.env == "production" and s.proxy_secret is not None and not proxy_signed(request):
+        web = s.web_url.rstrip("/")
+        raise HTTPException(status.HTTP_409_CONFLICT, f"Buy on the website: {web}/billing. Prices there follow "
+                                                      "the country you're in.")
+
+
+# Why an order lost its first-purchase discount to a newer one (shown on the old order, if anyone looks).
+SUPERSEDED_NOTE = "Replaced by a newer order: the first-purchase discount moved to that one."
+
+
+async def _offered(db: AsyncSession, user: User, cost: pricing.Price,
+                   keep: tuple[str, str] | None = None) -> tuple[pricing.Price, dict[str, Any]]:
     """`cost` less the account's first-purchase discount, if it has one (billing/referrals.py), and what the order
-    keeps of it: the code and how much came off."""
+    keeps of it: the code and how much came off.
+
+    One open order carries the discount at a time (red team): opening several discounted orders and paying them all
+    would make a first-purchase discount a discount on everything. A payment already on its way (a UTR waiting for
+    the admin, a gateway capture pending) keeps it, so a new order meanwhile is full price. Unpaid orders that still
+    have it lose it to the new one (they're marked expired, the way the reconciler retires an abandoned checkout;
+    one paid after all is still credited, never lost). `keep`: (plan, method) of an open order this one may be handed
+    back as (UPI reuses a day-old order for the same pack), which is left alone."""
     offer = await referrals.offer_for(db, user)
     if offer is None or offer.percent <= 0:
         return cost, {}
+    discounted = (Payment.user_id == user.id, Payment.referral_code_id.is_not(None))
+    if await db.scalar(select(func.count()).select_from(Payment)
+                       .where(*discounted, Payment.status.in_(("submitted", "processing")))):
+        return cost, {}
+    stale = update(Payment).where(*discounted, Payment.status == "awaiting_payment")
+    if keep is not None:
+        stale = stale.where(~((Payment.plan == keep[0]) & (func.coalesce(Payment.method, "upi") == keep[1])))
+    await db.execute(stale.values(status="expired", decided_at=datetime.now(UTC), note=SUPERSEDED_NOTE)
+                     .execution_options(synchronize_session=False))
     less, off = referrals.discounted(cost, offer.percent)
     return less, {"referral_code_id": offer.code_id, "discount_minor": off}
 
 
-@router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201, dependencies=[Depends(order_limit)])
+@router.post("/billing/upi/orders", response_model=UpiOrderOut, status_code=201,
+             dependencies=[Depends(order_limit), Depends(priced_by_the_edge)])
 async def create_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> UpiOrderOut:
     """Start paying for a credit pack: the amount, reference and UPI link. An open order for the same pack from the
@@ -234,7 +287,7 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
         raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
     if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
-    cost, discount = await _offered(db, user, pricing.price(price, pricing.INR))
+    cost, discount = await _offered(db, user, pricing.price(price, pricing.INR), keep=(pid, "upi"))
     price = cost.inr
     since = datetime.now(UTC) - upi.OPEN_ORDER_REUSE
     open_order = await db.scalar(
@@ -305,8 +358,8 @@ async def submit_utr(order_id: str, body: UtrIn, background: BackgroundTasks,
     s = get_settings()
     if first_time and s.admin_email and not s.is_admin_email(user.email):
         background.add_task(send_safely, OutgoingEmail(
-            to=s.admin_email, subject=f"UPI payment to check: ₹{p.amount_inr} from {user.email}",
-            text=(f"{user.email} says they paid ₹{p.amount_inr} for the {_label(p)}.\n\n"
+            to=s.admin_email, subject=f"UPI payment to check: ₹{p.amount_inr:,} from {user.email}",
+            text=(f"{user.email} says they paid ₹{p.amount_inr:,} for the {_label(p)}.\n\n"
                   f"UTR: {utr}\nReference (in the UPI note): {p.reference}\n\n"
                   f"Check your bank statement, then approve or reject it: {s.web_url.rstrip('/')}/admin/payments")))
     return _order_out(p)
@@ -335,7 +388,7 @@ class VerifyIn(BaseModel):
 
 
 @router.post("/billing/razorpay/orders", response_model=CheckoutOut, status_code=201,
-             dependencies=[Depends(order_limit)])
+             dependencies=[Depends(order_limit), Depends(priced_by_the_edge)])
 async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> CheckoutOut:
     """Start buying a pack through Razorpay: an order there for the pack's price (rupees in India, US dollars
@@ -529,7 +582,7 @@ class PaypalCaptureIn(BaseModel):
 
 
 @router.post("/billing/paypal/orders", response_model=PaypalCheckoutOut, status_code=201,
-             dependencies=[Depends(order_limit)])
+             dependencies=[Depends(order_limit), Depends(priced_by_the_edge)])
 async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> PaypalCheckoutOut:
     """Start paying a dollar price through PayPal: an order there for it, kept here until it's captured. Buyers in
@@ -661,6 +714,8 @@ class AdminPaymentsOut(BaseModel):
     processing: int = 0
     events_to_review: int = 0
     unlinked_refunds: int = 0
+    # Older payments past this page (?offset= for the next one).
+    has_more: bool = False
 
 
 async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
@@ -678,15 +733,19 @@ async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
 @router.get("/admin/payments", response_model=AdminPaymentsOut)
 async def admin_payments(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
                          only: Literal["submitted", "all"] = "submitted",
-                         limit: Annotated[int, Query(ge=1, le=500)] = 100) -> AdminPaymentsOut:
-    """UPI payments, newest first. "submitted" = waiting for you to check the UTR."""
-    q = select(Payment).order_by(Payment.submitted_at.desc().nulls_last(), Payment.created_at.desc()).limit(limit)
+                         limit: Annotated[int, Query(ge=1, le=500)] = 100,
+                         offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0) -> AdminPaymentsOut:
+    """Payments, newest first, a page at a time. "submitted" = waiting for you to check the UTR."""
+    q = (select(Payment).order_by(Payment.submitted_at.desc().nulls_last(), Payment.created_at.desc(), Payment.id)
+         .offset(offset).limit(limit + 1))
     if only == "submitted":
         q = q.where(Payment.status == "submitted")
     else:
         q = q.where(Payment.status.not_in(("awaiting_payment", "expired")))  # orders nobody paid for are noise
-    rows = (await db.scalars(q)).all()
-    waiting = len(rows) if only == "submitted" else len([p for p in rows if p.status == "submitted"])
+    page = (await db.scalars(q)).all()
+    rows, has_more = page[:limit], len(page) > limit
+    # Counted, not taken from the page: past the first hundred the tab's number was the page's.
+    waiting = int(await db.scalar(select(func.count()).select_from(Payment).where(Payment.status == "submitted")) or 0)
     processing = await db.scalar(select(func.count()).select_from(Payment).where(Payment.status == "processing"))
     events = await db.scalar(select(func.count()).select_from(PaymentEvent).where(
         PaymentEvent.status.in_(("unmatched", "error"))))
@@ -694,7 +753,8 @@ async def admin_payments(_: Annotated[User, Depends(require_admin)], db: Annotat
         PaymentRefund.payment_id.is_(None)))
     return AdminPaymentsOut(upi_configured=bool(get_settings().upi_id), waiting=waiting,
                             payments=[await _admin_payment(db, p) for p in rows], processing=int(processing or 0),
-                            events_to_review=int(events or 0), unlinked_refunds=int(unlinked or 0))
+                            events_to_review=int(events or 0), unlinked_refunds=int(unlinked or 0),
+                            has_more=has_more)
 
 
 @router.post("/admin/payments/reconcile")
@@ -747,11 +807,11 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
     else:
         reason = f"\n\nWhy: {note}" if note else ""
         mail = OutgoingEmail(to=u.email, subject="We couldn't confirm your Orbit payment",
-                             text=(f"We couldn't find your ₹{p.amount_inr} payment with UTR {p.utr} in our account."
+                             text=(f"We couldn't find your ₹{p.amount_inr:,} payment with UTR {p.utr} in our account."
                                    f"{reason}\n\nIf you did pay, check the UTR in your UPI app and send it again: "
                                    f"{web}/billing"))
     db.add(AuditLog(user_id=admin.id, action=f"admin.payment.{body.action}",
-                    target=f"{p.id} {p.plan} ₹{p.amount_inr} {p.utr}"))
+                    target=f"{p.id} {_label(p)} {pricing.payment_text(p)} UTR {p.utr}"))
     try:
         await db.commit()
     except IntegrityError as e:  # the credits for this payment were already added (uq_credit_entries_payment_kind)

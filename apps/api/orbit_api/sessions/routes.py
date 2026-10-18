@@ -6,7 +6,7 @@ import time
 import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable, Sequence
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
 from fastapi import (
@@ -493,6 +493,10 @@ async def delete_transcript(session_id: str, user: Annotated[User, Depends(curre
         raise HTTPException(status.HTTP_409_CONFLICT, "End the live session first.")
     await db.execute(delete(SessionTurn).where(SessionTurn.session_id == row.id))
     await db.execute(delete(Question).where(Question.session_id == row.id))
+    # Each answer carries the question it answered, word for word: that's what was said too.
+    for answer in (await db.scalars(select(Answer).where(Answer.session_id == row.id))).all():
+        if isinstance(answer.content, dict) and answer.content.get("question"):
+            answer.content = {**answer.content, "question": ""}
     # A dropped connection's saved state holds recent turns and questions too.
     row.carryover = None
     carryover.discard(row.id)
@@ -660,19 +664,87 @@ async def delete_session(session_id: str, user: Annotated[User, Depends(current_
     await db.commit()
 
 
+def _export_when(at: datetime, tz_offset: int) -> str:
+    """The session's start in the user's own time ("2026-10-18 11:35 (UTC+05:30)"): `tz_offset` is minutes east of UTC,
+    as the app knows it."""
+    local = (at if at.tzinfo else at.replace(tzinfo=UTC)) + timedelta(minutes=tz_offset)
+    sign, mins = ("+" if tz_offset >= 0 else "-"), abs(tz_offset)
+    zone = "UTC" if tz_offset == 0 else f"UTC{sign}{mins // 60:02d}:{mins % 60:02d}"
+    return f"{local:%Y-%m-%d %H:%M} ({zone})"
+
+
+def _export_length(seconds: int) -> str:
+    if seconds < 60:
+        return f"{seconds} s"
+    return f"{round(seconds / 60)} min"
+
+
+def _answer_lines(content: dict[str, Any] | None) -> list[str]:
+    if not isinstance(content, dict):
+        return []
+    out: list[str] = []
+    if text := str(content.get("direct_answer") or "").strip():
+        out += [text, ""]
+    out += [f"- {p}" for p in content.get("talking_points") or [] if str(p).strip()]
+    code = content.get("code")
+    if isinstance(code, dict) and str(code.get("code") or "").strip():
+        out += ["", f"```{code.get('language') or ''}", str(code["code"]).rstrip(), "```"]
+    return out
+
+
 @router.get("/sessions/{session_id}/export.md", response_class=PlainTextResponse)
 async def export_markdown(session_id: str, user: Annotated[User, Depends(current_user)],
-                          db: Annotated[AsyncSession, Depends(get_db)]) -> str:
+                          db: Annotated[AsyncSession, Depends(get_db)],
+                          tz_offset: Annotated[int, Query(ge=-720, le=840)] = 0) -> str:
+    """The whole session as Markdown: the summary and scorecard, each question with Orbit's answer (and answers
+    asked in chat), and the transcript. Times are in the user's own zone (`tz_offset`, minutes east of UTC)."""
     detail = await get_session(session_id, user, db)
     s = detail.session
     lines = [f"# {s.title}", "", f"- Type: {s.type}", f"- Role: {s.role or '—'}",
-             f"- Date: {s.created_at:%Y-%m-%d %H:%M} UTC", f"- Duration: {s.duration_seconds // 60} min", ""]
-    if detail.summary:
-        lines += ["## Summary", "", str(detail.summary.get("summary") or ""), ""]
-    lines += ["## Questions", ""] + [f"- {q['text']}" for q in detail.questions] + ["", "## Transcript", ""]
+             f"- Date: {_export_when(s.created_at, tz_offset)}", f"- Duration: {_export_length(s.duration_seconds)}",
+             ""]
+    summary = detail.summary or {}
+    if summary.get("summary"):
+        lines += ["## Summary", "", str(summary["summary"]), ""]
+    review = summary.get("review") if isinstance(summary.get("review"), dict) else None
+    if review:
+        lines += ["## Scorecard", ""]
+        if review.get("overall_score") is not None:
+            lines += [f"Overall: {review['overall_score']}/5", ""]
+        for title, key in (("Strengths", "strengths"), ("To improve", "improvements"), ("Practise next", "practice")):
+            if review.get(key):
+                lines += [f"**{title}**", ""] + [f"- {x}" for x in review[key]] + [""]
+        for item in review.get("items") or []:
+            score = f" ({item['score']}/5)" if item.get("score") is not None else ""
+            lines += [f"### {item.get('question') or 'Question'}{score}", ""]
+            if item.get("feedback"):
+                lines += [str(item["feedback"]), ""]
+            if item.get("better"):
+                lines += [f"A stronger answer: {item['better']}", ""]
+    by_question: dict[str, list[dict[str, Any]]] = {}
+    for a in detail.answers:
+        if a.get("content") and a.get("question_id"):
+            by_question.setdefault(a["question_id"], []).append(a)
+    listed = {q["id"] for q in detail.questions}
+    lines += ["## Questions and answers", ""]
+    for q in detail.questions:
+        lines += [f"### {q['text']}", ""]
+        for a in by_question.get(q["id"], []):
+            lines += [*_answer_lines(a.get("content")), ""]
+    loose = [a for a in detail.answers if a.get("content")
+             and (not a.get("question_id") or a["question_id"] not in listed)]
+    for a in loose:  # asked in chat or with Answer, or their question went with the transcript
+        content = a.get("content") or {}
+        title = str(content.get('question') or '').strip() or 'Answer'
+        lines += [f"### {title}", "", *_answer_lines(content), ""]
+    if not detail.questions and not loose:
+        lines += ["No questions or answers.", ""]
+    lines += ["## Transcript", ""]
     for t in detail.turns:
         mm, ss = divmod(t["start_ms"] // 1000, 60)
         lines.append(f"**{mm:02d}:{ss:02d} {t['speaker'].title()}** — {t['text']}")
+    if not detail.turns:
+        lines.append("No transcript (nothing was said, or it was deleted).")
     return "\n".join(lines) + "\n"
 
 

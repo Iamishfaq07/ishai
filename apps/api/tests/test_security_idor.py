@@ -537,6 +537,7 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("POST", "/v1/admin/users/bulk-credits", {"json": {"user_ids": ["{target}"], "resume": 5}}),
     ("POST", "/v1/admin/users/{target}/sign-out", {}),
     ("POST", "/v1/admin/users/{target}/password-reset", {}),
+    ("POST", "/v1/admin/users/{target}/2fa/off", {"json": {"reason": "idor check, matched ID"}}),
     ("POST", "/v1/admin/users/{target}/suspend", {"json": {"reason": "idor check"}}),
     ("POST", "/v1/admin/users/{target}/unsuspend", {}),
     ("DELETE", "/v1/admin/users/{target}", {"json": {"confirm_email": "{target_email}"}}),
@@ -617,6 +618,10 @@ def test_admin_routes_work_for_the_admin(world: World, method: str, path: str, k
                            json={"code": f"T{tag}", "label": "target", "kind": "creator"}))
     ids = {"target": user["id"], "target_email": user["email"], "target_order": order, "target_message": message,
            "target_thread": thread, "target_code": code, "target_code_tag": tag}
+    if path.endswith("/2fa/off"):  # only for an account that has two-step sign-in on
+        from tests.test_two_factor import _turn_on
+
+        _turn_on(c, h)  # confirms with the shared test password (PW)
     c.cookies.clear()
     r = c.request(method, _fill(path, ids), headers=world.admin, **_fill(kw, ids))
     # 201: a code made · 202: an email on its way · 204: deleted

@@ -66,8 +66,8 @@ export function MockPanel({ live, actions, voice, ended, onViewReport, muted = f
         <p className="text-sm text-zinc-500">
           {/* The server ends the session itself when the round finishes, so there's nothing left to press. */}
           {s?.negotiation
-            ? "Your review is on its way to History: how you anchored, justified and handled pushback, with stronger lines to use."
-            : "Your review is on its way to History: each answer graded, with a stronger way to say it."}
+            ? "Your review is on its way: how you anchored, justified and handled pushback, with stronger lines to use."
+            : "Your review is on its way: each answer graded, with a stronger way to say it."}
         </p>
         {ended && onViewReport && (
           <button type="button" onClick={onViewReport} className={cx(btn, "mt-2")}>

@@ -10,6 +10,7 @@ import type {
   VoiceStatus,
   CameraMetrics,
   PasskeyOptions,
+  SecurityActivity,
   SignedInDevice,
   JobMission,
   PrepPlan,
@@ -457,9 +458,10 @@ export function createApiClient(options: ApiClientOptions) {
     voiceStatus: () => json<VoiceStatus>("/v1/voice"),
     /** A sign-in only the browser extension can use, handed to it on the Connect page (never shown). */
     extensionConnect: () => json<{ token: string }>("/v1/extension/connect", { method: "POST" }),
-    /** The camera coach's numbers so far for a mock session (sent again as they grow). */
-    saveCameraMetrics: (sessionId: string, metrics: CameraMetrics) =>
-      json<void>(`/v1/sessions/${encodeURIComponent(sessionId)}/camera-metrics`, { method: "PUT", body: body(metrics) }),
+    /** The camera coach's numbers so far for a mock session (sent again as they grow). `keepalive`: sent as the page
+     *  closes, so the browser finishes the request after the tab is gone. */
+    saveCameraMetrics: (sessionId: string, metrics: CameraMetrics, keepalive = false) =>
+      json<void>(`/v1/sessions/${encodeURIComponent(sessionId)}/camera-metrics`, { method: "PUT", body: body(metrics), keepalive }),
     /** The interviewer's question as MP3, streamed (read the body as it arrives). */
     speak: (text: string, voice: string, signal?: AbortSignal, sessionId?: string) =>
       raw("/v1/voice/speak", {
@@ -497,6 +499,8 @@ export function createApiClient(options: ApiClientOptions) {
     logoutAll: () => json<void>("/v1/auth/logout-all", { method: "POST" }),
     /** Signed-in devices, most recently used first. */
     devices: () => json<SignedInDevice[]>("/v1/auth/sessions"),
+    /** Recent changes to how this account is signed in to (passkeys, two-step sign-in, password), newest first. */
+    securityActivity: () => json<SecurityActivity>("/v1/auth/security-activity"),
     signOutDevice: (id: string) => json<void>(`/v1/auth/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     requestEmailChange: (newEmail: string, password: string) =>
       json<{ status: string }>("/v1/auth/me/email", {
@@ -736,7 +740,7 @@ export function createApiClient(options: ApiClientOptions) {
     retryReport: (id: string) =>
       json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/report/retry`, { method: "POST" }),
     exportSessionMarkdown: async (id: string): Promise<string> =>
-      (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md`)).text(),
+      (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md${localDays()}`)).text(),
     liveTicket: (id: string) =>
       json<LiveTicket>(`/v1/sessions/${encodeURIComponent(id)}/live-ticket`, { method: "POST" }),
     /** 👍/👎 an answer (null clears it); a reason explains a 👎. */
@@ -787,10 +791,11 @@ export function createApiClient(options: ApiClientOptions) {
     // Plans / entitlements
     listPlans: () => json<PlanInfo[]>("/v1/plans"),
     entitlements: () => json<Entitlements>("/v1/entitlements"),
-    /** The credit packs for sale (public). */
-    listPacks: () => json<CreditPack[]>("/v1/billing/packs"),
-    /** The monthly plans for sale (public): 30 days, paid once; buy through the same orders as packs. */
-    listMonthly: () => json<MonthlyPlan[]>("/v1/billing/monthly"),
+    /** The credit packs for sale (public). `currency`: the list in rupees or dollars, to read only (/pricing). */
+    listPacks: (currency?: "INR" | "USD") => json<CreditPack[]>(`/v1/billing/packs${queryString({ currency })}`),
+    /** The monthly plans for sale (public): 30 days, paid once; buy through the same orders as packs. `currency`: as
+     *  for packs. */
+    listMonthly: (currency?: "INR" | "USD") => json<MonthlyPlan[]>(`/v1/billing/monthly${queryString({ currency })}`),
     /** Start paying for a credit pack over UPI (an open order for the same pack is handed back). */
     createUpiOrder: (pack: string) =>
       json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ pack }) }),
@@ -907,6 +912,9 @@ export function createApiClient(options: ApiClientOptions) {
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/suspend`, { method: "POST", body: body({ reason }) }),
     unsuspendUser: (userId: string) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/unsuspend`, { method: "POST" }),
+    /** Admin: two-step sign-in off for someone who lost their phone and codes; `reason`: how you checked it's them. */
+    turnOffTwoFactor: (userId: string, reason: string) =>
+      json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/2fa/off`, { method: "POST", body: body({ reason }) }),
     /** Admin: every device signs in again and live sessions stop; the password stays. */
     signOutUser: (userId: string) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/sign-out`, { method: "POST" }),
@@ -988,8 +996,8 @@ export function createApiClient(options: ApiClientOptions) {
     setUserAccess: (userId: string, change: AccessChange) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/access`, { method: "POST", body: body(change) }),
     /** Admin: UPI payments ("submitted" = a UTR waiting to be checked). */
-    adminPayments: (only: "submitted" | "all" = "submitted") =>
-      json<AdminPayments>(`/v1/admin/payments?only=${only}`),
+    adminPayments: (only: "submitted" | "all" = "submitted", offset = 0) =>
+      json<AdminPayments>(`/v1/admin/payments${queryString({ only, ...(offset ? { offset } : {}) })}`),
     /** Admin: ask Razorpay now about open orders (the server also does this on its own every few minutes). */
     adminReconcile: () => json<ReconcileResult>("/v1/admin/payments/reconcile", { method: "POST", body: body({}) }),
     /** Admin: creator and campus codes (and every invite link together), sign-ups to commission, and what to review. */

@@ -160,7 +160,7 @@ class AuditOut(BaseModel):
 @router.get("/audit", response_model=AuditOut)
 async def audit_log(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
                     scope: Literal["admin", "all"] = "admin",
-                    action: Annotated[str | None, Query(max_length=64, pattern=r"^[a-z_.]+$")] = None,
+                    action: Annotated[str | None, Query(max_length=64, pattern=r"^[a-z0-9_.]+$")] = None,
                     user_id: Annotated[str | None, Query(max_length=36)] = None,
                     q: Annotated[str | None, Query(max_length=120)] = None,
                     offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0,

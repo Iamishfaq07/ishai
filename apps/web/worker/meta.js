@@ -39,6 +39,21 @@ export const PAGE_META = {
     description:
       "Measured answer speed from real sessions, the live answer pipeline step by step, and how the desktop app keeps your sign-in and data safe.",
   },
+  "/pricing": {
+    title: "Orbit pricing: plans and credits in ₹ and US dollars",
+    description:
+      "Start free, then pay once: plans for a week, a month or a year, or credit packs that never expire. Prices in rupees in India and dollars elsewhere.",
+  },
+  "/interview-copilot": {
+    title: "Orbit interview copilot: live answers from your resume",
+    description:
+      "In calls where AI help is allowed, Orbit hears the question and suggests an answer from your resume and the job post. In Chrome, Edge or on Windows.",
+  },
+  "/mock-interview": {
+    title: "AI mock interviews with a scorecard and follow-ups | Orbit",
+    description:
+      "Practise out loud with an AI interviewer: HR, technical, panel, salary and video rounds that follow up on what you said, then score every answer.",
+  },
 };
 
 /**

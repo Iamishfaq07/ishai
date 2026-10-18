@@ -75,6 +75,10 @@ export {
   loadThinking,
   saveResponseTiming,
   saveThinking,
+  DEFAULT_ANSWER_SHAPE,
+  loadAnswerShape,
+  saveAnswerShape,
+  type AnswerShape,
 } from "./live/preferences";
 export {
   ANSWER_LANGUAGE_HINT,
@@ -340,7 +344,9 @@ export {
   formatNumber,
   isIndia,
   localeFor,
+  rupees,
   sampleOffer,
+  wholeMinutes,
   speechLang,
   type Country,
 } from "./region";

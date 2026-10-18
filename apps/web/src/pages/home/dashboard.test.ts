@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
-import { countdown, lastWeek, pipeline, summaryLine, upcoming } from "./dashboard";
+import { countdown, greetingFor, lastWeek, pipeline, summaryLine, upcoming } from "./dashboard";
+
+describe("Home's greeting", () => {
+  it("follows the hour, and evening ends at midnight", () => {
+    expect([5, 11, 12, 17, 18, 23].map(greetingFor)).toEqual(["Good morning", "Good morning", "Good afternoon", "Good afternoon", "Good evening", "Good evening"]);
+    expect([0, 2, 4].map(greetingFor)).toEqual(["Hello", "Hello", "Hello"]);
+  });
+});
 
 const NOW = new Date("2026-10-16T10:00:00").getTime();
 let n = 0;

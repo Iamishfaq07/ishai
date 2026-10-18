@@ -37,14 +37,22 @@ from orbit_api.live.metrics import summarize
 from orbit_api.models import (
     AppConfig,
     AuditLog,
+    CodeAttempt,
     CreditEntry,
+    Document,
+    EvidenceItem,
     JobApplication,
     JobFitCheck,
+    JobOffer,
     LiveSessionRow,
     Payment,
     Resume,
+    SavedAnswer,
+    Story,
     UsageEvent,
     User,
+    UserSession,
+    UserTwoFactor,
 )
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.runtime_config import (
@@ -273,8 +281,13 @@ class AdminUsage(BaseModel):
     paid_inr: int = 0  # approved UPI payments
     packs: int = 0
     # The last time the account used Orbit: a session, interview time, a resume AI action or resume edit, a Jobs AI
-    # fit check or tracker change. Signing in alone doesn't count.
+    # fit check or tracker change, a document, story, saved answer or evidence item, a Code AI attempt, an offer.
+    # Signing in alone doesn't count.
     last_active: datetime | None = None
+    # The last time any of its signed-in devices was used (signing in counts): "signed in, never used anything".
+    last_seen: datetime | None = None
+    # Two-step sign-in is on (shown on the account as AdminUser.two_factor; not part of the usage the app shows).
+    two_factor: bool = Field(False, exclude=True)
 
 
 class AdminUser(BaseModel):
@@ -296,6 +309,7 @@ class AdminUser(BaseModel):
     suspended_at: datetime | None = None
     suspended_reason: str | None = None
     has_note: bool = False  # the admin wrote private notes on it
+    two_factor: bool = False  # two-step sign-in is on (the admin can turn it off for someone locked out)
 
 
 class AdminTotals(BaseModel):
@@ -340,6 +354,12 @@ def activity_subquery(ids: list[str] | None = None) -> Subquery:
         part(Resume.user_id, Resume.updated_at),
         part(JobFitCheck.user_id, JobFitCheck.created_at),
         part(JobApplication.user_id, JobApplication.updated_at),
+        part(Document.user_id, Document.created_at, Document.origin != "orbit"),
+        part(Story.user_id, Story.updated_at),
+        part(SavedAnswer.user_id, SavedAnswer.updated_at),
+        part(EvidenceItem.user_id, EvidenceItem.updated_at),
+        part(CodeAttempt.user_id, CodeAttempt.created_at),
+        part(JobOffer.user_id, JobOffer.updated_at),
     ).subquery("activity_parts")
     return (select(parts.c.uid, func.max(parts.c.at).label("last_active"))
             .group_by(parts.c.uid).subquery("activity"))
@@ -388,6 +408,17 @@ async def _usage(db: AsyncSession, ids: list[str]) -> dict[str, AdminUsage]:
     for uid, last in (await db.execute(select(activity.c.uid, activity.c.last_active))).all():
         if uid in out and last is not None:
             out[uid].last_active = _aware(last)
+    # When each was last seen on any device, and whether two-step sign-in is on (the row's badge): one query for the
+    # page, not one each (tests/test_query_budget.py holds the list to its budget).
+    seen_q = (select(func.max(UserSession.last_seen_at)).where(UserSession.user_id == User.id)
+              .correlate(User).scalar_subquery())
+    two_q = (select(func.count()).select_from(UserTwoFactor)
+             .where(UserTwoFactor.user_id == User.id, UserTwoFactor.enabled_at.is_not(None))
+             .correlate(User).scalar_subquery())
+    for uid, seen, two in (await db.execute(select(User.id, seen_q, two_q).where(User.id.in_(ids)))).all():
+        if uid in out:
+            out[uid].last_seen = _aware(seen) if seen is not None else None
+            out[uid].two_factor = bool(two)
     for uid, paid, n in (await db.execute(
             select(Payment.user_id, func.sum(Payment.amount_inr), func.count())
             .where(Payment.user_id.in_(ids), Payment.status == "approved").group_by(Payment.user_id))).all():
@@ -442,7 +473,7 @@ async def admin_rows(db: AsyncSession, users: Sequence[User]) -> list[AdminUser]
             resume_credits=wallets.get(u.id, (0, 0.0))[0],
             interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1), usage=usage[u.id],
             suspended_at=_aware(u.suspended_at) if u.suspended_at else None, suspended_reason=u.suspended_reason,
-            has_note=bool((u.admin_note or "").strip())))
+            has_note=bool((u.admin_note or "").strip()), two_factor=usage[u.id].two_factor))
     return out
 
 

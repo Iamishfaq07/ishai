@@ -10,7 +10,9 @@ A person replies at `POST /v1/admin/support/{id}/reply`. That line shows in the 
 import hashlib
 import hmac
 import logging
+import re
 import secrets
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
@@ -21,9 +23,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from orbit_api import entitlements
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import optional_user
 from orbit_api.billing import pricing
+from orbit_api.billing.packs import pack_label as packs_label
 from orbit_api.billing.packs import packs
 from orbit_api.config import get_settings
 from orbit_api.contact.routes import clean_message, network_hash, one_line
@@ -201,10 +205,32 @@ _GATEWAY = {"razorpay": "Razorpay", "paypal": "PayPal"}  # anything else was a U
 
 
 def _minutes(value: float) -> str:
-    if abs(value - round(value)) < 0.05:
-        n = round(value)
-        return f"{n} interview minute" if n == 1 else f"{n} interview minutes"
-    return f"{value:.1f} interview minutes"
+    """Whole minutes, as a person says them: "317 interview minutes" (not 317.3), "1,250", "less than a minute"."""
+    if 0 < value < 1:
+        return "less than an interview minute"
+    n = int(value + 0.05)  # 59.97 is 60; 317.3 is 317
+    return "1 interview minute" if n == 1 else f"{n:,} interview minutes"
+
+
+def _day(value: datetime) -> str:
+    return value.strftime("%d %b %Y").lstrip("0")
+
+
+async def _balance_answer(db: AsyncSession, user: User) -> str:
+    """What's left: the credit balance, or, on a plan, the plan, until when, and its interview time this month."""
+    resume = await resume_balance(db, user.id)
+    minutes = await interview_minutes_left(db, user.id)
+    plan = await entitlements.plan_for(db, user.id)
+    if plan.credits:
+        return f"You have {_minutes(minutes)} and {_credit_word(resume)} left. They don't expire."
+    until = entitlements.running_until(user)
+    on = f"You're on {plan.label}" + (f" until {_day(until)}" if until else "")
+    left = await entitlements.minutes_remaining(db, user.id, "interview", plan)
+    allowance = ("with no limit on interview minutes" if left is None
+                 else f"with {_minutes(left)} left in this month's allowance")
+    kept = (f" Your credits are kept for after it: {_minutes(minutes)} and {_credit_word(resume)}."
+            if until and (minutes >= 1 or resume) else "")
+    return f"{on}, {allowance}.{kept}"
 
 
 def _credit_word(n: int) -> str:
@@ -213,18 +239,24 @@ def _credit_word(n: int) -> str:
 
 async def _account_answer(db: AsyncSession, user: User, kind: str, currency: str = pricing.INR) -> str:
     if kind == "balance":
-        resume = await resume_balance(db, user.id)
-        minutes = await interview_minutes_left(db, user.id)
-        return f"You have {_minutes(minutes)} and {_credit_word(resume)} left. They don't expire."
+        return await _balance_answer(db, user)
     payment = (await db.execute(
         select(Payment).where(Payment.user_id == user.id).order_by(Payment.created_at.desc()).limit(1)
     )).scalar_one_or_none()
     if payment is None:
-        cheapest = min(packs().values(), key=lambda p: p.price_inr)
-        return ("This account has no payment yet. Buy a pack on Plan & billing. Packs start at Mini "
-                f"{pricing.price_of(cheapest, currency).text()}.")
+        on_sale = list(packs().values())
+        interview = [p for p in on_sale if p.total_minutes > 0]
+        line = "This account has no payment yet. Buy on Plan & billing."
+        if interview:
+            first = min(interview, key=lambda p: p.price_inr)
+            line += f" Interview credits start at {packs_label(first)} for {pricing.price_of(first, currency).text()}."
+        resume_only = [p for p in on_sale if p.total_minutes == 0 and p.resume_credits > 0]
+        if resume_only:
+            ai = min(resume_only, key=lambda p: p.price_inr)
+            line += f" {packs_label(ai)} for Resume AI alone are {pricing.price_of(ai, currency).text()}."
+        return line
     pack = packs().get(payment.plan)
-    name = pack.label if pack else payment.plan
+    name = packs_label(pack) if pack else payment.plan
     money = pricing.payment_text(payment)  # in what was charged: "₹5,199", or "$106.99" through PayPal
     got = f"{payment.interview_minutes} interview minutes and {payment.resume_credits} Resume AI credits"
     if payment.status == "approved":
@@ -358,6 +390,16 @@ async def post_message(
         if not text:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Type a message.")
         await _add(db, thread, "user", text[:TEXT_MAX])
+        # The Inbox ticket was written at the handoff, usually before the question (the chat asks for it after):
+        # it follows the chat, so the admin reads what was asked, not just the bot's hello.
+        ticket = await db.scalar(select(ContactMessage).where(ContactMessage.source_support_thread_id == thread.id))
+        if ticket is not None:
+            await db.flush()  # the line just added, read back with the rest (thread.messages is the old list)
+            said = list((await db.scalars(select(SupportMessage).where(SupportMessage.thread_id == thread.id)
+                                          .order_by(SupportMessage.created_at))).all())
+            ticket.message = _ticket_text(thread.id, said)
+            if ticket.topic == "technical":
+                ticket.topic = _ticket_topic(said)
     return _out(await _commit(db, thread), user=user, page=body.page, currency=currency)
 
 
@@ -388,14 +430,13 @@ async def handoff(
     if moved.rowcount != 1:  # type: ignore[attr-defined]
         await db.rollback()
         return await _settled(db, thread_id)
-    transcript = "\n".join(f"{m.role}: {m.text}" for m in thread.messages)[-2800:]
     await _add(db, thread, "bot", HANDOFF)
     db.add(ContactMessage(
         user_id=thread.user_id,
         name=name,
         email=email,
-        topic="technical",
-        message=f"Support chat {thread.id[:8]} is waiting for a person.\n\n{transcript}"[:3000],
+        topic=_ticket_topic(thread.messages),
+        message=_ticket_text(thread.id, thread.messages),
         context={"support_thread_id": thread.id},
         status="new",
         network_hash=network_hash(client_ip(request)),
@@ -406,6 +447,24 @@ async def handoff(
     except IntegrityError:  # the chat's one ticket already exists (unique source_support_thread_id)
         await db.rollback()
         return await _settled(db, thread_id)
+
+
+# Words in the chat that make the Inbox ticket a payment question rather than a technical one.
+_PAYMENT_WORDS = re.compile(r"\b(pay|paid|payment|refund|utr|upi|razorpay|paypal|charged|invoice|receipt|price|"
+                            r"credits?|pack|plan|billing|bought|buy)\b", re.IGNORECASE)
+
+
+def _ticket_topic(messages: Sequence[SupportMessage]) -> str:
+    """The Inbox topic for a chat handed to a person: payment when the user's words are about paying, else technical."""
+    said = " ".join(m.text for m in messages if m.role == "user")
+    return "payment" if _PAYMENT_WORDS.search(said) else "technical"
+
+
+def _ticket_text(thread_id: str, messages: Sequence[SupportMessage]) -> str:
+    """The ticket's body: the chat so far, newest kept when it's long (the bot's hello and handoff lines left out)."""
+    lines = [f"{m.role}: {m.text}" for m in messages if not (m.role == "bot" and m.text in (GREETING, HANDOFF))]
+    transcript = "\n".join(lines)[-2800:] or "(nothing typed yet)"
+    return f"Support chat {thread_id[:8]} is waiting for a person.\n\n{transcript}"[:3000]
 
 
 async def _settled(db: AsyncSession, thread_id: str) -> ThreadOut:

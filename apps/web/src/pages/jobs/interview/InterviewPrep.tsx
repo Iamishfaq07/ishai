@@ -97,6 +97,12 @@ const h2 = "font-display text-base font-semibold";
 const muted = "text-sm text-zinc-600 dark:text-zinc-400";
 
 /** The interview's date and time and which round it is: the tracker's next date, with a time. */
+/** A datetime-local value that's already gone (an hour's grace: "now" while still filling it in isn't past). */
+function isPast(value: string): boolean {
+  const when = fromDateTimeInput(value);
+  return when !== null && Date.parse(when) < Date.now() - 60 * 60 * 1000;
+}
+
 function WhenCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: InterviewPrepUpdate, done?: string) => Promise<boolean> }) {
   const [editing, setEditing] = useState(!view.round.at && !view.round.type);
   const [at, setAt] = useState(dateTimeInput(view.round.at));
@@ -143,7 +149,12 @@ function WhenCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Inter
       {editing && (
         <div className="mt-4 space-y-3 border-t border-zinc-200 pt-4 dark:border-white/10">
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_6rem]">
-            <Field label="Date and time" htmlFor="iv-at">
+            {/* A past date can be right (logging one that happened, for its wrap-up), so it's said, not refused. */}
+            <Field
+              label="Date and time"
+              htmlFor="iv-at"
+              hint={isPast(at) ? "That's in the past. If the interview already happened, save it, then write its wrap-up." : undefined}
+            >
               <Input id="iv-at" type="datetime-local" value={at} onChange={(e) => setAt(e.target.value)} />
             </Field>
             <Field label="Round" htmlFor="iv-type" hint={ROUND_TYPES.find((r) => r.value === type)?.hint}>

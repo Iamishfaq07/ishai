@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_DESKTOP_DOWNLOAD_URL?: string;
   /** "true" once the Windows installer is Authenticode-signed: drops the Beta label (lib/desktop.ts). */
   readonly VITE_DESKTOP_SIGNED?: string;
+  /** The browser extension's store listing (Chrome Web Store), once published: /extension/connect links it. */
+  readonly VITE_EXTENSION_URL?: string;
 }
 
 interface ImportMeta {

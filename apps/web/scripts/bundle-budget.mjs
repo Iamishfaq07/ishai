@@ -19,7 +19,7 @@ export const BUDGETS = {
     Sessions: 185,
     SessionSetup: 200,
     Mock: 205,
-    Live: 255, // the live copilot (with the video room, D69: ~14 kB of it, loaded for every session)
+    Live: 246, // the live copilot; the video room (D69, ~14 kB) loads only for a video interview (D73)
     Resumes: 205,
     ResumeEditor: 255,
     JobsAiPages: 280,

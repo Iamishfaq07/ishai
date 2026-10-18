@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { JobTrackerEntry, OrbitSession } from "@orbit/types";
 import {
@@ -45,7 +45,9 @@ import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./UsageSummary";
 import { DueToday } from "./DueToday";
 import { KashSecHomeCard } from "../components/KashSec";
-import { summaryLine } from "./home/dashboard";
+import { greetingFor, summaryLine } from "./home/dashboard";
+// Rare (a change to the sign-in in the last fortnight) and below the first paint: its own small download.
+const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
 import { AtAGlance, Pipeline, Upcoming } from "./home/Mission";
 import { FollowUps } from "./jobs/FollowUps";
 import { InterviewSoon } from "./jobs/interview/InterviewSoon";
@@ -56,11 +58,6 @@ import { scoreTone } from "./resume/product";
 
 const primaryLink = buttonClass("primary", "md", "min-h-11");
 const secondaryLink = buttonClass("secondary", "md", "min-h-10");
-
-function greeting(): string {
-  const h = new Date().getHours();
-  return h >= 5 && h < 12 ? "Good morning" : h >= 12 && h < 18 ? "Good afternoon" : "Good evening";
-}
 
 /**
  * Home: one "Your next step" first, picked from the welcome answers and what the account already has
@@ -113,13 +110,18 @@ export function HomePage() {
       {/* Mission Control: where the search stands, in one line, from the account's own records. */}
       <header>
         <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-          {greeting()}
+          {greetingFor(new Date().getHours())}
           {firstName ? `, ${firstName}` : ""}
         </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           {tracker.data ? summaryLine(tracker.data) : "\u00a0"}
         </p>
       </header>
+
+      {/* A change to how the account is signed in to, until "It was me" here (auth/alerts.py). */}
+      <Suspense fallback={null}>
+        <SecurityNotice />
+      </Suspense>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-6">

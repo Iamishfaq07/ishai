@@ -151,3 +151,35 @@ async def test_output_budgets_grow_with_the_language() -> None:
     await _interviewer(english, "en")._generate()
     await _interviewer(hindi, "hi")._generate()
     assert (english.budgets, hindi.budgets) == ([240], [600])
+
+
+async def test_a_one_tap_rounds_questions_dont_claim_a_prep() -> None:
+    """Practice's 5-minute HR round and "Tell me about yourself" ask a round's usual questions (drill kind "set"):
+    nothing was prepared, so the interviewer doesn't open with "Let's practise the questions from your prep", and a
+    follow-up still probes the claim behind the answer, as with a prep question."""
+    from orbit_api.live.mock_interviewer import DrillItem
+
+    said: list[str] = []
+
+    async def on_question(_qid: str, text: str, *_: Any) -> None:
+        said.append(text)
+
+    class Asked(_Recording):
+        def __init__(self) -> None:
+            super().__init__()
+            self.asks: list[str] = []
+
+        async def generate(self, request: LLMRequest) -> LLMResponse:
+            self.asks.append(request.messages[-1].content)
+            return await super().generate(request)
+
+    for language in ("en", "hi", "hinglish"):
+        said.clear()
+        llm = Asked()
+        item = DrillItem(question="Tell me about yourself.", kind="set", follow_up=True)
+        mi = MockInterviewer(MockConfig(drill=[item]), llm=llm, index=SessionIndex([]), role=None, send=_noop,
+                             on_question=on_question, on_finish=_noop, language=language)
+        await mi.start(0)
+        assert said == ["Tell me about yourself."], (language, said)
+        await mi._generate(follow_up_on=item)
+        assert "the way an interviewer checks a resume claim" in llm.asks[-1]

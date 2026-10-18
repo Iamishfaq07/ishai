@@ -55,3 +55,28 @@ def test_the_admin_sees_what_each_account_has_used(monkeypatch: pytest.MonkeyPat
         assert client.get("/v1/admin/users/nope/activity", headers=admin).status_code == 404
     finally:
         gen.close()
+
+
+def test_last_active_counts_every_tool_and_signing_in_is_seen_apart(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An account that only used the story bank (or documents, Code AI, offers…) read "Last active: never"; and one
+    that only signed in looked the same as one nobody opened. Signing in is `last_seen`, never `last_active`."""
+    admin_email = f"admin-{uuid.uuid4().hex[:8]}@example.com"
+    gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=admin_email)
+    client = next(gen)
+    try:
+        admin, _ = _register_named(client, admin_email)
+        h, user = _register_named(client, f"u-{uuid.uuid4().hex[:8]}@example.com")
+        client.get("/v1/auth/me", headers=h)
+
+        def usage() -> dict[str, object]:
+            out = client.get("/v1/admin/users?only=all", headers=admin).json()
+            return dict(next(u for u in out["users"] if u["id"] == user["id"])["usage"])
+
+        before = usage()
+        assert before["last_active"] is None and before["last_seen"] is not None
+        r = client.post("/v1/stories", headers=h, json={"title": "Cut the build time", "situation": "Slow CI.",
+                                                         "action": "Cached the deps.", "result": "Builds 3x faster."})
+        assert r.status_code in (200, 201), r.text
+        assert usage()["last_active"] is not None
+    finally:
+        gen.close()

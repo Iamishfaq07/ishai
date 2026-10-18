@@ -19,6 +19,13 @@ import { visitorCountryWithin } from "./visitorCountry";
 
 export type RegisterOutcome = "signed_in" | "verify_email";
 
+/** Why the session check couldn't be answered, in words (the API client's own text for offline and timeouts). */
+export function unreachableText(err: unknown): string {
+  if (err instanceof ApiError && err.status === 0) return err.message;
+  if (err instanceof ApiError && err.status >= 500) return "Orbit is having a moment (it may be restarting). Try again in a few seconds.";
+  return "Can't reach Orbit right now. Check your connection and try again.";
+}
+
 /** The last interview prep (Practice), kept in this browser between visits. */
 export const LAST_PREP_KEY = "orbit.lastPrep";
 // Account data this browser keeps outside the page cache. localStorage is shared by everyone who signs in on the
@@ -60,6 +67,13 @@ function forgetAccount(): void {
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
+  /**
+   * The session check couldn't get an answer (offline, a timeout, the server restarting): not the same as signed
+   * out, so a signed-in person isn't sent to the sign-in page by a blip. The message says what happened; `recheck`
+   * asks again (it's also asked again when the browser comes back online).
+   */
+  unreachable: string | null;
+  recheck: () => void;
   /** Signs in, or returns the challenge when two-step sign-in is on (then `finishSecondStep` with the code). */
   login: (req: LoginRequest) => Promise<{ challenge: string } | null>;
   /** The authenticator code (or a recovery code). `challenge` is null after Google: it's in a cookie. */
@@ -96,22 +110,52 @@ async function confirmSession(): Promise<User> {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreachable, setUnreachable] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const recheck = useCallback(() => {
+    setLoading(true);
+    setAttempt((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
       forgetAccount();
+      setUnreachable(null);
       setUser(null);
     });
-    api
-      .me()
-      .then((account) => setUser(acceptAccount(account)))
-      .catch((err: unknown) => {
-        if (!(err instanceof ApiError) || err.status !== 401) console.warn("Session check failed", err);
-        setUser(null);
-      })
-      .finally(() => setLoading(false));
     return () => setUnauthorizedHandler(null);
   }, []);
+
+  useEffect(() => {
+    let live = true;
+    api
+      .me()
+      .then((account) => {
+        if (!live) return;
+        setUnreachable(null);
+        setUser(acceptAccount(account));
+      })
+      .catch((err: unknown) => {
+        if (!live) return;
+        // Only the server saying "not signed in" signs anyone out. Anything else (offline, a timeout, a 5xx while it
+        // restarts) is "couldn't check": the page says so and offers to try again.
+        const signedOut = err instanceof ApiError && (err.status === 401 || err.status === 403);
+        if (!signedOut) console.warn("Session check failed", err);
+        setUnreachable(signedOut ? null : unreachableText(err));
+        setUser(null);
+      })
+      .finally(() => live && setLoading(false));
+    return () => {
+      live = false;
+    };
+  }, [attempt]);
+
+  // Back online after the check failed: ask again by itself.
+  useEffect(() => {
+    if (!unreachable) return;
+    window.addEventListener("online", recheck);
+    return () => window.removeEventListener("online", recheck);
+  }, [unreachable, recheck]);
 
   // Cached page data (and the account's saved bits) belongs to one account: dropped before the user changes, so
   // nobody sees the last person's.
@@ -188,8 +232,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, login, finishSecondStep, loginWithPasskey, register, logout, setUser }),
-    [user, loading, login, finishSecondStep, loginWithPasskey, register, logout],
+    () => ({ user, loading, unreachable, recheck, login, finishSecondStep, loginWithPasskey, register, logout, setUser }),
+    [user, loading, unreachable, recheck, login, finishSecondStep, loginWithPasskey, register, logout],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

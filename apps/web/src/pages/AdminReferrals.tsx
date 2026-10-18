@@ -67,7 +67,7 @@ export function AdminReferralsPage() {
                 </Button>
               </div>
               {note && <ErrorNote>{note}</ErrorNote>}
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Codes (scrolls sideways)">
                 <table className="w-full min-w-[56rem] text-left text-sm">
                   <thead className="border-b border-zinc-200 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400">
                     <tr>

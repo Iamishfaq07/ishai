@@ -207,7 +207,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
   };
 
   const removeTranscript = async () => {
-    if (!(await confirmDialog({ title: "Delete the transcript?", body: "What was said in this session is deleted. The answers and the report are kept.", confirmLabel: "Delete transcript", danger: true }))) return;
+    if (!(await confirmDialog({ title: "Delete the transcript?", body: "What was said in this session is deleted: the transcript and its questions, also from the answers. The answers and the report (with its short quotes) are kept.", confirmLabel: "Delete transcript", danger: true }))) return;
     try {
       await api.deleteTranscript(session.id);
       setDetail(await api.getSession(session.id));
@@ -267,7 +267,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
             ["review", "Review"],
             ["summary", "Summary"],
             ["transcript", `Transcript (${detail.turns.length})`],
-            ["questions", `Questions & answers (${detail.questions.length})`],
+            ["questions", `Questions & answers (${detail.questions.length + detail.answers.filter((a) => !a.question_id || !detail.questions.some((q) => q.id === a.question_id)).length})`],
           ] as const
         ).map(([key, label]) => (
           <button
@@ -294,6 +294,7 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
           practiceQueue={!session.negotiation}
           ended={session.status === "ended"}
           empty={!detail.turns.length && !detail.questions.length}
+          answers={detail.answers.length}
           onGenerate={async () => {
             await api.reviewSession(session.id);
             setDetail(await api.getSession(session.id));
@@ -425,8 +426,33 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
     }
     return map;
   }, [detail.answers]);
+  // Answers no listed question carries: asked in chat or with Answer, or every one after "Delete transcript" (which
+  // keeps the answers). Shown on their own, or they'd be kept but never seen (the web's Questions & answers does too).
+  const loose = useMemo(() => {
+    const listed = new Set(detail.questions.map((q) => q.id));
+    return detail.answers.filter((a) => !a.question_id || !listed.has(a.question_id));
+  }, [detail.answers, detail.questions]);
 
-  if (detail.questions.length === 0) return <p className="text-sm text-zinc-500">No questions were detected.</p>;
+  const answer = (a: SessionAnswer) => (
+    <div key={a.id} className="mt-3 border-t border-zinc-100 pt-3 text-sm dark:border-zinc-800">
+      {a.content.direct_answer && <p className="whitespace-pre-line">{a.content.direct_answer}</p>}
+      <ul className="mt-1 space-y-1 text-zinc-700 dark:text-zinc-300">
+        {a.content.talking_points.map((p, i) => (
+          <li key={i}>· {p}</li>
+        ))}
+      </ul>
+      {a.content.code && (
+        <div className="mt-2">
+          <CodeBlock code={a.content.code} />
+        </div>
+      )}
+      <div className="mt-2 flex items-center justify-end gap-2">
+        <AnswerRatingButtons value={ratings.get(a.id)} onRate={(r, why) => ratings.rate(a.id, r, why)} />
+      </div>
+    </div>
+  );
+
+  if (detail.questions.length === 0 && loose.length === 0) return <p className="text-sm text-zinc-500">No questions were detected.</p>;
   return (
     <ol className="space-y-4">
       {detail.questions.map((q) => (
@@ -440,24 +466,15 @@ function QuestionsView({ detail }: { detail: SessionDetail }) {
               <span>{formatDate(q.created_at)}</span>
             </div>
             <p className="font-medium">{q.text}</p>
-            {(answersByQuestion.get(q.id) ?? []).map((a) => (
-              <div key={a.id} className="mt-3 border-t border-zinc-100 pt-3 text-sm dark:border-zinc-800">
-                {a.content.direct_answer && <p className="whitespace-pre-line">{a.content.direct_answer}</p>}
-                <ul className="mt-1 space-y-1 text-zinc-700 dark:text-zinc-300">
-                  {a.content.talking_points.map((p, i) => (
-                    <li key={i}>· {p}</li>
-                  ))}
-                </ul>
-                {a.content.code && (
-                  <div className="mt-2">
-                    <CodeBlock code={a.content.code} />
-                  </div>
-                )}
-                <div className="mt-2 flex items-center justify-end gap-2">
-                  <AnswerRatingButtons value={ratings.get(a.id)} onRate={(r, why) => ratings.rate(a.id, r, why)} />
-                </div>
-              </div>
-            ))}
+            {(answersByQuestion.get(q.id) ?? []).map(answer)}
+          </Card>
+        </li>
+      ))}
+      {loose.map((a) => (
+        <li key={a.id}>
+          <Card>
+            {a.content.question && <p className="font-medium">{a.content.question}</p>}
+            {answer(a)}
           </Card>
         </li>
       ))}

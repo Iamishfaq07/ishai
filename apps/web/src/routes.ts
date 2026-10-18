@@ -20,6 +20,10 @@ const loaders = {
   contact: () => import("./pages/Contact"),
   notFound: () => import("./pages/NotFound"),
   technical: () => import("./pages/Technical"),
+  // The public pricing page and the copilot's and Practice's product pages (D73).
+  pricing: () => import("./pages/Pricing"),
+  copilotPublic: () => import("./pages/CopilotPublic"),
+  practicePublic: () => import("./pages/PracticePublic"),
   setup: () => import("./pages/SessionSetup"),
   live: () => import("./pages/Live"),
   sessions: () => import("./pages/Sessions"),
@@ -69,6 +73,9 @@ export const ContactPage = page(loaders.contact, (m) => m.ContactPage);
 // An address that isn't a page: rare, so its code (and the public layout it brings) stays out of the first download.
 export const NotFoundPage = page(loaders.notFound, (m) => m.NotFoundPage);
 export const TechnicalPage = page(loaders.technical, (m) => m.TechnicalPage);
+export const PricingPage = page(loaders.pricing, (m) => m.PricingPage);
+export const CopilotPublicPage = page(loaders.copilotPublic, (m) => m.CopilotPublicPage);
+export const PracticePublicPage = page(loaders.practicePublic, (m) => m.PracticePublicPage);
 export const SessionSetupPage = page(loaders.setup, (m) => m.SessionSetupPage);
 export const LivePage = page(loaders.live, (m) => m.LivePage);
 export const SessionsPage = page(loaders.sessions, (m) => m.SessionsPage);
@@ -118,6 +125,9 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/guides(\/|$)/, "guides"],
   [/^\/contact\/?$/, "contact"],
   [/^\/technical\/?$/, "technical"],
+  [/^\/pricing\/?$/, "pricing"],
+  [/^\/interview-copilot\/?$/, "copilotPublic"],
+  [/^\/mock-interview\/?$/, "practicePublic"],
   [/^\/start/, "setup"],
   [/^\/live\//, "live"],
   [/^\/sessions\/[^/]+/, "sessionDetail"],

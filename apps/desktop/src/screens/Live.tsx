@@ -423,7 +423,10 @@ export function LiveScreen({
   return (
     <LivePanel
       audioAmplitude={() => audioAmplitude.current}
-      captureHealth={Object.values(deviceHealth).includes("recovering") ? "recovering" : Object.values(deviceHealth).includes("active") ? "active" : "muted"}
+      captureHealth={
+        // The connection gone for good: the devices still hear, but nothing reaches Orbit, so it isn't "active".
+        disconnected ? "offline" : Object.values(deviceHealth).includes("recovering") ? "recovering" : Object.values(deviceHealth).includes("active") ? "active" : "muted"
+      }
       mockInterview={session.type === "mock"}
       videoInterview={Boolean(session.video)}
       naturalVoice={naturalVoice}

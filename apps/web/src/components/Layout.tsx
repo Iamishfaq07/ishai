@@ -49,6 +49,10 @@ import { useCountry } from "../lib/country";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
+import { asksForShortcuts } from "./shortcutKeys";
+
+// Opened with "?" now and then: downloaded when it's first opened.
+const ShortcutsSheet = lazy(() => import("./ShortcutsSheet").then((m) => ({ default: m.ShortcutsSheet })));
 import { CODE_HOME } from "../pages/code/paths";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME, kashsecUrl } from "../pages/learn/links";
@@ -162,6 +166,7 @@ export function Layout() {
   const [collapsed, toggleSidebar] = useSidebar();
 
   const [searchOpen, setSearchOpen] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
   const openSearch = useCallback(() => setSearchOpen(true), []);
   const openSupportChat = useCallback(() => {
@@ -181,6 +186,9 @@ export function Layout() {
       } else if (e.key === "/" && !mod && !e.altKey && !isTypingTarget(e.target)) {
         e.preventDefault();
         setSearchOpen(true);
+      } else if (asksForShortcuts(e, isTypingTarget(e.target))) {
+        e.preventDefault();
+        setKeysOpen(true);
       }
     };
     const onSearch = () => setSearchOpen(true);
@@ -419,6 +427,11 @@ export function Layout() {
       {searchOpen && (
         <Suspense fallback={null}>
           <CommandPalette onClose={() => setSearchOpen(false)} onHelp={openSupportChat} onSignOut={signOut} />
+        </Suspense>
+      )}
+      {keysOpen && (
+        <Suspense fallback={null}>
+          <ShortcutsSheet open onClose={() => setKeysOpen(false)} />
         </Suspense>
       )}
     </div>

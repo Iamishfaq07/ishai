@@ -438,6 +438,15 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
         # Older clients read limits/usage: show the one interview balance there (live and mock share it).
         limits["live_minutes"] = limits["mock_minutes"] = round(granted_s / 60)
         live_used = mock_used = round(used_s / 60, 1)
+    saved: dict[str, Any] | None = None
+    if not plan.credits:
+        # On a plan with its own allowance, credits bought or given before aren't spent (credits.py) and never
+        # expire: the app still shows them, or a paid pack seems to vanish the day a plan starts.
+        granted_s, used_s = await credits.interview_seconds(db, user.id)
+        resume = await credits.resume_balance(db, user.id)
+        minutes = round(max(granted_s - used_s, 0) / 60, 1)
+        if minutes >= 1 or resume > 0:
+            saved = {"resume": resume, "interview_minutes_left": minutes}
     return {
         "plan": plan.name,
         "label": plan.label,
@@ -453,6 +462,8 @@ async def for_user(db: AsyncSession, user: User) -> dict[str, Any]:
         "features": {f: plan.has(f) for f in FEATURES},
         # Credit plans: what's left to spend (never expires). None on plans with their own allowances.
         "credits": wallet,
+        # On a plan with its own allowance: the credits kept for after it (None when there are none).
+        "saved_credits": saved,
     }
 
 

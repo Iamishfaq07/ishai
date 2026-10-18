@@ -17,6 +17,8 @@ describe("one-tap mock presets", () => {
     expect(s).toMatchObject({ type: "mock", title: "Mock — 5-min HR round", document_ids: ["resume-doc"], auto_answer: false });
     expect(s.mock).toMatchObject({ duration_minutes: 5, persona: "recruiter", interview_type: "behavioral", difficulty: "easy" });
     expect(s.mock?.drill?.map((d) => d.question)).toEqual(HR_QUESTIONS);
+    // The round's own questions, not "the questions from your prep": nothing was prepared (kind "prep" says it was).
+    expect(s.mock?.drill?.every((d) => d.kind === "set")).toBe(true);
     expect(s.role).toBeUndefined();
   });
 
@@ -115,7 +117,7 @@ describe("a one-tap round in a practice language (Hindi, Hinglish)", () => {
       expect.stringMatching(/^Apne resume se/),
       "Apne baare mein bataiye.",
     ]);
-    expect(hinglish.map((d) => d.kind)).toEqual(["prep", "prep", "concise"]);
+    expect(hinglish.map((d) => d.kind)).toEqual(["set", "set", "concise"]);
     expect(hinglish.every((d) => !/[ऀ-ॿ]/.test(d.question))).toBe(true); // Latin script
   });
 

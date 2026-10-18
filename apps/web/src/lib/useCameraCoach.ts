@@ -13,11 +13,12 @@ export function useCameraCoach(sessionId: string, enabled: boolean): CameraCoach
   const tally = useRef(new CoachTally());
   const lastSaved = useRef(-1);
   const save = useMemo(
-    () => () => {
+    () => (closing = false) => {
       const s = tally.current.summary();
       if (s.samples === 0 || s.samples === lastSaved.current) return;
       lastSaved.current = s.samples;
-      void api.saveCameraMetrics(sessionId, s).catch(() => {
+      // Closing the tab: a keepalive request outlives the page, or the last stretch (up to 20 s) was lost.
+      void api.saveCameraMetrics(sessionId, s, closing).catch(() => {
         lastSaved.current = -1; // try again next time
       });
     },
@@ -29,9 +30,10 @@ export function useCameraCoach(sessionId: string, enabled: boolean): CameraCoach
   }, [sessionId]);
   useEffect(() => {
     if (!enabled) return;
-    window.addEventListener("pagehide", save);
+    const closing = () => save(true);
+    window.addEventListener("pagehide", closing);
     return () => {
-      window.removeEventListener("pagehide", save);
+      window.removeEventListener("pagehide", closing);
       save();
     };
   }, [enabled, save]);
@@ -40,7 +42,7 @@ export function useCameraCoach(sessionId: string, enabled: boolean): CameraCoach
     return {
       start: async (video: HTMLVideoElement) => {
         const stop = await measure(video, tally.current);
-        const timer = window.setInterval(save, SAVE_EVERY_MS);
+        const timer = window.setInterval(() => save(), SAVE_EVERY_MS);
         return () => {
           window.clearInterval(timer);
           stop();

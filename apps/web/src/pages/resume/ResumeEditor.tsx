@@ -638,12 +638,12 @@ function ResumeEditor() {
         variant="no-results"
         title="That resume isn't here"
         body="It may have been deleted."
-        action={<Link to={RESUME_AI_HOME} className="text-indigo-600 underline dark:text-indigo-400">See your resumes</Link>}
+        action={<Link to={RESUME_AI_HOME} className="text-indigo-700 underline dark:text-indigo-300">See your resumes</Link>}
       />
     ) : (
       <div className="space-y-4">
-        <ErrorNote>{loadError.text}</ErrorNote>
-        <Link to={RESUME_AI_HOME} className="text-sm text-indigo-600 underline dark:text-indigo-400">All resumes</Link>
+        <ErrorNote onRetry={() => setReloadKey((n) => n + 1)}>{loadError.text}</ErrorNote>
+        <Link to={RESUME_AI_HOME} className="text-sm text-indigo-700 underline dark:text-indigo-300">All resumes</Link>
       </div>
     );
   }
@@ -1213,7 +1213,7 @@ const ScaledPage = memo(function ScaledPage({
         )}
       </div>
       <div ref={box} className="relative w-full" aria-label={`Resume preview, ${pages} page${pages === 1 ? "" : "s"}`} role="img" style={{ height: realHeight * scale }}>
-        <div ref={page} data-resume-preview="" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
+        <div ref={page} data-resume-preview="" inert style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
           <ResumePreview data={data} design={design} />
         </div>
         {guides.map((y, i) => (

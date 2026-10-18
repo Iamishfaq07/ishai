@@ -18,6 +18,7 @@ import {
   cx,
   focusRing,
   type LucideIcon,
+  wholeMinutes,
 } from "@orbit/ui";
 import { api } from "../api";
 import { openBilling, useEntitlements } from "../credits";
@@ -214,7 +215,7 @@ export function HomeScreen({
 
 /** What's left to spend, with the way to add more. Low or empty balances say so before a session is started. */
 function CreditsLine({ credits }: { credits: NonNullable<Entitlements["credits"]> }) {
-  const left = Math.round(credits.interview_minutes_left);
+  const left = wholeMinutes(credits.interview_minutes_left);
   const low = left < 10;
   return (
     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-600 dark:text-zinc-300">

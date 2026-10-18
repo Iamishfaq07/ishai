@@ -43,6 +43,13 @@ export function sinceText(iso: string | null, now: Date = new Date()): string {
   return then.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
+/** "Last active" for an account that never used anything: whether it has at least signed in ("signed in today"), so
+ *  "Never" doesn't read as an account nobody opened. */
+export function seenText(lastActive: string | null, lastSeen: string | null | undefined, now: Date = new Date()): string | null {
+  if (lastActive || !lastSeen) return null;
+  return `signed in ${sinceText(lastSeen, now).toLowerCase()}`;
+}
+
 const ACTION_LABEL: Record<string, string> = {
   "admin.access.grant": "Gave a plan for a while",
   "admin.access.approve": "Approved for good",
@@ -53,6 +60,7 @@ const ACTION_LABEL: Record<string, string> = {
   "admin.user.unsuspend": "Unsuspended the account",
   "admin.user.sign_out": "Signed it out everywhere",
   "admin.user.password_reset": "Sent a password reset",
+  "admin.user.2fa_off": "Turned off two-step sign-in",
   "admin.user.update": "Edited the account",
   "admin.user.delete": "Deleted the account",
   "admin.users.export": "Exported accounts (CSV)",
@@ -73,6 +81,17 @@ const ACTION_LABEL: Record<string, string> = {
   "auth.email_change_request": "Asked to change the email",
   "auth.email_changed": "Changed the email",
   "auth.delete_account": "Deleted their own account",
+  "auth.2fa_on": "Turned on two-step sign-in",
+  "auth.2fa_off": "Turned off two-step sign-in",
+  "auth.2fa_off_by_admin": "Two-step sign-in turned off by the admin",
+  "auth.login_2fa": "Signed in with two-step sign-in",
+  "auth.passkey_added": "Added a passkey",
+  "auth.passkey_removed": "Removed a passkey",
+  "auth.login_passkey": "Signed in with a passkey",
+  "auth.google": "Signed in with Google",
+  "auth.google_register": "Signed up with Google",
+  "auth.google_claim": "Connected Google (the old password stopped working)",
+  "auth.device_signed_out": "Signed out a device",
   "session.delete_transcript": "Deleted a transcript",
 };
 

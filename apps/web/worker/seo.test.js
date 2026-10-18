@@ -157,7 +157,7 @@ describe("routeKind (which addresses are pages)", () => {
   });
 
   it("calls everything else not a page", () => {
-    for (const p of ["/pricing", "/mock-interview", "/jobsearch", "/jobs/nope", "/sessions/a/b", "/admin", "/wp-login.php", "/llms.txt", "/companiesx"]) {
+    for (const p of ["/prices", "/mock-interviews", "/interview-copilots", "/jobsearch", "/jobs/nope", "/sessions/a/b", "/admin", "/wp-login.php", "/llms.txt", "/companiesx"]) {
       expect(routeKind(p)).toBeNull();
     }
     expect(isFixedAddress("/resume-ai/x")).toBe(false);
@@ -192,7 +192,7 @@ describe("routeKind (which addresses are pages)", () => {
 
 describe("the Worker's answers", () => {
   it("answers an address that isn't a page with a real 404, the app's page and noindex", async () => {
-    for (const p of ["/this-page-does-not-exist", "/companies/no-such-company", "/pricing"]) {
+    for (const p of ["/this-page-does-not-exist", "/companies/no-such-company", "/prices"]) {
       const res = await get(p);
       expect(res.status, p).toBe(404);
       expect(res.headers.get("x-robots-tag")).toBe("noindex");
@@ -388,6 +388,13 @@ describe("structured data (site.js)", () => {
     }
   });
 
+  it("describes the pricing page and the copilot's and Practice's pages, with breadcrumbs (D73)", () => {
+    const types = (p) => structuredDataFor(p, { title: "t", description: "d" })["@graph"].map((n) => n["@type"]);
+    expect(types("/pricing")).toEqual(["Organization", "WebSite", "WebPage", "BreadcrumbList"]);
+    expect(types("/interview-copilot")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList"]);
+    expect(types("/mock-interview")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList"]);
+  });
+
   it("numbers breadcrumbs from 1 and escapes '<' so no value can end the script", () => {
     expect(breadcrumbs([["Home", "/"], ["Jobs AI", "/jobs"]]).itemListElement.map((i) => i.position)).toEqual([1, 2]);
     expect(jsonLdText({ name: "</script><b>" })).not.toContain("</script>");
@@ -443,5 +450,39 @@ describe("security.txt (RFC 9116)", () => {
     // RFC 9116: less than a year ahead. Inside 30 days this fails on purpose: move SECURITY_TXT_EXPIRES on a year.
     expect(days, "renew SECURITY_TXT_EXPIRES in apps/web/worker/seo.js").toBeGreaterThan(30);
     expect(days).toBeLessThanOrEqual(366);
+  });
+});
+
+// ---------------------------------------------------------------- what the Worker writes itself
+
+describe("answers the Worker writes itself", () => {
+  it("carry the security headers the built files get from _headers", async () => {
+    const answers = [
+      await get("/robots.txt"),
+      await get("/.well-known/security.txt"),
+      await get("/privacy/"), // a 301
+      await get("/privacy", { protocol: "http:" }), // http → https, a 301
+      await get("/missing.js"), // a plain 404
+    ];
+    for (const res of answers) {
+      expect(res.headers.get("strict-transport-security"), res.url).toBe("max-age=63072000; includeSubDomains");
+      expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(res.headers.get("x-frame-options")).toBe("DENY");
+      expect(res.headers.get("referrer-policy")).toBe("no-referrer");
+      expect(res.headers.get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'none'");
+    }
+    expect(answers[2].status).toBe(301);
+    expect(answers[4].status).toBe(404);
+  });
+
+  it("never replace a page's own policy, and leave the API's answers alone", async () => {
+    const page = await get("/");
+    expect(page.headers.get("content-security-policy")).toBeNull(); // a page's CSP comes from _headers, not here
+    expect(page.headers.get("x-frame-options")).toBe("DENY");
+    const own = new Response("<html></html>", { headers: { "content-type": "text/html", "content-security-policy": "script-src 'self'", "x-frame-options": "SAMEORIGIN" } });
+    const { withBaseline } = await import("./seo.js");
+    const kept = withBaseline(own);
+    expect(kept.headers.get("content-security-policy")).toBe("script-src 'self'");
+    expect(kept.headers.get("x-frame-options")).toBe("SAMEORIGIN");
   });
 });

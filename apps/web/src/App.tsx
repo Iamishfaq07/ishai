@@ -1,12 +1,13 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { FlagGate } from "./components/FlagGate";
+import { AdminOnly } from "./components/AdminOnly";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { InviteLinkPage } from "./pages/InviteLink";
 import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
 import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
-import { Skeleton, toast } from "@orbit/ui";
+import { EmptyState, Skeleton, toast } from "@orbit/ui";
 import { signedInHereBefore, useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { servedHeadFor } from "./lib/servedHead";
@@ -69,6 +70,9 @@ import {
   ContactPage,
   NotFoundPage,
   TechnicalPage,
+  PricingPage,
+  CopilotPublicPage,
+  PracticePublicPage,
   CompaniesPage,
   CompanyPage,
   RolesPage,
@@ -94,7 +98,7 @@ export function PageLoading() {
  * page, and Resume AI's and Jobs AI's homes their product pages.
  */
 function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, unreachable, recheck } = useAuth();
   const location = useLocation();
   if (loading) {
     // A browser nobody has signed in on: the public face now, not a spinner until the session check answers (the
@@ -109,10 +113,27 @@ function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage
   }
   if (!user) {
     const page = publicPage?.(location.pathname);
+    // The session check got no answer (offline, the server restarting): someone who has signed in here is told so
+    // and can try again, instead of being sent to sign in by a blip. A first visit still gets the public page.
+    if (unreachable && (signedInHereBefore() || !page)) return <CantReach message={unreachable} onRetry={recheck} />;
     if (page) return page;
     return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
   }
   return <Signed>{children}</Signed>;
+}
+
+/** The whole page while the session can't be checked: what happened, and Try again (it also retries when back online). */
+function CantReach({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <main className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col justify-center px-5 py-16">
+      <EmptyState
+        kind="offline"
+        title="Can't reach Orbit"
+        body={`${message} If you were signed in, you still are.`}
+        onRetry={onRetry}
+      />
+    </main>
+  );
 }
 
 /** Signed in: warm the daily pages in the background so the next click doesn't wait for a download. A signed-in
@@ -195,8 +216,6 @@ export function App() {
   useRouteTitle();
   return (
     <Suspense fallback={<PageLoading />}>
-    <CookieNotice />
-    <SupportChat />
     <GoogleClaimNotice />
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -217,6 +236,10 @@ export function App() {
       <Route path="/contact" element={<Prerendered><ContactPage /></Prerendered>} />
       {/* Public: live latency, the answer pipeline, the desktop app's protections. */}
       <Route path="/technical" element={<Prerendered><TechnicalPage /></Prerendered>} />
+      {/* Public: the prices in rupees and dollars, and the copilot's and Practice's product pages (D73). */}
+      <Route path="/pricing" element={<Prerendered><PricingPage /></Prerendered>} />
+      <Route path="/interview-copilot" element={<Prerendered><CopilotPublicPage /></Prerendered>} />
+      <Route path="/mock-interview" element={<Prerendered><PracticePublicPage /></Prerendered>} />
       {/* Public: the question bank, how companies interview and what interviews for a job test (pages/bank). Built
           as HTML too (src/prerender), like the pages above, so it reads without JavaScript. */}
       <Route path="/companies" element={<Prerendered><CompaniesPage /></Prerendered>} />
@@ -290,16 +313,20 @@ export function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="extension/connect" element={<ExtensionConnectPage />} />
         <Route path="interview" element={<VideoInterviewPage />} />
-        <Route path="admin/users" element={<AdminUsersPage />} />
-        <Route path="admin/payments" element={<AdminPaymentsPage />} />
-        <Route path="admin/audit" element={<AdminAuditPage />} />
-        <Route path="admin/inbox" element={<AdminInboxPage />} />
-        <Route path="admin/support" element={<AdminSupportPage />} />
-        <Route path="admin/referrals" element={<AdminReferralsPage />} />
+        <Route path="admin/users" element={<AdminOnly><AdminUsersPage /></AdminOnly>} />
+        <Route path="admin/payments" element={<AdminOnly><AdminPaymentsPage /></AdminOnly>} />
+        <Route path="admin/audit" element={<AdminOnly><AdminAuditPage /></AdminOnly>} />
+        <Route path="admin/inbox" element={<AdminOnly><AdminInboxPage /></AdminOnly>} />
+        <Route path="admin/support" element={<AdminOnly><AdminSupportPage /></AdminOnly>} />
+        <Route path="admin/referrals" element={<AdminOnly><AdminReferralsPage /></AdminOnly>} />
         {ComponentGalleryPage && <Route path="dev/components" element={<ComponentGalleryPage />} />}
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    {/* After the page in the DOM, so the first Tab stop is the page's "Skip to content", not the floating support
+        button or the cookie note (both are fixed in place, so where they sit in the markup doesn't move them). */}
+    <CookieNotice />
+    <SupportChat />
     </Suspense>
   );
 }

@@ -21,6 +21,7 @@ import {
   FileText,
   ExternalLink,
   UserCog,
+  wholeMinutes,
 } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { WEB_URL, api } from "../api";
@@ -252,7 +253,7 @@ function UsageCard() {
               <span className="block text-xs text-zinc-500">Live and mock interviews both use these.</span>
             </span>
             <span className="shrink-0 font-medium tabular-nums text-zinc-900 dark:text-white">
-              {Math.round(credits.interview_minutes_left)} min left
+              {wholeMinutes(credits.interview_minutes_left)} min left
             </span>
           </div>
           <div className="flex items-baseline justify-between gap-3">

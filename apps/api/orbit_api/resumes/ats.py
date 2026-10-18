@@ -342,6 +342,51 @@ _BOILERPLATE = frozenset("""
 eeo eoe est edt pst pdt cst cdt mst gmt utc ist cet us usa uk eu emea apac latam hq llc inc ltd coo cmo cio svp evp
 avp asap ote dei pto wfh nyc sf la ada
 """.split()) | _GENERIC
+# Where the job is, not what it needs: "Austin, TX", "Offices in Bengaluru and London", "Location: Texas". A US state's
+# two-letter code counts only right after a city ("Austin, TX"): some are skills on their own ("AR/VR", "ML, IN").
+_US_STATES = frozenset("""
+al ak az ar ca co ct de fl ga hi id il in ia ks ky la me md ma mi mn ms mo mt ne nv nh nj nm ny nc nd oh ok or pa ri sc
+sd tn tx ut vt va wa wv wi wy dc
+""".split())
+_PLACES = frozenset("""
+alabama alaska arizona arkansas california colorado connecticut delaware florida georgia hawaii idaho illinois indiana
+iowa kansas kentucky louisiana maine maryland massachusetts michigan minnesota mississippi missouri montana nebraska
+nevada ohio oklahoma oregon pennsylvania tennessee texas utah vermont virginia wisconsin wyoming carolina dakota jersey
+austin seattle boston chicago denver atlanta dallas houston miami portland nashville raleigh charlotte pittsburgh
+philadelphia detroit minneapolis baltimore orlando tampa sacramento columbus cincinnati cleveland indianapolis
+milwaukee omaha tucson albuquerque boise bellevue redmond sunnyvale cupertino palo alto menlo oakland irvine plano
+bentonville san francisco jose diego antonio angeles los las vegas york brooklyn manhattan
+bengaluru bangalore mumbai bombay delhi gurgaon gurugram noida hyderabad pune chennai madras kolkata calcutta
+ahmedabad jaipur kochi cochin chandigarh indore coimbatore trivandrum thiruvananthapuram mysore mysuru nagpur lucknow
+bhubaneswar vizag visakhapatnam surat vadodara mohali srinagar jammu kashmir karnataka maharashtra telangana kerala
+gujarat rajasthan haryana punjab bengal pradesh odisha
+london manchester edinburgh glasgow birmingham cambridge oxford dublin cork belfast berlin munich hamburg frankfurt
+cologne stuttgart paris lyon amsterdam rotterdam utrecht brussels antwerp zurich geneva basel vienna prague warsaw
+krakow budapest lisbon porto madrid barcelona valencia milan rome turin stockholm gothenburg oslo copenhagen helsinki
+tallinn riga vilnius athens istanbul bucharest belgrade zagreb kyiv toronto vancouver montreal ottawa calgary
+waterloo guadalajara bogota medellin lima santiago buenos aires paulo janeiro singapore tokyo osaka seoul beijing
+shanghai shenzhen hangzhou taipei hong kong manila jakarta bangkok hanoi kuala lumpur dubai abu dhabi doha riyadh
+jeddah cairo nairobi lagos johannesburg sydney melbourne brisbane perth auckland wellington
+india canada germany france ireland netherlands spain portugal italy poland sweden norway denmark finland switzerland
+austria belgium romania ukraine israel egypt kenya nigeria australia zealand japan korea china taiwan philippines
+indonesia vietnam thailand malaysia brazil argentina chile colombia peru mexico emirates uae qatar arabia europe
+america americas asia africa nordics
+""".split())
+_CITY_STATE = re.compile(r"\b([A-Z][a-z]+(?:[ -][A-Z][a-z]+){0,2}),\s?([A-Z]{2})\b(?!\s*(?:/|&|and)\s*VR)")
+
+
+@lru_cache(maxsize=128)
+def _places_in(job_text: str) -> frozenset[str]:
+    """Places this post names as "City, ST" (each of the city's words and the code), as `_norm` keys."""
+    found: set[str] = set()
+    for m in _CITY_STATE.finditer(job_text):
+        city, code = m.group(1), m.group(2).lower()
+        if code in _US_STATES and _norm(city) not in SKILL_VOCAB:
+            found.add(code)
+            found.update(_norm(w) for w in re.split(r"[ -]", city))
+    return frozenset(found)
+
+
 # Skills that are also everyday words ("go to market", "excel in", "the rest", "Spring 2025", "a lean team"): only
 # counted when the post writes them as the product, capitalised mid-sentence.
 _AMBIGUOUS = {"go": "Go", "react": "React", "rest": "REST", "excel": "Excel", "spring": "Spring", "lean": "Lean",
@@ -403,6 +448,7 @@ def extract_keywords(job_text: str, limit: int = 20) -> list[str]:
 def _extract_keywords(job_text: str, limit: int) -> tuple[str, ...]:
     """The job post's most searchable terms: known skills first, then product/tech names, then repeated words."""
     norm = _norm(job_text)
+    places = _places_in(job_text) | _PLACES
     scores: Counter[str] = Counter()
     display: dict[str, str] = {}
     covered: list[str] = []
@@ -425,11 +471,12 @@ def _extract_keywords(job_text: str, limit: int) -> tuple[str, ...]:
             continue
         key = _norm(word)
         if (key in _STOP or key.rstrip("s") in _STOP or key in _BOILERPLATE or key in scores or key in _AMBIGUOUS
-                or _part_of(key, covered)):
+                or key in places or _part_of(key, covered)):
             continue
         scores[key] += 4
         display.setdefault(key, word)
-    counts = Counter(w for w in re.findall(r"[a-z][a-z+#-]{3,}", norm) if w not in _STOP and w not in _AMBIGUOUS)
+    counts = Counter(w for w in re.findall(r"[a-z][a-z+#-]{3,}", norm)
+                     if w not in _STOP and w not in _AMBIGUOUS and w not in places)
     # The most repeated few only: each is another pass over the post, and a post of a thousand words said three
     # times each would otherwise cost a thousand passes.
     for word, n in counts.most_common(60):

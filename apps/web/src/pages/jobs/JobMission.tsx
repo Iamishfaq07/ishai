@@ -86,7 +86,9 @@ export function JobMissionPage() {
     <div className="space-y-6">
       <BackLink to={JOBS_TRACKER}>Tracker</BackLink>
 
-      {entry ? <Header entry={entry} /> : <Skeleton variant="line" count={2} label="Loading the job" />}
+      {/* The heading's placeholder only while something is still loading: next to an error it read as stuck. */}
+      {entry ? <Header entry={entry} /> : !tracker.error && !mission.error && <Skeleton variant="line" count={2} label="Loading the job" />}
+      {tracker.error && !tracker.data && <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>}
 
       <LoadGate loading={mission.loading && !m} variant="card" count={2} label="Loading the mission">
         {mission.error && !m ? (
@@ -126,7 +128,7 @@ export function JobMissionPage() {
                       }}
                     />
                   )}
-                  {tab === "plan" && <PrepPlanPanel entry={entry} />}
+                  {tab === "plan" && <PrepPlanPanel entry={entry} onOpenInterview={() => setTab("interview")} />}
                   {tab === "fit" && <FitPanel fit={m.fit} entry={entry} />}
                   {tab === "resume" && <ResumePanel mission={m} entry={entry} onMission={update} />}
                   {tab === "company" && <CompanyPanel entry={entry} />}

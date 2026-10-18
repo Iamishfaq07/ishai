@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { loadResponseTiming, saveResponseTiming } from "./preferences";
+import { DEFAULT_ANSWER_SHAPE, loadAnswerShape, loadResponseTiming, saveAnswerShape, saveResponseTiming } from "./preferences";
 
 function fakeStorage(): Storage {
   const m = new Map<string, string>();
@@ -52,5 +52,20 @@ describe("answer copy text", () => {
       debug: { root_cause: "bound", fix: "drop +1", why: "len-1", diff: "-a\n+b" },
     };
     expect(answerAsText(debug)).toBe("Off by one.\n\nRoot cause: bound\nMinimal fix: drop +1\nWhy it failed: len-1\n\n-a\n+b");
+  });
+});
+
+describe("answer shape preference (length, style, Auto-answer)", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("remembers the last choice on this device, and ignores junk", () => {
+    vi.stubGlobal("localStorage", fakeStorage());
+    expect(loadAnswerShape()).toEqual(DEFAULT_ANSWER_SHAPE);
+    saveAnswerShape({ length: "short", style: "concise", autoAnswer: false });
+    expect(loadAnswerShape()).toEqual({ length: "short", style: "concise", autoAnswer: false });
+    localStorage.setItem("orbit.answerShape", JSON.stringify({ length: "huge", style: 3, autoAnswer: "no" }));
+    expect(loadAnswerShape()).toEqual(DEFAULT_ANSWER_SHAPE);
+    localStorage.setItem("orbit.answerShape", "{not json");
+    expect(loadAnswerShape()).toEqual(DEFAULT_ANSWER_SHAPE);
   });
 });

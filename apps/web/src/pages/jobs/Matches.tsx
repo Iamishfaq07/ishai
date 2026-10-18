@@ -601,7 +601,10 @@ export function PortalCard({ portals, days, prominent = false }: { portals: JobP
 }
 
 function NoMatches({ feed, days, searching }: { feed: JobFeed; days: string; searching: boolean }) {
-  const down = feed.sources.length > 0 && feed.sources.every((s) => s.failing || (s.listings === 0 && !s.refreshing));
+  // "Can't reach" only when the boards are failing: every board answering with nothing yet isn't an outage (it read as
+  // one whenever the feed was simply empty).
+  const down = feed.sources.length > 0 && feed.sources.every((s) => s.failing);
+  const empty = !down && feed.sources.length > 0 && feed.sources.every((s) => s.failing || (s.listings === 0 && !s.refreshing));
   return (
     <div className="space-y-4">
       {firstFetch(feed) ? (
@@ -611,6 +614,12 @@ function NoMatches({ feed, days, searching }: { feed: JobFeed; days: string; sea
           variant="offline"
           title="Orbit can't reach the job boards right now"
           body="They're usually back within the hour. Meanwhile, search the sites below: the links are filled in from your profile."
+        />
+      ) : empty ? (
+        <CosmicEmptyState
+          variant="no-results"
+          title="No jobs from the boards yet"
+          body="The job boards Orbit reads haven't sent any posts yet; they're checked again through the day. Meanwhile, search the sites below: the links are filled in from your profile."
         />
       ) : (
         <CosmicEmptyState

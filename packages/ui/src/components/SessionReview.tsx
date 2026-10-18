@@ -15,6 +15,8 @@ export interface SessionReviewProps {
   ended: boolean;
   /** Nothing was heard or asked (no transcript, no questions): there is nothing to review. */
   empty?: boolean;
+  /** Answers kept from a session with nothing said (asked in chat): an empty review mustn't say nothing happened. */
+  answers?: number;
   /** Generates (or regenerates) the review, then the caller reloads the session. */
   onGenerate: () => Promise<void>;
   /** Re-drill: start a practice round on the weak questions (the caller creates the session and opens it). */
@@ -36,7 +38,7 @@ const SCORE_WORD: Record<number, string> = { 1: "Needs work", 2: "Developing", 3
 
 /** Post-call scorecard: overall score, strengths/improvements/practice, and each question graded on what
  * the candidate actually said. Shared by the web session page and the desktop History screen. */
-export function SessionReview({ review, ended, empty = false, onGenerate, onDrill, onRetry, onSaveAnswer, practiceQueue = true }: SessionReviewProps) {
+export function SessionReview({ review, ended, empty = false, answers = 0, onGenerate, onDrill, onRetry, onSaveAnswer, practiceQueue = true }: SessionReviewProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const generate = async () => {
@@ -56,8 +58,12 @@ export function SessionReview({ review, ended, empty = false, onGenerate, onDril
       <EmptyState
         className="scene-host animate-fade-up"
         art={<CopilotScene quiet className="w-44 sm:w-52" />}
-        title="Nothing was captured"
-        body="No speech was heard and no questions were asked in this session, so there's nothing to review. If audio was on, check your microphone and interviewer audio with the tests on the start screen next time."
+        title={answers ? "Nothing was said out loud" : "Nothing was captured"}
+        body={
+          answers
+            ? `There's no speech to score, so there's no scorecard. The ${answers === 1 ? "answer" : `${answers} answers`} from this session ${answers === 1 ? "is" : "are"} on the Questions & answers tab.`
+            : "No speech was heard and no questions were asked in this session, so there's nothing to review. If audio was on, check your microphone and interviewer audio with the tests on the start screen next time."
+        }
       />
     );
   }

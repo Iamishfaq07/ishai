@@ -934,8 +934,11 @@ async def update_tracker(entry_id: str, body: TrackPatch, user: Annotated[User, 
 @router.get("/tracker/{entry_id}/timeline", response_model=list[TimelineEvent], dependencies=[Depends(read_limit)])
 async def tracker_timeline(entry_id: str, user: Annotated[User, Depends(current_user)],
                            db: Annotated[AsyncSession, Depends(get_db)]) -> list[TimelineEvent]:
-    """One tracked job's journey, oldest first (job_portal/timeline.py): only the owner's own rows."""
-    return await timeline(db, await _owned_entry(db, entry_id, user))
+    """One tracked job's journey, oldest first (job_portal/timeline.py): only the owner's own rows, the newest 300."""
+    return (await timeline(db, await _owned_entry(db, entry_id, user)))[-MAX_TIMELINE_EVENTS:]
+
+
+MAX_TIMELINE_EVENTS = 300
 
 
 @router.delete("/tracker/{entry_id}", status_code=204, dependencies=[Depends(read_limit)])

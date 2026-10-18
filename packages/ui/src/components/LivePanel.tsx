@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, lazy, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DEV_FIXTURES,
   type AnswerFeedbackReason,
@@ -35,7 +35,10 @@ import { ChatInput } from "./ChatInput";
 import { CodeBlock } from "./CodeBlock";
 import { ControlBar } from "./ControlBar";
 import { MockPanel, type CameraCoach } from "./MockPanel";
-import { VideoInterviewRoom } from "./VideoInterviewRoom";
+// The video room (D69) is ~14 kB gzip that only the AI video interview uses: loaded when one opens, not with every
+// live session. Until it arrives the room's own dark backdrop shows, so nothing jumps.
+const VideoInterviewRoom = lazy(() => import("./VideoInterviewRoom").then((m) => ({ default: m.VideoInterviewRoom })));
+const ROOM_BACKDROP = <div aria-hidden="true" className="h-full min-h-0 bg-[#07070c]" />;
 import { cx, focusRing } from "./cx";
 import { QuestionCard } from "./QuestionCard";
 import { StatusPill } from "./StatusPill";
@@ -377,6 +380,7 @@ export function LivePanel(props: LivePanelProps) {
 
   if (props.videoInterview && props.mockInterview) {
     return (
+      <Suspense fallback={ROOM_BACKDROP}>
       <VideoInterviewRoom
         {...(props.title ? { title: props.title } : {})}
         {...(props.subtitle ? { subtitle: props.subtitle } : {})}
@@ -406,6 +410,7 @@ export function LivePanel(props: LivePanelProps) {
         onEnd={props.onEnd}
         {...(props.onViewReport ? { onViewReport: props.onViewReport } : {})}
       />
+      </Suspense>
     );
   }
 
@@ -790,7 +795,7 @@ function Banners({
       text:
         live.usage.reason === "session"
           ? "This session reached the time limit and has ended. Start a new session to continue."
-          : "You've run out of interview minutes, so the session has ended. Your transcript is saved in History.",
+          : "You've run out of interview minutes, so the session has ended. Your transcript is saved with the session.",
       ...(live.usage.reason === "session" ? {} : { action: buy("Buy minutes") }),
     });
   else if (live.usage && live.state !== "ended") {

@@ -6,6 +6,7 @@ import {
   exportFileName,
   nextSort,
   plannedRemoval,
+  seenText,
   sinceText,
   wholeNumber,
 } from "./logic";
@@ -46,6 +47,15 @@ describe("the list's columns", () => {
     expect(sinceText(new Date(2026, 9, 6, 23, 0).toISOString(), now)).toBe("Yesterday");
     expect(sinceText(new Date(2026, 9, 2, 12, 0).toISOString(), now)).toBe("5 days ago");
     expect(sinceText(new Date(2026, 8, 9, 12, 0).toISOString(), now)).toBe("4 weeks ago");
+  });
+
+  it("says when an account that never used anything at least signed in", () => {
+    const now = new Date(2026, 9, 7, 18, 0);
+    const today = new Date(2026, 9, 7, 9, 0).toISOString();
+    expect(seenText(null, today, now)).toBe("signed in today");
+    expect(seenText(today, today, now)).toBeNull(); // it was active: "Today" says it
+    expect(seenText(null, null, now)).toBeNull(); // never signed in either: just "Never"
+    expect(seenText(null, undefined, now)).toBeNull(); // an older server
   });
 });
 

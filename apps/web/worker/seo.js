@@ -273,6 +273,30 @@ function withoutEtag(response) {
   return res;
 }
 
+/**
+ * The security headers every answer carries. The built files get them from `_headers` (vite.config.ts writes the
+ * pages' CSP there); what the Worker writes itself (the 301s, robots.txt, security.txt, a plain 404) got none of
+ * them. Only missing ones are added: a page's own CSP is never replaced, and anything that isn't a page gets the
+ * strictest one (it runs nothing and is never framed).
+ */
+export const BASELINE_HEADERS = {
+  "strict-transport-security": "max-age=63072000; includeSubDomains",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+};
+const NOTHING_CSP = "default-src 'none'; frame-ancestors 'none'";
+
+export function withBaseline(response) {
+  const missing = Object.keys(BASELINE_HEADERS).filter((h) => !response.headers.has(h));
+  const csp = !response.headers.has("content-security-policy") && !isHtml(response);
+  if (!missing.length && !csp) return response;
+  const res = new Response(response.body, response);
+  for (const h of missing) res.headers.set(h, BASELINE_HEADERS[h]);
+  if (csp) res.headers.set("content-security-policy", NOTHING_CSP);
+  return res;
+}
+
 function withHeader(response, name, value) {
   const res = new Response(response.body, response);
   res.headers.set(name, value);
@@ -340,6 +364,10 @@ export async function notFound(env, request, url) {
  */
 export async function withSeo(request, env, url, serve) {
   if (url.pathname === "/api" || url.pathname.startsWith("/api/")) return serve(request);
+  return withBaseline(await seoAnswer(request, env, url, serve));
+}
+
+async function seoAnswer(request, env, url, serve) {
   const method = request.method;
   const readable = method === "GET" || method === "HEAD";
   if (readable) {

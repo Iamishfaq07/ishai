@@ -1,5 +1,50 @@
 # Implementation log
 
+## Product audit: every product driven end to end, and what it found (2026-10-18)
+
+Three personas (a new free user in India, a paying user abroad in dollars, the admin) drove every product on a
+local stack at 1440, 820 and 390 px, light and dark, with axe on every route (DECISIONS D73). Each fix has a test.
+
+- **Signed in stays signed in**: any failed session check (offline, a timeout, a 5xx while the API restarts)
+  signed the user out to the sign-in page. Only 401/403 do now; anything else shows "Can't reach Orbit" with Try
+  again, and checks again when the browser is back online.
+- **Security** (the red team's follow-ups):
+  - The account's owner is emailed when a passkey is added, two-step sign-in goes on or off, or the password is
+    reset or changed (auth/alerts.py). Without SMTP the same events are in the app: Settings → Recent security
+    activity, and a notice on Home for a change in the last fortnight until "It was me" on that device.
+  - The admin can turn two-step sign-in off for someone who lost their phone and codes, saying how they checked
+    it's them (audit log); every device is signed out and the owner is emailed.
+  - One open order carries the first-purchase discount; in production, orders are made only through the website
+    (the edge's signed country decides the currency; the desktop app already buys there).
+  - The Worker's own answers (301s, robots.txt, security.txt, plain 404s) carry the security headers.
+- **Money and minutes**: rupees grouped everywhere (₹26,499), minutes left rounded down the same way everywhere,
+  credits bought before a plan stay in view while it runs, the support bot names packs as Billing does and knows
+  there's nothing to cancel, the admin's payments page by page.
+- **Data**: Delete transcript also takes each answer's quoted question; the Markdown export has the answers, the
+  scorecard and the user's own time; the video interview's Q1 is the question, not Saba's greeting; Practice's
+  one-tap rounds no longer say "the questions from your prep".
+- **Dead ends and confirmations**: a non-admin on an admin page is told it's the admin's; the extension page
+  says how to get it; deleting a confirmed claim and untracking a saved job ask first; sign-up says why it can't go
+  on; Billing says when payments aren't open; Code AI won't spend a review on the starter code; a too-large upload
+  says so (its 413 carries CORS headers); an empty jobs feed isn't called an outage; error pages speak plainly.
+- **ATS keywords** leave out where the job is (Austin, TX; Bengaluru). **Admin**: last active counts every tool,
+  and an account that only signed in says so.
+- **Desktop** (next release): Setup remembers answer length, style and Auto-answer; a video interview rejoins in
+  the browser; "Not connected" instead of "Capture active" with no connection; a left click on the tray icon shows
+  Orbit; no "Buy more interview minutes" on plans; audio errors name the button that's there; History lists
+  answers from chat.
+- **New**: `/pricing` with rupee and dollar prices (from the server, `?currency=` on the public listings, display
+  only), `/interview-copilot` and `/mock-interview` product pages, all built as HTML; "?" opens the keyboard
+  shortcuts anywhere in the app.
+- **Accessibility**: axe 0 on every route checked (WCAG 2.2 AA, light and dark, 1440 and 390 px); the first Tab
+  stop is Skip to content; small targets, name mismatches, nested links and two contrast misses fixed.
+- **Performance follow-ups**: the video room loads only for a video interview (Live 234 kB, budget 246), its mic
+  meter wakes on iOS, and its full screen respects the safe areas. Plan & billing and Offer AI hold one placeholder
+  until their data is in, then draw everything at once (layout shift 0.42/0.84 and 0.11/0.45 on desktop/phone, now
+  0.01 and under; Home 0.03-0.07).
+- **Tests**: `tools/e2e/product-audit.spec.ts`; API tests in test_security_alerts.py, test_pricing_page.py and the
+  suites each fix touched.
+
 ## Micro-interactions: presses, states, lists and exits that feel like one product (2026-10-18)
 
 - **Interaction rules** (DECISIONS D74; DESIGN.md "Interaction"): a press is one fill step darker and 97% at Full

@@ -8,7 +8,7 @@ import { downloadText, errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { AdminOverview } from "./admin/Overview";
 import { UserDrawer } from "./admin/UserDrawer";
-import { exportFileName, nextSort, sinceText, wholeNumber, type SortState } from "./admin/logic";
+import { exportFileName, nextSort, seenText, sinceText, wholeNumber, type SortState } from "./admin/logic";
 import { AccessBadge, AdminTabs, SuspendedBadge, Tag, day, inr, mins } from "./admin/shared";
 
 const PAGE = 50;
@@ -275,6 +275,7 @@ function SortHeader({
 
 function UserRow({ user: u, selected, onToggle, onOpen }: { user: AdminUser; selected: boolean; onToggle: () => void; onOpen: () => void }) {
   const used = (u.usage?.live_minutes_used ?? 0) + (u.usage?.mock_minutes_used ?? 0);
+  const seen = seenText(u.usage?.last_active ?? null, u.usage?.last_seen);
   const admin = u.access === "admin";
   return (
     <tr
@@ -316,7 +317,11 @@ function UserRow({ user: u, selected, onToggle, onOpen }: { user: AdminUser; sel
         <p className="mt-1 text-xs text-zinc-500 tabular-nums dark:text-zinc-400 md:hidden">
           {admin ? "Unlimited" : `${u.resume_credits} credits · ${mins(u.interview_minutes_left)} left`}
           {u.usage?.paid_inr ? ` · ${inr(u.usage.paid_inr)}` : ""}
-          <span className="sm:hidden"> · {sinceText(u.usage?.last_active ?? null).toLowerCase()}</span>
+          <span className="sm:hidden">
+            {" "}
+            · {sinceText(u.usage?.last_active ?? null).toLowerCase()}
+            {seen ? ` (${seen})` : ""}
+          </span>
         </p>
       </td>
       <td className="hidden py-2.5 pr-3 align-top tabular-nums md:table-cell">
@@ -338,7 +343,15 @@ function UserRow({ user: u, selected, onToggle, onOpen }: { user: AdminUser; sel
         </span>
       </td>
       <td className="hidden py-2.5 pr-3 text-right align-top tabular-nums md:table-cell">{u.usage?.paid_inr ? inr(u.usage.paid_inr) : "—"}</td>
-      <td className="hidden whitespace-nowrap py-2.5 pr-3 align-top sm:table-cell">{sinceText(u.usage?.last_active ?? null)}</td>
+      <td className="hidden whitespace-nowrap py-2.5 pr-3 align-top sm:table-cell">
+        {sinceText(u.usage?.last_active ?? null)}
+        {seen && (
+          <>
+            <br />
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{seen}</span>
+          </>
+        )}
+      </td>
       <td className="hidden whitespace-nowrap py-2.5 pr-3 align-top text-zinc-500 lg:table-cell dark:text-zinc-400">{day(u.created_at)}</td>
     </tr>
   );

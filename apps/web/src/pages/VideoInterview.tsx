@@ -22,6 +22,10 @@ function DeviceCheck({ onReady }: { onReady: (ok: boolean) => void }) {
     let ctx: AudioContext | null = null;
     let raf = 0;
     let cancelled = false;
+    // iOS (and some desktop browsers) start an AudioContext suspended until a tap or a key: without resuming it the
+    // meter stayed flat and said "Say something" while the mic worked. Resumed at once, and on the first gesture.
+    const unlock = () => void ctx?.resume().catch(() => undefined);
+    const GESTURES = ["pointerdown", "keydown", "touchend"] as const;
     navigator.mediaDevices
       ?.getUserMedia({ video: { width: 640, height: 480, facingMode: "user" }, audio: true })
       .then((s) => {
@@ -29,6 +33,10 @@ function DeviceCheck({ onReady }: { onReady: (ok: boolean) => void }) {
         stream = s;
         if (video.current) video.current.srcObject = s;
         ctx = new AudioContext();
+        if (ctx.state === "suspended") {
+          unlock();
+          GESTURES.forEach((e) => document.addEventListener(e, unlock, { capture: true, passive: true }));
+        }
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 512;
         ctx.createMediaStreamSource(s).connect(analyser);
@@ -50,6 +58,7 @@ function DeviceCheck({ onReady }: { onReady: (ok: boolean) => void }) {
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
+      GESTURES.forEach((e) => document.removeEventListener(e, unlock, { capture: true }));
       void ctx?.close();
       stream?.getTracks().forEach((t) => t.stop());
     };

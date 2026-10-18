@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { JobFitCheck, JobFitResponse, JobListing, JobStatus } from "@orbit/types";
-import { ApiError, practiceDocuments } from "@orbit/ui";
+import { ApiError, confirmDialog, practiceDocuments } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { practiceHref } from "../../lib/onboarding";
@@ -63,6 +63,14 @@ export function useJobActions(
 
   const unsave = async () => {
     if (!tracked) return;
+    // Taking it off the tracker drops what's kept with it there (notes, an interview date, a linked resume), and
+    // there's no undo: asked first, as the tracker's own Remove does.
+    if (!(await confirmDialog({
+      title: "Remove this job from your tracker?",
+      body: `${job.title}${job.company ? ` at ${job.company}` : ""} comes off your tracker, with any notes, interview date and linked resume kept there. You can save it again, but those don't come back.`,
+      confirmLabel: "Remove",
+      danger: true,
+    }))) return;
     setBusy("save");
     setError(null);
     try {

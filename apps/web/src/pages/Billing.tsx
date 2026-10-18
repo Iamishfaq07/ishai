@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BillingScene, CreditCard, LoadGate, Spot, cx, focusRing } from "@orbit/ui";
+import { BillingScene, CreditCard, LoadGate, Skeleton, Spot, cx, focusRing, rupees } from "@orbit/ui";
 import type { CreditPack, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
 import { errorText, formatDate } from "../lib/format";
-import { useAsync } from "../lib/useAsync";
+import { useAsync, useSettledOnce } from "../lib/useAsync";
 import { UpiCheckout } from "./UpiCheckout";
 import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
@@ -42,7 +42,7 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
         {shown.map((o) => (
           <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
             <span className="font-medium">
-              {o.label} · {o.amount_text || `₹${o.amount_inr}`}
+              {o.label} · {o.amount_text || rupees(o.amount_inr)}
             </span>
             <span className="text-zinc-500">{formatDate(o.submitted_at ?? o.created_at)}</span>
             {o.method === "razorpay" || o.method === "paypal" ? (
@@ -62,7 +62,7 @@ function Payments({ orders, onOpen }: { orders: UpiOrder[]; onOpen: (o: UpiOrder
             )}
             {!!o.refunded_inr && (
               <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-xs font-medium text-sky-800 dark:text-sky-200">
-                Refunded {o.refunded_text || `₹${o.refunded_inr}`}
+                Refunded {o.refunded_text || rupees(o.refunded_inr)}
               </span>
             )}
             {o.status === "processing" && (
@@ -206,7 +206,8 @@ export function BillingPage() {
   // button, and below every pack on a phone. Bring it into view, or the click looks like it did nothing; once the
   // plans and packs above it are in, or they push it back down (back from PayPal, the page is still loading).
   const said = buyError ?? bought ?? notice;
-  const laidOut = Boolean(packs.data && monthly.data);
+  const shown = useSettledOnce(ent, packs, monthly, orders, invite);
+  const laidOut = shown && Boolean(packs.data && monthly.data);
   useEffect(() => {
     if (said && laidOut) messageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [said, laidOut]);
@@ -224,6 +225,12 @@ export function BillingPage() {
       <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." art={<BillingScene />} />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
+      {!shown ? (
+        // One placeholder about the page's height until the plans, packs, balance and orders are in: drawn as each
+        // arrived, the sections pushed each other down by hundreds of pixels (CLS 0.4 on a desktop, 0.8 on a phone).
+        <Skeleton variant="card" count={3} label="Loading plans and credits" className="min-h-[70vh]" />
+      ) : (
+      <>
       {invite.data && orders.data && (
         <div className="mb-8">
           <CodeEntry offer={invite.data.offer} canEnter={!paidBefore} prefill={codeFromLink}
@@ -282,11 +289,13 @@ export function BillingPage() {
         {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
             wording swapping to Razorpay's moved the page (layout shift). */}
         <p className="min-h-[3.75rem] text-xs text-zinc-500 sm:min-h-[2.5rem]">
-          {!packs.data ? null : list.length > 0 && list[0]?.currency !== "INR" && !list.some((p) => p.buyable) ? (
-            // Dollar prices while no dollar checkout is on: the UPI or rupee-card wording below doesn't apply, and
-            // every Buy button is off, so say so instead of how to pay.
+          {!packs.data ? null : list.length > 0 && !list.some((p) => p.buyable) ? (
+            // No checkout is on for this currency (dollars before PayPal, or rupees before UPI or Razorpay): the
+            // how-to-pay wording below doesn't apply and every Buy button is off, so say so instead.
             <>
-              Prices outside India are in US dollars. Paying in dollars isn't open yet.{" "}
+              {list[0]?.currency !== "INR"
+                ? "Prices outside India are in US dollars. Paying in dollars isn't open yet."
+                : "Payments aren't open here yet, so the Buy buttons are off."}{" "}
               <Link
                 to={contactHref({ topic: "payment", from: "/billing" })}
                 className={cx("font-medium text-indigo-700 underline-offset-2 hover:underline dark:text-indigo-300", focusRing)}
@@ -349,6 +358,8 @@ export function BillingPage() {
           {invite.data && <InviteFriends invite={invite.data} />}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
