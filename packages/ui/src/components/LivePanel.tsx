@@ -439,7 +439,14 @@ export function LivePanel(props: LivePanelProps) {
             {props.title ?? "Orbit"}
           </h1>
         )}
-        <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
+        {!compact && wide ? (
+          // With the title beside it, the title gives way and the status always reads in full.
+          <span className="flex shrink-0">
+            <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
+          </span>
+        ) : (
+          <StatusPill state={live.state} connection={live.connection} stt={live.providers.stt?.state} />
+        )}
         {!compact && props.captureHealth && <DeviceCaptureHealthPill audio={paused || ended ? "muted" : props.captureHealth} screen={props.screenCaptureHealth} />}
         <SessionClock startedAt={live.startedAt} running={!ended && !paused} dragRegion={props.dragRegion} />
         {props.headerEnd}

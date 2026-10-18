@@ -98,7 +98,7 @@ export function Dropzone({
       role="button"
       tabIndex={off ? -1 : 0}
       aria-disabled={off || undefined}
-      aria-label={file ? `Chosen file: ${file.name}. Choose another file` : "Choose a file or drop it here"}
+      // Named by the words it shows (WCAG 2.5.3, label in name), with what a screen reader also needs in sr-only text.
       data-dragging={dragging || undefined}
       onClick={() => !off && input.current?.click()}
       onKeyDown={(e) => {
@@ -134,7 +134,10 @@ export function Dropzone({
       {busy ? (
         <ProgressRing progress={progress} className="text-sky-500" />
       ) : (
-        <span className="font-medium text-zinc-700 dark:text-zinc-200">{dragging ? "Drop it here" : file ? file.name : "Drop a file here, or click to choose"}</span>
+        <span className="font-medium text-zinc-700 dark:text-zinc-200">
+          {dragging ? "Drop it here" : file ? file.name : "Drop a file here, or click to choose"}
+          {file && !dragging && <span className="sr-only"> (chosen; choose another file)</span>}
+        </span>
       )}
       {hint && <span>{hint}</span>}
       <input

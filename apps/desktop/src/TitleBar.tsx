@@ -130,6 +130,9 @@ function AccountMenu({ name, email, onBilling, onWeb, onSignOut }: AccountMenuPr
     if (open) menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
   }, [open]);
   const who = name || email || "Your account";
+  // The initials it shows start its name (label in name, WCAG 2.5.3), as Avatar draws them.
+  const parts = who.trim().split(/[\s._@-]+/).filter(Boolean);
+  const initials = ((parts[0]?.[0] ?? "?") + (parts[1]?.[0] ?? "")).toUpperCase();
   const item = (label: string, icon: LucideIcon, run: () => void, danger = false) => {
     const Icon = icon;
     return (
@@ -155,7 +158,7 @@ function AccountMenu({ name, email, onBilling, onWeb, onSignOut }: AccountMenuPr
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Account"
+        aria-label={`${initials}, account`}
         title={email ? `Signed in as ${email}` : "Account"}
         onClick={() => setOpen((o) => !o)}
         className={cx("flex h-8 items-center rounded-full p-0.5 hover:bg-zinc-900/5 active:bg-zinc-900/10 dark:hover:bg-white/10 dark:active:bg-white/15", focusRing)}

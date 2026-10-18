@@ -128,7 +128,7 @@ export function Onboarding({ onDone }: { onDone: (next: "home" | "start") => voi
                     focusRing,
                   )}
                 >
-                  <span className={cx("min-w-0 flex-1 truncate font-medium", tool.id === "kashsec" && "text-teal-700 dark:text-teal-300")}>{tool.name}</span>
+                  <span className={cx("min-w-0 flex-1 font-medium leading-snug", tool.id === "kashsec" && "text-teal-700 dark:text-teal-300")}>{tool.name}</span>
                   <ArrowUpRight aria-hidden className="h-3.5 w-3.5 shrink-0 text-zinc-400 motion-ok:transition-transform motion-ok:group-hover:-translate-y-px motion-ok:group-hover:translate-x-px" />
                   <span className="sr-only">(opens in your browser)</span>
                 </button>
