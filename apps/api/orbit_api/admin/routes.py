@@ -286,6 +286,8 @@ class AdminUsage(BaseModel):
     last_active: datetime | None = None
     # The last time any of its signed-in devices was used (signing in counts): "signed in, never used anything".
     last_seen: datetime | None = None
+    # Two-step sign-in is on (shown on the account as AdminUser.two_factor; not part of the usage the app shows).
+    two_factor: bool = Field(False, exclude=True)
 
 
 class AdminUser(BaseModel):
@@ -406,11 +408,17 @@ async def _usage(db: AsyncSession, ids: list[str]) -> dict[str, AdminUsage]:
     for uid, last in (await db.execute(select(activity.c.uid, activity.c.last_active))).all():
         if uid in out and last is not None:
             out[uid].last_active = _aware(last)
-    for uid, seen in (await db.execute(
-            select(UserSession.user_id, func.max(UserSession.last_seen_at))
-            .where(UserSession.user_id.in_(ids)).group_by(UserSession.user_id))).all():
-        if seen is not None:
-            out[uid].last_seen = _aware(seen)
+    # When each was last seen on any device, and whether two-step sign-in is on (the row's badge): one query for the
+    # page, not one each (tests/test_query_budget.py holds the list to its budget).
+    seen_q = (select(func.max(UserSession.last_seen_at)).where(UserSession.user_id == User.id)
+              .correlate(User).scalar_subquery())
+    two_q = (select(func.count()).select_from(UserTwoFactor)
+             .where(UserTwoFactor.user_id == User.id, UserTwoFactor.enabled_at.is_not(None))
+             .correlate(User).scalar_subquery())
+    for uid, seen, two in (await db.execute(select(User.id, seen_q, two_q).where(User.id.in_(ids)))).all():
+        if uid in out:
+            out[uid].last_seen = _aware(seen) if seen is not None else None
+            out[uid].two_factor = bool(two)
     for uid, paid, n in (await db.execute(
             select(Payment.user_id, func.sum(Payment.amount_inr), func.count())
             .where(Payment.user_id.in_(ids), Payment.status == "approved").group_by(Payment.user_id))).all():
@@ -450,8 +458,6 @@ async def admin_rows(db: AsyncSession, users: Sequence[User]) -> list[AdminUser]
         used = {uid: float(total or 0) for uid, total in rows.all()}
     wallets = await credits.balances(db, ids)
     usage = await _usage(db, ids)
-    two_factor = set((await db.scalars(select(UserTwoFactor.user_id).where(
-        UserTwoFactor.user_id.in_(ids), UserTwoFactor.enabled_at.is_not(None)))).all()) if ids else set()
     out = []
     for u in users:
         granted = active_grant(u)
@@ -467,7 +473,7 @@ async def admin_rows(db: AsyncSession, users: Sequence[User]) -> list[AdminUser]
             resume_credits=wallets.get(u.id, (0, 0.0))[0],
             interview_minutes_left=round(wallets.get(u.id, (0, 0.0))[1], 1), usage=usage[u.id],
             suspended_at=_aware(u.suspended_at) if u.suspended_at else None, suspended_reason=u.suspended_reason,
-            has_note=bool((u.admin_note or "").strip()), two_factor=u.id in two_factor))
+            has_note=bool((u.admin_note or "").strip()), two_factor=usage[u.id].two_factor))
     return out
 
 
