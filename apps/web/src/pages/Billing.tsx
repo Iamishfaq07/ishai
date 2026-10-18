@@ -282,11 +282,13 @@ export function BillingPage() {
         {/* Room for three lines is kept, and nothing is said until the packs say how they're paid: the UPI
             wording swapping to Razorpay's moved the page (layout shift). */}
         <p className="min-h-[3.75rem] text-xs text-zinc-500 sm:min-h-[2.5rem]">
-          {!packs.data ? null : list.length > 0 && list[0]?.currency !== "INR" && !list.some((p) => p.buyable) ? (
-            // Dollar prices while no dollar checkout is on: the UPI or rupee-card wording below doesn't apply, and
-            // every Buy button is off, so say so instead of how to pay.
+          {!packs.data ? null : list.length > 0 && !list.some((p) => p.buyable) ? (
+            // No checkout is on for this currency (dollars before PayPal, or rupees before UPI or Razorpay): the
+            // how-to-pay wording below doesn't apply and every Buy button is off, so say so instead.
             <>
-              Prices outside India are in US dollars. Paying in dollars isn't open yet.{" "}
+              {list[0]?.currency !== "INR"
+                ? "Prices outside India are in US dollars. Paying in dollars isn't open yet."
+                : "Payments aren't open here yet, so the Buy buttons are off."}{" "}
               <Link
                 to={contactHref({ topic: "payment", from: "/billing" })}
                 className={cx("font-medium text-indigo-700 underline-offset-2 hover:underline dark:text-indigo-300", focusRing)}

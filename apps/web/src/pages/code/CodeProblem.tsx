@@ -48,6 +48,7 @@ function Workspace({ problem: p, attempts, reviewsLeft, onReviewed }: { problem:
   const [lang, setLang] = useState<CodeLanguage>(last?.language ?? "javascript");
   const [code, setCode] = useState(last?.code ?? starter(p, "javascript"));
   const [approach, setApproach] = useState(last?.approach ?? "");
+  const untouched = !code.trim() || code.trim() === starter(p, lang).trim();
   const [hints, setHints] = useState(0);
   const [run, setRun] = useState<RunResult | null>(null);
   const [busy, setBusy] = useState<"run" | "review" | null>(null);
@@ -144,10 +145,15 @@ function Workspace({ problem: p, attempts, reviewsLeft, onReviewed }: { problem:
             <Textarea id="code-approach" rows={4} maxLength={3000} value={approach} onChange={(e) => setApproach(e.target.value)} />
           </Field>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Button disabled={busy !== null || !code.trim() || reviewsLeft === 0} onClick={() => void reviewIt()}>
+            {/* The starter code as given isn't a try: reviewing it would spend one of the day's free reviews on nothing. */}
+            <Button disabled={busy !== null || untouched || reviewsLeft === 0} onClick={() => void reviewIt()}>
               <Sparkles className="h-4 w-4" /> {busy === "review" ? "The interviewer is reading…" : "Get the interviewer's review"}
             </Button>
-            {reviewsLeft !== null && <span className="text-xs text-zinc-500 dark:text-zinc-400">{reviewsLeft} free review{reviewsLeft === 1 ? "" : "s"} left today</span>}
+            {untouched ? (
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Write your solution first: the starter code isn't reviewed.</span>
+            ) : (
+              reviewsLeft !== null && <span className="text-xs text-zinc-500 dark:text-zinc-400">{reviewsLeft} free review{reviewsLeft === 1 ? "" : "s"} left today</span>
+            )}
           </div>
           {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
         </Card>

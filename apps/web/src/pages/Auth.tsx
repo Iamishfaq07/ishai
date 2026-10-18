@@ -466,14 +466,14 @@ export function RegisterPage() {
         </Field>
         {captcha && <Captcha config={captcha} onToken={setCaptchaToken} />}
         {error && <ErrorNote>{error}</ErrorNote>}
-        <Button type="submit" disabled={busy || !agreed || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
-          {busy ? "Creating account…" : "Create account"}
-        </Button>
         <label className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300">
           <input
             type="checkbox"
             checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
+            onChange={(e) => {
+              setAgreed(e.target.checked);
+              if (e.target.checked) setError(null);
+            }}
             className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600"
           />
           <span>
@@ -492,6 +492,9 @@ export function RegisterPage() {
             .
           </span>
         </label>
+        <Button type="submit" disabled={busy || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
+          {busy ? "Creating account…" : "Create account"}
+        </Button>
       </form>
       <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
         Already have an account?{" "}

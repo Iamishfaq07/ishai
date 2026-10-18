@@ -10,7 +10,8 @@ import { JOBS_TRACKER } from "./paths";
 import { dayLabel, localToday, planItemLink } from "./plan";
 
 /** The plan to the interview: a countdown, each day's tasks with a way to do them, and a tick for each. */
-export function PrepPlanPanel({ entry }: { entry: JobTrackerEntry }) {
+/** `onOpenInterview`: in the Mission room, where the date is set on the Interview tab next to this one. */
+export function PrepPlanPanel({ entry, onOpenInterview }: { entry: JobTrackerEntry; onOpenInterview?: () => void }) {
   const plan = useAsync(() => api.prepPlan(entry.id), [entry.id, entry.next_at, entry.status], `prep-plan:${entry.id}`);
   const [busy, setBusy] = useState<string | null>(null);
   const today = localToday();
@@ -39,12 +40,18 @@ export function PrepPlanPanel({ entry }: { entry: JobTrackerEntry }) {
           </h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             {p.interview_at
-              ? "The interview date has passed. Add the next one in the tracker for a new plan."
-              : "Add the interview date in the tracker (as applied or interviewing) and Orbit lays out each day until then."}
+              ? `The interview date has passed. Add the next one ${onOpenInterview ? "on the Interview tab" : "in the tracker"} for a new plan.`
+              : `Add the interview date ${onOpenInterview ? "on the Interview tab" : "in the tracker (as applied or interviewing)"} and Orbit lays out each day until then.`}
           </p>
-          <Link to={JOBS_TRACKER} className={cx("mt-3 inline-flex items-center gap-1 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
-            Open the tracker <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-          </Link>
+          {onOpenInterview ? (
+            <button type="button" onClick={onOpenInterview} className={cx("mt-3 inline-flex items-center gap-1 rounded text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+              Add the date <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          ) : (
+            <Link to={JOBS_TRACKER} className={cx("mt-3 inline-flex items-center gap-1 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+              Open the tracker <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          )}
         </Card>
       ) : p ? (
         <div className="space-y-4">
