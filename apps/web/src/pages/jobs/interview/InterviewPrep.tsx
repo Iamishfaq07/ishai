@@ -10,13 +10,11 @@ import type {
   ResumeQuestionsResponse,
 } from "@orbit/types";
 import {
+  Spot,
   ArrowRight,
   ArrowUpRight,
-  BookOpen,
   CalendarIcon,
-  FileText,
   InterviewDayScene,
-  ListChecks,
   LoadGate,
   MOCK_INTERVIEW_ENABLED,
   ROUND_TYPES,
@@ -201,8 +199,8 @@ function LaunchCard({ view }: { view: InterviewPrepView }) {
   };
   return (
     <section aria-labelledby="iv-launch" className="glass-panel gradient-border rounded-2xl p-5">
-      <h2 id="iv-launch" className="font-display text-lg font-semibold">
-        On the day
+      <h2 id="iv-launch" className="flex items-center gap-3 font-display text-lg font-semibold">
+        <Spot kind="copilot" /> On the day
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
         The copilot starts with this job's post, the resume you sent and {view.guide ? `the ${view.guide} guide` : "the role"} loaded, so answers are about you and this job.
@@ -262,7 +260,7 @@ function JobPostCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: In
   return (
     <Card>
       <h2 className={cx(h2, "flex items-center gap-2")}>
-        <FileText className="h-4 w-4 text-zinc-500" aria-hidden /> The job post
+        <Spot kind="jobpost" /> The job post
       </h2>
       {j.snippet && <p className="mt-2 line-clamp-6 whitespace-pre-line text-sm text-zinc-700 dark:text-zinc-300">{j.snippet}</p>}
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
@@ -327,7 +325,7 @@ function ResumeCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Int
   return (
     <Card>
       <h2 className={cx(h2, "flex items-center gap-2")}>
-        <BookOpen className="h-4 w-4 text-zinc-500" aria-hidden /> The resume you sent
+        <Spot kind="resume" /> The resume you sent
       </h2>
       {r ? (
         <div className="mt-3 flex items-center gap-3">
@@ -443,7 +441,7 @@ function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGener
   return (
     <Card>
       <h2 className={cx(h2, "flex items-center gap-2")}>
-        <Sparkles className="h-4 w-4 text-indigo-500" aria-hidden /> Likely questions
+        <Spot kind="questions" /> Likely questions
       </h2>
       {!out ? (
         <>
@@ -553,7 +551,7 @@ function StoriesCard({ view }: { view: InterviewPrepView }) {
   return (
     <Card>
       <h2 className={cx(h2, "flex items-center gap-2")}>
-        <ListChecks className="h-4 w-4 text-emerald-500" aria-hidden /> Stories to tell
+        <Spot kind="story" /> Stories to tell
       </h2>
       {view.stories.length > 0 ? (
         <>

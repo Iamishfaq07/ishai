@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { JobOfferRecord, OfferInput } from "@orbit/types";
-import { Check, CircleAlert, Copy, CosmicEmptyState, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
+import { Spot, Check, CircleAlert, Copy, CosmicEmptyState, Mic, PenLine, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
 import { Button, Card, ErrorNote, IconButton } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -96,7 +96,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 font-display text-base font-semibold">What it's made of</h2>
+          <h2 className="mb-3 flex items-center gap-3 font-display text-base font-semibold"><Spot kind="parts" />What it's made of</h2>
           <dl className="space-y-1.5 text-sm">
             {([[`${terms.fixed} a year`, o.fixed], [terms.variableYear, o.variable], [`${terms.joining} (once)`, o.joining_bonus], ["Equity a year", o.equity_per_year], ["Other a year", o.other]] as const)
               .filter(([, v]) => v > 0)
@@ -124,7 +124,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
 
         {o.take_home && (
           <Card>
-            <h2 className="font-display text-base font-semibold">In your account each month</h2>
+            <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="wallet" />In your account each month</h2>
             <p className="mt-1 font-display text-3xl font-semibold tabular-nums">{money(c, o.take_home.monthly, true)}</p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">An estimate, from the fixed pay. The variable comes once a year: about {money(c, o.take_home.variable_after_tax, true)} after tax.</p>
             <dl className="mt-3 space-y-1 text-sm">
@@ -150,7 +150,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
 
       <Card>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-base font-semibold">Against the market</h2>
+          <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="market" />Against the market</h2>
           {o.position && <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", POSITION_TONE[o.position])}>{POSITION_TEXT[o.position]}</span>}
         </div>
         {o.market ? (
@@ -163,7 +163,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-display text-base font-semibold">Your negotiation</h2>
+            <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="negotiate" />Your negotiation</h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">What to ask for and why, what to say, and the email. From the offer, the market and your resume.</p>
           </div>
           <div className="flex flex-wrap gap-2">

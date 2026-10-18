@@ -1,10 +1,22 @@
 import { Link } from "react-router-dom";
-import { Badge, CircleCheck, Code2, CodeScene, LoadGate, cx, focusRing } from "@orbit/ui";
+import { Badge, CircleCheck, Code2, CodeScene, LoadGate, Spot, cx, focusRing, type SpotKind } from "@orbit/ui";
 import { Card, ErrorNote, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { codePath } from "./paths";
+
+/** Each pattern drawn, so the list reads at a glance (the API's pattern names; anything new gets the code window). */
+const PATTERN_SPOT: Record<string, SpotKind> = {
+  Hashing: "hashing",
+  "Two pointers": "pointers",
+  "Sliding window": "window",
+  "Binary search": "binary",
+  Stack: "stack",
+  "Trees and graphs (BFS/DFS)": "tree",
+  "Heaps and intervals": "intervals",
+  "Dynamic programming": "dp",
+};
 
 /** A problem's difficulty as the shared Badge's tone. */
 export const DIFFICULTY_TONE = { easy: "success", medium: "warning", hard: "danger" } as const;
@@ -42,14 +54,14 @@ export function CodeHomePage() {
                 {d.reviews_left !== null && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{d.reviews_left} free reviews left today</span>}
               </p>
             </Card>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2">
               {d.patterns.map((pattern) => {
                 const mine = d.problems.filter((p) => p.pattern === pattern);
                 const done = mine.filter((p) => p.solved).length;
                 return (
                   <Card key={pattern} className="min-w-0">
                     <div className="mb-2 flex items-center justify-between gap-2">
-                      <h2 className="font-display text-base font-semibold">{pattern}</h2>
+                      <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind={PATTERN_SPOT[pattern] ?? "code"} />{pattern}</h2>
                       <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">{done}/{mine.length} solved</span>
                     </div>
                     <ul className="space-y-1">

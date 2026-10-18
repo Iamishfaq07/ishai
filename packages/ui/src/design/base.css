@@ -572,6 +572,10 @@ button:not(:disabled) {
   :root[data-motion="full"] :is(.scene, .scene-host):hover .scene-nudge {
     translate: 0 -3px;
   }
+  /* A spot graphic lifts a hair while the card, row or button it labels is hovered (its accent drew in on arrival). */
+  :root[data-motion="full"] :is(.glass-panel, .orbit-card, a, button, li, section):hover .spot .scene-nudge {
+    translate: 0 -2px;
+  }
 }
 @media print {
   .scene :is(.scene-draw, .scene-fade, .scene-in, .scene-pop, .scene-settle) {

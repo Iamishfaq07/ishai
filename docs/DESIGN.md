@@ -245,6 +245,8 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   burst plays at Full motion only. Wired: the first offer (added in Offer AI, or a job moved to offer on the
   tracker) and the first edit that takes a resume's ATS score past 80. Home's "You're set up" shows the celebration
   scene, its sparks bursting only the first time on a device (`CelebrationScene still`).
+- **Plain words:** `<Term term="ats">ATS</Term>` (glossary: ats, jd, utr, star, fit-check, tailor) or `tip="…"`.
+- **Links that look like buttons:** `buttonClass(variant, size)`, never a copied class string.
 
 ## Scenes
 
@@ -276,16 +278,17 @@ unless given a `title`. Under 3 KB of source each (WorkingScene holds three kind
 | `StoriesScene`, `AnswersScene`, `EvidenceScene`, `DocumentsScene` | same names | a STAR book, a kept answer, a quote under a shield, a fanned stack | the story bank, answers, evidence, documents (web and desktop) |
 | `LinkedInScene` | `linkedin` | a profile card, its headline rewritten, the search that finds it | LinkedIn AI's header |
 | `CodeScene` | `code` | a code window, a blinking cursor, tests ticking | Code AI's header |
-| `LearningScene` | `learning` | a path of lessons, the one you're on | Learning AI's header |
+| `LearningScene` | `learning` | a path of lessons, the one you're on | (spare: Learning AI's page carries KashSec's scene) |
 | `VideoScene` | `video` | a call with the interviewer, her question, her voice | the video interview's header |
 | `BillingScene` | `billing` | a receipt, paid, and a credit landing | Plan & billing's header, admin payments |
-| `SecurityScene` | `security` | a shield closing with a tick, a key, a six-digit code | two-step sign-in while it's off |
+| `SecurityScene` | `security` | a shield closing with a tick, a key, a six-digit code | (spare: settings sections have spots) |
 | `ReferralScene` | `people` | two people and the link between them | People (Jobs AI outreach) |
 | `InboxScene` | `inbox` | a letter into the tray, a chat waiting | admin inbox and support |
 | `InterviewDayScene` | `interview-day` | a calendar with the day ringed, its checklist | the Mission room's Interview tab while it has no date; Home's "Interview today/tomorrow" card from xl up (the next step then drops its scene) |
 | `NoResultsScene`, `OfflineScene` | `no-results`, `offline` | a telescope on empty sky; a dish losing its satellite | no matches; a job, offer or problem not found; boards down |
 | `WelcomeScene` | `support` | Orbit with a moon per product | the first welcome question |
 | `CelebrationScene` (`still`) | `success` | a ticked world, sparks thrown out | "You're set up" |
+| `KashSecScene` | — | a terminal typing a command, a shield, a path of lessons; KashSec's teal | KashSec's feature card (Learning AI) and the front page's KashSec section |
 | `WorkingScene` (`kind`) | — | reading (a band scans a page), writing (lines write in), matching (signals pass) | `WorkingState`: Jobs AI's matching, Resume AI's prep, letter and AI panel, outreach writing, a resume import, a review being written |
 
 **Motion** (base.css, "Every scene's one touch"). The first time a scene is in view (`Scene` sets `data-shown`), its
@@ -302,8 +305,44 @@ only for as long as the wait lasts.
 - Only `opacity`, `transform` and `stroke-dashoffset` animate, inside an SVG of fixed size: nothing around a scene
   moves. One motion class per element, never on an element with its own `transform` attribute (wrap it in a `<g>`).
   `scenes.test.ts` checks these rules.
-- **Plain words:** `<Term term="ats">ATS</Term>` (glossary: ats, jd, utr, star, fit-check, tailor) or `tip="…"`.
-- **Links that look like buttons:** `buttonClass(variant, size)`, never a copied class string.
+
+**Spot graphics** (`Spot`, `scenes/spots.tsx`; D70). A section's or a card's own small picture, so a page reads at a
+glance: 40 px on a quiet tile (`bg-zinc-50`, a hairline ring), 56 px (`size="lg"`) for a card that leads with it,
+`bare` without the tile on a tinted surface. Drawn in a 48-unit box in the scenes' hand: ink outlines at 1.6, paper
+fills, faint text lines, and **one** accent part (a stroke that draws in, or a dot or block that grows), never a second
+colour. Rules: at most one spot per card or section heading, beside the heading (`flex items-center gap-3`); a spot
+labels a section, it doesn't decorate a row, a table, a field or a button; it never replaces a status mark (an
+amber or green state keeps its words or its colour). The hero scene rule still holds: one scene in a view, any number
+of section spots around it. Motion: the accent part plays once when the spot is first seen (Gentle fades, Off shows
+it drawn), and the drawing lifts 2 px while its card, row or link is hovered (`.spot .scene-nudge`). Code AI's
+pattern cards also come in one after another (`stagger`). The kinds (`SPOT_KINDS`): settings (appearance,
+keyboard, voice, account, security, passkey, devices, privacy, admin), billing (plan, credits, usage, receipt), Offer
+AI (parts, wallet, market, negotiate, whatif, compare, rolepay), practice rounds (screen, intro, code, panel, video,
+pay), Code AI's patterns (hashing, pointers, window, binary, stack, tree, intervals, dp, lesson), Jobs AI (resume,
+target, place, briefcase, globe, alert), Resume AI (questions, gap, letter, ats, jobpost, rewrite, design, colour,
+photo, contact, sections, summary, skills, readability, keywords), the banks (coverage, story, drafts, answer,
+review, evidence) and the copilot and Mission room (context, audio, timeline, fit, mic, offer, copilot). All in the
+dev gallery.
+
+## KashSec Academy
+
+The Orbit team's free cybersecurity school, its own site (kashsec.vercel.app; D70). Promoted the same honest way
+everywhere (`components/KashSec.tsx`):
+- **Words**: its own tagline ("Free cybersecurity education for complete beginners. Start from zero, learn by doing,
+  and reach a real career."), "Free forever · Learn · Practise · Get hired", and only features its navigation shows
+  (`KASHSEC_FEATURES`: course paths, hands-on labs, interview bank, timed mock exam; the site also has tracks, a
+  glossary, flashcards, daily and weekly challenges, a shuffle quiz, practice tasks, tools, careers, a certification
+  roadmap and a progress tracker). No counts, ratings or claims it doesn't make (it doesn't teach AI).
+- **Colour**: teal, its own brand's, as a product colour: the scene, the chips' dots, the card's hairline and its
+  links. Never the accent's job (Orbit's own actions stay the accent), never a status.
+- **Placements**, never more than one in a view: Learning AI's featured band (`KashSecFeature`, with
+  `KashSecScene`: the page's one scene) and the tab bar's link beside Code AI; the front page's section (eyebrow
+  "Free from the Orbit team", chips, "Start learning free"; prerendered); the public footer; Home's dismissible "More
+  from us" (`KashSecHomeCard`, hidden for good per device); and in context, `KashSecContext` ("Preparing for a
+  security role?") where the role, a tracked job or a guide is in security (`isSecurityRole`, `lib/security.ts`):
+  Jobs AI's matches and a job's page, the Mission room, Practice and the cybersecurity analyst role guide.
+- **Links**: `kashsecUrl(placement)`: a new tab, `rel="noopener"`,
+  `?utm_source=orbit&utm_medium=referral&utm_campaign=<placement>`, and an sr-only "(opens KashSec in a new tab)".
 
 ## The video interview room
 

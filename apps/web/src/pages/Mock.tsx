@@ -1,19 +1,17 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { CreateSessionRequest, MockDifficulty, MockInterviewType, MockPersona } from "@orbit/types";
+import { KashSecContext } from "../components/KashSec";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../components/ui";
+import { isSecurityRole } from "../lib/security";
 import {
+  Spot,
+  type SpotKind,
   ChevronDown,
-  Code2,
-  Banknote,
-  IndianRupee,
   MOCK_INTERVIEW_ENABLED,
   PracticeScene,
   Sparkles,
   Target,
-  UserRound,
-  Users,
-  UsersRound,
   Video,
   cx,
   focusRing,
@@ -22,7 +20,6 @@ import {
   regionWords,
   practiceDocumentIds,
   sampleOffer,
-  type LucideIcon,
   readChoice,
   safeLocal,
 } from "@orbit/ui";
@@ -56,7 +53,7 @@ const TYPES: Array<{ value: MockInterviewType; label: string }> = [
   { value: "negotiation", label: "Salary negotiation" },
 ];
 
-const PRESET_ICON: Record<PresetId, LucideIcon> = { hr5: Users, tmay10: UserRound, tech15: Code2, panel15: UsersRound, oneway10: Video, salary: IndianRupee };
+const PRESET_SPOT: Record<PresetId, SpotKind> = { hr5: "screen", tmay10: "intro", tech15: "code", panel15: "panel", oneway10: "video", salary: "pay" };
 
 /**
  * Practice: the AI plays interviewer (spoken with the browser's voice), you answer by voice. A mock starts in one tap
@@ -233,7 +230,6 @@ function MockSetup() {
           </p>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {PRESETS.map((p) => {
-              const Icon = p.id === "salary" && !isIndia(country) ? Banknote : PRESET_ICON[p.id];
               const busy = starting === p.id;
               return (
                 <li key={p.id}>
@@ -253,9 +249,7 @@ function MockSetup() {
                     )}
                   >
                     <span className="flex w-full items-center justify-between gap-2">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-                        <Icon className="h-4 w-4" aria-hidden />
-                      </span>
+                      <Spot kind={PRESET_SPOT[p.id]} />
                       <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium tabular-nums text-zinc-700 dark:text-zinc-300">{p.minutes} min</span>
                     </span>
                     <span className="font-display text-sm font-semibold leading-snug sm:text-base">{busy ? "Starting…" : presetTitle(p, country)}</span>
@@ -265,6 +259,7 @@ function MockSetup() {
               );
             })}
           </ul>
+          {isSecurityRole(knownRole, company) && <KashSecContext placement="practice" />}
           {error && <ErrorNote>{error}</ErrorNote>}
           {guide && <CompanyGuide style={guide} />}
           <p className="flex items-start gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">

@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { AudioLines, DEVICE_VOICE, LoadGate, VOICE_CHOICE_KEY, playResponse, safeLocal, toast } from "@orbit/ui";
+import { DEVICE_VOICE, Spot, LoadGate, VOICE_CHOICE_KEY, playResponse, safeLocal, toast } from "@orbit/ui";
 import { Button, Card, Field, Select } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -51,10 +51,8 @@ export function InterviewerVoiceCard() {
 
   return (
     <Card id="interviewer-voice" className="scroll-mt-24">
-      <h2 className="mb-1 flex items-center gap-2.5 font-semibold">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-          <AudioLines className="h-4 w-4" aria-hidden />
-        </span>
+      <h2 className="mb-1 flex items-center gap-3 font-semibold">
+        <Spot kind="voice" />
         Interviewer voice
       </h2>
       <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">

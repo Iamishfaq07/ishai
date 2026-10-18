@@ -44,7 +44,7 @@ import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./Billing";
 import { DueToday } from "./DueToday";
-import { KashSecPromo } from "../components/Promos";
+import { KashSecHomeCard } from "../components/KashSec";
 import { summaryLine } from "./home/dashboard";
 import { AtAGlance, Pipeline, Upcoming } from "./home/Mission";
 import { FollowUps } from "./jobs/FollowUps";
@@ -154,7 +154,7 @@ export function HomePage() {
           <ResumeRow resumes={resumes.data} />
           <JobsRow tracker={tracker.data} />
         </div>
-        <KashSecPromo className="mt-4" />
+        <KashSecHomeCard className="mt-4" />
       </section>
 
       <RecentSessions sessions={sessions} />

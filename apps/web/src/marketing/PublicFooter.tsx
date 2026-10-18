@@ -5,6 +5,7 @@ import { CONTACT_PAGE, POLICY_LINKS, SUPPORT_EMAIL, SUPPORT_WHATSAPP, USE_WHERE_
 import { useIndia } from "../lib/country";
 import { useTheme, type ThemePref } from "../lib/theme";
 import { BrandLogo } from "./BrandLogo";
+import { kashsecUrl } from "../pages/learn/links";
 import { SITE_LINKS, siteProducts } from "./catalog";
 import { Container } from "./primitives";
 
@@ -136,6 +137,12 @@ export function PublicFooter({ className }: { className?: string }) {
               <Link to={CONTACT_PAGE} className={link}>
                 Contact us
               </Link>
+            </li>
+            <li>
+              <a href={kashsecUrl("footer")} target="_blank" rel="noopener" className={link}>
+                KashSec Academy (free)
+                <span className="sr-only"> (opens KashSec in a new tab)</span>
+              </a>
             </li>
           </Column>
           <Column title="Policies">

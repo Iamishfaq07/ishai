@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { JobOfferRecord, OfferScenario, OfferScenarioInput } from "@orbit/types";
-import { RotateCcw, cx, focusRing } from "@orbit/ui";
+import { Spot, RotateCcw, cx, focusRing } from "@orbit/ui";
 import { Card } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
@@ -51,7 +51,7 @@ export function WhatIf({ offer: o }: { offer: JobOfferRecord }) {
   return (
     <Card>
       <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-base font-semibold">What if</h2>
+        <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="whatif" />What if</h2>
         {changed && (
           <button
             type="button"

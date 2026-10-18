@@ -11,6 +11,7 @@ import {
   Database,
   Download,
   EyeOff,
+  KashSecScene,
   KeyRound,
   Laptop,
   Layers,
@@ -34,7 +35,8 @@ import { CONTACT_PAGE, COOKIE_PAGE, PRIVACY_PAGE, REFUND_PAGE, USE_WHERE_ALLOWED
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
 import { CreditPackGrid, PlanComparison, PricingTiers } from "../components/PricingTiers";
-import { KASHSEC_URL } from "./learn/links";
+import { kashsecUrl } from "./learn/links";
+import { KASHSEC_TAGLINE, KashSecChips } from "../components/KashSec";
 import { JOBS_AI_HOME } from "./jobs/paths";
 import { RESUME_AI_HOME } from "./resume/paths";
 import { LiveAnswerDemo } from "../marketing/LiveAnswerDemo";
@@ -238,21 +240,36 @@ function MoreTools({ products }: { products: SiteProduct[] }) {
               <ArrowLink to="/register" state={{ from: app[p.id] }}>
                 Use {p.name}
               </ArrowLink>
-              {p.id === "learning" && (
-                <a
-                  href={KASHSEC_URL}
-                  target="_blank"
-                  rel="noopener"
-                  className={cx("inline-flex min-h-8 items-center gap-1 rounded text-[0.8125rem] text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white", focusRing)}
-                >
-                  Free lessons on KashSec <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span className="sr-only">(opens in a new tab)</span>
-                </a>
-              )}
             </div>
           </li>
         ))}
       </Reveal>
+    </Section>
+  );
+}
+
+// ─── KashSec Academy ───────────────────────────────────────────────────────────────────────────────────────────
+
+/** The Orbit team's free cybersecurity school, its own site (DECISIONS D70): what it has, and one way in. */
+function KashSecSection() {
+  return (
+    <Section id="kashsec" labelledBy="kashsec-title">
+      <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-16">
+        <div className="lg:col-span-6">
+          <SectionIntro id="kashsec-title" eyebrow="Free from the Orbit team" title="KashSec Academy: cybersecurity, from zero." lead={KASHSEC_TAGLINE} />
+          <KashSecChips className="mt-6" />
+          <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <a href={kashsecUrl("front-page")} target="_blank" rel="noopener" className={buttonClass("secondary", "lg", "min-h-12 px-6")}>
+              Start learning free <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">(opens KashSec in a new tab)</span>
+            </a>
+            <span className="text-sm text-zinc-600 dark:text-zinc-400">Free forever · Learn · Practise · Get hired</span>
+          </div>
+        </div>
+        <div className="scene-host rounded-2xl border mk-line mk-surface p-6 sm:p-10 lg:col-span-6">
+          <KashSecScene className="mx-auto w-full sm:w-96" />
+        </div>
+      </div>
     </Section>
   );
 }
@@ -795,6 +812,7 @@ export function LandingPage() {
       />
 
       <MoreTools products={products} />
+      <KashSecSection />
       <HowItWorks />
       <WhyOrbit india={india} />
       <Security />

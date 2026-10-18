@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, BadgeIndianRupee, Banknote, MessagesSquare, GraduationCap, IdCard, ShieldCheck, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { ArrowRight, BadgeIndianRupee, Banknote, MessagesSquare, GraduationCap, IdCard, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import { useIndia } from "../lib/country";
-import { KASHSEC_URL, LEARN_HOME } from "../pages/learn/links";
+import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
 import { OFFERS_HOME } from "../pages/offers/model";
 import { AiPill } from "./products";
@@ -12,7 +12,7 @@ type Tool = { to: string; name: string; icon: LucideIcon; line: string };
 export const MORE_TOOLS: Tool[] = [
   { to: LINKEDIN_HOME, name: "LinkedIn", icon: IdCard, line: "Score your LinkedIn profile against the role you want, and fix what recruiters search for." },
   { to: OFFERS_HOME, name: "Offer", icon: BadgeIndianRupee, line: "What an offer pays each month, how it compares with the market, and a plan to ask for more." },
-  { to: LEARN_HOME, name: "Learning", icon: GraduationCap, line: "Coding-round practice with an AI interviewer's review, and free cybersecurity lessons." },
+  { to: LEARN_HOME, name: "Learning", icon: GraduationCap, line: "Coding-round practice with an AI interviewer's review, and free cybersecurity lessons on KashSec Academy." },
 ];
 
 /** The tools for where the visitor applies: outside India, Offer AI's take-home is rupee-only, so it promises the first
@@ -39,39 +39,6 @@ export function MoreToolChips({ dark = false, practice = false }: { dark?: boole
         </li>
       ))}
     </ul>
-  );
-}
-
-/**
- * KashSec, free cybersecurity and AI lessons (its own site). `tone` "dark" for the sign-in panel; "card" elsewhere.
- */
-export function KashSecPromo({ tone = "card", className }: { tone?: "dark" | "card"; className?: string }) {
-  const dark = tone === "dark";
-  return (
-    <a
-      href={KASHSEC_URL}
-      target="_blank"
-      rel="noopener"
-      className={cx(
-        "group flex items-center gap-3 rounded-2xl",
-        dark ? "p-2.5 bg-emerald-400/10 ring-1 ring-emerald-300/20 hover:bg-emerald-400/15" : "orbit-card p-4 transition-colors duration-quick hover:!border-zinc-300 dark:hover:!border-white/20",
-        focusRing,
-        className,
-      )}
-    >
-      <span className={cx("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", dark ? "bg-emerald-400/15 text-emerald-200" : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300")}>
-        <ShieldCheck className="h-[18px] w-[18px]" aria-hidden />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className={cx("flex flex-wrap items-center gap-1.5 text-sm font-semibold", dark ? "text-white" : "")}>
-          {dark ? "Learn cybersecurity and AI for free on KashSec" : "Learn cybersecurity for free"}
-          <span className={cx("rounded-full px-1.5 py-px text-[0.625rem] font-bold", dark ? "bg-emerald-300/20 text-emerald-100" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300")}>Free</span>
-        </span>
-        {!dark && <span className="block text-xs text-zinc-600 dark:text-zinc-400">KashSec: cybersecurity and AI lessons, free for everyone.</span>}
-      </span>
-      <ArrowUpRight className={cx("h-4 w-4 shrink-0 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5", dark ? "text-emerald-200" : "text-emerald-600 dark:text-emerald-300")} aria-hidden />
-      <span className="sr-only">(opens KashSec in a new tab)</span>
-    </a>
   );
 }
 

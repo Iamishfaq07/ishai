@@ -13,6 +13,7 @@ import { EvidenceScene } from "./EvidenceScene";
 import { InboxScene } from "./InboxScene";
 import { InterviewDayScene } from "./InterviewDayScene";
 import { JobsScene } from "./JobsScene";
+import { KashSecScene } from "./KashSecScene";
 import { LearningScene } from "./LearningScene";
 import { LinkedInScene } from "./LinkedInScene";
 import { NoResultsScene } from "./NoResultsScene";
@@ -27,10 +28,11 @@ import { TrackerScene } from "./TrackerScene";
 import { VideoScene } from "./VideoScene";
 import { WelcomeScene } from "./WelcomeScene";
 import { WorkingScene } from "./WorkingScene";
+import { SPOT_KINDS, Spot } from "./spots";
 
 const SCENES: Record<string, ComponentType<SceneProps>> = {
   AnswersScene, BillingScene, CelebrationScene, CodeScene, CopilotScene, DocumentsScene, EvidenceScene, InboxScene,
-  InterviewDayScene, JobsScene, LearningScene, LinkedInScene, NoResultsScene, OfferScene, OfflineScene, PracticeScene,
+  InterviewDayScene, JobsScene, KashSecScene, LearningScene, LinkedInScene, NoResultsScene, OfferScene, OfflineScene, PracticeScene,
   ReferralScene, ResumeScene, SecurityScene, StoriesScene, TrackerScene, VideoScene, WelcomeScene, WorkingScene,
 };
 const MOTION = ["scene-draw", "scene-fade", "scene-in", "scene-pop", "scene-settle"];
@@ -60,6 +62,26 @@ describe.each(Object.entries(SCENES))("%s", (_, Scene) => {
       expect(moving.length, tag).toBeLessThanOrEqual(1);
       if (moving.length) expect(tag, tag).not.toMatch(/\stransform="/);
       if (moving[0] === "scene-draw") expect(tag, tag).toMatch(/pathLength="1"/);
+    }
+  });
+});
+
+describe.each(SPOT_KINDS)("spot %s", (kind) => {
+  const html = renderToStaticMarkup(createElement(Spot, { kind }));
+
+  it("is decorative, flat, and its final frame without CSS", () => {
+    expect(html).toMatch(/^<span aria-hidden="true" class="spot /);
+    expect(html).not.toMatch(/<(linearGradient|radialGradient|filter|image|foreignObject|text)\b/);
+    expect(html).not.toMatch(/opacity="0"|opacity:\s*0[;"]/);
+  });
+
+  it("has one accent part that plays, marked the scenes' way", () => {
+    const moving = tags(html).filter((t) => classes(t).some((c) => MOTION.includes(c)));
+    expect(moving.length).toBeGreaterThan(0);
+    for (const tag of moving) {
+      expect(classes(tag).filter((c) => MOTION.includes(c)).length, tag).toBe(1);
+      expect(tag, tag).not.toMatch(/\stransform="/);
+      if (classes(tag).includes("scene-draw")) expect(tag, tag).toMatch(/pathLength="1"/);
     }
   });
 });

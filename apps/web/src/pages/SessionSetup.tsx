@@ -13,6 +13,7 @@ import type {
   Workspace,
 } from "@orbit/types";
 import {
+  Spot,
   ANSWER_LANGUAGE_HINT,
   ANSWER_STYLES,
   EXPERIENCE_LEVELS,
@@ -544,7 +545,7 @@ export function SessionSetupPage() {
           </Card>
 
           <Card>
-            <h2 className="mb-1 font-semibold">Context documents</h2>
+            <h2 className="mb-1 flex items-center gap-3 font-semibold"><Spot kind="context" />Context documents</h2>
             <p className="mb-4 text-sm text-zinc-500">Only checked documents are searched during this session.</p>
             <LoadGate loading={docs.loading && !docs.data} variant="line" count={4} label="Loading documents">
             {docs.error ? (
@@ -588,7 +589,7 @@ export function SessionSetupPage() {
 
         <div className="space-y-6">
           <Card>
-            <h2 className="mb-4 font-semibold">Audio</h2>
+            <h2 className="mb-4 flex items-center gap-3 font-semibold"><Spot kind="audio" />Audio</h2>
             <div className="space-y-5">
               <Field label="Microphone (you)" htmlFor="mic">
                 <Select id="mic" value={micId} onChange={(e) => setMicId(e.target.value)}>

@@ -25,7 +25,9 @@ import {
   isIndia,
   CosmicEmptyState,
 } from "@orbit/ui";
+import { KashSecContext } from "../../components/KashSec";
 import { Button, Card, ErrorNote, IconButton, Select } from "../../components/ui";
+import { isSecurityRole } from "../../lib/security";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -286,6 +288,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
           <PostingCheck checks={detail.checks ?? []} />
           <Provenance job={job} also={detail.also_listed ?? []} />
           <SafetyCard job={{ id: job.id, title: job.title, company: job.company, url: job.url }} />
+          {isSecurityRole(job.title) && <KashSecContext placement="listing" />}
         </aside>
       </div>
     </article>

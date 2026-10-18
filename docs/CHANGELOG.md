@@ -1,5 +1,18 @@
 # Implementation log
 
+## Spot graphics for every section, and KashSec Academy promoted (2026-10-18)
+
+- **Spot graphics** (DECISIONS D70; DESIGN.md "Scenes"): `Spot`, a section's own 40 px picture in the scenes' hand,
+  its accent part drawing in once and lifting on hover; 65 kinds. On Settings, Plan & billing, Offer AI, Practice's
+  rounds, Code AI's eight patterns (cards coming in one by one), Jobs AI's profile, Resume AI's panels and each
+  check to fix by category, the story bank, answers, evidence, the copilot's setup and the Mission room. One per card;
+  never on rows, fields or buttons.
+- **KashSec Academy** (DESIGN.md "KashSec Academy"): a feature card with its own scene (terminal, shield, lesson path,
+  in KashSec's teal) as Learning AI's band; a front-page section "Free from the Orbit team"; a footer link; Home's
+  dismissible "More from us"; and "Preparing for a security role?" on matches, a job's page, the Mission room,
+  Practice and the cybersecurity analyst guide when the role is in security. Its own words only, one card in a view,
+  every link in a new tab with `utm_campaign=<placement>`.
+
 ## Search, phase 2: guides, links, security.txt (2026-10-18)
 
 - **Orbit's own interview guides** at `/guides/<slug>` (`pages/guides/`): "Tell me about yourself" for freshers,

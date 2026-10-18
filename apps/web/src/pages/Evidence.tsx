@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { EvidenceItem } from "@orbit/types";
-import { Check, CosmicEmptyState, FileText, PenLine, Plus, ShieldCheck, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
+import { Spot, Check, CosmicEmptyState, FileText, PenLine, Plus, ShieldCheck, Sparkles, Trash2, LoadGate, confirmDialog, cx } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader, Select } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
@@ -238,7 +238,8 @@ export function EvidencePage() {
               <section aria-labelledby="check-title">
                 <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
                   <div>
-                    <h2 id="check-title" className="font-display text-lg font-semibold">
+                    <h2 id="check-title" className="flex items-center gap-3 font-display text-lg font-semibold">
+                      <Spot kind="review" />
                       To check <span className="font-sans text-sm font-normal text-zinc-500">({toCheck.length})</span>
                     </h2>
                     <p className="text-sm text-zinc-500 dark:text-zinc-400">Is each one true, and fairly put? Confirm it, fix the wording, or discard it.</p>
@@ -252,7 +253,8 @@ export function EvidencePage() {
             )}
             {confirmed.length > 0 && (
               <section aria-labelledby="confirmed-title">
-                <h2 id="confirmed-title" className="mb-3 font-display text-lg font-semibold">
+                <h2 id="confirmed-title" className="mb-3 flex items-center gap-3 font-display text-lg font-semibold">
+                  <Spot kind="evidence" />
                   Confirmed <span className="font-sans text-sm font-normal text-zinc-500">({confirmed.length})</span>
                 </h2>
                 <ul className="grid gap-3 md:grid-cols-2">{confirmed.map(row)}</ul>

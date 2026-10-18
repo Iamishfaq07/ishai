@@ -14,7 +14,7 @@ import { PRODUCT_TILE, siteProducts } from "../marketing/catalog";
 import { GoogleButton, type GoogleLabel } from "../marketing/GoogleButton";
 import { IconTile } from "../marketing/primitives";
 import { useSiteScope } from "../marketing/useSiteScope";
-import { KASHSEC_URL } from "./learn/links";
+import { kashsecUrl } from "./learn/links";
 import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { storedRef } from "../lib/referral";
 import { InviteNote } from "../components/InviteNote";
@@ -55,8 +55,8 @@ function ProductPanel({ compact = false }: { compact?: boolean }) {
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         <span className="font-medium text-zinc-800 dark:text-zinc-200">Also in your account:</span> {more.map((p) => p.name).join(", ")}, and free
         cybersecurity lessons on{" "}
-        <a href={KASHSEC_URL} target="_blank" rel="noopener" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
-          KashSec<span className="sr-only"> (opens in a new tab)</span>
+        <a href={kashsecUrl("signin")} target="_blank" rel="noopener" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+          KashSec<span className="sr-only"> (opens KashSec in a new tab)</span>
         </a>
         .
       </p>

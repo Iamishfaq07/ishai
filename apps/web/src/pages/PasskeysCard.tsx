@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import type { Passkey } from "@orbit/types";
-import { Fingerprint, LoadGate, Pencil, Trash2, confirmDialog, createPasskey, cx, focusRing, passkeyErrorText, passkeysSupported, toast } from "@orbit/ui";
+import { LoadGate, Spot, Pencil, Trash2, confirmDialog, createPasskey, cx, focusRing, passkeyErrorText, passkeysSupported, toast } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -82,10 +82,8 @@ export function PasskeysCard() {
   const keys = list.data ?? [];
   return (
     <Card id="passkeys" className="scroll-mt-24">
-      <h2 className="mb-1 flex items-center gap-2.5 font-semibold">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-          <Fingerprint className="h-4 w-4" aria-hidden />
-        </span>
+      <h2 className="mb-1 flex items-center gap-3 font-semibold">
+        <Spot kind="passkey" />
         Passkeys
       </h2>
       <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">

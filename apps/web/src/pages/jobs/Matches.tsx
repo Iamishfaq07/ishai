@@ -18,7 +18,9 @@ import {
   regionWords,
   sampleCity,
 } from "@orbit/ui";
+import { KashSecContext } from "../../components/KashSec";
 import { Button, Card, ErrorNote, PageHeader, Select } from "../../components/ui";
+import { isSecurityRole } from "../../lib/security";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useCountry } from "../../lib/country";
@@ -270,6 +272,7 @@ function Matches({ profile }: { profile: JobProfile }) {
         )}
 
         {!basis && <NoResume blank={Boolean(profile.resume)} />}
+        {isSecurityRole(...profile.prefs.titles) && <KashSecContext placement="matches" />}
 
         {feed.loading && !data ? (
           <WorkingState kind={suggesting ? "reading" : "matching"} label={suggesting ? "Reading your resume" : "Finding jobs that match your resume"} />
