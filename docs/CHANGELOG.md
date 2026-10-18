@@ -1,5 +1,29 @@
 # Implementation log
 
+## Micro-interactions: presses, states, lists and exits that feel like one product (2026-10-18)
+
+- **Interaction rules** (DECISIONS D74; DESIGN.md "Interaction"): a press is one fill step darker and 97% at Full
+  motion (80 ms in, 140 ms out) on every button and button-link; hover only with a real hover (no stuck tint after a
+  tap); keyboard focus an accent outline that reads on any surface; Gentle keeps the fades, Off is instant.
+  `interaction.test.ts` holds them, including no off-scale durations.
+- **Button states at a locked width**: `loading` + `loadingText` (ring spinner, "Saving…"), `done` ("Saved", a tick
+  drawing in, announced, a short buzz on Android), `disabledReason` (a tooltip and description; still focusable),
+  `CopyButton` ("Copied"). Sixteen hand-swapped busy labels moved over (stories, answers, documents, tracker, offers,
+  people, add a job, contact, settings, mock and video interview, admin payments); copy buttons on the transcript,
+  referral link, counter-offer and negotiation emails, the outreach kit, interview prep, the follow-up and answer
+  cards and code blocks now morph.
+- **Selection and controls**: checkboxes and radios drawn in the accent with a popping tick; a gliding switch thumb;
+  tabs and segmented controls re-measure on resize; a product's tabs slide their pill between pages; a chosen
+  template gets a tick; the stepper and progress bar animate between steps.
+- **Lists and overlays**: `useFlip` on the tracker (a card glides across columns), the story bank, answers and
+  documents; dialogs, sheets, side panels and confirms play an exit; toasts stack and close up smoothly; a details
+  grows open when opened by hand; content fades in after a skeleton; one route fade; tooltips portaled and warm.
+- **Icon buttons and desktop**: 40 px targets (44 on touch) without changing their size; styled tooltips instead of
+  the browser's. Desktop: Setup's title-bar buttons and Start button, the window buttons, the close dialog's
+  choices and the live control bar press and tint like the rest.
+- **Tokens everywhere**: stray `duration-150/200/300/500/700` and hand-written timings moved to the scale; progress
+  fills and the mock round's clocks slide (transform) instead of resizing. Gallery: `/dev/components` → "Interaction".
+
 ## Faster where it was slow, and built for phones (2026-10-18)
 
 - **Measured first** (DECISIONS D72; PERFORMANCE.md has the budgets, the before and after, and how to measure): a

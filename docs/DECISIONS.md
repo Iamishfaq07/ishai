@@ -866,3 +866,46 @@ page's service worker answers only failed page loads (never the API or the app's
 Left as decisions for later, with their expected gains in PERFORMANCE.md: the live page's continuous canvas
 animations (the main-thread cost while a session listens), deltas instead of the whole answer in each answer.chunk
 (a protocol change for both clients), and batched drawing for the other long lists.
+
+**D74 — One feel for every press, pick and change, built into the primitives: fast in, calm out, nothing jumps.**
+The owner asked for interaction design at the level of Linear, Stripe, Vercel and Raycast ("buttons, clicks,
+animations"). The pieces existed (Button, the motion tokens, the three motion levels) but each surface felt a little
+different: a press was a 100 ms scale with no change of colour, a busy button swapped its words by hand and changed
+width ("Save advanced settings" shrinking to "Saving…"), copy buttons said "Copied" by toast in one place and on the
+button in another, hovers stuck after a tap on phones, dialogs and toasts vanished on close while the rest jumped
+into the gap, and the focus ring's offset was painted in one surface colour (a dark halo on the dark canvas). The
+rules are now one scale in base.css ("Interaction") and the primitives, so every page gets them by using a
+primitive, and DESIGN.md "Interaction" is the table of timings:
+- A press is a fill one step darker and a sink to 97% (Full motion only), 80 ms in and 140 ms out, on `.btn` (Button,
+  and links through `buttonClass`) and hand-made buttons alike; switches, tabs, radios, menu rows and busy or
+  disabled buttons don't sink, and a card that's a button sinks only to 99%. Hover is one tint step, only where
+  there's a real hover (Tailwind's `hoverOnlyWhenSupported`). Keyboard focus is an outline, not a ring: its gap is
+  see-through, so it reads on any surface in either theme.
+- A button's states share one grid cell (`MorphLabel`), so it is always as wide as its widest state: `loading` +
+  `loadingText` (a ring spinner and "Saving…"), `done` ("Saved" and a tick that draws in, for 1.6 s, announced), and
+  `CopyButton` ("Copied"). Sixteen hand-swapped busy labels in the web app, and the desktop's Start, moved to it. `disabledReason` keeps a disabled button
+  focusable (aria-disabled) and says why in a tooltip and its description; icon buttons reach a 40 px target (44 on
+  touch) without being drawn bigger, and their tooltip is the styled one (portaled, keyboard focus only, warm along a
+  toolbar) instead of the browser's title.
+- Selections move: tabs, segmented controls and now a product's tabs (whose pill slides from the page you came from)
+  re-measure on resize; every checkbox and radio is drawn by base.css so its tick pops (high-contrast mode keeps the
+  system's); a switch's thumb glides; a chosen card gets a tick (`SelectCheck`); a stepper's tick and line fill in.
+- Things that come and go leave properly: dialogs, sheets, side panels and confirms play a short exit (`usePresence`,
+  showing what they last showed, no longer a dialog to screen readers, presses passing through), toasts leave the way
+  they came while the others close up, and lists that change in place (tracker, stories, answers, documents) glide
+  with `useFlip` (FLIP: where each item was drawn just before the change, read during render, then a transform), with
+  a removed item's copy fading where it was. A `details` grows open only when someone opens it (the summary's press
+  marks it), so one that starts open never shifts the page. Content replacing a skeleton fades in.
+- Haptics are a single 8 to 12 ms pulse for a save's "Saved" and a copy only, on Android only and at Full motion only;
+  never on iPhone (no API), never for a press or an error.
+Only transform and opacity animate (a details' height while it opens is the one exception), so there's no layout
+shift; Gentle keeps the fades and drops every movement; Off makes every change instant and clear. `interaction.test.ts`
+holds the rules: the timings, the press gating, Gentle's fade lists, no `transition-all` and no off-scale
+`duration-*` anywhere but the live meters and the mock round's clocks.
+Rejected: a motion library (Framer Motion's AnimatePresence and layout animations do the exits and the FLIP, but they
+are a dependency on every screen, and the presence and FLIP the app needs are a hundred lines each); ripples (they
+read as Material, not as this product, and draw the eye to the press rather than the result); a hover lift on
+buttons (the rule since D58 is that only the press moves); and a global page cross-fade through View Transitions for
+every route (the tabs would flash while a lazy page loads; the route keeps one short fade-in and View Transitions stay
+for morphs between two views). Nothing a page does changed: the same calls, the same results, the same words, now
+with feedback on the control itself.

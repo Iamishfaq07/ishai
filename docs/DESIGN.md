@@ -26,7 +26,8 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   (`rounded-3xl`).
 - **Buttons**: primary is the solid accent (white on accent-600 passes AA in every accent), secondary is bordered,
   ghost is plain, danger is rose-700 text, destructive is solid rose (inside a confirm), link is inline text. Nothing
-  on a button moves except the press, and buttons cast no shadow.
+  on a button moves except the press, and buttons cast no shadow. How each feels (hover, press, focus, busy, done)
+  is "Interaction" below.
 - **Fields and buttons are one height**: a text field, a select and a regular button are all 38 px (every button
   variant carries a 1 px border, transparent unless it's bordered), so a field and its button line up in a row.
   `sm` buttons are for dense rows and cards, not beside a field.
@@ -110,16 +111,24 @@ class string; `/dev/components` (development builds) shows each in its states, i
   sticky action bars) < `shadow-dialog` (dialogs, side panels, the command palette) < `shadow-toast`; each with a
   hairline border, and its own dark value. Z order: `z-bar` 20 < `z-sidebar` 30 < `z-menu`/`z-popover` 40 <
   `z-dialog` 50 < `z-confirm` 60 < `z-toast` 70.
-- Motion: `duration-press/quick/panel/page` (100/160/240/280 ms), `ease-standard/enter/exit`; overlay entrances
-  `animate-dialog-in`, `animate-sheet-up`, `animate-menu-in`, `animate-panel-in`; the `.indicator` slide. Gentle turns
-  each into a fade, Off into nothing.
+- Motion: `duration-press-in/press-out` (80/140 ms, a button's press), `duration-press/quick/panel/page`
+  (100/160/240/280 ms), `ease-standard/enter/exit/pop`; overlay entrances `animate-dialog-in`, `animate-sheet-up`,
+  `animate-menu-in`, `animate-panel-in` and their exits `animate-dialog-out`, `animate-sheet-down`,
+  `animate-panel-out`; `animate-page-in` (a route), `animate-toast-in/out`; the `.indicator` slide. Gentle turns each
+  into a fade, Off into nothing.
 
 **Actions**
 - `Button` — `primary` (one per view), `secondary`, `ghost`, `danger` (quiet rose: a Delete that asks first),
-  `destructive` (solid rose: the button that deletes, inside a confirm), `link`. `loading` swaps the label for a
-  spinner at the same width (aria-busy); `aria-pressed` styles a toggle; `block` is full width on phones.
-- `IconButton` (icon only, named by `label`, which is also its tooltip), `ButtonGroup`, `MenuButton`, `SplitButton`,
-  `buttonClass(variant, size)` for links that look like buttons.
+  `destructive` (solid rose: the button that deletes, inside a confirm), `link`. `loading` puts a spinner in the
+  label's place (aria-busy), with `loadingText` ("Saving…") beside it; `done` (with `useFlash`) shows "Saved" and a
+  tick for a moment; the button is always as wide as its widest state. `disabledReason` says why it's disabled (a
+  tooltip, and its description; it stays focusable); `tip` adds a tooltip; `aria-pressed` styles a toggle; `block`
+  is full width on phones.
+- `IconButton` (icon only, named by `label`, which is also its tooltip; a 40 px target, 44 on touch, however small
+  it's drawn), `ButtonGroup`, `MenuButton`, `SplitButton`, `buttonClass(variant, size)` for links that look like
+  buttons (it carries `.btn`, so a link presses like a button).
+- `CopyButton` — copies and says "Copied" on itself (or "Couldn't copy"). `MorphLabel` for words that take turns in
+  one place on a hand-made button; `SelectCheck` for the tick on a chosen card.
 
 **Overlays**
 - `Dialog`/`Sheet` + `DialogActions` (the way out first, the main action last; stacked, main on top, on phones).
@@ -127,8 +136,10 @@ class string; `/dev/components` (development builds) shows each in its states, i
   `typeToConfirm` ("DELETE") for what can't be undone (an account).
 - `MenuButton` / hand-built menus with `useDismiss`, `menuKeys`, `floatingClass`, `menuItemClass` (arrows, Home/End,
   first letters, Escape back to the button, a press outside closes). `Popover` for small forms and filters.
-- `Tooltip` — on hover after 400 ms and on focus at once, aria-describedby, Escape hides. It only repeats or adds:
-  never put information people need only in a tooltip (phones can't hover).
+- `Tooltip` — on hover after 400 ms (at once, without its fade, when moving on from another one) and on keyboard
+  focus at once, never on a click or a tap; aria-describedby; Escape, a press or a scroll hides it. Drawn on the top
+  layer (`z-tooltip`), so nothing clips it and it adds nothing to the layout. It only repeats or adds: never put
+  information people need only in a tooltip (phones can't hover).
 - `toast()` — `neutral`/`info`, `success`, `warning`, `error`; one action (Undo); stacks three; polite live region;
   above dialogs. `Callout` — inline banners: `info` (ink), `success`, `warning`, `error` (announced); optional title,
   action, dismiss. `ErrorNote` is the error callout with Retry.
@@ -137,7 +148,8 @@ class string; `/dev/components` (development builds) shows each in its states, i
 - `Field` (label; `required` marker; `hint`; `error`, wired with aria-describedby and aria-invalid; `counter`, amber in
   the last tenth), `Input`, `Textarea`, `Select` (date fields are `Input type="date"`), `SearchInput`, `Checkbox`,
   `RadioGroup`, `Toggle` (a switch), `Slider`, `SegmentedControl` (a few exclusive options; a radio group with a
-  sliding indicator), `Dropzone`.
+  sliding indicator), `Dropzone`. Every checkbox and radio, the primitives' and hand-made ones, is drawn by base.css
+  in the accent so its tick or dot can pop in (high-contrast mode keeps the system's).
 - Errors say what to do ("Add a company name"), appear when the person leaves the field or submits, never while
   they type.
 
@@ -146,7 +158,8 @@ class string; `/dev/components` (development builds) shows each in its states, i
   `Td` (`label` for the phone's card view with `stack`, `primary` for the row's title, `align="right"` for figures),
   `TableEmpty`, `TableLoading`. Wide tables scroll inside their card, never the page.
 - `StatTile`, `Badge` (status only, always in words: `success`, `warning`, `danger`, `info`, `accent`, `neutral`),
-  `Avatar` (initials, never photos), `ProgressBar`, `Stepper`, `Pagination`, `Breadcrumbs`, `Kbd`, `IconTile`.
+  `Avatar` (initials, never photos), `ProgressBar` (its fill slides), `Stepper` (a step done ticks in, the line after
+  it fills), `Pagination`, `Breadcrumbs`, `Kbd`, `IconTile`.
 - `Tabs` + `TabPanel` (a sliding underline, arrow keys; only the chosen panel is in the page), or `tabClass` /
   `tabListClass` for a tab list that manages itself. `ProductTabs` for a product's own pages (links).
 - `PageHeader` (title, a line, actions, `back`, `art`: a product page's scene), `BackLink`, `Card`, `EmptyState` /
@@ -225,10 +238,57 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
 - **Bars stay solid:** the sticky header and the phone tab bar are opaque (no see-through, no backdrop blur: page
   text under the labels made them hard to read, and blur over the animated sky costs too much on a phone).
 - `scroll-padding` keeps a focused field clear of the sticky header and the phone tab bar.
-- **Page transitions:** same-document View Transitions through `withViewTransition(update, to?)` or React Router's
-  `viewTransition={useViewTransitionOk(to)}`: a 160 ms crossfade, and a morph for an element given a
-  `view-transition-name` (a job card into its page title). Gentle crossfades only; Off and `/live/*` never start
-  one. Leave them off for things done many times a minute or started from the keyboard.
+- **Page transitions:** every route arrives the same way, `animate-page-in` on the Layout's page (a 240 ms fade with
+  a 4 px rise; a fade at Gentle; nothing at Off), and a page doesn't add its own entrance on top. A product's tabs
+  slide their pill from the tab you came from. For a morph between two views (a job card into its page title),
+  same-document View Transitions through `withViewTransition(update, to?)` or React Router's
+  `viewTransition={useViewTransitionOk(to)}`: a 160 ms crossfade and a morph for an element given a
+  `view-transition-name`. Gentle crossfades only; Off and `/live/*` never start one. Leave them off for things done
+  many times a minute or started from the keyboard.
+
+## Interaction
+
+How everything you press, pick or open responds (DECISIONS D74): calm, fast, the same everywhere, and never in the
+way. The rules live in `base.css` ("Interaction") and the primitives, so a page gets them by using `Button`,
+`buttonClass`, `CopyButton`, `Toggle`, `Checkbox`, `Tabs`, `Sheet`, `toast` and `useFlip`; `/dev/components` →
+"Interaction" shows each one, and `interaction.test.ts` holds the rules.
+
+| Moment | What happens | Timing |
+| --- | --- | --- |
+| Hover (a mouse only) | one tint step; a bordered button's border darkens too; nothing rises | `quick` 160 ms |
+| Press | one fill step darker, and 97% (Full only); a card that's a button (`lift`) 99% | in `press-in` 80 ms, out `press-out` 140 ms |
+| Keyboard focus | a 2 px accent outline 2 px outside, following the corners (its gap is see-through, so it reads on any surface) | at once |
+| Busy | a spinner and `loadingText` in the label's place, width locked, aria-busy, presses ignored | the words cross-fade: 100 ms out, 160 in |
+| Done (a save) | a tick draws in beside "Saved" for 1.6 s, read out politely, a short buzz on Android | the same cross-fade; the tick `panel` |
+| Copied | the label becomes "Copied" with a tick (or "Couldn't copy"), then comes back | the same |
+| Disabled | 50% and `not-allowed`; with `disabledReason`, a tooltip and the description say why | — |
+| Selection (a tab, a segment, a product tab, a chosen card) | the indicator slides; a chosen card's tick pops in | `panel` 240 ms; the tick `quick` on `ease-pop` |
+| Switch, checkbox, radio | the thumb glides as the track fills; a tick or a dot pops in | `quick`; the colour `press` 100 ms |
+| A list changes (tracker, stories, answers, documents, toasts) | the rest glide to their places; a new item fades and rises 6 px; a removed one fades where it was | `panel`; the exit 140 ms |
+| A disclosure (`details`) opens | it grows to its content as the content fades in, only when opened by hand | `panel` |
+| A dialog, a sheet, a side panel | in: fades up from 97%, rises, slides; out: settles back, drops, slides, shorter, and presses pass through | in `panel` to `page`; out `quick` |
+| A toast | rises in a touch smaller and leaves the same way; the others close up | in `panel`; out `quick` |
+| A route | `animate-page-in`: a fade with a 4 px rise | `panel` |
+| A tooltip | after 400 ms on hover (at once along a toolbar), at once on keyboard focus; a 2 px rise | `quick` |
+| Skeleton, then content | the content fades in where the placeholder stood | `quick` |
+
+- **Only transform and opacity move.** Colours ease alongside. The one exception is a disclosure's height while it
+  opens (it has to push what's below); a list's own height changes at once, so nothing around it slides.
+- **Primary actions never jump.** A button keeps the width of its widest state (`MorphLabel`: every state laid out
+  in one cell), and its label never changes length while you look at it: no `{busy ? "Saving…" : "Save"}`.
+- **Touch:** `hover:` applies only where there's a real hover (Tailwind's `hoverOnlyWhenSupported`), so a tap never
+  leaves a button tinted; presses (`:active`) show on touch too. Icon buttons reach 44 px on a touch screen.
+- **Haptics:** `haptic()` for a key confirmation only (a save's "Saved", a copy): one 8 to 12 ms pulse, on Android
+  only (iPhones have no vibration API, desktops no motor), and only at Full motion. Never for a press, a hover, a
+  selection or an error.
+- **Motion levels:** Full as above. Gentle keeps every fade and drops every movement (the press, slides, glides, the
+  thumb and the tick's pop are instant; a busy spinner breathes instead of turning). Off makes every change instant
+  and clear: the state is there at once and the words say it. Motion driven from JavaScript (`useFlip`,
+  `usePresence`, `useCountUp`) reads `currentMotion()`.
+- **Writing it:** the tokens (`duration-quick`, `ease-standard`), never a number (`duration-300`) or `transition-all`;
+  `interaction.test.ts` fails on a stray one (live meters and the mock round's clocks keep their own tick). A
+  hand-made button gets the press from base.css: give it an `active:` colour one step past its `hover:`. No drag
+  handles exist yet; one would get `cursor-grab`, a hover tint and the press.
 
 ## Feedback and empty screens
 
@@ -237,9 +297,10 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   tracker"). Not for errors that need action (`ErrorNote`) or questions (`confirmDialog`).
 - **Loading:** `Skeleton` (`line`, `card`, `job-card`, `resume-card`, `session-row`) with `useLoadPhase(loading)`.
   `LoadGate` is that timing around a list: nothing, then the skeleton, then the list.
-  (shown after 150 ms, kept at least 300 ms). A `loading` button keeps its name and width (a spinner takes the
-  label's place; no "Saving…" swap needed). Spinners (`Spinner`, the
-  orb) are for small or unknown-shaped waits. In the workbench a placeholder is an ink tint, not the accent.
+  (shown after 150 ms, kept at least 300 ms); the content that replaces a skeleton fades in where it stood. A busy
+  button is `loading` with `loadingText` ("Saving…"), never a label swapped by hand (that changed its width). Spinners
+  (`Spinner`, the orb) are for small or unknown-shaped waits; a button's is a plain ring. In the workbench a
+  placeholder is an ink tint, not the accent.
 - **AI waits over two seconds** (reading a resume, writing a letter or a review, matching jobs): `WorkingState`
   (`label`, `kind` `reading` / `writing` / `matching`; `compact` side by side, for a panel), the AI-working scene over
   the same words, in place of a big spinner. A button's own "Reading…" label stays as it is.
