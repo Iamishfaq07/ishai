@@ -1,4 +1,4 @@
-import type { AnswerStyle, CodingLanguage, ExperienceLevel, ResponseTiming, ThinkingLevel } from "@orbit/types";
+import type { AnswerLength, AnswerStyle, CodingLanguage, ExperienceLevel, ResponseTiming, ThinkingLevel } from "@orbit/types";
 import { INDIA, isIndia } from "../region";
 import { regionWords } from "../regionCopy";
 import { safeLocal } from "../storage";
@@ -122,5 +122,42 @@ export function saveExperience(level: ExperienceLevel): void {
     safeLocal.setItem(EXPERIENCE_KEY, level);
   } catch {
     // storage unavailable — still applies to this session
+  }
+}
+
+/**
+ * How long and in what style answers come, and whether they come by themselves: the last choice on this device, so
+ * Setup doesn't go back to Auto / Natural / Auto-answer each time (the desktop app forgot them between sessions).
+ */
+const ANSWER_SHAPE_KEY = "orbit.answerShape";
+const LENGTHS: readonly AnswerLength[] = ["auto", "short", "standard", "detailed"];
+
+export interface AnswerShape {
+  length: AnswerLength;
+  style: AnswerStyle;
+  autoAnswer: boolean;
+}
+
+export const DEFAULT_ANSWER_SHAPE: AnswerShape = { length: "auto", style: "natural", autoAnswer: true };
+
+export function loadAnswerShape(): AnswerShape {
+  try {
+    const saved = JSON.parse(safeLocal.getItem(ANSWER_SHAPE_KEY) ?? "null") as Partial<AnswerShape> | null;
+    if (!saved || typeof saved !== "object") return DEFAULT_ANSWER_SHAPE;
+    return {
+      length: LENGTHS.includes(saved.length as AnswerLength) ? (saved.length as AnswerLength) : DEFAULT_ANSWER_SHAPE.length,
+      style: ANSWER_STYLES.some((s) => s.value === saved.style) ? (saved.style as AnswerStyle) : DEFAULT_ANSWER_SHAPE.style,
+      autoAnswer: typeof saved.autoAnswer === "boolean" ? saved.autoAnswer : DEFAULT_ANSWER_SHAPE.autoAnswer,
+    };
+  } catch {
+    return DEFAULT_ANSWER_SHAPE;
+  }
+}
+
+export function saveAnswerShape(shape: AnswerShape): void {
+  try {
+    safeLocal.setItem(ANSWER_SHAPE_KEY, JSON.stringify(shape));
+  } catch {
+    // storage unavailable: still applies to this session
   }
 }

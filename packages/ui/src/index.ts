@@ -75,6 +75,10 @@ export {
   loadThinking,
   saveResponseTiming,
   saveThinking,
+  DEFAULT_ANSWER_SHAPE,
+  loadAnswerShape,
+  saveAnswerShape,
+  type AnswerShape,
 } from "./live/preferences";
 export {
   ANSWER_LANGUAGE_HINT,

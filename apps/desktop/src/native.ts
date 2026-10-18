@@ -68,7 +68,14 @@ export function deviceStatusText(ev: { channel: AudioChannel; state: DeviceState
  * An audio error as a person reads it: what's wrong and what to do, without Windows error codes ("Access is denied.
  * (0x80070005)"). The raw text goes to the console, and the audio test's "Copy diagnostics" keeps it.
  */
-export function friendlyAudioError(err: unknown): string {
+export function friendlyAudioError(err: unknown, again = "click Retry"): string {
+  // The way to try again where the message shows: the live screen has Retry; Setup's audio test is "Test audio".
+  const said = audioErrorText(err);
+  const cap = again.charAt(0).toUpperCase() + again.slice(1);
+  return said.replace(/Click Retry/g, cap).replace(/click Retry/g, again);
+}
+
+function audioErrorText(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   console.warn("Audio:", raw);
   if (/restarting to finish an update/i.test(raw)) return "Orbit is restarting to finish an update. It's back in a moment.";

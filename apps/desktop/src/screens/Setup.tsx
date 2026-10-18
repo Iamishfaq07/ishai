@@ -50,6 +50,8 @@ import {
   loadResponseTiming,
   loadThinking,
   saveExperience,
+  loadAnswerShape,
+  saveAnswerShape,
   saveResponseTiming,
   saveThinking,
   addFrame,
@@ -188,11 +190,14 @@ export function SetupScreen({
   const [type, setType] = useState<SessionType>(initialType ?? "interview");
   const [role, setRole] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [length, setLength] = useState<AnswerLength>("auto");
+  // The answer's length and style and Auto-answer: the last ones used on this device (they were forgotten each time).
+  const [shape] = useState(loadAnswerShape);
+  const [length, setLength] = useState<AnswerLength>(shape.length);
   const [experience, setExperience] = useState<ExperienceLevel>(loadExperience);
-  const [style, setStyle] = useState<AnswerStyle>("natural");
+  const [style, setStyle] = useState<AnswerStyle>(shape.style);
   const [thinking, setThinking] = useState<ThinkingLevel>(loadThinking);
-  const [autoAnswer, setAutoAnswer] = useState(true);
+  const [autoAnswer, setAutoAnswer] = useState(shape.autoAnswer);
+  useEffect(() => saveAnswerShape({ length, style, autoAnswer }), [length, style, autoAnswer]);
   const [responseTiming, setResponseTiming] = useState<ResponseTiming>(loadResponseTiming);
   // What the interviewer speaks and what answers are written in ("" = the same), when the server offers languages.
   const offered = user?.live_languages;
@@ -267,7 +272,7 @@ export function SetupScreen({
         setError((e) => (e !== null && e === micListError.current ? null : e));
       })
       .catch((err: unknown) => {
-        micListError.current = friendlyAudioError(`Couldn't list audio devices: ${String(err)}`);
+        micListError.current = friendlyAudioError(`Couldn't list audio devices: ${String(err)}`, "come back to this screen");
         setError(micListError.current);
       });
   }, []);
@@ -1163,7 +1168,8 @@ export function SetupScreen({
               Start without these checks
             </button>
           )}
-          {!outOfMinutes && (
+          {/* Credits only: on a plan they aren't spent while it runs (and Unlimited has nothing to top up). */}
+          {!outOfMinutes && plan?.credits && (
             <button
               type="button"
               onClick={() => openBilling()}
@@ -1285,17 +1291,17 @@ function AudioTest({
           if (text) setNote(text);
         } else {
           log(channel, "error", ev.message);
-          setNote(friendlyAudioError(ev.message));
+          setNote(friendlyAudioError(ev.message, "press Test audio again"));
         }
       });
       if (captureId.current !== id) return; // stopped (or the screen closed) while it was starting
       if (info.micError) {
         log("mic", "error", info.micError);
-        setNote(friendlyAudioError(info.micError));
+        setNote(friendlyAudioError(info.micError, "press Test audio again"));
       }
       if (systemAudio && info.systemError) {
         log("system", "error", info.systemError);
-        setNote(friendlyAudioError(info.systemError));
+        setNote(friendlyAudioError(info.systemError, "press Test audio again"));
       }
       setRunning(true);
     } catch (err) {
@@ -1303,7 +1309,7 @@ function AudioTest({
       runningRef.current = false;
       captureId.current = 0;
       events.current.push({ t: 0, channel: "mic", kind: "error", detail: String(err) });
-      setNote(friendlyAudioError(err));
+      setNote(friendlyAudioError(err, "press Test audio again"));
     }
   };
 
