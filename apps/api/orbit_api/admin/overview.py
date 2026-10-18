@@ -14,7 +14,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits, ratelimit
@@ -107,11 +107,15 @@ async def stats(admin: Annotated[User, Depends(require_admin)], db: Annotated[As
         day = local_day(at)
         minutes[day] = minutes.get(day, 0.0) + float(quantity or 0) / 60
 
+    # Both counts from one pass over the activity tables (it reads every account's latest use: the dominant cost).
     activity = activity_subquery()
+    week, month_ago = now - timedelta(days=7), now - timedelta(days=30)
 
-    async def active_since(when: datetime) -> int:
-        return int(await db.scalar(select(func.count()).select_from(activity).join(User, User.id == activity.c.uid)
-                                   .where(activity.c.last_active >= when)) or 0)
+    def active_since(when: datetime) -> Any:
+        return func.coalesce(func.sum(case((activity.c.last_active >= when, 1), else_=0)), 0)
+
+    active = (await db.execute(select(active_since(week), active_since(month_ago)).select_from(activity)
+                               .join(User, User.id == activity.c.uid))).one()
 
     async def scalar(query: Any) -> float:
         return float(await db.scalar(query) or 0)
@@ -122,8 +126,8 @@ async def stats(admin: Annotated[User, Depends(require_admin)], db: Annotated[As
         interview_minutes=[DayValue(day=d.isoformat(), value=round(minutes.get(d.isoformat(), 0.0), 1))
                            for d in day_list],
         users=int(await scalar(select(func.count()).select_from(User))),
-        active_7d=await active_since(now - timedelta(days=7)),
-        active_30d=await active_since(now - timedelta(days=30)),
+        active_7d=int(active[0]),
+        active_30d=int(active[1]),
         suspended=int(await scalar(select(func.count()).select_from(User).where(User.suspended_at.is_not(None)))),
         paid_accounts=int(await scalar(select(func.count(func.distinct(Payment.user_id))).where(
             Payment.status == "approved", Payment.user_id.is_not(None)))),

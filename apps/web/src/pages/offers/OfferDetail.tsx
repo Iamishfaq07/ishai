@@ -136,7 +136,7 @@ function Detail({ offer: o, onChange, onDeleted }: { offer: JobOfferRecord; onCh
               ))}
             </dl>
             <details className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-              <summary className="cursor-pointer">How this is worked out</summary>
+              <summary className="tap-y cursor-pointer">How this is worked out</summary>
               <ul className="mt-1 list-disc space-y-0.5 pl-4">
                 {o.take_home.assumptions.map((a) => <li key={a}>{a}</li>)}
               </ul>

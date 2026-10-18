@@ -8,7 +8,7 @@ export function BackLink({ to, children, className }: { to: string; children: Re
     <Link
       to={to}
       className={cx(
-        "inline-flex items-center gap-1.5 rounded text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+        "tap-y inline-flex items-center gap-1.5 rounded text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
         focusRing,
         className,
       )}

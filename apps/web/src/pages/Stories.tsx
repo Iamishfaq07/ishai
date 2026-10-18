@@ -309,7 +309,7 @@ function StoryCard({ story, onEdit, onDelete, onPractise, practising = false }: 
       )}
       {parts.length > 0 && (
         <details className="mt-3 text-sm">
-          <summary className={cx("cursor-pointer select-none text-xs font-medium text-indigo-600 dark:text-indigo-300", focusRing)}>
+          <summary className={cx("tap-y cursor-pointer select-none text-xs font-medium text-indigo-600 dark:text-indigo-300", focusRing)}>
             Show the full story
           </summary>
           <dl className="mt-2 space-y-2">

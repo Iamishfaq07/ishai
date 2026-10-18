@@ -8,6 +8,7 @@ Honesty rules:
 - Everything is computed from `provider_requests` and `usage` rows; no content is read.
 """
 
+import itertools
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -16,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.config import get_settings
-from orbit_api.entitlements import plan_for
+from orbit_api.entitlements import plans_for_users
 from orbit_api.models import LiveSessionRow, ProviderRequest, UsageEvent, User
 from orbit_api.providers.llm.base import Usage
 from orbit_api.providers.llm.pricing import estimate_cost
@@ -28,8 +29,14 @@ def _usd(x: float) -> float:
 
 async def cost_report(db: AsyncSession, days: int) -> dict[str, Any]:
     since = datetime.now(UTC) - timedelta(days=days)
-    reqs = (await db.scalars(select(ProviderRequest).where(ProviderRequest.created_at >= since))).all()
-    usage = (await db.scalars(select(UsageEvent).where(
+    # Only the columns the report reads: a month of calls is tens of thousands of rows, and whole ORM objects took
+    # most of the time.
+    P = ProviderRequest
+    reqs = (await db.execute(select(P.provider, P.model, P.request_type, P.input_tokens, P.output_tokens,
+                                    P.cached_input_tokens, P.estimated_cost_usd, P.ok, P.user_id, P.session_id,
+                                    P.created_at).where(P.created_at >= since))).all()
+    usage = (await db.execute(select(UsageEvent.metric, UsageEvent.quantity, UsageEvent.user_id,
+                                     UsageEvent.session_id).where(
         UsageEvent.created_at >= since,
         UsageEvent.metric.in_(("live_seconds", "mock_seconds", "stt_seconds", "screenshots"))))).all()
     sessions = (await db.scalar(select(LiveSessionRow.id).where(LiveSessionRow.created_at >= since).limit(1)))
@@ -101,11 +108,16 @@ async def cost_report(db: AsyncSession, days: int) -> dict[str, Any]:
     live_total = session_llm_usd + (stt_usd or 0.0)
 
     per_user: list[dict[str, Any]] = []
-    for uid in set(user_llm) | set(user_stt):
-        user = await db.get(User, uid)
+    ids = set(user_llm) | set(user_stt)
+    users: dict[str, User] = {}
+    for chunk in itertools.batched(ids, 500):  # every account with a cost: a few queries, not two per account
+        users.update({u.id: u for u in (await db.scalars(select(User).where(User.id.in_(chunk)))).all()})
+    plan_of = await plans_for_users(db, list(users.values()))
+    for uid in ids:
+        user = users.get(uid)
         total = user_llm.get(uid, 0.0) + user_stt.get(uid, 0.0)
         per_user.append({"user_id": uid, "email": user.email if user else None,
-                         "plan": (await plan_for(db, uid)).name if user else None,
+                         "plan": plan_of[uid].name if user else None,
                          "llm_usd": _usd(user_llm.get(uid, 0.0)), "stt_usd": _usd(user_stt.get(uid, 0.0)),
                          "usd": _usd(total)})
     per_user.sort(key=lambda row: float(row["usd"]), reverse=True)

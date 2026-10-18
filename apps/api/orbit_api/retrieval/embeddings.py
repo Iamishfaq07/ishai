@@ -120,7 +120,12 @@ class FastEmbedEmbedder:
 
 
 def cosine(a: list[float], b: list[float]) -> float:
-    return sum(x * y for x, y in zip(a, b, strict=False))
+    """Dot product of two unit vectors. math.sumprod runs in C: the generator it replaced was 86% of the time a
+    question spent between firing and its LLM request (~8 ms with a few hundred chunks, on the event loop)."""
+    if len(a) != len(b):  # a vector from another embedder: compare what overlaps, as zip() did
+        n = min(len(a), len(b))
+        a, b = a[:n], b[:n]
+    return math.sumprod(a, b)
 
 
 _hash = HashingEmbedder()

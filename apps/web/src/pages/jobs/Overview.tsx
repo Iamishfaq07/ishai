@@ -189,7 +189,7 @@ function TrackerSummary({ entries, loading }: { entries: JobTrackerEntry[] | nul
           <BookmarkCheck className="h-4 w-4 text-indigo-500" aria-hidden /> Your applications
         </h2>
         {entries && entries.length > 0 && (
-          <Link to={JOBS_TRACKER} className={cx(textLink, "text-xs")}>
+          <Link to={JOBS_TRACKER} className={cx(textLink, "tap-y text-xs")}>
             Open tracker
           </Link>
         )}

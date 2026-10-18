@@ -5,6 +5,7 @@ BM25 keeps them sharp. The tokenizer lowercases, drops stopwords and applies a l
 "migration" / "migrated" meet, without pulling in NLTK.
 """
 
+import functools
 import math
 import re
 from collections import Counter
@@ -19,7 +20,10 @@ _SUFFIXES = ("ations", "ation", "ating", "ated", "ments", "ment", "ings", "ing",
              "ly", "s")
 
 
+@functools.lru_cache(maxsize=65_536)
 def stem(tok: str) -> str:
+    # Cached: building a session's index stems every word of every chunk (~30k calls for a big session, most of
+    # its ~100 ms connect cost), from a vocabulary of a few thousand words.
     if len(tok) <= 4 or not tok.isalpha():
         return tok
     base = tok
@@ -59,16 +63,21 @@ class BM25:
             df.update(tf.keys())
         n = len(docs)
         self._idf = {t: math.log(1 + (n - f + 0.5) / (f + 0.5)) for t, f in df.items()}
+        # Term → the documents that have it (with its count there): a query visits only those, not every document
+        # for every term (the same sums, added in the same order).
+        self._postings: dict[str, list[tuple[int, int]]] = {}
+        for i, tf in enumerate(self._tf):
+            for t, f in tf.items():
+                self._postings.setdefault(t, []).append((i, f))
 
     def scores(self, query: str) -> list[float]:
-        terms = set(tokenize(query))
-        out = []
-        for tf, length in zip(self._tf, self._len, strict=True):
-            s = 0.0
-            for t in terms:
-                f = tf.get(t)
-                if f:
-                    norm = 1 - self.b + self.b * (length / self._avg if self._avg else 1)
-                    s += self._idf[t] * f * (self.k1 + 1) / (f + self.k1 * norm)
-            out.append(s)
+        out = [0.0] * len(self._tf)
+        for t in set(tokenize(query)):
+            postings = self._postings.get(t)
+            if not postings:
+                continue
+            idf = self._idf[t]
+            for i, f in postings:
+                norm = 1 - self.b + self.b * (self._len[i] / self._avg if self._avg else 1)
+                out[i] += idf * f * (self.k1 + 1) / (f + self.k1 * norm)
         return out

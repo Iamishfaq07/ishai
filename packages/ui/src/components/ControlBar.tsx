@@ -56,12 +56,13 @@ function loadSettingsOpen(): boolean {
   return typeof window === "undefined" || typeof window.matchMedia !== "function" || window.matchMedia("(min-width: 640px)").matches;
 }
 
+// tap-y: on a touch screen each takes taps over 44 px of height (design/base.css); with a mouse, as it looks.
 const btn =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40";
+  "tap-y inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40";
 const ghost = "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5";
 const pressed = "bg-indigo-500/10 text-indigo-700 ring-1 ring-indigo-500/25 dark:text-indigo-200";
 const selectCls =
-  "appearance-none rounded-lg border border-zinc-200 bg-white py-1 pl-2 pr-6 text-xs font-medium text-zinc-800 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:border-white/20";
+  "appearance-none rounded-lg border border-zinc-200 bg-white py-1 pl-2 pr-6 text-xs font-medium coarse:py-2 text-zinc-800 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:border-white/20";
 
 /**
  * The live session's bottom bar, in two rows:

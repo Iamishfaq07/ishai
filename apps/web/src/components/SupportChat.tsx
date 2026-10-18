@@ -5,6 +5,7 @@ import { ApiError, MessageCircle, Send, Skeleton, Trash2, X, buttonClass, cx, fo
 import { Input } from "./ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useKeyboardInset } from "../lib/keyboardInset";
 import { SHELL_EVENTS } from "../lib/shell";
 
 const Questions = lazy(() => import("./HelpDialog"));
@@ -84,6 +85,9 @@ export function SupportChat() {
   const userNow = useRef(userId);
   userNow.current = userId;
   const [open, setOpen] = useState(false);
+  // A phone's keyboard open over the chat: the panel sits on top of the keyboard and fits in what's left above it,
+  // instead of staying under it with the message box out of sight.
+  const keyboard = useKeyboardInset(open);
   const [questions, setQuestions] = useState(false);
   const [thread, setThread] = useState<SupportThread | null>(null);
   const [saved, setSaved] = useState<Saved | null>(() => load(userId));
@@ -315,11 +319,13 @@ export function SupportChat() {
           ? "bottom-[calc(4.25rem+env(safe-area-inset-bottom))] md:bottom-5 md:right-5"
           : "bottom-[max(0.75rem,env(safe-area-inset-bottom))] md:bottom-5 md:right-5",
       )}
+      style={keyboard.inset ? { bottom: keyboard.inset + 8 } : undefined}
     >
       {open && (
         <section
           aria-label="Support chat"
-          className="pointer-events-auto flex h-[min(32rem,70vh)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-dialog dark:border-white/10 dark:bg-zinc-950"
+          style={keyboard.inset ? { height: Math.min(512, keyboard.visible - 16) } : undefined}
+          className="pointer-events-auto flex h-[min(32rem,70vh)] supports-[height:100dvh]:h-[min(32rem,70dvh)] w-full flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-dialog dark:border-white/10 dark:bg-zinc-950"
         >
           <header className="flex items-center gap-2 border-b border-zinc-200 px-4 py-3 dark:border-white/10">
             <MessageCircle className="h-4 w-4 text-indigo-500" aria-hidden />
@@ -462,6 +468,7 @@ export function SupportChat() {
         aria-label={unread ? "Support chat, new reply" : open ? "Close support chat" : "Chat with support"}
         className={cx(
           "pointer-events-auto relative grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-popover hover:bg-indigo-500",
+          keyboard.inset > 0 && "hidden", // typing: the panel has its own close button, and needs the room
           focusRing,
         )}
       >

@@ -22,9 +22,11 @@
 
 import asyncio
 import contextlib
+import hashlib
 import json
 import logging
 import time
+from collections import OrderedDict
 from collections.abc import Awaitable
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -138,6 +140,18 @@ def _out(r: Resume) -> ResumeOut:
                      pending_suggestions=[fixes.Suggestion.model_validate(s) for s in r.pending_suggestions or []])
 
 
+# The resume list's ATS scores by content (see list_resumes), newest use last. In memory, so a deploy (new scoring
+# rules) starts it afresh.
+_list_scores: OrderedDict[str, int] = OrderedDict()
+LIST_SCORES_MAX = 4096
+
+
+def _score_key(r: Resume) -> str:
+    """What a resume's list score depends on: its content, design and job post."""
+    raw = json.dumps([r.data, r.design, r.job_text or ""], sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.blake2b(raw.encode(), digest_size=16).hexdigest()
+
+
 async def _owned(db: AsyncSession, resume_id: str, user: User) -> Resume:
     r = await db.get(Resume, resume_id)
     if r is None or r.user_id != user.id:
@@ -152,9 +166,21 @@ async def list_resumes(user: Annotated[User, Depends(current_user)],
                              .options(defer(Resume.cover_letter))
                              .order_by(Resume.updated_at.desc(), Resume.created_at.desc()))).all()
     loaded = [(r, *_load(r), r.job_text or "") for r in rows]
-    # Scoring is CPU work (keyword matching, every check), once per resume: off the event loop, so a long list
-    # doesn't stall every other request (live sessions included).
-    scores = await asyncio.to_thread(lambda: [score_resume(data, design, job).score for _, data, design, job in loaded])
+    # Scoring is CPU work (keyword matching, every check, ~2 ms a resume), so each content is scored once: the list
+    # is loaded on every visit to Resume AI, and an unchanged resume scores the same. What's new is scored off the
+    # event loop, so a long list doesn't stall every other request (live sessions included).
+    keys = [_score_key(r) for r in rows]
+    todo = [(k, data, design, job) for k, (_, data, design, job) in zip(keys, loaded, strict=True)
+            if k not in _list_scores]
+    if todo:
+        fresh = await asyncio.to_thread(lambda: [score_resume(d, des, job).score for _, d, des, job in todo])
+        for (k, *_), score in zip(todo, fresh, strict=True):
+            _list_scores[k] = score
+        while len(_list_scores) > LIST_SCORES_MAX:
+            _list_scores.popitem(last=False)
+    scores = [_list_scores[k] for k in keys]
+    for k in keys:
+        _list_scores.move_to_end(k)
     return [ResumeSummary(id=r.id, title=r.title, name=data.basics.name, headline=data.basics.headline,
                           template=design.template, score=score, has_job=bool(job.strip()), updated_at=r.updated_at)
             for (r, data, design, job), score in zip(loaded, scores, strict=True)]

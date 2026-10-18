@@ -58,6 +58,8 @@ export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize
     // Pressed feedback on touch and click, at Full motion only (buttons get theirs from base.css).
     "inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed",
     variant === "link" ? (size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm") : SIZE[size],
+    // On a touch screen the smaller sizes (and text links) take taps over at least 44 px of height (base.css .tap-y).
+    size !== "lg" && "tap-y",
     VARIANT[variant],
     focusRing,
     className,

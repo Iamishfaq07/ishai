@@ -63,18 +63,32 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
 
   // Mobile browsers (iOS Safari especially) start an AudioContext created outside a tap "suspended", and it
   // produces no frames until resumed from a user gesture: try now, then again on the next tap/keypress.
+  let stopped = false;
+  const halted = () => ctx.state !== "running" && ctx.state !== "closed"; // "suspended", or Safari's "interrupted"
   const resume = () => {
-    if (ctx.state === "suspended") void ctx.resume().catch(() => {});
+    if (!stopped && halted()) void ctx.resume().catch(() => {});
   };
   const unlockEvents = ["pointerdown", "keydown", "touchend"] as const;
   const unlock = () => {
     resume();
-    if (ctx.state !== "suspended") unlockEvents.forEach((e) => document.removeEventListener(e, unlock));
+    if (!halted()) unlockEvents.forEach((e) => document.removeEventListener(e, unlock));
   };
   resume();
   unlockEvents.forEach((e) => document.addEventListener(e, unlock));
+  // iOS also halts a running context later ("interrupted": a phone call, Siri, another app's audio, the screen
+  // locking) and doesn't start it again by itself: the frames stop and the session hears nothing. Every time that
+  // happens, resume when the page is back on screen, and on the next tap.
+  const rearm = () => {
+    if (stopped || !halted()) return;
+    resume();
+    unlockEvents.forEach((e) => document.addEventListener(e, unlock));
+  };
+  const onVisible = () => {
+    if (document.visibilityState === "visible") rearm();
+  };
+  ctx.addEventListener("statechange", rearm);
+  document.addEventListener("visibilitychange", onVisible);
 
-  let stopped = false;
   return {
     stream,
     analyser,
@@ -83,6 +97,8 @@ export async function captureStream(stream: MediaStream, onFrame: (frame: PcmFra
       if (stopped) return;
       stopped = true;
       unlockEvents.forEach((e) => document.removeEventListener(e, unlock));
+      ctx.removeEventListener("statechange", rearm);
+      document.removeEventListener("visibilitychange", onVisible);
       node.port.onmessage = null;
       source.disconnect();
       analyser.disconnect();

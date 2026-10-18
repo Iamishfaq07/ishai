@@ -42,7 +42,7 @@ import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, 
 import { openSupport } from "../lib/shell";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync, type AsyncState } from "../lib/useAsync";
-import { UsageSummary } from "./Billing";
+import { UsageSummary } from "./UsageSummary";
 import { DueToday } from "./DueToday";
 import { KashSecHomeCard } from "../components/KashSec";
 import { summaryLine } from "./home/dashboard";
@@ -540,7 +540,7 @@ function RecentSessions({ sessions }: { sessions: AsyncState<OrbitSession[]> }) 
           <HistoryIcon className="h-4 w-4 text-zinc-500 dark:text-zinc-400" aria-hidden />
           Recent sessions
         </h2>
-        <Link to="/sessions" className={cx("rounded text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+        <Link to="/sessions" className={cx("tap-y rounded text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
           View all
         </Link>
       </div>

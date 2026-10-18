@@ -443,7 +443,7 @@ export function LivePanel(props: LivePanelProps) {
             title={sideOpen ? "Hide transcript panel" : "Show transcript, chat and reading"}
             aria-label={sideOpen ? "Hide transcript panel" : "Show transcript panel"}
             className={cx(
-              "shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
+              "tap-y shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200",
               sideOpen && "text-indigo-600 dark:text-indigo-300",
               focusRing,
             )}
@@ -456,7 +456,7 @@ export function LivePanel(props: LivePanelProps) {
           onClick={() => props.onModeChange(compact ? "expanded" : "compact")}
           title={compact ? "Expand" : "Compact"}
           aria-label={compact ? "Switch to expanded mode" : "Switch to compact mode"}
-          className={cx("shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200", focusRing)}
+          className={cx("tap-y shrink-0 rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 dark:hover:bg-white/5 dark:hover:text-zinc-200", focusRing)}
         >
           {compact ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
         </button>
@@ -466,7 +466,7 @@ export function LivePanel(props: LivePanelProps) {
             type="button"
             onClick={props.onEnd}
             disabled={ended}
-            className={cx("shrink-0 rounded px-1.5 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:text-rose-400 dark:hover:bg-rose-950/40", focusRing)}
+            className={cx("tap-y shrink-0 rounded px-1.5 text-xs text-rose-600 hover:bg-rose-50 disabled:opacity-40 dark:text-rose-400 dark:hover:bg-rose-950/40", focusRing)}
           >
             End
           </button>

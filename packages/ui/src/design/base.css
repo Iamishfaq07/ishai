@@ -1295,3 +1295,30 @@ html.app-shell .sheet-sweep { display: none; }
     transform var(--dur-panel) var(--ease-standard),
     width var(--dur-panel) var(--ease-standard);
 }
+
+/* Touch screens: a small control's tap area grows to at least 44 px (Apple's and Android's minimum) without moving
+   anything: an invisible box centred on it takes the taps. `.tap` grows both ways (a control with room around it),
+   `.tap-y` only the height (controls side by side, which mustn't take each other's taps). With a mouse, nothing.
+   ::before, because ::after is .btn-sheen's. A positioning utility on the same element (absolute, sticky) wins. */
+@media (pointer: coarse) {
+  .tap,
+  .tap-y {
+    position: relative;
+  }
+  .tap::before,
+  .tap-y::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: max(100%, 44px);
+    transform: translateY(-50%);
+  }
+  .tap::before {
+    left: 50%;
+    right: auto;
+    width: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+}

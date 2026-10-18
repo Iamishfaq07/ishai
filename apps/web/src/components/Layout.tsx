@@ -200,7 +200,9 @@ export function Layout() {
   const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
   return (
-    <div className="flex min-h-full">
+    // viewport-fit=cover (index.html) lets a phone held sideways draw under its notch: the left and right insets keep
+    // the app clear of it (0 everywhere else).
+    <div className="flex min-h-full pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2 focus:text-sm dark:focus:bg-zinc-900"
@@ -219,7 +221,7 @@ export function Layout() {
       <div className="flex min-w-0 flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
         <header className="sticky top-0 z-20 border-b border-zinc-200/70 bg-white dark:border-white/5 dark:bg-zinc-950">
           <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2.5 sm:px-6">
-            <Link to="/" className={cx("shrink-0 rounded-lg md:hidden", focusRing)} aria-label="Orbit home">
+            <Link to="/" className={cx("tap-y shrink-0 rounded-lg md:hidden", focusRing)} aria-label="Orbit home">
               <OrbitWordmark size={24} />
             </Link>
             <button
@@ -231,7 +233,7 @@ export function Layout() {
               aria-label={`Search or jump to… ${shortcut}`}
               aria-haspopup="dialog"
               className={cx(
-                "ml-auto flex h-10 items-center gap-2 rounded-xl text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 md:ml-0 md:w-full md:max-w-sm md:border md:border-zinc-200 md:bg-zinc-50 md:pl-3 md:pr-2 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white md:dark:border-white/10 md:dark:bg-white/[0.03]",
+                "tap-y ml-auto flex h-10 items-center gap-2 rounded-xl text-zinc-600 hover:bg-zinc-900/5 hover:text-zinc-900 md:ml-0 md:w-full md:max-w-sm md:border md:border-zinc-200 md:bg-zinc-50 md:pl-3 md:pr-2 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white md:dark:border-white/10 md:dark:bg-white/[0.03]",
                 "w-10 justify-center md:justify-start",
                 focusRing,
               )}
@@ -361,7 +363,7 @@ export function Layout() {
           labels. */}
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.12)] md:hidden dark:border-white/5 dark:bg-zinc-950 dark:shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.6)]"
+        className="fixed inset-x-0 bottom-0 z-20 border-t border-zinc-200/70 bg-white pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.12)] md:hidden dark:border-white/5 dark:bg-zinc-950 dark:shadow-[0_-8px_24px_-12px_rgb(0_0_0/0.6)]"
       >
         <ul className="mx-auto grid max-w-lg grid-cols-5">
           {TABS.map(({ to, label, tab, icon: Icon, current }) => {

@@ -141,7 +141,7 @@ export function CompanionShare({
         aria-controls={popId}
         title={code ? "Your phone can follow this session" : "Follow this session on your phone"}
         className={cx(
-          "inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-40 dark:hover:bg-white/5 dark:hover:text-zinc-200",
+          "tap-y inline-flex items-center gap-1 rounded-lg p-1.5 text-xs text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 disabled:opacity-40 dark:hover:bg-white/5 dark:hover:text-zinc-200",
           code && "text-indigo-600 dark:text-indigo-300",
           focusRing,
         )}

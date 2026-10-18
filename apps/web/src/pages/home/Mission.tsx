@@ -39,7 +39,7 @@ export function Pipeline({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }
     <Card>
       <div className="mb-4 flex items-baseline justify-between gap-3">
         <h2 className="font-display text-base font-semibold">Applications</h2>
-        <Link to={JOBS_TRACKER} className={link}>
+        <Link to={JOBS_TRACKER} className={cx(link, "tap-y")}>
           Open the tracker
         </Link>
       </div>

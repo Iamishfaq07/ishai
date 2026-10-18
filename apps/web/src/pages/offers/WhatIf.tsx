@@ -134,7 +134,7 @@ export function WhatIf({ offer: o }: { offer: JobOfferRecord }) {
           )}
           {result && (
             <details className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
-              <summary className={cx("cursor-pointer rounded", focusRing)}>Assumptions</summary>
+              <summary className={cx("tap-y cursor-pointer rounded", focusRing)}>Assumptions</summary>
               <ul className="mt-1 list-disc space-y-0.5 pl-4">
                 {result.assumptions.map((a) => <li key={a}>{a}</li>)}
               </ul>
@@ -154,7 +154,7 @@ function Slider({ label, value, min, max, step, text, onChange }: { label: strin
         <label htmlFor={id} className="text-sm font-medium">{label}</label>
         <span className="text-xs tabular-nums text-zinc-600 dark:text-zinc-300">{text}</span>
       </div>
-      <input id={id} type="range" min={min} max={max} step={step} value={value} aria-valuetext={text} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-indigo-500" />
+      <input id={id} type="range" min={min} max={max} step={step} value={value} aria-valuetext={text} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-indigo-500 coarse:h-11" />
     </div>
   );
 }

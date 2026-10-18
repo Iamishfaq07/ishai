@@ -872,6 +872,8 @@ async def _live(db: AsyncSession, entries: list[JobApplication]) -> dict[str, da
 async def list_tracker(user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> list[TrackerOut]:
     rows = list((await db.scalars(select(JobApplication).where(JobApplication.user_id == user.id)
+                                  # The likely questions kept for a job (kilobytes each) aren't in the list.
+                                  .options(defer(JobApplication.interview_questions))
                                   .order_by(JobApplication.status_at.desc()))).all())
     live = await _live(db, rows)
     rounds = await last_rounds(db, user.id, [r.id for r in rows])

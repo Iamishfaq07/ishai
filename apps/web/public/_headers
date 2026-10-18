@@ -29,3 +29,8 @@
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 /mediapipe/*
   Cache-Control: public, max-age=604800, stale-while-revalidate=604800
+
+# The theme script runs in every page's <head> before anything is drawn, so revalidating it cost a round trip on every
+# page load (about 0.4 s on a slow 3G phone) before the first paint. A day, then refreshed in the background.
+/theme-init.js
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex" />
+  <title>You're offline | Orbit AI</title>
+  <!-- Shown by public/sw.js when a page can't load because the device is offline. Self-contained (no files to fetch),
+       and no script: "Try again" is a link to the same address. -->
+  <style>
+    html { color-scheme: light dark; }
+    body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 1.5rem; box-sizing: border-box;
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; background: #f6f6f9; color: #18181b; text-align: center; }
+    main { max-width: 22rem; }
+    h1 { font-size: 1.4rem; margin: 1rem 0 .25rem; }
+    p { margin: 0 0 1.5rem; color: #3f3f46; }
+    a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 1.25rem; border-radius: .75rem;
+      background: #4f46e5; color: #fff; font-weight: 600; text-decoration: none; }
+    a:focus-visible { outline: 2px solid #4f46e5; outline-offset: 3px; }
+    @media (prefers-color-scheme: dark) { body { background: #080918; color: #e4e4e7; } p { color: #d4d4d8; } }
+  </style>
+</head>
+<body>
+  <main>
+    <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true">
+      <circle cx="24" cy="24" r="17" fill="none" stroke="#6366f1" stroke-width="4" />
+      <circle cx="24" cy="24" r="7" fill="#6366f1" />
+      <circle cx="38" cy="10" r="4" fill="#a5b4fc" />
+    </svg>
+    <h1>You're offline</h1>
+    <p>Orbit needs the internet to load this page. Check your connection, then try again. Nothing you saved is lost.</p>
+    <a href="">Try again</a>
+  </main>
+</body>
+</html>

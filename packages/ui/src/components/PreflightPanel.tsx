@@ -127,7 +127,7 @@ export function PreflightPanel({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className={cx("flex min-w-0 flex-1 items-center gap-2 text-left text-xs font-medium", focusRing)}
+          className={cx("tap-y flex min-w-0 flex-1 items-center gap-2 text-left text-xs font-medium", focusRing)}
         >
           {overall === null ? (
             <RefreshCw className="h-4 w-4 flex-none text-zinc-400 motion-safe:animate-spin" aria-hidden="true" />
@@ -148,7 +148,7 @@ export function PreflightPanel({
           disabled={checking}
           onClick={() => void run(true)}
           className={cx(
-            "rounded-lg border border-zinc-200 px-2 py-0.5 text-xs hover:bg-white/60 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5",
+            "tap-y rounded-lg border border-zinc-200 px-2 py-0.5 text-xs hover:bg-white/60 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5",
             focusRing,
           )}
         >

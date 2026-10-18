@@ -35,12 +35,27 @@ function words(text: string): string[] {
 }
 
 const SPELLED = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+const SPELLED_RE = new RegExp(`\\b(${SPELLED.join("|")})\\b`, "gi");
 
 function numbers(text: string): Set<string> {
   // "three engineers" backs "3 engineers": small numbers in words count as their digits.
-  text = text.replace(new RegExp(`\\b(${SPELLED.join("|")})\\b`, "gi"), (w) => String(SPELLED.indexOf(w.toLowerCase())));
+  text = text.replace(SPELLED_RE, (w) => String(SPELLED.indexOf(w.toLowerCase())));
   // Standalone figures only: the 95 in "p95" or the 3 in "S3" names a thing, not an amount.
   return new Set((text.match(/(?<![a-z0-9])\d[\d,.]*%?/gi) ?? []).map((n) => n.replace(/[.,]+$/, "").replace(/,/g, "")));
+}
+
+/** A claim's words and the figures it (or its quote) gives, worked out once per claim: the resume editor checks every
+ *  bullet against every confirmed claim on each keystroke, and redoing this each time was most of a keystroke's work. */
+const prepared = new WeakMap<object, { key: string; claim: string[]; backed: Set<string> }>();
+
+function prepare(item: Pick<EvidenceItem, "claim" | "quote">): { claim: string[]; backed: Set<string> } {
+  const key = `${item.claim}\u0000${item.quote}`;
+  let hit = prepared.get(item);
+  if (!hit || hit.key !== key) {
+    hit = { key, claim: [...new Set(words(item.claim))], backed: numbers(`${item.claim} ${item.quote}`) };
+    prepared.set(item, hit);
+  }
+  return hit;
 }
 
 /**
@@ -55,9 +70,8 @@ export function evidenceFor<T extends Pick<EvidenceItem, "claim" | "quote" | "st
   let best: { item: T; score: number } | null = null;
   for (const item of items) {
     if (item.status !== "confirmed") continue;
-    const claim = [...new Set(words(item.claim))];
+    const { claim, backed } = prepare(item);
     if (claim.length < 3) continue;
-    const backed = numbers(`${item.claim} ${item.quote}`);
     if ([...figures].some((n) => !backed.has(n))) continue;
     const shared = claim.filter((w) => said.has(w)).length;
     const score = shared / claim.length;

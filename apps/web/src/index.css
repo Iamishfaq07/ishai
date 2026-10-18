@@ -32,6 +32,26 @@
   }
 }
 
+/* Touch screens: iOS zooms the page into a text field whose type is under 16 px when it's focused, and doesn't zoom
+   back out, so with a finger every field types at 16 px (fields set larger keep their size). With a mouse nothing
+   changes. !important, so it outranks a field's own text-sm, text-xs and !text-xs. A field that really is larger keeps
+   its size: !text-base and up, or text-base and up without the shared field look's text-sm (text-sm comes later in
+   the built CSS, so "text-sm text-lg" is 14 px). */
+@media (pointer: coarse) {
+  :is(
+      input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="hidden"]),
+      textarea,
+      select
+    ):not(
+      [class~="!text-base"],
+      [class~="!text-lg"],
+      [class~="!text-xl"],
+      :is([class~="text-base"], [class~="text-lg"], [class~="text-xl"], [class~="text-2xl"], [class~="text-3xl"]):not([class~="text-sm"], [class~="text-xs"], [class~="!text-sm"], [class~="!text-xs"])
+    ) {
+    font-size: 16px !important;
+  }
+}
+
 /* Reduced motion (the OS setting and Settings → Appearance) is handled in base.css through html[data-motion]: the OS
    setting makes Full play as Gentle, which still fades but never moves. */
 
