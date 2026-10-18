@@ -33,7 +33,7 @@ import { api } from "../lib/api";
 import { useCountry } from "../lib/country";
 import { CONTACT_PAGE, COOKIE_PAGE, PRIVACY_PAGE, REFUND_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
-import { useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
+import { WELCOME_LIKE, useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
 import { kashsecUrl } from "./learn/links";
 import { KASHSEC_TAGLINE, KashSecChips } from "../components/KashSec";
 import { JOBS_AI_HOME } from "./jobs/paths";
@@ -41,6 +41,7 @@ import { RESUME_AI_HOME } from "./resume/paths";
 import { LiveAnswerDemo } from "../marketing/LiveAnswerDemo";
 import { PRODUCT_TILE, siteProducts, type SiteProduct } from "../marketing/catalog";
 import { ArrowLink, CheckList, Container, Eyebrow, IconTile, Section, SectionIntro } from "../marketing/primitives";
+import { SameBox } from "../marketing/SameBox";
 import { CtaBand, inkButton } from "../marketing/ProductPage";
 import { ProductShot, type ShotName } from "../marketing/ProductShot";
 import { PublicLayout } from "../marketing/PublicLayout";
@@ -77,7 +78,7 @@ function freeLineFor(welcome: WelcomeGrant | null): string {
 
 // ─── Hero ────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-function Hero({ freeLine, ctas }: { freeLine: string; ctas: RefObject<HTMLDivElement | null> }) {
+function Hero({ freeLine, freeLineLike, ctas }: { freeLine: string; freeLineLike: string; ctas: RefObject<HTMLDivElement | null> }) {
   return (
     <section aria-labelledby="hero-title" className="relative isolate">
       <div className="mk-hero-detail" aria-hidden="true" />
@@ -111,7 +112,9 @@ function Hero({ freeLine, ctas }: { freeLine: string; ctas: RefObject<HTMLDivEle
               Try a practice question
             </Link>
           </div>
-          <p className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">{freeLine}</p>
+          <SameBox like={<p>{freeLineLike}</p>} answered={freeLine} className="mt-5 text-sm text-zinc-600 dark:text-zinc-400">
+            <p>{freeLine}</p>
+          </SameBox>
           <p className="mt-6 flex max-w-xl items-start gap-2.5 border-t mk-line pt-5 text-[0.8125rem] leading-relaxed text-zinc-600 dark:text-zinc-400">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
             {USE_WHERE_ALLOWED}
@@ -618,7 +621,7 @@ export function LandingPage() {
 
   return (
     <PublicLayout>
-      <Hero freeLine={freeLine} ctas={heroCtas} />
+      <Hero freeLine={freeLine} freeLineLike={freeLineFor(welcome ?? WELCOME_LIKE)} ctas={heroCtas} />
       <ProductIndex products={products} />
 
       <FeatureSection

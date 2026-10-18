@@ -4,6 +4,10 @@ import { api } from "./api";
 
 export type WelcomeGrant = NonNullable<PlanInfo["welcome"]>;
 
+/** The grant as the server gives it today (orbit_api/config.py's defaults, and production's on 18 Oct 2026), only to
+ *  size the lines that wait for it (marketing/SameBox.tsx): never shown or said. */
+export const WELCOME_LIKE: WelcomeGrant = { resume_credits: 1, interview_minutes: 20 };
+
 /**
  * What a new account gets free at sign-up, from the server (ORBIT_WELCOME_RESUME_CREDITS and
  * ORBIT_WELCOME_INTERVIEW_MINUTES decide it), or null until it answers or when it gives nothing.

@@ -18,7 +18,9 @@ export const BUDGETS = {
     // chunk's name is in the entry's preload map (+0.3 kB on every first load); Landing shares the live answer and
     // the sticky bar with them, Mock its one-tap rounds with /mock-interview.
     Home: 211, // the signed-in landing: the page everyone opens
-    Landing: 206, // the front page, signed out
+    // The front page, signed out. +1 kB for SameBox (0.5 kB): its free line keeps its room until the server answers
+    // (CLS 0; docs/PERFORMANCE.md).
+    Landing: 207,
     Sessions: 186, // +1 kB for D80, through the entry
     SessionSetup: 200,
     Mock: 206,

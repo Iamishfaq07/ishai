@@ -639,7 +639,9 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
 - **Facts, never claims**: a facts band shows only what the code or the server stands behind (a score out of 100,
   `TEMPLATES.length`, the guides counted from their own files, the languages from `LIVE_LANGUAGES`, the median of real
   sessions from the server, the job counts once there are enough). No ratings, reviews, user counts, invented
-  results, testimonials or "trusted by" rows, ever. A number that comes from the server is left out until it answers.
+  results, testimonials or "trusted by" rows, ever. A number that comes from the server is left out until it answers;
+  a line above the fold that waits for one keeps the room it will need from the first paint (`SameBox`), so nothing
+  under it moves when it does.
 - **Pictures are the product, playing**: each render is the real component where it draws without data
   (`ResumePreview`, the score ring and section bars of LinkedIn AI, its `SearchPreview`, `CodeBlock`, `StagePill`,
   `LiveAnswerDemo`), or a faithful composition of the screen in its own classes where the real one fetches its own

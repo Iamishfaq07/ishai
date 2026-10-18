@@ -7,12 +7,13 @@ import { StoreBadge } from "../components/StoreBadge";
 import { api } from "../lib/api";
 import { USE_WHERE_ALLOWED } from "../lib/contact";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL, MS_STORE_LIVE } from "../lib/desktop";
-import { useWelcomeGrant } from "../lib/welcome";
+import { WELCOME_LIKE, useWelcomeGrant } from "../lib/welcome";
 import { PRACTICE_PAGE } from "../marketing/catalog";
 import { CrossSell, FactsBand, FaqBlock, FinalCta, HeroShowcase, StepsWithUI, ToolkitGrid, type Fact } from "../marketing/kit";
 import { LiveAnswerDemo } from "../marketing/LiveAnswerDemo";
 import { PublicLayout } from "../marketing/PublicLayout";
 import { ArrowLink, CheckList, IconTile, Section, SectionIntro } from "../marketing/primitives";
+import { SameBox } from "../marketing/SameBox";
 import { StickyCta } from "../marketing/StickyCta";
 import { JOBS_AI_HOME } from "./jobs/paths";
 import { RESUME_AI_HOME } from "./resume/paths";
@@ -23,6 +24,19 @@ const BACK_TO_SETUP = { from: "/start" };
 
 /** The languages a live session can be in besides auto-detect: English and nine more, plus Hinglish (D62). */
 const LANGUAGES = LIVE_LANGUAGES.filter((l) => l.value !== "auto" && l.value !== "hinglish").length;
+
+/** The hero's line on what's free: the free minutes once the server says how many. */
+function freeNote(minutes: number) {
+  return (
+    <p>
+      <strong className="font-medium text-zinc-900 dark:text-white">Live sessions use interview minutes.</strong>{" "}
+      {minutes ? `A new account gets ${minutes} free; ` : ""}more come with a plan or a credit pack, paid once.{" "}
+      <Link to="/pricing" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+        See pricing
+      </Link>
+    </p>
+  );
+}
 
 /** The measured speed from real sessions (the same numbers as /technical), once the server has them. */
 function useFirstWord(): number | null {
@@ -71,15 +85,7 @@ export function CopilotPublicPage() {
             </Link>
           </>
         }
-        note={
-          <p>
-            <strong className="font-medium text-zinc-900 dark:text-white">Live sessions use interview minutes.</strong>{" "}
-            {minutes ? `A new account gets ${minutes} free; ` : ""}more come with a plan or a credit pack, paid once.{" "}
-            <Link to="/pricing" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
-              See pricing
-            </Link>
-          </p>
-        }
+        note={<SameBox like={freeNote(minutes || WELCOME_LIKE.interview_minutes)} answered={minutes}>{freeNote(minutes)}</SameBox>}
         visual={<LiveAnswerDemo className="mx-auto max-w-[34rem] lg:mr-0" />}
       />
 

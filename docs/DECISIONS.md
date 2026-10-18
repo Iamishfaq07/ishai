@@ -1076,8 +1076,11 @@ before (fonts.css: a preload there competes with sign-in's code). Measuring it a
 before had a broken API address (Git Bash turned `/api` into a Windows path), so their CLS of 0 had no server
 answers in it: with the API answering, the hero's free line grows by a line when the welcome grant (or Jobs AI's
 numbers, Resume AI's pack price) arrives, CLS 0.02-0.07 on four pages before and after alike, and 0.006 on the front
-page now that its app starts after the paint. Keeping that line's room is the owner's copy call (docs/PERFORMANCE.md).
-The same day LinkedIn AI's section bars and the toolkits stopped leaving an empty cell: Experience with its roles, and
+page now that its app starts after the paint. The words stay as they are; the line keeps its room instead: `SameBox`
+(marketing/SameBox.tsx) lays out the answered form with today's values invisibly in the same grid cell, its words
+as aria-hidden CSS generated content (so the built HTML still says only what's true without the server, and nothing
+is read twice), and draws the answer afresh in that box. CLS 0 on every product page and the front page, LCP
+1.65-1.80 s (docs/PERFORMANCE.md). The same day LinkedIn AI's section bars and the toolkits stopped leaving an empty cell: Experience with its roles, and
 a bar alone on its row, take the whole row (`wideBars`), and a wide toolkit card spans from md up.
 
 **D76 — Saba is heard (or says why not), her words come as she says them, a turn ends when you stop, and she talks

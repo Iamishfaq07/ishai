@@ -7,6 +7,7 @@ import { COPILOT_PAGE, PRACTICE_PAGE } from "../../marketing/catalog";
 import { CrossSell, FactsBand, FaqBlock, FinalCta, HeroShowcase, StepsWithUI, ToolkitGrid, usePublicData, type Fact } from "../../marketing/kit";
 import { PublicLayout } from "../../marketing/PublicLayout";
 import { IconTile, Section, SectionIntro } from "../../marketing/primitives";
+import { SameBox } from "../../marketing/SameBox";
 import { StickyCta } from "../../marketing/StickyCta";
 import { useCountry } from "../../lib/country";
 import { RESUME_AI_HOME } from "../resume/paths";
@@ -24,8 +25,14 @@ const WORLD_PORTALS = ["LinkedIn", "Indeed", "Wellfound", "Google Jobs"];
 /** Below this, the live count isn't worth a headline (a new server still fetching its first jobs). */
 const SHOW_COUNTS_FROM = 50;
 
+type Daily = Pick<JobStats, "fit_daily" | "profile_daily">;
+
+/** The daily allowances as the server gives them today (orbit_api/config.py, production on 18 Oct 2026), only to
+ *  size the hero's line until it answers (SameBox): never shown. */
+const DAILY_LIKE: Daily = { fit_daily: 15, profile_daily: 5 };
+
 /** What's free, said plainly, with the server's own daily allowances once it answers. */
-function FreeNote({ stats }: { stats: JobStats | null }) {
+function freeNote(stats: Daily | null) {
   return (
     <p>
       <strong className="font-medium text-zinc-900 dark:text-white">Free with an Orbit account.</strong> Browsing, matching and the tracker never use
@@ -86,7 +93,7 @@ export function JobsAiPublicPage() {
             </Link>
           </>
         }
-        note={<FreeNote stats={stats} />}
+        note={<SameBox like={freeNote(stats ?? DAILY_LIKE)} answered={stats && [stats.fit_daily, stats.profile_daily]}>{freeNote(stats)}</SameBox>}
         visual={<JobsHeroArt />}
       />
 

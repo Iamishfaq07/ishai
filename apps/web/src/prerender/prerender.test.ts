@@ -161,6 +161,17 @@ describe("the built public pages", () => {
     }
   });
 
+  it("keeps the hero's free line's room for the server's answer, without saying it (SameBox)", () => {
+    for (const path of ["/", "/resume-ai", "/jobs", "/interview-copilot", "/mock-interview"]) {
+      const html = files.get(workerFile(path))!;
+      const hero = html.slice(html.indexOf('id="hero-title"'), html.indexOf("</section>", html.indexOf('id="hero-title"')));
+      expect(hero, path).toContain('<div aria-hidden="true" class="invisible [grid-area:1/1]">');
+      expect(hero, path).toMatch(/data-like="[^"]*\d/); // the answered form, numbers and all, sized but not text
+      // What a reader gets is only what's true without the server.
+      expect(text(html), path).not.toMatch(/A new account gets \d|each day you get \d|Your first AI action|from ₹\d|from \$\d|Free to start: \d/);
+    }
+  });
+
   it("leaves no empty cell in a product page's grids at any column count", () => {
     // Auto-placement as the browser does it (no dense packing): a card that doesn't fit the rest of a row moves on.
     const empty = (spans: number[], cols: number) => {

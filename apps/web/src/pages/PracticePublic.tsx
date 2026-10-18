@@ -4,11 +4,12 @@ import { companyNames, roleNames } from "virtual:question-bank/names";
 import { ArrowRight, AudioLines, Building2, ChartColumn, Clock, FileText, MessagesSquare, NotebookPen, RefreshCw, Reveal, Scale, Sparkles, Target, Users, Video, buttonClass, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import { PRACTICE_FAQ } from "../../worker/faqs/mock-interview.js";
 import { useCountry } from "../lib/country";
-import { useWelcomeGrant } from "../lib/welcome";
+import { WELCOME_LIKE, useWelcomeGrant } from "../lib/welcome";
 import { COPILOT_PAGE } from "../marketing/catalog";
 import { CrossSell, FactsBand, FaqBlock, FinalCta, HeroShowcase, StepsWithUI, ToolkitGrid } from "../marketing/kit";
 import { PublicLayout } from "../marketing/PublicLayout";
 import { ArrowLink, IconTile, Section, SectionIntro } from "../marketing/primitives";
+import { SameBox } from "../marketing/SameBox";
 import { StickyCta } from "../marketing/StickyCta";
 import { PRESETS, presetTitle, type PresetId } from "./mockPresets";
 import { CompaniesArt, DrillArt, ReviewStepArt, RoomArt, RoundsStepArt, ScorecardArt, StoryArt, StrongerArt, TalkStepArt } from "./PracticePublicArt";
@@ -19,6 +20,19 @@ const BACK_TO_PRACTICE = { from: "/mock" };
 
 /** Each one-tap round's mark (the front door's icon tiles). */
 const ROUND_ICON: Record<PresetId, LucideIcon> = { hr5: Clock, tmay10: MessagesSquare, tech15: Target, panel15: Users, oneway10: Video, salary: Scale };
+
+/** The hero's line on what's free: the free minutes once the server says how many. */
+function freeNote(minutes: number) {
+  return (
+    <p>
+      <strong className="font-medium text-zinc-900 dark:text-white">Mock interviews use interview minutes.</strong>{" "}
+      {minutes ? `A new account gets ${minutes} free; ` : ""}a single practice question with instant feedback is free without an account.{" "}
+      <Link to="/pricing" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
+        See pricing
+      </Link>
+    </p>
+  );
+}
 
 /**
  * /mock-interview: Practice for signed-out visitors (D73), built with the product pages' section kit (DECISIONS
@@ -49,15 +63,7 @@ export function PracticePublicPage() {
             </Link>
           </>
         }
-        note={
-          <p>
-            <strong className="font-medium text-zinc-900 dark:text-white">Mock interviews use interview minutes.</strong>{" "}
-            {minutes ? `A new account gets ${minutes} free; ` : ""}a single practice question with instant feedback is free without an account.{" "}
-            <Link to="/pricing" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
-              See pricing
-            </Link>
-          </p>
-        }
+        note={<SameBox like={freeNote(minutes || WELCOME_LIKE.interview_minutes)} answered={minutes}>{freeNote(minutes)}</SameBox>}
         visual={<RoomArt />}
       />
 
