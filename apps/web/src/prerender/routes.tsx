@@ -13,6 +13,7 @@ import { PracticePublicPage } from "../pages/PracticePublic";
 import { WarmupPage } from "../pages/Warmup";
 import { JobsAiPublicPage } from "../pages/jobs/JobsAiPublic";
 import { ResumeAiPublicPage } from "../pages/resume/ResumeAiPublic";
+import { LinkedInPublicPage } from "../pages/linkedin/LinkedInPublic";
 import { BankIndexView, GuideView } from "../pages/bank/BankPages";
 import { COMPANIES_PATH, ROLES_PATH, companyPath, rolePath } from "../pages/bank/content";
 import { loadCompany, loadRole } from "../pages/bank/docs";
@@ -49,6 +50,7 @@ const WORKER_PAGES: Record<string, () => ReactNode> = {
   "/pricing": () => <PricingPage />,
   "/interview-copilot": () => <CopilotPublicPage />,
   "/mock-interview": () => <PracticePublicPage />,
+  "/linkedin-ai": () => <LinkedInPublicPage />,
 };
 
 /** Where the Worker finds a PAGE_META page's built copy (worker/prerendered.js `prerenderedAsset`). */

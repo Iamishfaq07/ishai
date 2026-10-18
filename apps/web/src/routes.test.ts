@@ -70,4 +70,9 @@ describe("the public pricing and product pages (D73)", () => {
     expect(pageFor("/mock")).toBe("mock");
     expect(pageFor("/pricings")).toBeNull();
   });
+
+  it("gives LinkedIn AI's product page its own code, apart from the signed-in tool (D79)", () => {
+    expect(pageFor("/linkedin-ai")).toBe("linkedinPublic");
+    expect(pageFor("/linkedin")).toBe("linkedin");
+  });
 });

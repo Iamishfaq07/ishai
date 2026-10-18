@@ -548,8 +548,9 @@ plainly what Orbit is, shows the real product, and gets out of the way. Code: `a
   Orbit" when signed in. Sticky, opaque, a hairline once scrolled. The menu is the shared one's behaviour and look
   (`useDismiss`, `floatingClass` from @orbit/ui).
   Phones: the logo, Start free and a menu button that opens the whole site as one full-screen sheet (a dialog: focus
-  stays inside, Escape closes, the page behind doesn't scroll). No menu item ends on a sign-in wall: the four tools
-  without a page of their own have anchors in the front page's "More in your account".
+  stays inside, Escape closes, the page behind doesn't scroll). No menu item ends on a sign-in wall: the four main
+  products and LinkedIn AI have pages of their own ("Product pages" below), and the three tools without one (Code AI,
+  Offer AI, Learning AI) have anchors in the front page's "More in your account".
 - **Canvas**: white, with `--site-subtle` (#F7F8FA) bands for alternate sections; dark mode is the workbench's blue-
   grey family (canvas #0B0F17, surface #141B27, line #232C3B, and the same ink steps, so shared components look the
   same signed in or out). Tokens: `mk-canvas`, `mk-band`, `mk-surface`, `mk-line`, `mk-divide` (site.css).
@@ -617,3 +618,50 @@ plainly what Orbit is, shows the real product, and gets out of the way. Code: `a
   are lazy and sized; the front door loads one text face (Plex) and no font for the logo.
 - **Checks**: `tools/e2e/public-pages.spec.ts` (axe WCAG 2.2 AA on every public page, light and dark, 1280 and 390 px,
   no sideways scroll on a phone, the menus' keyboard behaviour).
+
+## Product pages
+
+A public product page (Resume AI, Jobs AI, LinkedIn AI, the interview copilot, Practice; DECISIONS D79) goes into
+the product's detail the way a good product page does, and shows the product working rather than describing it. They
+are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLayout`, and follow "The front door".
+
+- **The order**: `HeroShowcase` (breadcrumbs, the product's mark, a two-tone headline, the actions, what's free said
+  plainly, the honest line where the product needs it, and the product itself on the right), `FactsBand`,
+  `StepsWithUI` (three steps, each with a small render of the product), the page's own middle (the templates'
+  `Carousel`, the rounds, where the jobs come from, the search preview), `ToolkitGrid` (cards that are working pieces
+  of the product), `ComparisonBlock` where a fair one exists, `PricingSection` where the product is bought with
+  credits, `FaqBlock`, `CrossSell` (the products that pick up where this one stops) and `FinalCta`. One h1, the
+  hero's.
+- **The headline is two-tone**: ink, then the accent, as solid colours (no gradient). The closing panel's title does
+  the same in white and `indigo-300`. Section headings stay ink, with the accent in their eyebrow.
+- **Facts, never claims**: a facts band shows only what the code or the server stands behind (a score out of 100,
+  `TEMPLATES.length`, the guides counted from their own files, the languages from `LIVE_LANGUAGES`, the median of real
+  sessions from the server, the job counts once there are enough). No ratings, reviews, user counts, invented
+  results, testimonials or "trusted by" rows, ever. A number that comes from the server is left out until it answers.
+- **Pictures are the product, playing**: each render is the real component where it draws without data
+  (`ResumePreview`, the score ring and section bars of LinkedIn AI, its `SearchPreview`, `CodeBlock`, `StagePill`,
+  `LiveAnswerDemo`), or a faithful composition of the screen in its own classes where the real one fetches its own
+  data (the editor's fix cards, the tracker, the compact window, the video room). Sample people and companies are made
+  up and say so ("Sample", "Example", the caption). Numbers on a render are real where they can be: Resume AI's hero
+  score is the ATS check's own on the sample (82 → 85 → 91 → 96 → 98 as its four fixes are made), LinkedIn AI's the
+  audit's (47 → 94). A mock of another site is Orbit's own drawing, never its look or logo.
+- **Motion** (`kit/motion.ts`, `.kp-*` in `site.css`): a render plays one short sequence the first time it's in view
+  (`usePlay`: the scenes' IntersectionObserver, `useInView`) and rests on its final frame. Its CSS parts come in
+  (`.kp-in`, `--x`/`--y`), pop (`.kp-pop`), fade (`.kp-fade`), fill (`.kp-fill`) or light up (`.kp-lit`, colours
+  easing) after `--d`; its JavaScript parts (typing, counting, steps) follow `useClock`. Full plays it once (the hero
+  offers Play again); Gentle shows the final frame at once, the text and numbers finished (only the tracker card's
+  landing ring, a fade, plays when it's seen), so nothing waits its turn; Off, data saver and the built HTML
+  (`data-still`) show the final frame from the start. Only opacity and transform move, inside
+  boxes of a fixed size (typed text keeps its full text's room), so nothing around a render shifts. Nothing loops:
+  Saba's bars rise and fall a few times, a meter four.
+- **Built as HTML, light to open**: every section renders without the browser and lands finished in
+  `dist/_prerender/*.html`; a heavy render (a whole resume page) draws a light placeholder there and in the app until
+  it's near the screen (`useNear`, the carousel's `render(i, near)`), or, above the fold, until just after the first
+  paint (`useAfterPaint`: the templates behind the hero). A render loads no font beyond Plex: resume renders use Arial
+  where a template asks for Inter, languages are named in English, and code waits for the screen.
+- **The FAQ** comes from `worker/faqs/<page>.js`, which the page shows and its FAQPage structured data states, word
+  for word (D67): plain text, the same for every visitor, no links inside an answer.
+- **The carousel** scrolls natively (snap points; a swipe, a trackpad or the arrow keys, the row takes focus) and has
+  Previous and Next; it never moves on its own.
+- **Copy**: what's true and checkable, as everywhere on the front door; a comparison says what each side hands you
+  and names no one ("A general chatbot").

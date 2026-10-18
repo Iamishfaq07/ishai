@@ -16,11 +16,13 @@ import { RESUME_AI_HOME } from "../pages/resume/paths";
 /** The copilot's and Practice's own product pages (D73); signed in, the copilot starts at /start and Practice is /mock. */
 export const COPILOT_PAGE = "/interview-copilot";
 export const PRACTICE_PAGE = "/mock-interview";
+/** LinkedIn AI's product page (D79); signed in, the tool itself is /linkedin. */
+export const LINKEDIN_PAGE = "/linkedin-ai";
 
 /**
  * The products as the public site names them: the header's Products menu, the phone menu and the footer read this one
- * list. The four main products have a section of the front page (or a page of their own); the other four tools sit in
- * the front page's "More in your account" section, each with its own anchor, so no menu link ends on a sign-in wall.
+ * list. The four main products and LinkedIn AI have a page of their own (D73, D79); the other three tools sit in the
+ * front page's "More in your account" section, each with its own anchor, so no menu link ends on a sign-in wall.
  */
 export interface SiteProduct {
   id: "copilot" | "practice" | "resume" | "jobs" | "linkedin" | "code" | "offer" | "learning";
@@ -39,7 +41,7 @@ export function siteProducts(india: boolean): SiteProduct[] {
     { id: "practice", name: "Practice", line: "Mock and video interviews with an AI interviewer, then a scorecard.", href: PRACTICE_PAGE, icon: Target, main: true },
     { id: "resume", name: "Resume AI", line: "An ATS score out of 100 and a tailored resume for every job.", href: RESUME_AI_HOME, icon: FileText, main: true },
     { id: "jobs", name: "Jobs AI", line: "New jobs that fit you, a tracker and messages for referrals.", href: JOBS_AI_HOME, icon: Briefcase, main: true },
-    { id: "linkedin", name: "LinkedIn AI", line: "How your profile reads to a recruiter, and what to fix first.", href: "/#linkedin-ai", icon: IdCard, main: false },
+    { id: "linkedin", name: "LinkedIn AI", line: "How your profile reads to a recruiter, and what to fix first.", href: LINKEDIN_PAGE, icon: IdCard, main: false },
     { id: "code", name: "Code AI", line: "Coding rounds by pattern: run the tests, then get a review.", href: "/#code-ai", icon: Code2, main: false },
     {
       id: "offer",

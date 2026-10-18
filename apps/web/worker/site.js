@@ -3,7 +3,9 @@
 // (seo.js) and, later, the build's prerendered pages, so both describe Orbit the same way.
 //
 // Rules (DECISIONS D67): no ratings or reviews (Orbit has none to show), no prices (they differ by country and change;
-// the pricing section on the front page is the source), and FAQ markup only next to a visible FAQ with the same words.
+// the pricing section on the front page is the source), and FAQ markup only next to a visible FAQ with the same words
+// (the product pages' questions live in faqs.js, which the pages draw their FAQ from too: D79).
+import { faqsFor } from "./faqs.js";
 
 /** The canonical origin. Links, canonicals and the sitemap always name it, whatever host served the request. */
 export const SITE = "https://orbitanswer.com";
@@ -165,6 +167,15 @@ const PRODUCT_PAGES = {
         "A resume builder and checker: an ATS score out of 100, what's missing for the job you want, and AI rewrites that keep your own numbers. Editing, the score and Word/PDF downloads are free.",
     },
   },
+  "/linkedin-ai": {
+    crumb: "LinkedIn AI",
+    app: {
+      id: "linkedin-ai",
+      name: "Orbit LinkedIn AI",
+      description:
+        "A LinkedIn profile checker: a score out of 100, section by section, the fixes to paste in (headline, About, roles, skills, the custom URL) and a preview of how a recruiter's search shows the profile. Not made by LinkedIn.",
+    },
+  },
   "/jobs": {
     crumb: "Jobs AI",
     app: {
@@ -224,6 +235,8 @@ export function structuredDataFor(path, { title, description } = {}) {
       webPage({ path, name: title || product.app.name, description, extra: { mainEntity: { "@id": `${siteUrl(path)}#app-${product.app.id}` } } }),
       webApp({ ...product.app, path }),
       breadcrumbs([["Home", "/"], [product.crumb, path]]),
+      // The page's own questions, word for word, where it shows them.
+      faqsFor(path).length > 0 && faqPage(path, faqsFor(path)),
     );
   }
   const other = OTHER_PAGES[path];

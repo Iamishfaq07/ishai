@@ -1,6 +1,6 @@
 // The link previews (WhatsApp, LinkedIn, X, Slack): one 1200 x 630 card per public page.
 //
-//   node apps/web/og/render.mjs            (repo root; needs playwright-core and system Chrome)
+//   node apps/web/og/render.mjs [page ...]  (repo root; needs playwright-core and system Chrome; pages: only those)
 //
 // 1. Writes each page's SVG source here (apps/web/og/<page>.svg) from the table below: the outlined wordmark, the
 //    product, the page's promise in IBM Plex Sans (loaded from node_modules), and a crop of a real screen of the app
@@ -29,6 +29,10 @@ const PAGES = [
   ["jobs", "Jobs AI", "jobs", ["Find jobs that fit", "your resume."], ["New openings from companies' own careers", "pages, ranked by how well you fit."], "jobs", [500, 300, 2060, 1300]],
   ["warmup", "Free practice", "practice", ["Answer one interview", "question, free."], ["Type or speak your answer and see what", "to improve. No account needed."], "practice", [500, 300, 2060, 1300]],
   ["technical", "How Orbit works", "copilot", ["How Orbit answers", "in real time."], ["Measured answer speed, the live pipeline", "and the desktop app's protections."], "copilot", [130, 80, 1580, 1000]],
+  // The product pages of D79 (the section kit): the copilot's, Practice's and LinkedIn AI's own cards.
+  ["interview-copilot", "Interview copilot", "copilot", ["Live answers, from", "your own resume."], ["Where AI help is allowed: an answer built", "from your resume, as the question is asked."], "copilot", [130, 80, 1580, 1000]],
+  ["mock-interview", "Mock interviews", "practice", ["Mock interviews", "that listen back."], ["An AI interviewer that follows up on what", "you said, then scores every answer."], "practice", [500, 300, 2060, 1300]],
+  ["linkedin-ai", "LinkedIn AI", "orbit", ["See your profile", "as recruiters do."], ["A score out of 100, the fixes to paste in,", "and how a recruiter's search shows you."], "draw:linkedin", null],
   ["contact", "Contact", "orbit", ["Talk to the", "Orbit team."], ["Questions, payments or a job that looks", "wrong: a person reads every message."], null, null],
   // The question bank: one card for the companies list and every company guide, one for the roles.
   ["companies", "Interview guides", "practice", ["How companies", "interview, free."], ["The rounds, what interviewers listen for", "and practice questions, company by company."], "draw:company", null],
@@ -65,6 +69,7 @@ function contactPicture() {
 /** A guide, drawn (the guides are pages of text): its steps or what it checks, in the same window. Generic on
  *  purpose: no company is named on a card that previews every guide. */
 function guidePicture(kind) {
+  if (kind === "linkedin") return linkedinPicture();
   const company = kind === "company";
   const rows = company
     ? ["Online assessment", "Technical interview", "Managerial round", "HR round"]
@@ -80,6 +85,27 @@ function guidePicture(kind) {
       <text x="52" y="29" font-size="16" font-weight="500" fill="${INK.text}">${esc(r)}</text>
     </g>`).join("")}
     <text x="32" y="378" font-size="15" fill="${INK.soft}">Practice questions, with what a good answer covers</text>
+  </g>`;
+}
+
+/** LinkedIn AI, drawn in Orbit's own style (never LinkedIn's look or logo): a profile's score and its sections, the
+ *  sample profile's real scores from the public page (pages/linkedin/publicArt.tsx). */
+function linkedinPicture() {
+  const rows = [["Headline", 20, 20], ["About", 17, 20], ["Experience", 21, 21], ["Skills", 12, 15], ["Search keywords", 10, 10]];
+  const ring = 2 * Math.PI * 46;
+  return `<g transform="translate(700 120)">
+    <rect width="560" height="420" rx="18" fill="${INK.surface}" stroke="#FFFFFF" stroke-opacity="0.1"/>
+    <circle cx="88" cy="92" r="46" fill="none" stroke="#34D399" stroke-opacity="0.18" stroke-width="10"/>
+    <circle cx="88" cy="92" r="46" fill="none" stroke="#34D399" stroke-width="10" stroke-linecap="round" stroke-dasharray="${ring}" stroke-dashoffset="${ring * 0.06}" transform="rotate(-90 88 92)"/>
+    <text x="88" y="101" text-anchor="middle" font-size="28" font-weight="600" fill="${INK.text}">94</text>
+    <text x="164" y="84" font-size="22" font-weight="600" fill="${INK.text}">Strong</text>
+    <text x="164" y="112" font-size="16" fill="${INK.soft}">Profile score, for Data Analyst roles</text>
+    ${rows.map(([label, pts, max], i) => `<g transform="translate(32 ${170 + i * 46})">
+      <text y="0" font-size="15" fill="${INK.text}">${esc(label)}</text>
+      <text x="420" y="0" text-anchor="end" font-size="15" fill="${INK.soft}">${pts}/${max}</text>
+      <rect y="10" width="420" height="8" rx="4" fill="#FFFFFF" fill-opacity="0.08"/>
+      <rect y="10" width="${(420 * pts) / max}" height="8" rx="4" fill="${pts === max ? "#34D399" : DOT.orbit}"/>
+    </g>`).join("")}
   </g>`;
 }
 
@@ -137,7 +163,9 @@ function card([, chip, dot, head, sub, screen, crop]) {
 mkdirSync(join(WEB, "public", "og"), { recursive: true });
 const browser = await chromium.launch({ channel: "chrome" });
 const page = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
-for (const p of PAGES) {
+// `node render.mjs linkedin-ai mock-interview`: only those cards (the others stay as they were).
+const only = process.argv.slice(2);
+for (const p of PAGES.filter(([name]) => !only.length || only.includes(name))) {
   const [name, , , , , screen] = p;
   if (screen && !screen.startsWith("draw:") && !existsSync(join(REPO, "marketing", "screens", "src", `${screen}-dark.png`))) throw new Error(`capture the screens first: ${screen}-dark.png`);
   const svgFile = join(OG, `${name}.svg`);

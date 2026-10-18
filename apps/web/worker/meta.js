@@ -49,6 +49,11 @@ export const PAGE_META = {
     description:
       "In calls where AI help is allowed, Orbit hears the question and suggests an answer from your resume and the job post. In Chrome, Edge or on Windows.",
   },
+  "/linkedin-ai": {
+    title: "Orbit LinkedIn AI: score your profile, paste the fixes",
+    description:
+      "A score out of 100 for your LinkedIn profile, section by section, the fixes to paste in, and how a recruiter's search shows you. Not made by LinkedIn.",
+  },
   "/mock-interview": {
     title: "AI mock interviews with a scorecard and follow-ups | Orbit",
     description:
@@ -68,6 +73,9 @@ export const PAGE_IMAGES = {
   "/warmup": "/og/warmup.jpg",
   "/contact": "/og/contact.jpg",
   "/technical": "/og/technical.jpg",
+  "/interview-copilot": "/og/interview-copilot.jpg",
+  "/mock-interview": "/og/mock-interview.jpg",
+  "/linkedin-ai": "/og/linkedin-ai.jpg",
   "/companies": "/og/companies.jpg",
   "/roles": "/og/roles.jpg",
 };

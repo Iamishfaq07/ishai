@@ -14,7 +14,7 @@ export function desktopApp(): Node;
 export function webApp(app: { id?: string; name: string; path: string; description: string; category?: string }): Node;
 export function webPage(page: { path: string; name: string; description?: string; type?: string; extra?: Node }): Node;
 export function breadcrumbs(items: Array<[string, string]>): Node;
-export function faqPage(path: string, items: Array<[string, string]>): Node;
+export function faqPage(path: string, items: ReadonlyArray<readonly [string, string]>): Node;
 export function graph(...nodes: Array<Node | null | undefined | false>): { "@context": string; "@graph": Node[] };
 export function jsonLdText(doc: unknown): string;
 export function structuredDataFor(path: string, page?: { title?: string | null; description?: string | null }): { "@context": string; "@graph": Node[] } | null;

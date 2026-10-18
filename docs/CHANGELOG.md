@@ -1,5 +1,57 @@
 # Implementation log
 
+## Product pages that show the product working (2026-10-18)
+
+The public product pages, rebuilt on one section kit and in the depth of a good product page (DECISIONS D79;
+DESIGN.md "Product pages").
+
+- **The section kit** (`apps/web/src/marketing/kit/`): `HeroShowcase` (breadcrumbs, a two-tone headline, the
+  actions, what's free, the product playing on the right), `FactsBand`, `StepsWithUI`, `Carousel`, `ToolkitGrid`,
+  `ComparisonBlock`, `FaqBlock`, `CrossSell` and `FinalCta`, with the small pieces the renders are drawn from (rings
+  that count, bars that fill, keyword chips that light up, rows that tick, typed text) and their motion (`usePlay`,
+  `useClock`, `.kp-*` in site.css).
+- **Resume AI** (`/resume-ai`): the sample resume with two of its other templates behind it and the ATS score
+  counting from 82 to 98 as the check's four fixes are made (the real check's numbers, with Play again); the facts;
+  import, score and tailor, download, each with its render; all ten real templates in a carousel; Fix with AI with
+  the rewrite typed in and its changed words marked, the check part by part, the job post's keywords (11 of 15), a
+  cover letter and interview prep; "A chatbot gives you text. Resume AI gives you a resume."; the prices; the
+  questions; Jobs AI, Practice and the copilot next.
+- **Jobs AI** (`/jobs`): an example match whose score counts up and skills light, then the fit check; the server's
+  job counts (once there are enough) beside the four applicant-tracking systems and the 30 days a post is kept; the
+  search profile, the matches and the tracker as steps; the tracker with a card moving to Interviewing, where the jobs
+  come from, the Mission room, outreach typed in and interview day; the questions.
+- **LinkedIn AI** gets a page (`/linkedin-ai`, in the Products menu, the sitemap and llms.txt): the real score ring
+  and section bars climbing from 47 to 94 as five fixes go in (the audit's numbers); the fix card with Copy and Done
+  on LinkedIn; the keywords, the About, the free fixes and the score trail; the real recruiter-search preview, which
+  switches between the profile as LinkedIn has it and with the fixes.
+- **Interview copilot** (`/interview-copilot`): the live answer streaming in; the ten languages, the server's median
+  first word (else the two ways to listen), Shorter in one tap, no audio kept; the steps; sources from your
+  documents with a suggested detail marked, the languages, Shorter/Longer/Simpler, the real code block and the Windows
+  app's compact window; where AI help is allowed, as before.
+- **Practice** (`/mock-interview`): the video room with Saba asking, her bars rising and falling with the words and
+  the caption coming in word by word, then listening; the one-tap rounds and the interview guides counted from their
+  own lists; the review's ring and per-answer scores, a stronger way to say it, the answers due again, the story bank
+  and a company's style.
+- **Every product page**: a title within 60 characters and a description of 120 to 160, one h1, breadcrumbs, its own
+  link-preview card (new ones for the copilot, Practice and LinkedIn AI: `og/render.mjs` now renders only the cards
+  named), FAQ markup from the same words the page shows (`worker/faqs/`), and the phones' sticky bar.
+- **Motion**: Full plays each render once when it scrolls into view and rests on the final frame; Gentle, Off, data
+  saver and the built HTML show the final frame at once, the words and numbers finished.
+- **Fixes on the way**: the built pages drew a count-up's starting number (`useCountUp` in a server render: the
+  Resume AI page's HTML said 54 for a score of 98); the old Resume AI hero shifted the page as it measured itself (CLS
+  0.137 on a phone); a decorative resume no longer adds its section names to the page's headings.
+- **Speed** (Lighthouse mobile, PERFORMANCE.md): Resume AI 85 → 92 (CLS 0.137 → 0, LCP 2.96 → 2.82 s; the public
+  renders use Arial instead of downloading Inter, the templates behind the hero draw just after the first paint); the
+  copilot 96 → 94, Jobs AI 95 → 93, Practice 94 → 91 (their HTML is 17 to 18 kB gzipped instead of 10 to 12), LinkedIn
+  AI 93. The public pages have JavaScript budgets of their own; Home, the front page and Mock went up 1 kB for the
+  chunk names in the entry's preload map.
+- **Checked**: typecheck, lint and every unit suite (web 473, ui 550, desktop 68, extension 9); the build's prerender
+  (each product page finished in its HTML, every render `data-still`, the FAQ markup word for word); the whole
+  Playwright suite (37), with a new `product-pages.spec.ts` (sections, no sideways scroll at 360 and 390, Full, Gentle
+  and Off, the carousel, the FAQ, the menu and the search preview) and axe on every public page, `/linkedin-ai`
+  included, in both themes at 1280 and 390.
+- **Not built**: pages for Code AI, Offer AI and Learning AI (D79 says why).
+
 ## Saba is Aurora for everyone, and keeps her natural voice (2026-10-18)
 
 Saba's voice is Aurora at the normal pace for everyone, with no setting to change it; only the admin can still pick a

@@ -111,8 +111,19 @@ describe("the built public pages", () => {
       expect(description.length, file).toBeLessThanOrEqual(200);
       expect(canonical, file).toMatch(/^https:\/\/orbitanswer\.com\//);
       expect(tag(html, /<meta property="og:url" content="([^"]*)"/), file).toBe(canonical);
-      const data = JSON.stringify(jsonLd(html));
-      expect(data, file).not.toMatch(/aggregateRating|"Review"|FAQPage|"offers"/); // nothing we can't stand behind
+      const doc = jsonLd(html);
+      const data = JSON.stringify(doc);
+      expect(data, file).not.toMatch(/aggregateRating|"Review"|"offers"/); // nothing we can't stand behind
+      // FAQ markup only where the page shows those exact questions and answers (D67, D79).
+      const faq = doc["@graph"].find((n) => n["@type"] === "FAQPage") as { mainEntity: Array<{ name: string; acceptedAnswer: { text: string } }> } | undefined;
+      if (faq) {
+        const words = text(html);
+        expect(faq.mainEntity.length, file).toBeGreaterThan(0);
+        for (const q of faq.mainEntity) {
+          expect(words, `${file}: ${q.name}`).toContain(squash(q.name));
+          expect(words, `${file}: ${q.name}`).toContain(squash(q.acceptedAnswer.text));
+        }
+      }
       expect(html.indexOf('<div id="prerender"'), file).toBeLessThan(html.indexOf('<div id="root"></div>'));
     }
     const amazon = files.get("companies/amazon.html")!;
@@ -120,6 +131,31 @@ describe("the built public pages", () => {
     const crumbs = jsonLd(amazon)["@graph"].find((n) => n["@type"] === "BreadcrumbList") as { itemListElement: Array<{ name: string; item: string }> };
     expect(crumbs.itemListElement.map((i) => i.name)).toEqual(["Home", "Companies", "Amazon"]);
     expect(files.get("_prerender/warmup.html")).toContain("Interview Warmup");
+  });
+
+  it("builds every product page with the section kit, finished, for a reader without JavaScript (D79)", () => {
+    for (const path of ["/resume-ai", "/jobs", "/linkedin-ai", "/interview-copilot", "/mock-interview"]) {
+      const html = files.get(workerFile(path))!;
+      const page = html.slice(html.indexOf('<div id="prerender"'), html.indexOf('<div id="root">'));
+      const title = tag(html, /<title>([^<]*)<\/title>/);
+      const description = tag(html, /<meta name="description" content="([^"]*)"/).replace(/&#x27;|&#39;/g, "'");
+      expect(title.length, path).toBeLessThanOrEqual(60);
+      expect(description.length, path).toBeGreaterThanOrEqual(120);
+      expect(description.length, path).toBeLessThanOrEqual(160);
+      expect(page.match(/<h1[\s>]/g)?.length, path).toBe(1);
+      expect(page, path).toContain('aria-label="Breadcrumb"');
+      // Every animated render is in its final frame: data-still keeps the CSS parts where they end.
+      const renders = page.match(/<[a-z]+\s[^>]*\bclass="kp[ "][^>]*>/g) ?? [];
+      expect(renders.length, path).toBeGreaterThanOrEqual(5);
+      for (const r of renders) expect(r, path).toContain('data-still=""');
+      // The sections: facts, three steps, the toolkit, the questions (with their markup) and the last word.
+      const words = text(html);
+      for (const s of ["Step 1", "Step 2", "Step 3", "Questions people ask first"]) expect(words, `${path}: ${s}`).toContain(s);
+      for (const id of ["toolkit", "faq"]) expect(page, `${path}: #${id}`).toContain(`id="${id}"`);
+      expect(page, path).toMatch(/<dl[^>]*>[\s\S]*?<dt/); // the facts band
+      expect(jsonLd(html)["@graph"].map((n) => n["@type"]), path).toContain("FAQPage");
+      expect(words, path).not.toMatch(/deepseek|guaranteed/i);
+    }
   });
 
   it("keeps each guide page light", () => {

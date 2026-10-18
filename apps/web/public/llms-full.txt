@@ -41,7 +41,7 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 
 ### More tools in the same account
 
-- LinkedIn AI: scores a LinkedIn profile against the role the user wants, and what recruiters search for.
+- LinkedIn AI: scores a LinkedIn profile out of 100 against the role the user wants, section by section (headline, About, latest roles, skills, the keywords employers ask for, education, custom URL), writes the fixes to paste into LinkedIn and shows how a recruiter search result shows the profile. Read from LinkedIn's own PDF of the profile or pasted text; Orbit never signs in to LinkedIn, and LinkedIn AI is not made by or connected to LinkedIn. Page: https://orbitanswer.com/linkedin-ai
 - Code AI: coding-round practice by pattern. Write the code, run the tests, then get an interviewer's review of the code and the explanation.
 - Offer AI: what a job offer really pays each month (take-home after tax in India), how it compares with the market, and a plan to ask for more.
 - Learning AI: coding-round practice in Orbit, and free cybersecurity and AI lessons on KashSec, a partner site.
@@ -86,6 +86,7 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 - [Jobs AI](https://orbitanswer.com/jobs)
 - [Interview copilot](https://orbitanswer.com/interview-copilot)
 - [Mock interviews](https://orbitanswer.com/mock-interview)
+- [LinkedIn AI](https://orbitanswer.com/linkedin-ai)
 - [Pricing](https://orbitanswer.com/pricing)
 - [Free interview warm-up](https://orbitanswer.com/warmup)
 - [How Orbit works](https://orbitanswer.com/technical)

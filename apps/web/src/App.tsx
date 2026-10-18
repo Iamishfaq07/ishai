@@ -73,6 +73,7 @@ import {
   PricingPage,
   CopilotPublicPage,
   PracticePublicPage,
+  LinkedInPublicPage,
   CompaniesPage,
   CompanyPage,
   RolesPage,
@@ -240,6 +241,8 @@ export function App() {
       <Route path="/pricing" element={<Prerendered><PricingPage /></Prerendered>} />
       <Route path="/interview-copilot" element={<Prerendered><CopilotPublicPage /></Prerendered>} />
       <Route path="/mock-interview" element={<Prerendered><PracticePublicPage /></Prerendered>} />
+      {/* LinkedIn AI's product page (D79): the tool itself is /linkedin, signed in. */}
+      <Route path="/linkedin-ai" element={<Prerendered><LinkedInPublicPage /></Prerendered>} />
       {/* Public: the question bank, how companies interview and what interviews for a job test (pages/bank). Built
           as HTML too (src/prerender), like the pages above, so it reads without JavaScript. */}
       <Route path="/companies" element={<Prerendered><CompaniesPage /></Prerendered>} />

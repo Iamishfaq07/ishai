@@ -143,6 +143,8 @@ function Stacked({ title, dates, sub, side }: { title: string; dates: string; su
  */
 export function ResumePreview({ data, design, decorative = false }: { data: ResumeData; design: ResumeDesign; decorative?: boolean }) {
   const NameTag = decorative ? "p" : "h1";
+  // Inside another page (decorative) its section names are not that page's headings either.
+  const SectionTag = decorative ? "p" : "h2";
   const space = design.template === "campus" ? { ...SPACE[design.spacing], ...CAMPUS_GAPS[design.spacing] } : SPACE[design.spacing];
   const font = FONTS.find((f) => f.id === design.font)?.stack ?? FONTS[0]!.stack;
   const page = PAGE_MM[design.page];
@@ -170,82 +172,82 @@ export function ResumePreview({ data, design, decorative = false }: { data: Resu
   const heading = (label: string): ReactNode => {
     if (t === "modern") {
       return (
-        <h2 style={{ color: accent, fontSize: "1.05em", marginBottom: space.item }} className="flex items-center gap-2 font-bold uppercase tracking-wide">
+        <SectionTag style={{ color: accent, fontSize: "1.05em", marginBottom: space.item }} className="flex items-center gap-2 font-bold uppercase tracking-wide">
           <span style={{ background: accent }} className="inline-block h-[1.1em] w-[3px] rounded" />
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     if (t === "compact") {
       return (
-        <h2 style={{ color: accent, fontSize: "0.95em", marginBottom: "3pt" }} className="font-bold uppercase tracking-wider">
+        <SectionTag style={{ color: accent, fontSize: "0.95em", marginBottom: "3pt" }} className="font-bold uppercase tracking-wider">
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     if (t === "elegant") {
       return (
-        <h2
+        <SectionTag
           style={{ color: accent, fontFamily: serif, fontSize: "1.05em", letterSpacing: "0.14em", borderBottom: `3px double ${accent}`, marginBottom: space.item, paddingBottom: "2pt" }}
           className="text-center font-semibold uppercase"
         >
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     if (t === "minimal") {
       return (
-        <h2 style={{ color: "#71717a", fontSize: "0.85em", letterSpacing: "0.18em", marginBottom: space.item }} className="font-semibold uppercase">
+        <SectionTag style={{ color: "#71717a", fontSize: "0.85em", letterSpacing: "0.18em", marginBottom: space.item }} className="font-semibold uppercase">
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     if (t === "bold") {
       return (
-        <h2 style={{ color: accent, fontSize: "1.1em", marginBottom: space.item }} className="font-extrabold uppercase tracking-wide">
+        <SectionTag style={{ color: accent, fontSize: "1.1em", marginBottom: space.item }} className="font-extrabold uppercase tracking-wide">
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     if (t === "executive") {
       return (
-        <h2
+        <SectionTag
           style={{ background: tint(accent, 0.9), borderLeft: `3px solid ${accent}`, color: "#18181b", fontSize: "1em", marginBottom: space.item, padding: "1.5pt 5pt" }}
           className="font-bold uppercase tracking-wider"
         >
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     if (t === "campus") {
       // Small capitals over a hairline, as in the LaTeX resumes recruiters know ("Jake's resume"), in the body's font
       // (the app's own h1/h2 style would set them in Space Grotesk).
       return (
-        <h2
+        <SectionTag
           style={{ color: accent, fontFamily: font, fontVariant: "small-caps", fontSize: "1.2em", letterSpacing: "0.03em", lineHeight: 1.2, borderBottom: `0.75pt solid ${accent}`, marginBottom: "3pt", paddingBottom: "0.5pt" }}
           className="font-semibold"
         >
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     if (t === "harvard") {
       return (
-        <h2
+        <SectionTag
           style={{ color: accent, fontFamily: titleFont, fontSize: "1em", letterSpacing: "0.08em", borderBottom: `0.75pt solid ${accent}`, marginBottom: space.item, paddingBottom: "1.5pt" }}
           className="text-center font-bold uppercase"
         >
           {label}
-        </h2>
+        </SectionTag>
       );
     }
     return (
-      <h2
+      <SectionTag
         style={{ color: accent, borderColor: accent, fontSize: "1em", marginBottom: space.item, paddingBottom: "2pt" }}
         className="border-b font-bold uppercase tracking-wider"
       >
         {label}
-      </h2>
+      </SectionTag>
     );
   };
 
