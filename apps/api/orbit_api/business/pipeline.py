@@ -15,16 +15,18 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import jobs as job_queue
+from orbit_api import ratelimit
 from orbit_api.business import emails, rules
 from orbit_api.business.access import (
     CompanyCtx,
     Ctx,
     application_for,
     audit,
+    delete_application_rows,
     job_for,
     sees_application,
     timeline,
@@ -49,6 +51,10 @@ from orbit_api.providers.email import OutgoingEmail, send_safely
 router = APIRouter(prefix="/v1/business/companies/{company_id}", tags=["business"])
 
 MAX_BULK = 200
+_rerank_app = ratelimit.SlidingWindow(rate_per_s=1 / 600, burst=1)  # one re-rank per application per 10 minutes
+_rerank_company = ratelimit.SlidingWindow(rate_per_s=200 / 86400, burst=200)  # 200 a day per company
+WAITING_FOR_CONFIRMATION = ("Waiting for the applicant to confirm their email. Emails from your team go out once "
+                            "they open the link in Orbit's confirmation email.")
 
 
 def now() -> datetime:
@@ -191,9 +197,29 @@ def company_ranking(ranking: dict[str, Any] | None) -> dict[str, Any] | None:
     return {k: v for k, v in ranking.items() if k != "model_version"}
 
 
+def _blind(app: BizApplication, text: str) -> str:
+    """Text about the applicant with their name, email, phone and links hidden (blind review)."""
+    return rules.blind_text(text, app.name, app.email, app.phone)
+
+
+def _blind_parsed(app: BizApplication, parsed: dict[str, Any]) -> dict[str, Any]:
+    def walk(v: Any) -> Any:
+        if isinstance(v, str):
+            return _blind(app, v)
+        if isinstance(v, list):
+            return [walk(x) for x in v]
+        if isinstance(v, dict):
+            return {k: walk(x) for k, x in v.items()}
+        return v
+
+    return {k: walk(v) for k, v in parsed.items()}
+
+
 def _item(app: BizApplication, blind: bool) -> ListItem:
     met, total, label = match_counts(app.ranking)
     headline = (app.parsed or {}).get("headline") if app.parsed else None
+    if blind and isinstance(headline, str):
+        headline = _blind(app, headline)
     return ListItem(
         id=app.id, reference=app.reference, name=rules.candidate_label(app.reference) if blind else app.name,
         email=None if blind else app.email, headline=headline, stage_id=app.stage_id, status=app.status,
@@ -261,8 +287,11 @@ _EVENT_TEXT = {
 }
 
 
-def _event_text(e: BizEvent, stages: dict[str, str]) -> str:
+def _event_text(e: BizEvent, stages: dict[str, str], app: BizApplication | None = None, blind: bool = False) -> str:
     data = {**(e.data or {})}
+    if blind and e.kind == "email" and app is not None:
+        # The subject as the template was written ({{candidate_name}}, not the name), or masked for older events.
+        data["subject"] = data.get("subject_template") or _blind(app, str(data.get("subject", "")))
     if "to" in data:
         data["to"] = stages.get(str(data["to"]), str(data["to"]))
     if "tags" in data and isinstance(data["tags"], list):
@@ -285,20 +314,25 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
     parsed = None
     if app.parsed:
         parsed = {k: app.parsed.get(k) for k in ("headline", "total_years", "skills", "experience", "education")}
+        if blind:
+            parsed = _blind_parsed(app, parsed)
+    answers = app.answers or []
+    if blind:
+        answers = [{**a, "answer": _blind(app, str(a.get("answer", "")))} for a in answers]
     base = _item(app, blind).model_dump()
     return Detail(
         **base, job_id=job.id, job_title=job.title, phone=None if blind else app.phone,
         location=None if blind else app.location,
-        resume_text=rules.blind_text(app.resume_text, app.name) if blind else app.resume_text,
+        resume_text=_blind(app, app.resume_text) if blind else app.resume_text,
         resume_filename=None if blind else app.resume_filename, resume_source=app.resume_source, parsed=parsed,
-        answers=app.answers or [], ranking=company_ranking(app.ranking),
+        answers=answers, ranking=company_ranking(app.ranking),
         notes=[NoteOut(id=n.id, author=n.author_name, author_id=n.author_id, body=n.body, mentions=n.mentions or [],
                        created_at=_aware(n.created_at) or now()) for n in notes],
         scorecards=[ScorecardOut(id=c.id, stage_id=c.stage_id, author=c.author_name, author_id=c.author_id,
                                  ratings=[ScoreItem(**r) for r in c.ratings or []], notes=c.notes,
                                  recommendation=c.recommendation, created_at=_aware(c.created_at) or now())
                     for c in cards],
-        timeline=[EventOut(id=e.id, kind=e.kind, text=_event_text(e, stage_names), actor=e.actor_name,
+        timeline=[EventOut(id=e.id, kind=e.kind, text=_event_text(e, stage_names, app, blind), actor=e.actor_name,
                            created_at=_aware(e.created_at) or now()) for e in events],
         interviewers=app.interviewers or [],
         interview=InterviewOut(id=iv.id, slots=iv.slots, duration_min=iv.duration_min, location=iv.location,
@@ -337,16 +371,36 @@ def _responded(app: BizApplication) -> None:
         app.first_response_at = now()
 
 
+def confirmed(app: BizApplication) -> bool:
+    """The applicant's address is theirs: they opened Orbit's confirmation link, or applied signed in (their Orbit
+    email is verified). Until then nothing a company writes is sent to it (D82: no relay through the apply form)."""
+    return app.email_confirmed_at is not None
+
+
+def _refuse_unconfirmed(app: BizApplication) -> None:
+    if not confirmed(app):
+        raise HTTPException(409, detail={"code": "biz_email_unconfirmed", "message": WAITING_FOR_CONFIRMATION})
+
+
 async def _send_template(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJob, kind: str, *,
                          stage: str = "", subject: str | None = None, body: str | None = None,
-                         attachments: tuple[tuple[str, str, bytes], ...] = ()) -> str:
+                         attachments: tuple[tuple[str, str, bytes], ...] = ()) -> tuple[str, str]:
+    """Sends a company email (a template, or the member's own words) to a confirmed applicant: (the subject as sent,
+    the subject as written, for blind review's timeline)."""
+    if not confirmed(app):
+        raise emails.EmailNotConfirmed(app.id)
     t_subject, t_body, _ = await emails.template(db, ctx.company.id, kind)
-    values = emails.values(ctx.company, job, app, token=rules.status_token(app.id), stage=stage,
+    values = emails.values(ctx.company, job, app, token=emails.status_token_for(app), stage=stage,
                            recruiter=ctx.actor_name)
-    final_subject = emails.render(subject or t_subject, values)
+    written = rules.one_line(subject or t_subject)
+    final_subject = rules.one_line(emails.render(written, values))
     await emails.send_to_applicant(ctx.company, app, final_subject, emails.render(body or t_body, values),
                                    ctx.user.email, attachments)
-    return final_subject
+    return final_subject, written
+
+
+def _emailed(db: AsyncSession, ctx: Ctx, app: BizApplication, sent: tuple[str, str]) -> None:
+    timeline(db, app, "email", ctx.user, subject=sent[0], subject_template=sent[1])
 
 
 class MoveIn(BaseModel):
@@ -358,6 +412,8 @@ class MoveIn(BaseModel):
 class BulkOut(BaseModel):
     moved: int
     items: list[ListItem]
+    # Emails not sent because the applicant hasn't confirmed their address yet (the UI says they're waiting).
+    emails_waiting: int = 0
 
 
 @router.post("/applications/move", response_model=BulkOut)
@@ -391,13 +447,17 @@ async def move(body: MoveIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depend
         if body.notify and kind not in {"rejected"}:
             to_send.append((app, job, stage["name"]))
     await db.commit()
+    waiting = 0
     for app, job, name in to_send:
+        if not confirmed(app):
+            waiting += 1
+            continue
         label = rules.CANDIDATE_STAGE.get(rules.stage_kind(job.stages, app.stage_id), ("", ""))[0]
-        subject = await _send_template(db, ctx, app, job, "stage", stage=label or name)
-        timeline(db, app, "email", ctx.user, subject=subject)
+        _emailed(db, ctx, app, await _send_template(db, ctx, app, job, "stage", stage=label or name))
     if to_send:
         await db.commit()
-    return BulkOut(moved=len(pairs), items=[_item(a, _is_blind(ctx, False)) for a, _ in pairs])
+    return BulkOut(moved=len(pairs), items=[_item(a, _is_blind(ctx, False)) for a, _ in pairs],
+                   emails_waiting=waiting)
 
 
 class RejectIn(BaseModel):
@@ -427,12 +487,17 @@ async def reject(body: RejectIn, ctx: CompanyCtx, db: Annotated[AsyncSession, De
         await sync_tracker_status(db, app, "rejected")
         done.append((app, job))
     await db.commit()
+    waiting = 0
     if body.send_email:
         for app, job in done:
-            subject = await _send_template(db, ctx, app, job, "rejection", subject=body.subject, body=body.body)
-            timeline(db, app, "email", ctx.user, subject=subject)
+            if not confirmed(app):
+                waiting += 1
+                continue
+            _emailed(db, ctx, app, await _send_template(db, ctx, app, job, "rejection", subject=body.subject,
+                                                        body=body.body))
         await db.commit()
-    return BulkOut(moved=len(done), items=[_item(a, _is_blind(ctx, False)) for a, _ in pairs])
+    return BulkOut(moved=len(done), items=[_item(a, _is_blind(ctx, False)) for a, _ in pairs],
+                   emails_waiting=waiting)
 
 
 @router.post("/applications/{application_id}/unreject", response_model=Detail)
@@ -581,11 +646,12 @@ async def email_applicant(application_id: str, body: EmailIn, ctx: CompanyCtx,
     app, job = await application_for(db, ctx, application_id)
     if body.kind is None and not (body.subject and body.body):
         raise HTTPException(422, "Choose a template or write a subject and message.")
+    _refuse_unconfirmed(app)
     label = rules.CANDIDATE_STAGE.get(rules.stage_kind(job.stages, app.stage_id), ("", ""))[0]
-    subject = await _send_template(db, ctx, app, job, body.kind or "stage", stage=label, subject=body.subject,
-                                   body=body.body)
+    sent = await _send_template(db, ctx, app, job, body.kind or "stage", stage=label, subject=body.subject,
+                                body=body.body)
     _responded(app)
-    timeline(db, app, "email", ctx.user, subject=subject)
+    _emailed(db, ctx, app, sent)
     audit(db, ctx.company.id, ctx.user, "application.emailed", app.reference, job_id=job.id)
     await db.commit()
     return await detail_out(db, ctx, app, job, _is_blind(ctx, False))
@@ -606,6 +672,7 @@ async def offer_slots(application_id: str, body: SlotsIn, ctx: CompanyCtx,
     app, job = await application_for(db, ctx, application_id)
     if app.status != "active":
         raise HTTPException(409, "Only an applicant in the pipeline can be invited.")
+    _refuse_unconfirmed(app)
     slots = sorted({(s if s.tzinfo else s.replace(tzinfo=UTC)).astimezone(UTC) for s in body.slots})
     if len(slots) < 3 or slots[0] <= now() + timedelta(minutes=30):
         raise HTTPException(422, "Offer 3 to 5 different times, all at least 30 minutes from now.")
@@ -617,9 +684,8 @@ async def offer_slots(application_id: str, body: SlotsIn, ctx: CompanyCtx,
     timeline(db, app, "interview_slots", ctx.user, count=len(slots))
     audit(db, ctx.company.id, ctx.user, "application.interview_offered", app.reference, job_id=job.id)
     await db.commit()
-    subject = await _send_template(db, ctx, app, job, "interview", body=(
-        None if not body.message else body.message + "\n\nPick a time here:\n{{status_link}}"))
-    timeline(db, app, "email", ctx.user, subject=subject)
+    _emailed(db, ctx, app, await _send_template(db, ctx, app, job, "interview", body=(
+        None if not body.message else body.message + "\n\nPick a time here:\n{{status_link}}")))
     await db.commit()
     return await detail_out(db, ctx, app, job, _is_blind(ctx, False))
 
@@ -627,7 +693,12 @@ async def offer_slots(application_id: str, body: SlotsIn, ctx: CompanyCtx,
 @router.post("/applications/{application_id}/rerank", response_model=Detail)
 async def rerank(application_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> Detail:
     ctx.require("move_applicants")
+    ctx.writable()
     app, job = await application_for(db, ctx, application_id)
+    ratelimit.check(_rerank_app, f"biz-rerank:{app.id}", "This applicant was ranked again a moment ago. Try again "
+                    "in 10 minutes.")
+    ratelimit.check(_rerank_company, f"biz-rerank-company:{ctx.company.id}", "That's today's limit for ranking "
+                    "applicants again. Try tomorrow.")
     app.ranking_status = "pending"
     await job_queue.enqueue(db, RANK_KIND, {"application_id": app.id}, dedupe_key=f"{RANK_KIND}:{app.id}")
     await db.commit()
@@ -635,13 +706,6 @@ async def rerank(application_id: str, ctx: CompanyCtx, db: Annotated[AsyncSessio
 
 
 # ---- data controls -------------------------------------------------------------------------------------------------
-
-
-async def delete_application_rows(db: AsyncSession, app_id: str) -> None:
-    """Everything about one applicant (the timeline, notes, scorecards, interviews, mentions go with it)."""
-    for model in (BizNotification, BizNote, BizScorecard, BizEvent, BizInterview):
-        await db.execute(delete(model).where(model.application_id == app_id))
-    await db.execute(delete(BizApplication).where(BizApplication.id == app_id))
 
 
 @router.delete("/applications/{application_id}", status_code=204)

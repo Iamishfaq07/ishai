@@ -9,6 +9,7 @@ import type {
   BizApplyPreview,
   BizApplyResult,
   BizAuditEntry,
+  BizBulkResult,
   BizCompany,
   BizCompanyAnalytics,
   BizCompanyCreate,
@@ -107,8 +108,8 @@ export const biz = {
     api.call<BizApplicationList>(`${c(cid)}/jobs/${e(jid)}/applications${qs({ ...q, reveal: q.reveal || undefined })}`),
   application: (cid: string, aid: string, reveal = false) =>
     api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}${qs({ reveal: reveal || undefined })}`),
-  move: (cid: string, req: BizMoveRequest) => api.call<{ moved: number }>(`${c(cid)}/applications/move`, post(req)),
-  reject: (cid: string, req: BizRejectRequest) => api.call<{ rejected: number }>(`${c(cid)}/applications/reject`, post(req)),
+  move: (cid: string, req: BizMoveRequest) => api.call<BizBulkResult>(`${c(cid)}/applications/move`, post(req)),
+  reject: (cid: string, req: BizRejectRequest) => api.call<BizBulkResult>(`${c(cid)}/applications/reject`, post(req)),
   unreject: (cid: string, aid: string) => api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}/unreject`, post()),
   updateApplication: (cid: string, aid: string, input: { tags?: string[]; interviewers?: string[] }) =>
     api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}`, patch(input)),

@@ -298,7 +298,8 @@ Not part of the live socket. TypeScript DTOs: `packages/types/src/business.ts`; 
 `apps/api/orbit_api/business/`. A company is its own tenant on the same Orbit login. Every company route takes the
 company id in the path and answers **404** (never 403) to anyone who isn't a member, so a company's existence isn't
 confirmed to outsiders; a member whose role can't do something gets **403** `{"detail": {"code": "biz_forbidden"}}`.
-A suspended company answers writes with **403** `biz_suspended`. Plan limits answer **402**
+A suspended company answers every write (verification, logo, members and invites, plan requests, templates, jobs,
+applicants, re-ranking) with **403** `biz_suspended`; reads still work. Plan limits answer **402**
 `{"detail": {"code": "biz_limit", "limit": "jobs"|"seats", "plan": ...}}`.
 
 **Roles.** owner (everything, plan, transfer) · admin (everything but plan and transfer) · recruiter (jobs, all
@@ -311,7 +312,10 @@ notes, scorecards) · interviewer (only applications whose `interviewers` includ
 - `GET /companies/{cid}/verification` → BizVerification. `POST …/verification/account` (the member's own verified
   email is at the domain), `POST …/verification/email {email}` (sends a 6-digit code to a work address at the
   domain), `POST …/verification/email/confirm {code}`, `POST …/verification/dns` (looks up the TXT record
-  `orbit-verify=<token>` on the domain or `_orbit-verify.<domain>`). Free-mail and hosting domains can't verify.
+  `orbit-verify=<token>` on the domain or `_orbit-verify.<domain>`). A company's `domain` is the registrable domain
+  of its website (Public Suffix List: `jobs.acme.co.in` → `acme.co.in`); a bare public suffix (`co.in`, `github.io`)
+  is a 422. Free-mail, throwaway-mail and hosting domains can't verify. The account and email-code routes need an
+  address at the domain itself (`a@acme.com`); a subdomain mailbox (`a@eng.acme.com`) verifies by DNS only.
   Unverified companies can draft jobs; publishing answers **403** `biz_unverified`.
 - Members: `GET …/members` → BizMembers · `POST …/invites {email, role}` · `DELETE …/invites/{id}` ·
   `PATCH …/members/{mid} {role}` · `DELETE …/members/{mid}` · `POST …/transfer {member_id}` (owner) ·
@@ -323,10 +327,13 @@ notes, scorecards) · interviewer (only applications whose `interviewers` includ
 - Applications: `GET …/jobs/{jid}/applications?stage=&q=&tag=&sort=score|applied|name&reveal=` →
   BizApplicationList · `GET …/applications/{aid}?reveal=` → BizApplicationDetail · `POST …/applications/move
   {ids, stage_id, notify}` · `POST …/applications/reject {ids, send_email, subject?, body?}` ·
-  `POST …/applications/{aid}/unreject` · `PATCH …/applications/{aid} {tags?, interviewers?}` ·
+  → BizBulkResult `{moved, items, emails_waiting}` (move and reject; `emails_waiting`: emails not sent because
+  those applicants haven't confirmed their address) · `POST …/applications/{aid}/unreject` · `PATCH …/applications/{aid} {tags?, interviewers?}` ·
   `POST …/applications/{aid}/notes {body}` (`@name` or `@email` mentions notify members) ·
   `POST …/applications/{aid}/scorecards` BizScorecardInput · `POST …/applications/{aid}/email {kind|subject+body}` ·
-  `POST …/applications/{aid}/interview` BizSlotsInput · `POST …/applications/{aid}/rerank` ·
+  `POST …/applications/{aid}/interview` BizSlotsInput (email and interview answer **409** `biz_email_unconfirmed`
+  until the applicant's address is confirmed) · `POST …/applications/{aid}/rerank` (429 more than once per applicant
+  per 10 minutes or 200 a day per company) ·
   `DELETE …/applications/{aid}` (delete-on-request; the audit log keeps the reference only) ·
   `GET …/jobs/{jid}/export.csv`. There is no automatic rejection: knock-out failures are flagged and sorted last.
 - `GET|PUT …/templates[/{kind}]` (BizTemplate) · `GET …/analytics` → BizCompanyAnalytics ·
@@ -339,10 +346,17 @@ into the application (the company never reads the Orbit resume itself) and the j
 tracker (`source: "orbit_direct"`, listing id `biz:<job_id>`), moved as the company moves it. Signed out:
 `POST /v1/public/business/jobs/{job_id}/apply` multipart (`name, email, phone, answers` JSON, `consent`,
 `notice_version`, `source`, `file` PDF/DOCX ≤ 5 MB, `captcha_token`, honeypot `website`); a confirmation email
-carries the status link. Both need `consent: true` and the current `notice_version` (recorded with the time). One
-application per email per job: a repeat answers `200 {"status": "already_applied"}`.
+carries the status link. Both need `consent: true` and the current `notice_version` (recorded with the time, and
+the retention in effect then). One application per email per job: a repeat answers `200 {"status":
+"already_applied"}`, except that a signed-out application whose address was never confirmed is replaced by the next
+one (signed out or one click) from that address. Until an applicant's address is confirmed (the status link opened,
+or a one-click application from a verified Orbit email) only Orbit's fixed confirmation email goes to it: no company
+template, custom email, stage or rejection email, or interview invite. The status link's token is random per
+application (only its SHA-256 and a sealed copy are stored).
 
-**Public** (`/v1/public/business`, no sign-in, cacheable): `GET /companies/{slug}` → BizPublicCompany ·
+**Public** (`/v1/public/business`, no sign-in, cacheable): `GET /companies/{slug}` → BizPublicCompany
+(`verified_domain`: the proven domain for the "Verified: acme.com" badge, null while unverified; also in
+BizPublicJob's `company`) ·
 `GET /companies/{slug}/jobs/{job_slug}` → BizPublicJob (with `json_ld` while open) · `GET /companies/{slug}/logo` ·
 `GET /sitemap` → `[{loc, lastmod}]` · `POST /jobs/{job_id}/report {reason, details, email?}` ·
 `GET /applications/{token}` → BizApplicationStatus · `POST /applications/{token}/confirm` ·

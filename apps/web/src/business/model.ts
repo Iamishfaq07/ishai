@@ -353,6 +353,19 @@ export function resumeFileProblem(file: Pick<File, "name" | "size">): string | n
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** What the team sees while an applicant's address isn't confirmed: company emails wait until it is (D82). */
+export const WAITING_FOR_CONFIRMATION =
+  "Waiting for the applicant to confirm their email. Emails and interview invitations from your team go out once they open the link in Orbit's confirmation email.";
+
+/** The toast after a bulk reject: how many, and how many emails are waiting for a confirmed address. */
+export function rejectedMessage(moved: number, sendEmail: boolean, waiting: number): string {
+  const who = moved === 1 ? "1 applicant" : `${moved} applicants`;
+  if (!sendEmail) return `Rejected ${who}`;
+  if (waiting === 0) return `Rejected ${who} and emailed`;
+  if (waiting >= moved) return `Rejected ${who}. No email yet: waiting for ${waiting === 1 ? "the applicant" : "the applicants"} to confirm their email`;
+  return `Rejected ${who}, emailed ${moved - waiting}. ${waiting} waiting for the applicant to confirm their email`;
+}
+
 /** A website as typed ("acme.com", "https://www.acme.com/about") → its domain, or null. */
 export function domainOf(website: string): string | null {
   const w = website.trim();
