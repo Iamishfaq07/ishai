@@ -115,6 +115,8 @@ export const biz = {
   move: (cid: string, req: BizMoveRequest) => api.call<BizBulkResult>(`${c(cid)}/applications/move`, post(req)),
   reject: (cid: string, req: BizRejectRequest) => api.call<BizBulkResult>(`${c(cid)}/applications/reject`, post(req)),
   unreject: (cid: string, aid: string) => api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}/unreject`, post()),
+  practiceBrief: (cid: string, aid: string) => api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}/practice-brief`, post()),
+  generateKit: (cid: string, jid: string) => api.call<BizJob>(`${c(cid)}/jobs/${e(jid)}/generate-kit`, post()),
   updateApplication: (cid: string, aid: string, input: { tags?: string[]; interviewers?: string[] }) =>
     api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}`, patch(input)),
   addNote: (cid: string, aid: string, text: string) => api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}/notes`, post({ body: text })),

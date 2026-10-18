@@ -227,6 +227,8 @@ export interface BizJobInput {
   must_haves: string[];
   nice_to_haves: string[];
   questions: BizQuestion[];
+  /** Questions the team uses in the interview. Not shown on the public job page. */
+  interview_kit: Array<{ id: string; text: string }>;
   /** Editable per job; must keep at least one "applied" and one "rejected" stage. */
   stages?: BizStage[];
   /** User ids of members on the hiring team (hiring managers see only these jobs). */
@@ -409,6 +411,8 @@ export interface BizApplicationListItem {
   /** Keyword matching alone (the AI model was unavailable): shown as "basic match". */
   basic_match: boolean;
   deletion_requested: boolean;
+  /** Why they were rejected, from a fixed list. Null until someone rejects them. */
+  rejection_reason?: string | null;
 }
 
 /** GET /v1/business/companies/{cid}/jobs/{jid}/applications */
@@ -513,6 +517,8 @@ export interface BizMoveRequest {
   stage_id: string;
   /** Send the "stage changed" email template (optional). */
   notify?: boolean;
+  /** An owner or admin may hire without the scorecards. */
+  force?: boolean;
 }
 
 export interface BizRejectRequest {
@@ -521,6 +527,8 @@ export interface BizRejectRequest {
   /** Overrides the rejection template for this send. */
   subject?: string;
   body?: string;
+  /** not_qualified | experience | role_fit | compensation | timing | withdrew | other */
+  reason?: string;
 }
 
 /** POST .../applications/move and .../applications/reject */
@@ -587,6 +595,7 @@ export interface BizJobAnalytics {
   title: string;
   applicants: number;
   by_source: Record<string, number>;
+  by_rejection_reason: Record<string, number>;
   /** How many reached each stage (in the job's order), and as a share of applicants. */
   funnel: Array<{ stage_id: string; name: string; reached: number; rate: number }>;
   /** Hours from applying to the first human action (a move, an email, a rejection); null with none yet. */
@@ -601,6 +610,7 @@ export interface BizCompanyAnalytics {
   hired: number;
   median_first_response_hours: number | null;
   by_source: Record<string, number>;
+  by_rejection_reason: Record<string, number>;
   jobs: BizJobAnalytics[];
   /** Applicants per day, last 30 days. */
   daily: Array<{ day: string; count: number }>;

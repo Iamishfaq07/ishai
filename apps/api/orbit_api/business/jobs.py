@@ -65,6 +65,11 @@ class Question(BaseModel):
     knockout: Knockout | None = None
 
 
+class KitItem(BaseModel):
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex[:8], min_length=1, max_length=16)
+    text: str = Field(min_length=1, max_length=300)
+
+
 class Stage(BaseModel):
     id: str = Field(min_length=1, max_length=16, pattern=r"^[a-z0-9_-]+$")
     name: str = Field(min_length=1, max_length=40)
@@ -92,6 +97,7 @@ class JobIn(BaseModel):
     must_haves: list[str] = Field(default_factory=list, max_length=15)
     nice_to_haves: list[str] = Field(default_factory=list, max_length=15)
     questions: list[Question] = Field(default_factory=list, max_length=MAX_QUESTIONS)
+    interview_kit: list[KitItem] = Field(default_factory=list, max_length=12)
     stages: list[Stage] | None = Field(None, max_length=MAX_STAGES)
     hiring_team: list[str] | None = Field(None, max_length=50)
     valid_through: datetime | None = None
@@ -136,6 +142,7 @@ class JobOut(BaseModel):
     must_haves: list[str]
     nice_to_haves: list[str]
     questions: list[dict[str, Any]]
+    interview_kit: list[dict[str, Any]]
     stages: list[dict[str, Any]]
     hiring_team: list[str]
     valid_through: datetime | None
@@ -190,7 +197,7 @@ async def job_out(db: AsyncSession, company: BizCompany, job: BizJob) -> JobOut:
         experience=job.experience, salary_min=job.salary_min, salary_max=job.salary_max,
         salary_currency=job.salary_currency, salary_period=job.salary_period, show_salary=job.show_salary,
         must_haves=job.must_haves or [], nice_to_haves=job.nice_to_haves or [], questions=job.questions or [],
-        stages=job.stages or [], hiring_team=job.hiring_team or [], valid_through=_aware(job.valid_through),
+        interview_kit=job.interview_kit or [], stages=job.stages or [], hiring_team=job.hiring_team or [], valid_through=_aware(job.valid_through),
         published_at=_aware(job.published_at), closed_at=_aware(job.closed_at),
         created_at=_aware(job.created_at) or now(), updated_at=_aware(job.updated_at) or now(),
         public_url=public_url(company, job), taken_down_reason=job.taken_down_reason, counts=await _counts(db, job))
@@ -273,6 +280,15 @@ async def _apply_fields(db: AsyncSession, ctx: Ctx, job: BizJob, body: JobIn, fi
         job.nice_to_haves = _clean_list(body.nice_to_haves, 15, 160)
     if "questions" in fields:
         job.questions = _check_questions(body.questions)
+    if "interview_kit" in fields:
+        seen: set[str] = set()
+        kit = []
+        for item in body.interview_kit:
+            if item.id in seen:
+                raise HTTPException(422, "Each interview question needs its own id.")
+            seen.add(item.id)
+            kit.append({"id": item.id, "text": rules.one_line(item.text)[:300]})
+        job.interview_kit = kit
     if "stages" in fields and body.stages is not None:
         new = _check_stages(body.stages)
         kept = {s["id"] for s in new}
@@ -319,7 +335,7 @@ async def create_job(body: JobIn, ctx: CompanyCtx, db: Annotated[AsyncSession, D
     ctx.writable()
     title = rules.one_line(body.title)
     fields = set(body.model_fields_set) | {"description_html", "locations", "must_haves", "nice_to_haves",
-                                            "questions"}
+                                            "questions", "interview_kit"}
     slug = await _unique_job_slug(db, ctx.company.id, title)
     for attempt in range(SLUG_TRIES):
         job = BizJob(company_id=ctx.company.id, slug=slug, title=title, status="draft", created_by=ctx.user.id,
@@ -466,6 +482,27 @@ class DraftOut(BaseModel):
     inclusive_language_notes: list[str]
     source: Literal["ai", "template"]
 
+
+
+@router.post("/companies/{company_id}/jobs/{job_id}/generate-kit", response_model=JobOut)
+async def generate_interview_kit(
+    job_id: str,
+    ctx: CompanyCtx,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> JobOut:
+    """Generate structured interview questions from the job's must-haves and title. Human reviews and edits."""
+    ctx.require("manage_jobs")
+    ctx.writable()
+    job = await job_for(db, ctx, job_id)
+    ai = get_business_ai()
+    try:
+        kit = await ai.generate_interview_kit(job, count=6)
+    except Exception:
+        kit = [{"id": "k1", "text": f"Walk me through how you would approach a typical challenge in {job.title}."}]
+    job.interview_kit = kit
+    audit(db, ctx.company.id, ctx.user, "job.kit_generated", job.title, job_id=job.id)
+    await db.commit()
+    return await job_out(db, ctx.company, job)
 
 @router.post("/companies/{company_id}/jobs/draft", response_model=DraftOut)
 async def draft(body: BriefIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> DraftOut:

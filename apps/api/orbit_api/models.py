@@ -1283,6 +1283,8 @@ class BizJob(TimestampMixin, Base):
     must_haves: Mapped[list[str]] = mapped_column(JSON, default=list)
     nice_to_haves: Mapped[list[str]] = mapped_column(JSON, default=list)
     questions: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    # Questions the team uses in the interview. Not shown on the public job page. Sent only if the team emails a practice brief.
+    interview_kit: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     stages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
     hiring_team: Mapped[list[str]] = mapped_column(JSON, default=list)  # user ids
     status: Mapped[str] = mapped_column(String(8), default="draft")  # draft | open | paused | closed
@@ -1333,6 +1335,8 @@ class BizApplication(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(10), default="active")  # active | rejected | hired
     stage_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Why the team rejected them, from a fixed list. Null until someone rejects, cleared if they are moved back.
+    rejection_reason: Mapped[str | None] = mapped_column(String(32))
     first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     interviewers: Mapped[list[str]] = mapped_column(JSON, default=list)  # user ids

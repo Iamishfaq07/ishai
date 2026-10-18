@@ -79,6 +79,20 @@ export const DEFAULT_STAGES: BizStage[] = [
   { id: "rejected", name: "Rejected", kind: "rejected" },
 ];
 
+export const REJECTION_REASONS: Array<{ id: string; label: string }> = [
+  { id: "not_qualified", label: "Doesn't meet the must-haves" },
+  { id: "experience", label: "Experience doesn't match" },
+  { id: "role_fit", label: "Not the right role" },
+  { id: "compensation", label: "Compensation didn't match" },
+  { id: "timing", label: "Timing or availability" },
+  { id: "withdrew", label: "They withdrew" },
+  { id: "other", label: "Other" },
+];
+
+export function rejectionLabel(id: string): string {
+  return REJECTION_REASONS.find((r) => r.id === id)?.label ?? id;
+}
+
 export function newId(prefix = "q"): string {
   const r = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 8) : Math.random().toString(36).slice(2, 10);
   return `${prefix}_${r}`;
@@ -102,6 +116,7 @@ export function emptyJob(): BizJobInput {
     must_haves: [],
     nice_to_haves: [],
     questions: [],
+    interview_kit: [],
     stages: DEFAULT_STAGES.map((s) => ({ ...s })),
     hiring_team: [],
     valid_through: null,

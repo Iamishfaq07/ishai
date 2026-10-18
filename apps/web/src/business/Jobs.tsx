@@ -428,6 +428,7 @@ const toInput = (j: BizJob): BizJobInput => ({
   must_haves: j.must_haves,
   nice_to_haves: j.nice_to_haves,
   questions: j.questions,
+  interview_kit: j.interview_kit ?? [],
   stages: j.stages,
   hiring_team: j.hiring_team,
   valid_through: j.valid_through,
@@ -769,6 +770,36 @@ export function JobEditor() {
                 <Plus className="h-4 w-4" aria-hidden /> Add a question
               </Button>
             </AiMark>
+          </Panel>
+
+          <Panel title="Interview kit" hint="Questions your team asks. Not shown on the job page. You can email them to an applicant as a practice brief.">
+            <div className="space-y-2">
+              {(form.interview_kit ?? []).map((q, i) => (
+                <div key={q.id} className="flex items-center gap-2">
+                  <Input aria-label={`Interview question ${i + 1}`} value={q.text} maxLength={300} onChange={(e) => set("interview_kit", (form.interview_kit ?? []).map((x) => (x.id === q.id ? { ...x, text: e.target.value } : x)))} />
+                  <Button type="button" variant="ghost" size="sm" aria-label={`Remove question ${i + 1}`} onClick={() => set("interview_kit", (form.interview_kit ?? []).filter((x) => x.id !== q.id))}>
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" size="sm" disabled={(form.interview_kit ?? []).length >= 12} onClick={() => set("interview_kit", [...(form.interview_kit ?? []), { id: newId("k"), text: "" }])}>
+                  <Plus className="h-4 w-4" aria-hidden /> Add an interview question
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={async () => {
+                  if (!jid) return;
+                  try {
+                    const updated = await biz.generateKit(company.id, jid);
+                    set("interview_kit", updated.interview_kit ?? []);
+                    toast({ message: "Interview kit generated. Review and edit.", tone: "success" });
+                  } catch (err) {
+                    toast({ message: errorText(err), tone: "error" });
+                  }
+                }}>
+                  Generate from job
+                </Button>
+              </div>
+            </div>
           </Panel>
 
           <Panel title="Stages" hint="The steps an applicant moves through for this job.">

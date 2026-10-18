@@ -135,9 +135,22 @@ class BusinessAI(Protocol):
 
     async def parse_applicant_resume(self, text: str) -> ParsedResume: ...
 
+    async def generate_interview_kit(self, job: "JobSpec", count: int = 6) -> list[dict[str, str]]:
+        """Deterministic structured questions from must-haves and title. No model call."""
+        title = getattr(job, "title", "this role") or "this role"
+        musts = getattr(job, "must_haves", []) or []
+        qs = []
+        for i, m in enumerate(musts[:count-2]):
+            qs.append({"id": f"k_must_{i}", "text": f"Tell me about a time you used {m} to solve a hard problem. What was the outcome?"})
+        qs.append({"id": "k_role", "text": f"What does success look like for you in the first 90 days as {title}?"})
+        qs.append({"id": "k_collab", "text": "Describe a time you disagreed with a teammate. How did you handle it?"})
+        return qs[:count]
+
     async def rank_applicant(self, job: JobSpec, resume: ParsedResume, answers: list[QA]) -> Ranking: ...
 
     async def fill_job(self, request: JobFillRequest) -> JobFill: ...
+
+    async def generate_interview_kit(self, job: "JobSpec", count: int = 6) -> list[dict[str, str]]: ...
 
 
 def professional_only(resume: ParsedResume) -> ParsedResume:

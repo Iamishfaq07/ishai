@@ -26,6 +26,7 @@ import {
   cx,
   focusRing,
   toast,
+  buttonClass,
 } from "@orbit/ui";
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
@@ -69,6 +70,109 @@ function Requirements({ title, items }: { title: string; items: BizRequirementMa
           );
         })}
       </ul>
+    </div>
+  );
+}
+
+function Consensus({ cards }: { cards: BizApplicationDetail["scorecards"] }) {
+  if (cards.length < 2) return null;
+  const hire = cards.filter((c) => c.recommendation === "hire").length;
+  const scores = cards.flatMap((c) => c.ratings.map((r) => r.score));
+  const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length) : null;
+  const split = hire > 0 && hire < cards.length;
+  // Per-criterion averages
+  const crits: Record<string, number[]> = {};
+  for (const c of cards) for (const r of c.ratings) {
+    (crits[r.criterion] ||= []).push(r.score);
+  }
+  return (
+    <div className={cx("mb-3 rounded-xl border p-3 text-sm", split ? "border-amber-300 bg-amber-50 dark:border-amber-400/30 dark:bg-amber-400/10" : "border-zinc-200 dark:border-white/10")}>
+      <p className="font-medium">{hire} hire · {cards.length - hire} no hire{avg ? ` · average ${avg.toFixed(1)}/4` : ""}</p>
+      {split && <p className="mt-1 text-xs text-amber-900 dark:text-amber-200">The team disagrees. Read the notes before deciding.</p>}
+      {Object.keys(crits).length > 0 && (
+        <div className="mt-2 space-y-1">
+          {Object.entries(crits).map(([c, ss]) => {
+            const a = ss.reduce((x, y) => x + y, 0) / ss.length;
+            const pct = (a / 4) * 100;
+            const color = a >= 3.5 ? "bg-emerald-500" : a >= 2.5 ? "bg-amber-500" : "bg-rose-500";
+            return (
+              <div key={c} className="flex items-center gap-2 text-xs">
+                <span className="w-32 truncate">{c}</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10">
+                  <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
+                </div>
+                <span className="w-6 tabular-nums">{a.toFixed(1)}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SuggestedAction({ a }: { a: BizApplicationDetail }) {
+  const score = a.score ?? 0;
+  const cards = a.scorecards ?? [];
+  const hireCount = cards.filter(c => c.recommendation === "hire").length;
+  let suggestion = "Review the ranking and notes.";
+  let tone = "neutral";
+  if (cards.length >= 2 && hireCount === cards.length && score >= 70) {
+    suggestion = "Strong consensus and high match. Consider moving to next stage or offer.";
+    tone = "success";
+  } else if (score < 40 || (cards.length >= 2 && hireCount === 0)) {
+    suggestion = "Low match or no hire consensus. Consider rejection with a clear reason.";
+    tone = "warning";
+  } else if (cards.length >= 1 && hireCount > 0) {
+    suggestion = "Mixed signals. Schedule a debrief or request more evidence.";
+    tone = "info";
+  }
+  return (
+    <Callout tone={tone as any}>
+      <strong>Suggested next step:</strong> {suggestion} (AI suggestion only — you decide.)
+    </Callout>
+  );
+}
+
+function PracticeBrief({ a }: { a: BizApplicationDetail }) {
+  const { company } = useCompany();
+  const [kit, setKit] = useState<Array<{ id: string; text: string }>>([]);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    biz.job(company.id, a.job_id).then((j) => setKit(j.interview_kit ?? [])).catch(() => undefined);
+  }, [company.id, a.job_id]);
+  const practice = `/mock?role=${encodeURIComponent(a.job_title)}&company=${encodeURIComponent(company.name)}`;
+  const send = async () => {
+    setBusy(true);
+    try {
+      await biz.practiceBrief(company.id, a.id);
+      toast({ message: "Practice brief sent", tone: "success" });
+    } catch (err) {
+      toast({ message: errorText(err), tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-zinc-600 dark:text-zinc-400">Email this person the interview questions and a link to practise on Orbit. Practice does not decide the hire.</p>
+      {kit.length > 0 ? (
+        <ol className="list-decimal space-y-1 pl-4">
+          {kit.map((q) => (
+            <li key={q.id}>{q.text}</li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">No interview questions yet. Add them on the job.</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" loading={busy} disabled={!a.email_confirmed} disabledReason="Waiting for them to confirm their email." onClick={() => void send()}>
+          Email practice brief
+        </Button>
+        <Link to={practice} className={buttonClass("secondary", "sm")}>
+          Open in Orbit Mock
+        </Link>
+      </div>
     </div>
   );
 }
@@ -608,13 +712,12 @@ export function Candidate() {
         </div>
 
         <div className="space-y-5">
-          <Panel title="Interview with Saba" hint="Coming soon">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">A short screening interview with Orbit's AI interviewer, scored only on what's said, with a human deciding. Not available yet.</p>
-            <Button className="mt-3" size="sm" variant="secondary" disabled disabledReason="Coming soon">
-              <Video className="h-4 w-4" aria-hidden /> Interview with Saba (coming soon)
-            </Button>
+          <Panel title="Practice this role" hint="Practice does not decide the hire.">
+            <PracticeBrief a={a} />
           </Panel>
           <Panel title="Scorecards">
+            <Consensus cards={a.scorecards} />
+            <SuggestedAction a={a} />
             {a.scorecards.length > 0 && (
               <ul className="mb-4 space-y-2">
                 {a.scorecards.map((s) => (
@@ -675,8 +778,8 @@ export function Candidate() {
         open={rejecting}
         onClose={() => setRejecting(false)}
         count={1}
-        onReject={async (send, s, b) => {
-          const r = await biz.reject(company.id, { ids: [a.id], send_email: send, ...(s ? { subject: s } : {}), ...(b ? { body: b } : {}) });
+        onReject={async (send, s, b, reason) => {
+          const r = await biz.reject(company.id, { ids: [a.id], send_email: send, ...(s ? { subject: s } : {}), ...(b ? { body: b } : {}), ...(reason ? { reason } : {}) });
           toast({ message: rejectedMessage(r.moved, send, r.emails_waiting), tone: "success" });
           setN((x) => x + 1);
         }}

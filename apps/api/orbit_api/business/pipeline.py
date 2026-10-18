@@ -12,6 +12,7 @@ import io
 import re
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
@@ -57,6 +58,17 @@ _rerank_company = ratelimit.SlidingWindow(rate_per_s=200 / 86400, burst=200)  # 
 WAITING_FOR_CONFIRMATION = ("Waiting for the applicant to confirm their email. Emails from your team go out once "
                             "they open the link in Orbit's confirmation email.")
 
+# Why a person was rejected. A fixed list so the dashboard can count them. "other" is the catch-all.
+REJECTION_REASONS = {
+    "not_qualified": "Doesn't meet the must-haves",
+    "experience": "Experience doesn't match",
+    "role_fit": "Not the right role",
+    "compensation": "Compensation didn't match",
+    "timing": "Timing or availability",
+    "withdrew": "They withdrew",
+    "other": "Other",
+}
+
 
 def now() -> datetime:
     return datetime.now(UTC)
@@ -93,6 +105,7 @@ class ListItem(BaseModel):
     # Keyword matching alone (the AI model was unavailable): the UI says "basic match".
     basic_match: bool = False
     deletion_requested: bool
+    rejection_reason: str | None = None
 
 
 class JobRef(BaseModel):
@@ -231,7 +244,8 @@ def _item(app: BizApplication, blind: bool) -> ListItem:
         score=int(app.ranking["score"]) if app.ranking and app.ranking.get("score") is not None else None,
         must_haves_met=met, must_haves_total=total, match_label=label,
         basic_match=app.ranking is not None and basic_match(app.ranking_model),
-        deletion_requested=app.deletion_requested_at is not None)
+        deletion_requested=app.deletion_requested_at is not None,
+        rejection_reason=app.rejection_reason)
 
 
 def _sort_key(app: BizApplication) -> tuple[int, int, float]:
@@ -404,10 +418,27 @@ def _emailed(db: AsyncSession, ctx: Ctx, app: BizApplication, sent: tuple[str, s
     timeline(db, app, "email", ctx.user, subject=sent[0], subject_template=sent[1])
 
 
+async def _hire_blocked(db: AsyncSession, ctx: Ctx, app: BizApplication, force: bool) -> str | None:
+    """A hire needs the team's scorecards. An owner or admin may override; everyone else is refused."""
+    if force and ctx.role in {"owner", "admin"}:
+        return None
+    cards = list((await db.scalars(select(BizScorecard).where(BizScorecard.application_id == app.id))).all())
+    assigned = [uid for uid in (app.interviewers or []) if uid]
+    authors = {c.author_id for c in cards if c.author_id}
+    if assigned and any(uid not in authors for uid in assigned):
+        return ("Every assigned interviewer needs a scorecard before this person can be hired. "
+                "An owner or admin can hire anyway.")
+    if not cards:
+        return "Add a scorecard before hiring. An owner or admin can hire anyway."
+    return None
+
+
 class MoveIn(BaseModel):
     ids: list[str] = Field(max_length=MAX_BULK)
     stage_id: str = Field(max_length=16)
     notify: bool = False
+    # An owner or admin may hire without the scorecards. Everyone else is refused.
+    force: bool = False
 
 
 class BulkOut(BaseModel):
@@ -429,17 +460,22 @@ async def move(body: MoveIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depend
             raise HTTPException(422, "That stage isn't in this job's pipeline.")
         if app.stage_id == body.stage_id:
             continue
+        kind = stage["kind"]
+        if kind == "hired":
+            blocked = await _hire_blocked(db, ctx, app, body.force)
+            if blocked:
+                raise HTTPException(409, blocked)
         before = app.stage_id
         app.stage_id, app.stage_changed_at = body.stage_id, now()
         kind = stage["kind"]
         if kind == "rejected":
             app.status, app.rejected_at = "rejected", now()
         elif kind == "hired":
-            app.status, app.rejected_at = "hired", None
+            app.status, app.rejected_at, app.rejection_reason = "hired", None, None
         else:
             if app.status == "rejected":
                 timeline(db, app, "unrejected", ctx.user)
-            app.status, app.rejected_at = "active", None
+            app.status, app.rejected_at, app.rejection_reason = "active", None, None
         _responded(app)
         timeline(db, app, "stage", ctx.user, to=body.stage_id)
         audit(db, ctx.company.id, ctx.user, "application.moved", app.reference, job_id=job.id, **{
@@ -466,6 +502,7 @@ class RejectIn(BaseModel):
     send_email: bool = False
     subject: str | None = Field(None, max_length=200)
     body: str | None = Field(None, max_length=8000)
+    reason: str | None = Field(None, max_length=32)
 
 
 @router.post("/applications/reject", response_model=BulkOut)
@@ -474,14 +511,16 @@ async def reject(body: RejectIn, ctx: CompanyCtx, db: Annotated[AsyncSession, De
     ctx.require("move_applicants")
     ctx.writable()
     pairs = await _apps_for(db, ctx, body.ids)
+    reason = body.reason if body.reason in REJECTION_REASONS else None
     done: list[tuple[BizApplication, BizJob]] = []
     for app, job in pairs:
         if app.status == "rejected":
             continue
         target = rules.first_stage(job.stages, "rejected") or "rejected"
         app.stage_id, app.status, app.rejected_at, app.stage_changed_at = target, "rejected", now(), now()
+        app.rejection_reason = reason
         _responded(app)
-        timeline(db, app, "rejected", ctx.user, email=body.send_email)
+        timeline(db, app, "rejected", ctx.user, email=body.send_email, reason=reason or "")
         audit(db, ctx.company.id, ctx.user, "application.rejected", app.reference, job_id=job.id,
               email=body.send_email,
               ranking_model=app.ranking_model, score=(app.ranking or {}).get("score"))
@@ -501,13 +540,42 @@ async def reject(body: RejectIn, ctx: CompanyCtx, db: Annotated[AsyncSession, De
                    emails_waiting=waiting)
 
 
+@router.post("/applications/{application_id}/practice-brief", response_model=Detail)
+async def practice_brief(application_id: str, ctx: CompanyCtx,
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> Detail:
+    """Email the job's interview questions and a private Orbit practice link. Practice does not decide the hire."""
+    ctx.require("move_applicants")
+    ctx.writable()
+    app, job = await application_for(db, ctx, application_id)
+    _refuse_unconfirmed(app)
+    kit = [q for q in (job.interview_kit or []) if isinstance(q, dict) and q.get("text")]
+    lines = "\n".join(f"{i}. {q['text']}" for i, q in enumerate(kit, 1)) or "The team will ask about the role."
+    web = get_settings().web_url.rstrip("/")
+    link = f"{web}/mock?role={quote(job.title)}&company={quote(ctx.company.name)}"
+    body = (
+        f"Hi {app.name},\n\n"
+        f"{ctx.company.name} invited you to practise for {job.title} on Orbit. "
+        "This is practice only. It does not decide the hire.\n\n"
+        f"Questions they may ask:\n{lines}\n\n"
+        f"Practise here: {link}\n"
+    )
+    subject = f"Practise for {job.title} at {ctx.company.name}"
+    await emails.send_to_applicant(ctx.company, app, subject, body, ctx.user.email)
+    _responded(app)
+    timeline(db, app, "email", ctx.user, subject=subject, subject_template=subject)
+    audit(db, ctx.company.id, ctx.user, "application.practice_brief", app.reference, job_id=job.id,
+          questions=len(kit))
+    await db.commit()
+    return await detail_out(db, ctx, app, job, False)
+
+
 @router.post("/applications/{application_id}/unreject", response_model=Detail)
 async def unreject(application_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> Detail:
     ctx.require("move_applicants")
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
     if app.status == "rejected":
-        app.status, app.rejected_at = "active", None
+        app.status, app.rejected_at, app.rejection_reason = "active", None, None
         app.stage_id = rules.first_stage(job.stages, "applied") or app.stage_id
         app.stage_changed_at = now()
         timeline(db, app, "unrejected", ctx.user)

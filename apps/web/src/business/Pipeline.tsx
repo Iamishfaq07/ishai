@@ -39,8 +39,8 @@ import {
 } from "@orbit/ui";
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
-import { SourceTable, hours } from "./Dashboard";
-import { applicationPath, applyMove, downloadBlob, groupByStage, jobPath, matchLabel, neighbourStage, rejectedMessage, relTime, scoreTone, sortApplications, toggleId, type SortKey } from "./model";
+import { SourceTable, FunnelBars, hours } from "./Dashboard";
+import { applicationPath, applyMove, downloadBlob, groupByStage, jobPath, matchLabel, neighbourStage, rejectedMessage, relTime, REJECTION_REASONS, rejectionLabel, scoreTone, sortApplications, toggleId, type SortKey } from "./model";
 import { JobStatusBadge, Loading, LoadError, Panel, errorText } from "./ui";
 
 type View = "board" | "list";
@@ -250,17 +250,26 @@ function ListView({ data, cid, selected, setSelected, onMove, sort, canMove }: {
   );
 }
 
-export function RejectDialog({ open, onClose, count, onReject }: { open: boolean; onClose: () => void; count: number; onReject: (sendEmail: boolean, subject?: string, body?: string) => Promise<void> }) {
+export function RejectDialog({ open, onClose, count, onReject }: { open: boolean; onClose: () => void; count: number; onReject: (sendEmail: boolean, subject?: string, body?: string, reason?: string) => Promise<void> }) {
   const id = useId();
   const [send, setSend] = useState(true);
   const [custom, setCustom] = useState(false);
   const [subject, setSubject] = useState("");
   const [text, setText] = useState("");
+  const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   return (
     <Dialog open={open} onClose={onClose} title={`Reject ${count === 1 ? "this applicant" : `${count} applicants`}?`} size="md">
       <div className="space-y-4">
         <p className="text-sm text-zinc-600 dark:text-zinc-400">They move to Rejected. You can undo it from their page. Their data is deleted after your retention period.</p>
+        <Field label="Why" htmlFor={`${id}-why`} hint="Optional. Counted on the dashboard. Not sent to the applicant.">
+          <Select id={`${id}-why`} value={reason} onChange={(e) => setReason(e.target.value)}>
+            <option value="">No reason</option>
+            {REJECTION_REASONS.map((r) => (
+              <option key={r.id} value={r.id}>{r.label}</option>
+            ))}
+          </Select>
+        </Field>
         <Checkbox label="Email them" description="Your rejection template, from Orbit, with replies to you." checked={send} onChange={(e) => setSend(e.target.checked)} />
         {send && <Checkbox label="Write a different message for this send" checked={custom} onChange={(e) => setCustom(e.target.checked)} />}
         {send && custom && (
@@ -284,7 +293,7 @@ export function RejectDialog({ open, onClose, count, onReject }: { open: boolean
             onClick={async () => {
               setBusy(true);
               try {
-                await onReject(send, send && custom && subject.trim() ? subject.trim() : undefined, send && custom && text.trim() ? text.trim() : undefined);
+                await onReject(send, send && custom && subject.trim() ? subject.trim() : undefined, send && custom && text.trim() ? text.trim() : undefined, reason || undefined);
                 onClose();
               } finally {
                 setBusy(false);
@@ -356,9 +365,9 @@ export function Pipeline() {
     [company.id, data],
   );
 
-  const reject = async (ids: string[], sendEmail: boolean, subject?: string, body?: string) => {
+  const reject = async (ids: string[], sendEmail: boolean, subject?: string, body?: string, reason?: string) => {
     try {
-      const r = await biz.reject(company.id, { ids, send_email: sendEmail, ...(subject ? { subject } : {}), ...(body ? { body } : {}) });
+      const r = await biz.reject(company.id, { ids, send_email: sendEmail, ...(subject ? { subject } : {}), ...(body ? { body } : {}), ...(reason ? { reason } : {}) });
       toast({ message: rejectedMessage(r.moved, sendEmail, r.emails_waiting), tone: "success" });
       setSelected([]);
       reload();
@@ -506,17 +515,13 @@ export function Pipeline() {
             <SourceTable bySource={stats.by_source} total={stats.applicants} />
           </Panel>
           <Panel title="How far they get">
-            <ol className="space-y-1 text-sm">
-              {stats.funnel.map((f) => (
-                <li key={f.stage_id} className="flex justify-between gap-2 tabular-nums">
-                  <span>{f.name}</span>
-                  <span>
-                    {f.reached} ({Math.round(f.rate * 100)}%)
-                  </span>
-                </li>
-              ))}
-            </ol>
+            <FunnelBars steps={stats.funnel} />
           </Panel>
+          {Object.keys(stats.by_rejection_reason).length > 0 && (
+            <Panel title="Why people were rejected" hint="Only the reasons the team recorded. Not sent to applicants.">
+              <SourceTable bySource={Object.fromEntries(Object.entries(stats.by_rejection_reason).map(([k, n]) => [rejectionLabel(k), n]))} total={Object.values(stats.by_rejection_reason).reduce((a, b) => a + b, 0)} />
+            </Panel>
+          )}
         </div>
       )}
       {!canMove && company.role === "interviewer" && <Callout tone="info">As an interviewer you see the applicants assigned to you, and can add notes and scorecards.</Callout>}

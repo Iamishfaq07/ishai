@@ -34,6 +34,7 @@ class JobAnalytics(BaseModel):
     title: str
     applicants: int
     by_source: dict[str, int]
+    by_rejection_reason: dict[str, int]
     funnel: list[FunnelStep]
     median_first_response_hours: float | None
     responded: int
@@ -51,6 +52,7 @@ class CompanyAnalytics(BaseModel):
     hired: int
     median_first_response_hours: float | None
     by_source: dict[str, int]
+    by_rejection_reason: dict[str, int]
     jobs: list[JobAnalytics]
     daily: list[Daily]
 
@@ -80,8 +82,10 @@ async def job_analytics(db: AsyncSession, job: BizJob) -> JobAnalytics:
         funnel.append(FunnelStep(stage_id=s["id"], name=s["name"], reached=reached,
                                  rate=round(reached / total, 3) if total else 0.0))
     hours = _hours(apps)
+    reasons = Counter(a.rejection_reason for a in apps if a.status == "rejected" and a.rejection_reason)
     return JobAnalytics(job_id=job.id, title=job.title, applicants=total,
-                        by_source=dict(Counter(a.source for a in apps)), funnel=funnel,
+                        by_source=dict(Counter(a.source for a in apps)), by_rejection_reason=dict(reasons),
+                        funnel=funnel,
                         median_first_response_hours=round(statistics.median(hours), 1) if hours else None,
                         responded=len(hours))
 
@@ -111,6 +115,8 @@ async def get_company_analytics(ctx: CompanyCtx, db: Annotated[AsyncSession, Dep
         applicants_30d=sum(days.values()), hired=sum(1 for a in apps if a.status == "hired"),
         median_first_response_hours=round(statistics.median(hours), 1) if hours else None,
         by_source=dict(Counter(a.source for a in apps)),
+        by_rejection_reason=dict(Counter(a.rejection_reason for a in apps
+                                         if a.status == "rejected" and a.rejection_reason)),
         jobs=[await job_analytics(db, j) for j in jobs[:50]],
         daily=[Daily(day=(since + timedelta(days=i + 1)).date().isoformat(),
                      count=days.get((since + timedelta(days=i + 1)).date().isoformat(), 0)) for i in range(30)])

@@ -6,7 +6,7 @@ import type { BizCompanyAnalytics } from "@orbit/types";
 import { Briefcase, Plus, Table, THead, Td, Th, Tr, buttonClass, cx, focusRing } from "@orbit/ui";
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
-import { companyPath, jobPath } from "./model";
+import { companyPath, jobPath, rejectionLabel } from "./model";
 import { Loading, LoadError, Panel, Stat } from "./ui";
 
 const SOURCE_LABEL: Record<string, string> = {
@@ -24,6 +24,25 @@ export function hours(h: number | null): string {
   if (h < 1) return "Under an hour";
   if (h < 48) return `${Math.round(h)} h`;
   return `${Math.round(h / 24)} days`;
+}
+
+export function FunnelBars({ steps }: { steps: Array<{ stage_id: string; name: string; reached: number; rate: number }> }) {
+  const max = Math.max(1, ...steps.map((s) => s.reached));
+  return (
+    <ol className="space-y-2" aria-label="Applicants who reached each stage">
+      {steps.map((s) => (
+        <li key={s.stage_id}>
+          <div className="flex justify-between gap-2 text-xs">
+            <span>{s.name}</span>
+            <span className="tabular-nums text-zinc-600 dark:text-zinc-400">{s.reached} · {Math.round(s.rate * 100)}%</span>
+          </div>
+          <div className="mt-1 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/5">
+            <div className="h-2 rounded-full bg-gradient-to-r from-indigo-400 to-indigo-600 transition-all duration-700 ease-out" style={{ width: `${Math.round((s.reached / max) * 100)}%` }} />
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export function SourceTable({ bySource, total }: { bySource: Record<string, number>; total: number }) {
@@ -84,6 +103,13 @@ export function Dashboard() {
             <Panel title="Where applicants come from">
               <SourceTable bySource={data.by_source} total={data.applicants_total} />
             </Panel>
+            <Panel title="Why people were rejected" hint="Only reasons the team recorded. Not sent to applicants.">
+              {Object.keys(data.by_rejection_reason).length === 0 ? (
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">No reasons recorded yet. They're optional when you reject someone.</p>
+              ) : (
+                <SourceTable bySource={Object.fromEntries(Object.entries(data.by_rejection_reason).map(([k, n]) => [rejectionLabel(k), n]))} total={Object.values(data.by_rejection_reason).reduce((a, b) => a + b, 0)} />
+              )}
+            </Panel>
             <Panel title="Applicants per day" hint="The last 30 days.">
               {data.daily.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">No applicants in the last 30 days.</p>
@@ -127,13 +153,7 @@ export function Dashboard() {
                         {j.applicants} applicants · first reply {hours(j.median_first_response_hours).toLowerCase()}
                       </span>
                     </div>
-                    <ol className="mt-2 flex flex-wrap gap-2 text-xs" aria-label={`${j.title}: applicants who reached each stage`}>
-                      {j.funnel.map((f) => (
-                        <li key={f.stage_id} className="rounded-lg bg-zinc-100 px-2 py-1 tabular-nums dark:bg-white/5">
-                          {f.name}: <strong>{f.reached}</strong> ({Math.round(f.rate * 100)}%)
-                        </li>
-                      ))}
-                    </ol>
+                    <FunnelBars steps={j.funnel} />
                   </div>
                 ))}
               </div>
