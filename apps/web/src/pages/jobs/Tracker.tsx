@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
 import {
   ArrowRight,
+  Badge,
   ArrowUpRight,
   Check,
   Columns3,
@@ -50,7 +51,9 @@ import {
   fileSlug,
   fromDateInput,
   isManual,
+  isOrbitDirect,
   linkHost,
+  orbitDirectPath,
   nextDateIcs,
   nextDateTitle,
   postedAgo,
@@ -317,6 +320,8 @@ function TrackerCard({
   const original = safeUrl(entry.url);
   const apply = safeUrl(entry.apply_url);
   const manual = isManual(entry);
+  const direct = isOrbitDirect(entry);
+  const directPath = direct ? orbitDirectPath(entry.url) : null;
   const open = entry.live ? stillOpenAt(entry) : null;
   const round = roundLabel(entry.round_type, entry.round_number);
   const dates = [
@@ -336,7 +341,11 @@ function TrackerCard({
       <div className="min-w-0 flex-1">
       <h4 className={cx("font-medium leading-snug", compact ? "text-sm" : "text-base")}>
         {/* The job's own page while it's in the feed; after that, the original post. */}
-        {entry.live ? (
+        {directPath ? (
+          <Link to={directPath} className={cx("rounded hover:text-indigo-600 dark:hover:text-indigo-300", focusRing)}>
+            {entry.title}
+          </Link>
+        ) : entry.live ? (
           <Link to={jobPath(entry.listing_id)} className={cx("rounded hover:text-indigo-600 dark:hover:text-indigo-300", focusRing)}>
             {entry.title}
           </Link>
@@ -364,7 +373,11 @@ function TrackerCard({
         {dates.join(" · ")}
       </p>
       {entry.notes && !editing && <p className="mt-1.5 line-clamp-3 whitespace-pre-line text-xs text-zinc-600 dark:text-zinc-300">{entry.notes}</p>}
-      {manual ? (
+      {direct ? (
+        <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-zinc-600 dark:text-zinc-300">
+          <Badge tone="accent">Applied via Orbit</Badge> The company moves this one; its stage updates here.
+        </p>
+      ) : manual ? (
         linkHost(entry.url) && <p className="mt-1.5 truncate text-xs text-zinc-500 dark:text-zinc-400">From {linkHost(entry.url)}</p>
       ) : !entry.live ? (
         <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">This post is no longer listed in the feed.</p>

@@ -295,7 +295,7 @@ export interface BizJobDraft {
 
 // ─── Applications (company side) ─────────────────────────────────────────────
 
-export type BizApplicationStatus = "active" | "rejected" | "hired";
+export type BizApplicationState = "active" | "rejected" | "hired";
 export type BizSource = "careers" | "widget" | "orbit" | "google" | "linkedin" | "direct" | "other";
 export type BizMet = "yes" | "partly" | "no";
 
@@ -323,7 +323,7 @@ export interface BizApplicationListItem {
   email: string | null; // null in blind review
   headline: string | null;
   stage_id: string;
-  status: BizApplicationStatus;
+  status: BizApplicationState;
   source: BizSource;
   tags: string[];
   applied_at: string;

@@ -25,7 +25,7 @@ export const LINKEDIN_PAGE = "/linkedin-ai";
  * front page's "More in your account" section, each with its own anchor, so no menu link ends on a sign-in wall.
  */
 export interface SiteProduct {
-  id: "copilot" | "practice" | "resume" | "jobs" | "linkedin" | "code" | "offer" | "learning";
+  id: "copilot" | "practice" | "resume" | "jobs" | "linkedin" | "code" | "offer" | "learning" | "business";
   name: string;
   /** One line: what it does for you. */
   line: string;
@@ -65,6 +65,8 @@ export const PRODUCT_TILE: Record<SiteProduct["id"], string> = {
   code: "bg-zinc-100 text-zinc-700 ring-zinc-900/10 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10",
   offer: "bg-zinc-100 text-zinc-700 ring-zinc-900/10 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10",
   learning: "bg-zinc-100 text-zinc-700 ring-zinc-900/10 dark:bg-white/5 dark:text-zinc-200 dark:ring-white/10",
+  // Orbit for Business (D82): its own page, not in the products menu (it's for companies, not job seekers).
+  business: "bg-indigo-50 text-indigo-700 ring-indigo-600/15 dark:bg-indigo-400/10 dark:text-indigo-200 dark:ring-indigo-300/20",
 };
 
 /** The section links in the header and the footer. Router links: "/#pricing" scrolls once the front page is drawn. */
