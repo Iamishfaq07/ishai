@@ -30,7 +30,15 @@ even when SQLite hides it.
 
   | entry (every page) | CSS | Home | front page | Sessions | Setup | Mock | Live | Resume AI | resume editor | Jobs AI |
   |---|---|---|---|---|---|---|---|---|---|---|
-  | 170 kB | 32 kB | 210 | 205 | 185 | 200 | 205 | 255 | 205 | 255 | 280 |
+  | 170 kB | 32 kB | 211 | 206 | 185 | 200 | 206 | 246 | 205 | 255 | 280 |
+
+  The public product pages (D79), signed out: Resume AI 226, Jobs AI 209, the copilot 212, Practice 207, LinkedIn AI
+  207 kB (measured 215.0, 198.3, 201.1, 196.7 and 196.6 kB when they were built on the section kit; they were 194.0,
+  189.9, 181.2 and 184.1 kB before, LinkedIn AI had no page). Home, the front page and Mock went up 1 kB for D79: the
+  kit's shared pieces (the live answer and the sticky bar the front page shares, the one-tap rounds Mock shares with
+  /mock-interview, the stage pill, the search preview, a few icons) became chunks of their own, and every chunk's name
+  is in the entry's preload map, so every first load carries 0.3 kB more (Home 209.7 → 210.1, front page 204.1 →
+  205.1, Mock 204.6 → 205.3 kB).
 
   About 5% over main as measured on 18 Oct 2026 after the merges of that day (entry 162.4, CSS 29.1, Home 201.9,
   front page 195.6, Sessions 177.7, Setup 191.8, Mock 197.6, Live 243.6, Resume AI 196.8, resume editor 243.6, Jobs
@@ -161,6 +169,30 @@ Its LCP element is text in the prerendered HTML (time to first byte ~10 ms, rend
 first paint is render-blocking: the 29 kB stylesheet and `/theme-init.js`, ~450 ms by Lighthouse's estimate on a cold
 visit (the theme script's new cache rule helps repeat visits only). Inlining the public pages' critical CSS and the
 theme script would be the next step there (see "Left to do").
+
+### Web — the product pages on the section kit (D79; Lighthouse 13.5 mobile, simulated, median of 3)
+The full build with its prerendered pages, served over HTTP/2 with `/api` proxied to a local API (the same method).
+
+| page | before: score / FCP / LCP / TBT / CLS | after |
+|---|---|---|
+| Resume AI | 85 / 2,807 / 2,957 ms / 3 ms / 0.137 | 92 / 2,598 / 2,823 ms / 27 ms / 0 |
+| interview copilot | 96 / 2,103 / 2,403 ms / 0 ms / 0 | 94 / 2,495 / 2,570 ms / 0 ms / 0 |
+| Jobs AI | 95 / 2,197 / 2,316 ms / 0 ms / 0 | 93 / 2,479 / 2,706 ms / 0 ms / 0 |
+| Practice | 94 / 2,146 / 2,706 ms / 9 ms / 0 | 91 / 2,628 / 2,853 ms / 3 ms / 0 |
+| LinkedIn AI (new) | — | 93 / 2,481 / 2,631 ms / 0 ms / 0 |
+
+Accessibility 100 on every page. Resume AI's old hero sized itself in JavaScript after the first paint, so its rewrite
+card moved (CLS 0.137); the new one is a box of a fixed size. Its first version on the kit measured 81 (FCP 3.4 s,
+observed first paint 1.3 to 2.2 s): the app's first render drew five whole resume pages and the sample's Inter font
+cost 130 kB. The templates behind the hero now draw just after the first paint, the carousel's only once it's near
+the screen, and the public renders use Arial (one of the editor's fonts), so the page downloads no font but Plex.
+The copilot's language card names the languages in English and its code block waits until it's near the screen, so
+no Cyrillic or monospace font is fetched with the page. What's left is the HTML itself: the product pages are 17 to
+23 kB gzipped instead of 10 to 12 (every section and render is in the built copy, finished), one more round trip on a
+slow connection before the first paint, which is why the copilot's, Jobs AI's, Practice's and LinkedIn AI's simulated
+LCP sit just over 2.5 s (observed on this machine: 0.3 to 0.5 s, or about 1.3 s in a run where the app's own copy
+arrived before the first paint, which the front page and the old pages showed too). Inlining the critical CSS
+(below) is the next step for all of them.
 
 ### Mobile access (headless, iPhone UA + touch; 25 signed-in pages at 360, 390, 414 and 768 px)
 | | before | after |

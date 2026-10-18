@@ -1007,6 +1007,61 @@ graphical, and advertise our tools there while installing"). The choices:
 - **Not changed, on purpose**: the window-privacy prompt and card (D8: the owner is deciding them) and the uninstall
   hook (`hooks.nsh`).
 
+**D79 — Product pages show the product working, built from one section kit, and say only what the code stands
+behind.** The owner asked for product pages in the depth of Parakeet AI's Resume Maker page ("more details of the
+tool, with screenshot animations from the product"). Its structure was studied from a read-only capture and none of
+its words, pictures, colours or layout were taken. The choices:
+- **One kit, every page** (`apps/web/src/marketing/kit/`, DESIGN.md "Product pages"): a hero with the product on
+  the right, a facts band, three steps each with a small render, the page's own middle (Resume AI's real templates
+  in a carousel, Practice's one-tap rounds, where the jobs come from, LinkedIn AI's search preview), a toolkit of
+  working pieces, a fair comparison where there is one, the prices where credits buy the product, the questions, the
+  products that come next, and one last action. Resume AI, Jobs AI, the copilot and Practice were rebuilt on it, and
+  LinkedIn AI got a page at `/linkedin-ai` (the tool stays at `/linkedin`, as `/interview-copilot` stands apart from
+  `/start` in D73), now in the Products menu, the sitemap and llms.txt.
+- **Left out on purpose**: the reference's video testimonials, star ratings, "trusted by" counts and invented
+  outcomes ("3.2x more interviews"). Orbit has none it can stand behind, so the facts band carries only facts: the
+  score's 100 points and eight parts, `TEMPLATES.length`, the guides counted from their files, the ten languages from
+  `LIVE_LANGUAGES` (live_language.py), the presets, the four applicant-tracking systems and the 30 days a post is
+  kept (job_portal), the server's free fit checks and, once it has them, its job counts and the median first word of
+  real sessions. The comparison ("A chatbot gives you text. Resume AI gives you a resume.") says what each side hands
+  you and names no one.
+- **Animated real UI, not video**: renders are the real components where they draw without data (`ResumePreview`,
+  LinkedIn AI's ring, bars and `SearchPreview`, `CodeBlock`, `StagePill`, `LiveAnswerDemo`) or faithful compositions
+  in the screen's own classes where the real ones fetch their data (the fix cards, the tracker, the Mission room,
+  the compact window, the video room, where Saba stays a voice). Crisp at any size, both themes, every accent, nothing
+  to download, and each one carries one description for screen readers and crawlers. The numbers on them are the
+  product's own, run on the made-up samples: the ATS check gives Resume AI's sample 82 with four things wrong, then
+  85, 91, 96 and 98 as each is fixed, and 11 of the sample job post's 15 keywords; the LinkedIn audit gives the sample
+  profile 47, then 61, 73, 80, 91 and 94.
+- **Motion keeps D68 and D74**: one short sequence the first time a render is in view, then the final frame; Full
+  plays it (the Resume AI hero offers Play again); Gentle, Off, data saver and the built HTML show the final frame at
+  once. Gentle first faded each part in on its own delay; axe caught text mid-fade, at a fraction of its contrast,
+  for up to a second, so at Gentle a part no longer waits its turn (a landing ring, a fade with no text, still plays). Only opacity and transform move, inside boxes of a fixed size,
+  so nothing shifts (the old Resume AI hero measured its box in JavaScript, and its rewrite card moved: CLS 0.137 on a
+  phone). Nothing loops.
+- **The built pages are finished pages**: every section is in `dist/_prerender`, every render with `data-still`, and
+  `useCountUp` now draws its final number when rendered without a browser (the old page's HTML said "54" where the
+  score was 98). A decorative `ResumePreview` names its sections in paragraphs, not headings, so a page with ten of
+  them keeps one outline. Whole resume pages below the fold draw a light placeholder until they're near the screen.
+- **FAQ markup where the FAQ is**: each page's questions live in `worker/faqs/<page>.js`, which the page shows and
+  its FAQPage node states word for word (D67's rule; the prerender test compares them), in plain text that's the same
+  for every visitor.
+- **Not built this round: Code AI, Offer AI and Learning AI pages.** Done well, each needs more than this round could
+  make true: Code AI's page wants its real runner (`code/runner.ts`) running a sample's tests in the page and a review
+  that is the product's; Offer AI's numbers come from the region's tax rules (`offers/model.ts`), so an example offer
+  has to be worked through the real calculator per country and labelled; Learning AI is mostly Code AI's paths and
+  KashSec (D70), so a page of its own would be thin and promote another site. They keep their anchors on the front
+  page.
+- **What it costs**: the public pages are lazy chunks, now 197 to 215 kB of first-load JavaScript (they were 181 to
+  194), with budgets of their own; the kit's shared pieces became chunks, and every chunk's name sits in the entry's
+  preload map, so the entry grew 0.3 kB and Home's, the front page's and Mock's budgets went up by 1 kB
+  (docs/PERFORMANCE.md). The HTML is the bigger cost: 17 to 23 kB gzipped instead of 10 to 12, because every
+  section is in the built copy, finished; on a slow phone that's one more round trip before the first paint (the
+  copilot's simulated LCP went from 2.40 to 2.57 s, Practice's from 2.71 to 2.85). The first build on the kit also
+  drew five whole resume pages in the app's first render and downloaded Inter for the sample; the templates behind
+  the hero now draw just after the first paint, the carousel's only when they're near the screen, and the public
+  renders use Arial (one of the editor's own fonts), so Resume AI went from 85 to 92 on Lighthouse.
+
 **D76 — Saba is heard (or says why not), her words come as she says them, a turn ends when you stop, and she talks
 like an interviewer on a call.** The owner: "Saba doesn't talk sometimes, it only gives the transcript", "it gives
 the full transcript first, then starts talking", "it's not very interactive, it must be like a human". Production's
