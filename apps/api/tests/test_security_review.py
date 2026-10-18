@@ -86,6 +86,23 @@ def test_oversized_request_bodies_are_refused(client: TestClient) -> None:
     assert r.status_code == 413  # answered by BodyLimit itself, not a parse error
 
 
+def test_a_too_large_answer_reaches_the_app_that_sent_it(client: TestClient) -> None:
+    """BodyLimit runs outside CORS: its 413 carries CORS headers for an allowed origin itself, or the browser hides it
+    and the web app says "Can't reach Orbit" instead of what's wrong. Another origin gets none."""
+    cap = get_settings().max_upload_bytes + 1024 * 1024
+    big = b"x" * (cap + 1)
+    ours = get_settings().cors_origins[0]
+    r = client.post("/v1/documents", content=big, headers={"content-type": "multipart/form-data; boundary=x",
+                                                           "origin": ours})
+    assert r.status_code == 413
+    assert r.headers["access-control-allow-origin"] == ours
+    assert r.headers["access-control-allow-credentials"] == "true"
+    assert "up to 5 MB" in r.json()["detail"]
+    r = client.post("/v1/documents", content=big, headers={"content-type": "multipart/form-data; boundary=x",
+                                                           "origin": "https://evil.example"})
+    assert r.status_code == 413 and "access-control-allow-origin" not in r.headers
+
+
 def test_update_links_use_the_configured_public_url(client: TestClient, tmp_path: Path,
                                                     monkeypatch: pytest.MonkeyPatch) -> None:
     d = tmp_path / "0.2.0"
