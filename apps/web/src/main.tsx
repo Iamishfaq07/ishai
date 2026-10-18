@@ -6,6 +6,7 @@ import { App } from "./App";
 import { AppError } from "./components/AppError";
 import { OutOfCreditsHost } from "./components/OutOfCreditsDialog";
 import { AuthProvider, signedInHereBefore } from "./lib/auth";
+import { setUpOfflinePage } from "./lib/offlinePage";
 import { captureRefFromUrl } from "./lib/referral";
 import { reloadForNewBuild } from "./lib/staleBuild";
 import { preloadPublicPage } from "./routes";
@@ -14,6 +15,8 @@ import "./index.css";
 initDesign();
 // An invite or creator code in the address (?ref=): kept for the sign-up (lib/referral.ts).
 captureRefFromUrl();
+// Offline, a page load shows Orbit's "You're offline" page instead of the browser's error (public/sw.js).
+setUpOfflinePage();
 // A first visit to a page with a public face starts its code now; someone who has signed in here gets the app instead.
 if (!signedInHereBefore()) preloadPublicPage(window.location.pathname);
 
