@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { FlagGate } from "./components/FlagGate";
+import { AdminOnly } from "./components/AdminOnly";
 import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 import { InviteLinkPage } from "./pages/InviteLink";
 import { Layout } from "./components/Layout";
@@ -290,12 +291,12 @@ export function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="extension/connect" element={<ExtensionConnectPage />} />
         <Route path="interview" element={<VideoInterviewPage />} />
-        <Route path="admin/users" element={<AdminUsersPage />} />
-        <Route path="admin/payments" element={<AdminPaymentsPage />} />
-        <Route path="admin/audit" element={<AdminAuditPage />} />
-        <Route path="admin/inbox" element={<AdminInboxPage />} />
-        <Route path="admin/support" element={<AdminSupportPage />} />
-        <Route path="admin/referrals" element={<AdminReferralsPage />} />
+        <Route path="admin/users" element={<AdminOnly><AdminUsersPage /></AdminOnly>} />
+        <Route path="admin/payments" element={<AdminOnly><AdminPaymentsPage /></AdminOnly>} />
+        <Route path="admin/audit" element={<AdminOnly><AdminAuditPage /></AdminOnly>} />
+        <Route path="admin/inbox" element={<AdminOnly><AdminInboxPage /></AdminOnly>} />
+        <Route path="admin/support" element={<AdminOnly><AdminSupportPage /></AdminOnly>} />
+        <Route path="admin/referrals" element={<AdminOnly><AdminReferralsPage /></AdminOnly>} />
         {ComponentGalleryPage && <Route path="dev/components" element={<ComponentGalleryPage />} />}
       </Route>
       <Route path="*" element={<NotFoundPage />} />
