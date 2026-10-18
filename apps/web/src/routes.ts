@@ -55,13 +55,8 @@ const loaders = {
   adminInbox: () => import("./pages/AdminInbox"),
   adminSupport: () => import("./pages/AdminSupport"),
   adminReferrals: () => import("./pages/AdminReferrals"),
-  // Orbit for Business (D82): its public page, the company app (its own chunks, loaded only there), the careers pages
-  // and an applicant's status page, an invite, and the admin's screen.
-  businessLanding: () => import("./business/BusinessLanding"),
-  businessApp: () => import("./business/BusinessApp"),
-  careers: () => import("./business/CareersPages"),
-  businessInvite: () => import("./business/InvitePage"),
-  adminBusiness: () => import("./business/AdminBusiness"),
+  // Orbit for Business (D82): one small router chunk for every business address; its pages load from there.
+  business: () => import("./business/BusinessRoutes"),
 } as const;
 
 function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
@@ -124,13 +119,11 @@ export const AdminAuditPage = page(loaders.adminAudit, (m) => m.AdminAuditPage);
 export const AdminInboxPage = page(loaders.adminInbox, (m) => m.AdminInboxPage);
 export const AdminSupportPage = page(loaders.adminSupport, (m) => m.AdminSupportPage);
 export const AdminReferralsPage = page(loaders.adminReferrals, (m) => m.AdminReferralsPage);
-export const BusinessLandingPage = page(loaders.businessLanding, (m) => m.BusinessLandingPage);
-export const BusinessAppPage = page(loaders.businessApp, (m) => m.BusinessApp);
-export const CompanyCareersPage = page(loaders.careers, (m) => m.CompanyCareersPage);
-export const PublicJobPage = page(loaders.careers, (m) => m.PublicJobPage);
-export const ApplicationStatusPage = page(loaders.careers, (m) => m.ApplicationStatusPage);
-export const BusinessInvitePage = page(loaders.businessInvite, (m) => m.InvitePage);
-export const AdminBusinessPage = page(loaders.adminBusiness, (m) => m.AdminBusinessPage);
+export const BusinessPages = page(loaders.business, (m) => m.BusinessRoutes);
+export const CompanyCareersPage = page(loaders.business, (m) => m.CompanyCareersPage);
+export const PublicJobPage = page(loaders.business, (m) => m.PublicJobPage);
+export const ApplicationStatusPage = page(loaders.business, (m) => m.ApplicationStatusPage);
+export const AdminBusinessPage = page(loaders.business, (m) => m.AdminBusinessPage);
 
 type PageKey = keyof typeof loaders;
 
@@ -146,9 +139,6 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/interview-copilot\/?$/, "copilotPublic"],
   [/^\/mock-interview\/?$/, "practicePublic"],
   [/^\/linkedin-ai\/?$/, "linkedinPublic"],
-  [/^\/business\/?$/, "businessLanding"],
-  [/^\/business\/app(\/|$)/, "businessApp"],
-  [/^\/(company|application)\//, "careers"],
   [/^\/start/, "setup"],
   [/^\/live\//, "live"],
   [/^\/sessions\/[^/]+/, "sessionDetail"],

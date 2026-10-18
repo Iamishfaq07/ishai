@@ -16,7 +16,7 @@ import {
   EmptyState,
   Field,
   Input,
-  LayoutGrid,
+  Gauge,
   ScrollText,
   Select,
   SettingsIcon,
@@ -106,7 +106,7 @@ function Header({ company }: { company?: BizCompany | undefined }) {
 }
 
 const NAV = [
-  { to: "", label: "Dashboard", icon: LayoutGrid, end: true },
+  { to: "", label: "Dashboard", icon: Gauge, end: true },
   { to: "jobs", label: "Jobs", icon: Briefcase },
   { to: "team", label: "Team", icon: Users },
   { to: "settings", label: "Settings", icon: SettingsIcon },

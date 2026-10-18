@@ -2,7 +2,7 @@
 // is what stops fake employers and job scams. Unverified companies can draft jobs but not publish them.
 import { useEffect, useId, useState, type FormEvent } from "react";
 import type { BizVerification } from "@orbit/types";
-import { BadgeCheck, Button, Callout, CopyButton, Field, Input, Mail, toast } from "@orbit/ui";
+import { Button, ShieldCheck, Callout, CopyButton, Field, Input, Mail, toast } from "@orbit/ui";
 import { biz } from "./api";
 import { useCompany, PageTitle } from "./BusinessApp";
 import { EMAIL_RE } from "./model";
@@ -47,7 +47,7 @@ export function Verification() {
     <div className="max-w-3xl space-y-5">
       <PageTitle title="Verify your company" subtitle={`Show that you work at ${v.domain}. It's what lets your jobs go live, and what protects job seekers from fake employers.`} />
       {v.verified ? (
-        <Callout tone="success" icon={<BadgeCheck className="h-4 w-4" />} title={`${company.name} is verified`}>
+        <Callout tone="success" icon={<ShieldCheck className="h-4 w-4" />} title={`${company.name} is verified`}>
           Verified {v.method === "dns" ? "with a DNS record" : v.method === "admin" ? "by the Orbit team" : "with a work email"} on {v.domain}. Your careers page shows a "Verified company" badge.
         </Callout>
       ) : v.blocked_domain ? (

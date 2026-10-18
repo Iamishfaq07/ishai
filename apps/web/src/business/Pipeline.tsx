@@ -9,7 +9,7 @@ import {
   Button,
   Callout,
   Checkbox,
-  Columns3,
+  ChartColumn,
   Dialog,
   DialogActions,
   Download,
@@ -413,7 +413,7 @@ export function Pipeline() {
           value={view}
           onChange={setView}
           options={[
-            { value: "board", label: <span className="inline-flex items-center gap-1"><Columns3 className="h-3.5 w-3.5" aria-hidden /> Board</span> },
+            { value: "board", label: <span className="inline-flex items-center gap-1"><ChartColumn className="h-3.5 w-3.5" aria-hidden /> Board</span> },
             { value: "list", label: <span className="inline-flex items-center gap-1"><List className="h-3.5 w-3.5" aria-hidden /> List</span> },
           ]}
         />

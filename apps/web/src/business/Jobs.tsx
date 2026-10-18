@@ -18,8 +18,8 @@ import type {
   BizWorkplace,
 } from "@orbit/types";
 import {
-  ArrowDown,
-  ArrowUp,
+  ChevronRight,
+  ChevronLeft,
   Button,
   Callout,
   Checkbox,
@@ -336,10 +336,10 @@ function QuestionEditor({ q, index, count, onChange, onRemove, onMove }: { q: Bi
       {q.knockout && <p className="mt-2 text-xs text-amber-800 dark:text-amber-300">Knock-out: {describeKnockout(q.kind, q.knockout)}</p>}
       <div className="mt-3 flex gap-1">
         <Button type="button" variant="ghost" size="sm" aria-label={`Move question ${index + 1} up`} disabled={index === 0} onClick={() => onMove(-1)}>
-          <ArrowUp className="h-4 w-4" aria-hidden />
+          <ChevronLeft className="h-4 w-4 rotate-90" aria-hidden />
         </Button>
         <Button type="button" variant="ghost" size="sm" aria-label={`Move question ${index + 1} down`} disabled={index === count - 1} onClick={() => onMove(1)}>
-          <ArrowDown className="h-4 w-4" aria-hidden />
+          <ChevronRight className="h-4 w-4 rotate-90" aria-hidden />
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
           <Trash2 className="h-4 w-4" aria-hidden /> Remove
@@ -366,10 +366,10 @@ function StagesEditor({ stages, onChange }: { stages: BizStage[]; onChange: (s: 
               ))}
             </Select>
             <Button type="button" variant="ghost" size="sm" aria-label={`Move ${s.name || "stage"} up`} disabled={i === 0} onClick={() => onChange(moveItem(stages, i, i - 1))}>
-              <ArrowUp className="h-4 w-4" aria-hidden />
+              <ChevronLeft className="h-4 w-4 rotate-90" aria-hidden />
             </Button>
             <Button type="button" variant="ghost" size="sm" aria-label={`Move ${s.name || "stage"} down`} disabled={i === stages.length - 1} onClick={() => onChange(moveItem(stages, i, i + 1))}>
-              <ArrowDown className="h-4 w-4" aria-hidden />
+              <ChevronRight className="h-4 w-4 rotate-90" aria-hidden />
             </Button>
             <Button type="button" variant="ghost" size="sm" aria-label={`Remove ${s.name || "stage"}`} disabled={s.kind === "applied" || s.kind === "rejected"} onClick={() => onChange(stages.filter((_, j) => j !== i))}>
               <Trash2 className="h-4 w-4" aria-hidden />

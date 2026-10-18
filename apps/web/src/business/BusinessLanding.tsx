@@ -3,7 +3,7 @@
 // person decides, a shared pipeline, and the plans. Built as HTML too (src/prerender).
 import { useRef } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Building2, Columns3, Globe, ScrollText, ShieldCheck, Sparkles, Users, buttonClass } from "@orbit/ui";
+import { ArrowRight, Briefcase, Building2, ChartColumn, ScrollText, ShieldCheck, Sparkles, Users, buttonClass } from "@orbit/ui";
 import { BUSINESS_FAQ } from "../../worker/faqs/business.js";
 import { FactsBand, FaqBlock, FinalCta, HeroShowcase, Panel, SampleTag, StepsWithUI, ToolkitGrid } from "../marketing/kit";
 import { PublicLayout } from "../marketing/PublicLayout";
@@ -136,8 +136,8 @@ export function BusinessLandingPage() {
         band
         tools={[
           { title: "Ranking that shows its work", icon: Sparkles, text: "\"Matches 6 of 8 must-haves\", each with the line from the resume that shows it. It sorts; it never decides.", widget: <EvidenceArt />, wide: true },
-          { title: "Careers page and Google for Jobs", icon: Globe, text: "Each open job is a page with JobPosting markup, in Orbit's sitemap, and taken out when the job closes.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">orbitanswer.com/company/acme</p> },
-          { title: "Board and list", icon: Columns3, text: "Drag or use the keyboard to move applicants, select many to move or reject at once, tag and search.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">Applied · Screen · Interview · Offer · Hired</p> },
+          { title: "Careers page and Google for Jobs", icon: Briefcase, text: "Each open job is a page with JobPosting markup, in Orbit's sitemap, and taken out when the job closes.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">orbitanswer.com/company/acme</p> },
+          { title: "Board and list", icon: ChartColumn, text: "Drag or use the keyboard to move applicants, select many to move or reject at once, tag and search.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">Applied · Screen · Interview · Offer · Hired</p> },
           { title: "Team, scorecards and scheduling", icon: Users, text: "Five roles, a 1-4 rubric per stage with hire or no hire, and interview times the applicant picks, with a calendar invite.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">Owner · Admin · Recruiter · Hiring manager · Interviewer</p> },
           { title: "Data controls and audit log", icon: ScrollText, text: "Retention you set, delete on request, CSV export, and a log of every move and every ranking's model version.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">Rejected: deleted after 12 months</p> },
         ]}

@@ -8,10 +8,10 @@ import {
   ArrowLeft,
   Badge,
   Button,
-  CalendarPlus,
+  CalendarIcon,
   Callout,
   CircleCheck,
-  CircleX,
+  X,
   Circle,
   Field,
   Input,
@@ -36,7 +36,7 @@ import { Loading, LoadError, Panel, errorText } from "./ui";
 const MET: Record<BizMet, { label: string; icon: typeof CircleCheck; tone: string }> = {
   yes: { label: "Met", icon: CircleCheck, tone: "text-emerald-700 dark:text-emerald-300" },
   partly: { label: "Partly", icon: Circle, tone: "text-amber-700 dark:text-amber-300" },
-  no: { label: "Not shown", icon: CircleX, tone: "text-zinc-500 dark:text-zinc-400" },
+  no: { label: "Not shown", icon: X, tone: "text-zinc-500 dark:text-zinc-400" },
 };
 
 function Requirements({ title, items }: { title: string; items: BizRequirementMatch[] }) {
@@ -266,7 +266,7 @@ function Scheduling({ a, onSaved }: { a: BizApplicationDetail; onSaved: (d: BizA
       </Field>
       {error && <Callout tone="error">{error}</Callout>}
       <Button type="submit" size="sm" loading={busy}>
-        <CalendarPlus className="h-4 w-4" aria-hidden /> Send times
+        <CalendarIcon className="h-4 w-4" aria-hidden /> Send times
       </Button>
     </form>
   );

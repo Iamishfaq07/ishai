@@ -6,7 +6,7 @@ import { Link, useLocation, useParams, useSearchParams } from "react-router-dom"
 import type { BizApplicationStatus, BizApplyPreview, BizApplyResult, BizJobReport, BizPublicCompany, BizPublicJob, BizQuestion } from "@orbit/types";
 import {
   ArrowLeft,
-  BadgeCheck,
+  ShieldCheck,
   Briefcase,
   Button,
   Callout,
@@ -100,7 +100,7 @@ function Verified({ on }: { on: boolean }) {
   if (!on) return null;
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-200">
-      <BadgeCheck className="h-3 w-3" aria-hidden /> Verified company
+      <ShieldCheck className="h-3 w-3" aria-hidden /> Verified company
     </span>
   );
 }
