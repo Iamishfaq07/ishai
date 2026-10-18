@@ -18,9 +18,11 @@ the credits only theirs, so time on a Pro grant doesn't come out of the credits 
 earlier in the month don't shrink a Pro allowance.
 """
 
+import itertools
 import json
 import logging
 import os
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -307,6 +309,30 @@ async def plan_for(db: AsyncSession, user_id: str) -> Plan:
     if sub is not None:
         return plan_named(sub.plan)
     return PENDING if user is not None and awaiting_approval(user) else plans()["free"]
+
+
+async def plans_for_users(db: AsyncSession, users: Sequence[User]) -> dict[str, Plan]:
+    """`plan_for` of many accounts at once (the admin's reports), by the same rules in the same order: one query for
+    the subscriptions of those not on a grant, instead of two per account (the cost report ran 4,000 queries for
+    2,000 accounts)."""
+    subs: dict[str, str] = {}
+    pending = [u.id for u in users if not active_grant(u)]
+    for ids in itertools.batched(pending, 500):  # bounded IN lists
+        rows = (await db.execute(select(Subscription.user_id, Subscription.plan)
+                                 .where(Subscription.user_id.in_(ids), Subscription.status == "active")
+                                 .order_by(Subscription.created_at.asc()))).all()
+        subs.update({uid: plan for uid, plan in rows})  # oldest first: the newest active one wins, as in plan_for
+    out: dict[str, Plan] = {}
+    for user in users:
+        if await is_admin(db, user):
+            out[user.id] = plans()["unlimited"]
+        elif granted := active_grant(user):
+            out[user.id] = plan_named(granted)
+        elif user.id in subs:
+            out[user.id] = plan_named(subs[user.id])
+        else:
+            out[user.id] = PENDING if awaiting_approval(user) else plans()["free"]
+    return out
 
 
 def _month_start() -> datetime:
