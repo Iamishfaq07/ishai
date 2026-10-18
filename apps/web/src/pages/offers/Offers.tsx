@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
-import { Spot, ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, LoadGate, celebrate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
+import { Spot, ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, Skeleton, celebrate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
-import { useAsync } from "../../lib/useAsync";
+import { useAsync, useSettledOnce } from "../../lib/useAsync";
 import { useCountry } from "../../lib/country";
 import { jobPath } from "../jobs/paths";
 import { OfferForm } from "./OfferForm";
@@ -28,6 +28,7 @@ export function OffersPage() {
   const country = useCountry();
   const india = isIndia(country);
   const offers = useAsync(() => api.offers(), [], "offers");
+  const shown = useSettledOnce(offers);
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export function OffersPage() {
             ? "What an offer really pays each month, how it compares with the market, and a plan to ask for more."
             : "What an offer is worth in its first year, how it compares with the market, and a plan to ask for more. Monthly take-home after tax is India-only for now."
         }
-        actions={!adding && list.length > 0 ? (
+        actions={shown && !adding && list.length > 0 ? (
           <Button onClick={() => setAdding(true)}>
             <Plus className="h-4 w-4" /> Add an offer
           </Button>
@@ -70,7 +71,12 @@ export function OffersPage() {
           <OfferForm initial={emptyOffer(currencyFor(country))} busy={busy} error={error} onSave={(o) => void add(o)} onCancel={() => setAdding(false)} />
         </div>
       )}
-      <LoadGate loading={offers.loading && !offers.data} variant="card" count={2} label="Getting your offers">
+      {/* Until the offers are in, one placeholder for the list and the check below it, swapped for both at once (no
+          minimum skeleton time): drawn as they arrived, the list pushed the pay check down (CLS 0.45 on a phone). */}
+      {!shown ? (
+        <Skeleton variant="card" count={2} label="Getting your offers" className="min-h-[60vh]" />
+      ) : (
+      <>
         {offers.error && !offers.data ? (
           <ErrorNote onRetry={offers.reload}>{errorText(offers.error)}</ErrorNote>
         ) : list.length === 0 && !adding ? (
@@ -96,8 +102,9 @@ export function OffersPage() {
             {list.length > 1 && <Compare offers={list} />}
           </div>
         )}
-      </LoadGate>
-      <PayCheck />
+        <PayCheck />
+      </>
+      )}
     </>
   );
 }

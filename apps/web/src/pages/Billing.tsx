@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BillingScene, CreditCard, LoadGate, Spot, cx, focusRing, rupees } from "@orbit/ui";
+import { BillingScene, CreditCard, LoadGate, Skeleton, Spot, cx, focusRing, rupees } from "@orbit/ui";
 import type { CreditPack, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
 import { errorText, formatDate } from "../lib/format";
-import { useAsync } from "../lib/useAsync";
+import { useAsync, useSettledOnce } from "../lib/useAsync";
 import { UpiCheckout } from "./UpiCheckout";
 import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
@@ -206,7 +206,8 @@ export function BillingPage() {
   // button, and below every pack on a phone. Bring it into view, or the click looks like it did nothing; once the
   // plans and packs above it are in, or they push it back down (back from PayPal, the page is still loading).
   const said = buyError ?? bought ?? notice;
-  const laidOut = Boolean(packs.data && monthly.data);
+  const shown = useSettledOnce(ent, packs, monthly, orders, invite);
+  const laidOut = shown && Boolean(packs.data && monthly.data);
   useEffect(() => {
     if (said && laidOut) messageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [said, laidOut]);
@@ -224,6 +225,12 @@ export function BillingPage() {
       <PageHeader icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." art={<BillingScene />} />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
+      {!shown ? (
+        // One placeholder about the page's height until the plans, packs, balance and orders are in: drawn as each
+        // arrived, the sections pushed each other down by hundreds of pixels (CLS 0.4 on a desktop, 0.8 on a phone).
+        <Skeleton variant="card" count={3} label="Loading plans and credits" className="min-h-[70vh]" />
+      ) : (
+      <>
       {invite.data && orders.data && (
         <div className="mb-8">
           <CodeEntry offer={invite.data.offer} canEnter={!paidBefore} prefill={codeFromLink}
@@ -351,6 +358,8 @@ export function BillingPage() {
           {invite.data && <InviteFriends invite={invite.data} />}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

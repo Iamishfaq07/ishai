@@ -103,3 +103,15 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[], key?
   );
   return { data, error, loading, reload, setData };
 }
+
+/**
+ * True once every one of these loads has answered (data or an error) at least once, and from then on. A page that
+ * draws its data-filled sections only then, with one placeholder in their place before, never moves under the
+ * reader as each answer lands one after another (layout shift: Plan & billing measured 0.4-0.8 CLS that way). A
+ * later refresh doesn't hide anything again.
+ */
+export function useSettledOnce(...states: ReadonlyArray<{ loading: boolean; data: unknown; error: unknown }>): boolean {
+  const settled = useRef(false);
+  if (!settled.current && states.every((st) => !st.loading || st.data !== null || st.error !== null)) settled.current = true;
+  return settled.current;
+}
