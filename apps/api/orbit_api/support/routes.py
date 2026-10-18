@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from orbit_api import entitlements
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import optional_user
 from orbit_api.billing import pricing
@@ -201,10 +202,32 @@ _GATEWAY = {"razorpay": "Razorpay", "paypal": "PayPal"}  # anything else was a U
 
 
 def _minutes(value: float) -> str:
-    if abs(value - round(value)) < 0.05:
-        n = round(value)
-        return f"{n} interview minute" if n == 1 else f"{n} interview minutes"
-    return f"{value:.1f} interview minutes"
+    """Whole minutes, as a person says them: "317 interview minutes" (not 317.3), "1,250", "less than a minute"."""
+    if 0 < value < 1:
+        return "less than an interview minute"
+    n = int(value + 0.05)  # 59.97 is 60; 317.3 is 317
+    return "1 interview minute" if n == 1 else f"{n:,} interview minutes"
+
+
+def _day(value: datetime) -> str:
+    return value.strftime("%d %b %Y").lstrip("0")
+
+
+async def _balance_answer(db: AsyncSession, user: User) -> str:
+    """What's left: the credit balance, or, on a plan, the plan, until when, and its interview time this month."""
+    resume = await resume_balance(db, user.id)
+    minutes = await interview_minutes_left(db, user.id)
+    plan = await entitlements.plan_for(db, user.id)
+    if plan.credits:
+        return f"You have {_minutes(minutes)} and {_credit_word(resume)} left. They don't expire."
+    until = entitlements.running_until(user)
+    on = f"You're on {plan.label}" + (f" until {_day(until)}" if until else "")
+    left = await entitlements.minutes_remaining(db, user.id, "interview", plan)
+    allowance = ("with no limit on interview minutes" if left is None
+                 else f"with {_minutes(left)} left in this month's allowance")
+    kept = (f" Your credits are kept for after it: {_minutes(minutes)} and {_credit_word(resume)}."
+            if until and (minutes >= 1 or resume) else "")
+    return f"{on}, {allowance}.{kept}"
 
 
 def _credit_word(n: int) -> str:
@@ -213,9 +236,7 @@ def _credit_word(n: int) -> str:
 
 async def _account_answer(db: AsyncSession, user: User, kind: str, currency: str = pricing.INR) -> str:
     if kind == "balance":
-        resume = await resume_balance(db, user.id)
-        minutes = await interview_minutes_left(db, user.id)
-        return f"You have {_minutes(minutes)} and {_credit_word(resume)} left. They don't expire."
+        return await _balance_answer(db, user)
     payment = (await db.execute(
         select(Payment).where(Payment.user_id == user.id).order_by(Payment.created_at.desc()).limit(1)
     )).scalar_one_or_none()
