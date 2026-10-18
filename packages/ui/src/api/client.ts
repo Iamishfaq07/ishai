@@ -995,8 +995,8 @@ export function createApiClient(options: ApiClientOptions) {
     setUserAccess: (userId: string, change: AccessChange) =>
       json<AdminUser>(`/v1/admin/users/${encodeURIComponent(userId)}/access`, { method: "POST", body: body(change) }),
     /** Admin: UPI payments ("submitted" = a UTR waiting to be checked). */
-    adminPayments: (only: "submitted" | "all" = "submitted") =>
-      json<AdminPayments>(`/v1/admin/payments?only=${only}`),
+    adminPayments: (only: "submitted" | "all" = "submitted", offset = 0) =>
+      json<AdminPayments>(`/v1/admin/payments${queryString({ only, ...(offset ? { offset } : {}) })}`),
     /** Admin: ask Razorpay now about open orders (the server also does this on its own every few minutes). */
     adminReconcile: () => json<ReconcileResult>("/v1/admin/payments/reconcile", { method: "POST", body: body({}) }),
     /** Admin: creator and campus codes (and every invite link together), sign-ups to commission, and what to review. */

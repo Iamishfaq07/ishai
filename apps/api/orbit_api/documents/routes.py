@@ -137,12 +137,16 @@ async def _ingest(db: AsyncSession, doc: Document, text: str) -> None:
     doc.extracted = {"chunk_categories": sorted({c.category for _, c, _ in prepared})}
 
 
+# The list's bound: paid plans have no document cap, so the newest this many (far past what anyone keeps) are listed.
+MAX_LISTED_DOCUMENTS = 1000
+
+
 @router.get("", response_model=list[DocumentOut])
 async def list_documents(user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> list[DocumentOut]:
     docs = (await db.scalars(select(Document).where(Document.user_id == user.id)
                              .options(defer(Document.source_text), defer(Document.extracted))
-                             .order_by(Document.created_at.desc()))).all()
+                             .order_by(Document.created_at.desc()).limit(MAX_LISTED_DOCUMENTS))).all()
     # One grouped count for the whole list instead of one per document.
     counts: dict[str, int] = {
         doc_id: int(n) for doc_id, n in (await db.execute(

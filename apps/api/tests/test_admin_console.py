@@ -603,3 +603,19 @@ def test_the_dashboard_asks_the_admin_to_turn_on_two_step_sign_in(console: Any) 
     on = client.post("/v1/auth/2fa/enable", headers=admin, json={"code": code_at(secret, int(time.time() // 30))})
     assert on.status_code == 200, on.text
     assert "admin_two_factor" not in client.get("/v1/admin/stats", headers=admin).json()["warnings"]
+
+
+def test_payments_come_a_page_at_a_time_and_the_count_to_check_is_all_of_them(console: Any) -> None:
+    """The list stopped at its limit with no way to older payments, and "to check" counted only the page."""
+    client, admin, _ = console
+    h, _u = _user(client, "pager")
+    for _ in range(3):
+        o = client.post("/v1/billing/upi/orders", headers=h, json={"pack": "starter"}).json()
+        assert client.post(f"/v1/billing/upi/orders/{o['id']}/utr", headers=h, json={"utr": _utr()}).status_code == 200
+        client.post("/v1/billing/upi/orders", headers=h, json={"pack": "mini"})  # a different pack: a new order
+    first = client.get("/v1/admin/payments?only=submitted&limit=1", headers=admin).json()
+    assert len(first["payments"]) == 1 and first["has_more"] is True and first["waiting"] >= 3
+    second = client.get("/v1/admin/payments?only=submitted&limit=1&offset=1", headers=admin).json()
+    assert second["payments"][0]["id"] != first["payments"][0]["id"]
+    everything = client.get("/v1/admin/payments?only=submitted&limit=500", headers=admin).json()
+    assert everything["has_more"] is False and len(everything["payments"]) == everything["waiting"]

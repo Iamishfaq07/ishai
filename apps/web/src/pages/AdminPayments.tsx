@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AdminPayment } from "@orbit/types";
-import { Check, CosmicEmptyState, IndianRupee, LoadGate, X, confirmDialog, cx, rupees } from "@orbit/ui";
+import { Check, CosmicEmptyState, IndianRupee, LoadGate, X, confirmDialog, cx, rupees, toast } from "@orbit/ui";
 import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText, formatDate } from "../lib/format";
@@ -28,14 +28,31 @@ const LABEL: Record<AdminPayment["status"], string> = {
 export function AdminPaymentsPage() {
   const [only, setOnly] = useState<"submitted" | "all">("submitted");
   const list = useAsync(() => api.adminPayments(only), [only], `admin-payments-${only}`);
-  // A decided payment stays in the list (marked Approved or Rejected); the tab's count of those still to check is the
-  // server's count of the listed ones, so it's worked out again here, or it kept counting the one just approved.
+  // A decided payment stays in the list (marked Approved or Rejected); the tab's count of those still to check (the
+  // server's, for every page) goes down by one, or it kept counting the one just approved.
   const replace = (row: AdminPayment) =>
     list.setData((prev) => {
       if (!prev) return prev;
+      const before = prev.payments.find((p) => p.id === row.id);
       const payments = prev.payments.map((p) => (p.id === row.id ? row : p));
-      return { ...prev, payments, waiting: payments.filter((p) => p.status === "submitted").length };
+      const change = (before?.status === "submitted" ? 1 : 0) - (row.status === "submitted" ? 1 : 0);
+      return { ...prev, payments, waiting: Math.max(0, prev.waiting - change) };
     });
+
+  // Older payments, a page at a time (the server keeps the tab's count of those to check for all of them).
+  const [older, setOlder] = useState(false);
+  const loadOlder = async () => {
+    const shown = list.data?.payments.length ?? 0;
+    setOlder(true);
+    try {
+      const next = await api.adminPayments(only, shown);
+      list.setData((prev) => (prev ? { ...prev, payments: [...prev.payments, ...next.payments], has_more: next.has_more } : next));
+    } catch (err) {
+      toast({ message: errorText(err), tone: "error" });
+    } finally {
+      setOlder(false);
+    }
+  };
 
   const [checking, setChecking] = useState(false);
   const [checked, setChecked] = useState<string | null>(null);
@@ -108,13 +125,22 @@ export function AdminPaymentsPage() {
           body={only === "submitted" ? "You'll get an email when someone sends a UTR." : "Payments appear here once someone pays and sends the UTR."}
         />
       ) : (
-        <ul className="space-y-3">
-          {data.payments.map((p) => (
-            <li key={p.id}>
-              <PaymentRow payment={p} onChange={replace} />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="space-y-3">
+            {data.payments.map((p) => (
+              <li key={p.id}>
+                <PaymentRow payment={p} onChange={replace} />
+              </li>
+            ))}
+          </ul>
+          {data.has_more && (
+            <div className="mt-4 flex justify-center">
+              <Button variant="secondary" size="sm" disabled={older} onClick={() => void loadOlder()}>
+                {older ? "Loading…" : "Show older payments"}
+              </Button>
+            </div>
+          )}
+        </>
       )}
       </LoadGate>
     </>

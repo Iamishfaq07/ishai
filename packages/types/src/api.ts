@@ -933,6 +933,8 @@ export interface AdminPayments {
   events_to_review?: number;
   /** Refunds whose payment isn't known here yet. */
   unlinked_refunds?: number;
+  /** Older payments past this page (ask again with an offset). */
+  has_more?: boolean;
 }
 
 /** A first-purchase discount: from an invite link or a creator's or campus's code (POST /v1/referrals/redeem). */

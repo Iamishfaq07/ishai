@@ -696,6 +696,8 @@ class AdminPaymentsOut(BaseModel):
     processing: int = 0
     events_to_review: int = 0
     unlinked_refunds: int = 0
+    # Older payments past this page (?offset= for the next one).
+    has_more: bool = False
 
 
 async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
@@ -713,15 +715,19 @@ async def _admin_payment(db: AsyncSession, p: Payment) -> AdminPayment:
 @router.get("/admin/payments", response_model=AdminPaymentsOut)
 async def admin_payments(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)],
                          only: Literal["submitted", "all"] = "submitted",
-                         limit: Annotated[int, Query(ge=1, le=500)] = 100) -> AdminPaymentsOut:
-    """UPI payments, newest first. "submitted" = waiting for you to check the UTR."""
-    q = select(Payment).order_by(Payment.submitted_at.desc().nulls_last(), Payment.created_at.desc()).limit(limit)
+                         limit: Annotated[int, Query(ge=1, le=500)] = 100,
+                         offset: Annotated[int, Query(ge=0, le=1_000_000)] = 0) -> AdminPaymentsOut:
+    """Payments, newest first, a page at a time. "submitted" = waiting for you to check the UTR."""
+    q = (select(Payment).order_by(Payment.submitted_at.desc().nulls_last(), Payment.created_at.desc(), Payment.id)
+         .offset(offset).limit(limit + 1))
     if only == "submitted":
         q = q.where(Payment.status == "submitted")
     else:
         q = q.where(Payment.status.not_in(("awaiting_payment", "expired")))  # orders nobody paid for are noise
-    rows = (await db.scalars(q)).all()
-    waiting = len(rows) if only == "submitted" else len([p for p in rows if p.status == "submitted"])
+    page = (await db.scalars(q)).all()
+    rows, has_more = page[:limit], len(page) > limit
+    # Counted, not taken from the page: past the first hundred the tab's number was the page's.
+    waiting = int(await db.scalar(select(func.count()).select_from(Payment).where(Payment.status == "submitted")) or 0)
     processing = await db.scalar(select(func.count()).select_from(Payment).where(Payment.status == "processing"))
     events = await db.scalar(select(func.count()).select_from(PaymentEvent).where(
         PaymentEvent.status.in_(("unmatched", "error"))))
@@ -729,7 +735,8 @@ async def admin_payments(_: Annotated[User, Depends(require_admin)], db: Annotat
         PaymentRefund.payment_id.is_(None)))
     return AdminPaymentsOut(upi_configured=bool(get_settings().upi_id), waiting=waiting,
                             payments=[await _admin_payment(db, p) for p in rows], processing=int(processing or 0),
-                            events_to_review=int(events or 0), unlinked_refunds=int(unlinked or 0))
+                            events_to_review=int(events or 0), unlinked_refunds=int(unlinked or 0),
+                            has_more=has_more)
 
 
 @router.post("/admin/payments/reconcile")
