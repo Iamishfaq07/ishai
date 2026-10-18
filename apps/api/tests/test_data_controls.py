@@ -155,3 +155,26 @@ def test_email_change_confirms_by_link_and_signs_out_old_sessions(client: TestCl
     assert client.post("/v1/auth/email-change/confirm", json={"token": token}).status_code == 400  # single use
     assert client.post("/v1/auth/login", json={"email": new, "password": PW}).status_code == 200
     assert client.post("/v1/auth/login", json={"email": email, "password": PW}).status_code == 401
+
+
+def test_the_markdown_export_has_the_answers_and_the_users_own_time(client: TestClient) -> None:
+    """The export had the summary, the questions and the transcript but none of Orbit's answers, its date in UTC
+    and a 45-second session as "0 min"."""
+    from orbit_api.sessions.routes import _export_length, _export_when
+
+    _, h = _user(client)
+    sid = _ended_session(client, h)
+    detail = _wait_report(client, h, sid)
+    answer = next(a for a in detail["answers"] if a["content"] and a["content"].get("direct_answer"))["content"]
+    md = client.get(f"/v1/sessions/{sid}/export.md?tz_offset=330", headers=h).text
+    assert "## Questions and answers" in md and answer["direct_answer"][:40] in md
+    assert "(UTC+05:30)" in md and "## Transcript" in md
+    if (detail["summary"] or {}).get("review"):
+        assert "## Scorecard" in md
+    from datetime import UTC, datetime
+
+    assert _export_when(datetime(2026, 10, 18, 6, 5, tzinfo=UTC), 330) == "2026-10-18 11:35 (UTC+05:30)"
+    assert _export_when(datetime(2026, 10, 18, 6, 5), -300) == "2026-10-18 01:05 (UTC-05:00)"
+    assert _export_when(datetime(2026, 10, 18, 6, 5, tzinfo=UTC), 0) == "2026-10-18 06:05 (UTC)"
+    assert (_export_length(45), _export_length(150), _export_length(3600)) == ("45 s", "2 min", "60 min")
+    assert client.get(f"/v1/sessions/{sid}/export.md?tz_offset=9999", headers=h).status_code == 422

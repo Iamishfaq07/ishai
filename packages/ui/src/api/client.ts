@@ -739,7 +739,7 @@ export function createApiClient(options: ApiClientOptions) {
     retryReport: (id: string) =>
       json<OrbitSession>(`/v1/sessions/${encodeURIComponent(id)}/report/retry`, { method: "POST" }),
     exportSessionMarkdown: async (id: string): Promise<string> =>
-      (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md`)).text(),
+      (await raw(`/v1/sessions/${encodeURIComponent(id)}/export.md${localDays()}`)).text(),
     liveTicket: (id: string) =>
       json<LiveTicket>(`/v1/sessions/${encodeURIComponent(id)}/live-ticket`, { method: "POST" }),
     /** 👍/👎 an answer (null clears it); a reason explains a 👎. */
