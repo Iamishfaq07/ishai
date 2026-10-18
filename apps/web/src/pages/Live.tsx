@@ -424,7 +424,14 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
   );
 
   // The AI video interview is a full-screen call: its own header and controls, no page chrome around it.
-  if (session.video && !endedWhy) return <div className="h-dvh min-h-0 bg-[#07070c]">{panel}</div>;
+  if (session.video && !endedWhy) {
+    // Full screen: on a phone with a notch, rounded corners or a home bar, the room's controls stay clear of them.
+    return (
+      <div className="h-dvh min-h-0 bg-[#07070c] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
+        {panel}
+      </div>
+    );
+  }
 
   return (
     // Clear of the home bar and a sideways phone's notch (viewport-fit=cover; the insets are 0 elsewhere).
