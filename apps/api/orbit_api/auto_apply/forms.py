@@ -67,7 +67,11 @@ def _text(raw: Any, limit: int = 2000) -> str:
     return " ".join(s.split())[:limit]
 
 
-def _standard_by_label(label: str) -> Standard | None:
+def _standard_by_label(label: str, kind: Kind = "text") -> Standard | None:
+    """A free-text question that asks for a standard field by its label. A choice ("Are you subject to any agreements
+    with your current employer?", Yes/No) never is one."""
+    if kind not in ("text", "url"):
+        return None
     low = label.lower()
     if "linkedin" in low:
         return "linkedin"
@@ -99,9 +103,10 @@ def _gh_question(q: dict[str, Any], section: Section) -> FormQuestion | None:
     label = _text(q.get("label"), 500)
     options = [Option(label=_text(v.get("label"), 300), value=str(v.get("value")))
                for v in f.get("values") or [] if isinstance(v, dict)]
-    return FormQuestion(id=name, label=label, kind=_GH_KIND.get(str(f.get("type")), "text"),
+    kind = _GH_KIND.get(str(f.get("type")), "text")
+    return FormQuestion(id=name, label=label, kind=kind,
                         required=bool(q.get("required")), options=options, section=section,
-                        standard=_GH_STANDARD.get(name) or _standard_by_label(label),
+                        standard=_GH_STANDARD.get(name) or _standard_by_label(label, kind),
                         description=_text(q.get("description"), 4000))
 
 
@@ -185,10 +190,11 @@ def lever_form(page: str) -> list[FormQuestion]:
             options = [Option(label=_text(o.get("text"), 300), value=_text(o.get("text"), 300))
                        for o in f.get("options") or [] if isinstance(o, dict)]
             label = _text(f.get("text"), 2000)
-            out.append(FormQuestion(id=f"cards[{raw}][field{i}]", label=label,
-                                    kind=_LEVER_KIND.get(str(f.get("type")), "text"), required=bool(f.get("required")),
-                                    options=options, description=_text(f.get("description"), 4000),
-                                    standard=_standard_by_label(label)))
+            kind = _LEVER_KIND.get(str(f.get("type")), "text")
+            out.append(FormQuestion(id=f"cards[{raw}][field{i}]", label=label, kind=kind,
+                                    required=bool(f.get("required")), options=options,
+                                    description=_text(f.get("description"), 4000),
+                                    standard=_standard_by_label(label, kind)))
     if "comments" in names:
         out.append(FormQuestion(id="comments", label="Additional information", kind="textarea",
                                 standard="cover_letter"))
@@ -241,7 +247,9 @@ def _ashby_question(e: dict[str, Any], section: Section) -> FormQuestion | None:
     label = _text(f.get("title"), 500)
     options = [Option(label=_text(v.get("label"), 300), value=str(v.get("value", v.get("label"))))
                for v in f.get("selectableValues") or [] if isinstance(v, dict)]
-    standard = _ASHBY_STANDARD.get(path) or ("phone" if ftype == "Phone" else None) or _standard_by_label(label)
+    kind = _ASHBY_KIND.get(ftype, "text")
+    standard = (_ASHBY_STANDARD.get(path) or ("phone" if ftype == "Phone" else None)
+                or _standard_by_label(label, kind))
     return FormQuestion(id=path, label=label, kind=_ASHBY_KIND.get(ftype, "text"), required=bool(e.get("isRequired")),
                         options=options, section=section, standard=standard,
                         description=_text(e.get("descriptionHtml"), 4000))

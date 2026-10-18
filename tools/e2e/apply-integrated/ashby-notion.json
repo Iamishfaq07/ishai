@@ -1,0 +1,326 @@
+{
+ "data": {
+  "jobPosting": {
+   "id": "1",
+   "title": "Backend Engineer",
+   "applicationForm": {
+    "id": "f",
+    "sections": [
+     {
+      "title": null,
+      "fieldEntries": [
+       {
+        "id": "entry-_systemfield_name",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "_systemfield_name",
+         "path": "_systemfield_name",
+         "title": "Full Name",
+         "type": "String",
+         "selectableValues": []
+        }
+       },
+       {
+        "id": "entry-_systemfield_email",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "_systemfield_email",
+         "path": "_systemfield_email",
+         "title": "Email",
+         "type": "Email",
+         "selectableValues": []
+        }
+       },
+       {
+        "id": "entry-8039f8aa-c269-467e-bdea-dec068474224",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "8039f8aa-c269-467e-bdea-dec068474224",
+         "path": "8039f8aa-c269-467e-bdea-dec068474224",
+         "title": "Phone",
+         "type": "Phone",
+         "selectableValues": []
+        }
+       },
+       {
+        "id": "entry-_systemfield_location",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "_systemfield_location",
+         "path": "_systemfield_location",
+         "title": "Location",
+         "type": "Location",
+         "selectableValues": []
+        }
+       },
+       {
+        "id": "entry-_systemfield_resume",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "_systemfield_resume",
+         "path": "_systemfield_resume",
+         "title": "Resume",
+         "type": "File",
+         "selectableValues": []
+        }
+       },
+       {
+        "id": "entry-dbb7e595-3d7b-4a1f-b0b6-76497b74b4cb",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "dbb7e595-3d7b-4a1f-b0b6-76497b74b4cb",
+         "path": "dbb7e595-3d7b-4a1f-b0b6-76497b74b4cb",
+         "title": "LinkedIn Profile",
+         "type": "String",
+         "selectableValues": []
+        }
+       },
+       {
+        "id": "entry-b0a5aba8-dbb7-41a9-b548-f72cc3e48956",
+        "isRequired": false,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "b0a5aba8-dbb7-41a9-b548-f72cc3e48956",
+         "path": "b0a5aba8-dbb7-41a9-b548-f72cc3e48956",
+         "title": "What pronouns would you like our team to use when addressing you?",
+         "type": "ValueSelect",
+         "selectableValues": [
+          {
+           "label": "He/Him",
+           "value": "He/Him"
+          },
+          {
+           "label": "She/Her",
+           "value": "She/Her"
+          },
+          {
+           "label": "They/Them",
+           "value": "They/Them"
+          },
+          {
+           "label": "Prefer not to say",
+           "value": "Prefer not to say"
+          },
+          {
+           "label": "Not represented here",
+           "value": "Not represented here"
+          }
+         ]
+        }
+       },
+       {
+        "id": "entry-e01a85db-feaa-42b3-a9ad-69b1dcbbab3f",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "e01a85db-feaa-42b3-a9ad-69b1dcbbab3f",
+         "path": "e01a85db-feaa-42b3-a9ad-69b1dcbbab3f",
+         "title": "We work from our offices on Mondays, Tuesdays, and Thursdays (Anchor Days). If you need an accommodation, we’ll partner with you and explore reasonable options consistent with applicable law. Are you able to commit to working from one of our offices on Anchor Days each week?",
+         "type": "Boolean",
+         "selectableValues": [
+          {
+           "label": "Yes",
+           "value": "Yes"
+          },
+          {
+           "label": "No",
+           "value": "No"
+          }
+         ]
+        }
+       },
+       {
+        "id": "entry-790b5934-74f5-46f5-897a-675b7f37f2f3",
+        "isRequired": true,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "790b5934-74f5-46f5-897a-675b7f37f2f3",
+         "path": "790b5934-74f5-46f5-897a-675b7f37f2f3",
+         "title": "Will you now or in the future require Notion to sponsor an immigration case in order to employ you?",
+         "type": "Boolean",
+         "selectableValues": [
+          {
+           "label": "Yes",
+           "value": "Yes"
+          },
+          {
+           "label": "No",
+           "value": "No"
+          }
+         ]
+        }
+       },
+       {
+        "id": "entry-0b3b7773-f6d9-4032-9ab1-368c4164e95a",
+        "isRequired": false,
+        "isHidden": false,
+        "descriptionHtml": null,
+        "field": {
+         "id": "0b3b7773-f6d9-4032-9ab1-368c4164e95a",
+         "path": "0b3b7773-f6d9-4032-9ab1-368c4164e95a",
+         "title": "How did you hear about this opportunity? (select all that apply)",
+         "type": "MultiValueSelect",
+         "selectableValues": [
+          {
+           "label": "LinkedIn",
+           "value": "LinkedIn"
+          },
+          {
+           "label": "Glassdoor",
+           "value": "Glassdoor"
+          },
+          {
+           "label": "Notion Blog",
+           "value": "Notion Blog"
+          },
+          {
+           "label": "Notion Employee",
+           "value": "Notion Employee"
+          },
+          {
+           "label": "Notion Website",
+           "value": "Notion Website"
+          },
+          {
+           "label": "Billboard/Outdoor Ads",
+           "value": "Billboard/Outdoor Ads"
+          },
+          {
+           "label": "Conference or Meetup",
+           "value": "Conference or Meetup"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "surveyForms": [
+    {
+     "id": "s",
+     "sections": [
+      {
+       "title": "EEOC",
+       "fieldEntries": [
+        {
+         "id": "entry-_systemfield_eeoc_gender",
+         "isRequired": false,
+         "isHidden": false,
+         "descriptionHtml": null,
+         "field": {
+          "id": "_systemfield_eeoc_gender",
+          "path": "_systemfield_eeoc_gender",
+          "title": "Gender",
+          "type": "ValueSelect",
+          "selectableValues": [
+           {
+            "label": "Male",
+            "value": "Male"
+           },
+           {
+            "label": "Female",
+            "value": "Female"
+           },
+           {
+            "label": "Decline to self-identify",
+            "value": "Decline to self-identify"
+           }
+          ]
+         }
+        },
+        {
+         "id": "entry-_systemfield_eeoc_race",
+         "isRequired": false,
+         "isHidden": false,
+         "descriptionHtml": null,
+         "field": {
+          "id": "_systemfield_eeoc_race",
+          "path": "_systemfield_eeoc_race",
+          "title": "Race",
+          "type": "ValueSelect",
+          "selectableValues": [
+           {
+            "label": "Hispanic or Latino",
+            "value": "Hispanic or Latino"
+           },
+           {
+            "label": "White (Not Hispanic or Latino)",
+            "value": "White (Not Hispanic or Latino)"
+           },
+           {
+            "label": "Black or African American (Not Hispanic or Latino)",
+            "value": "Black or African American (Not Hispanic or Latino)"
+           },
+           {
+            "label": "Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)",
+            "value": "Native Hawaiian or Other Pacific Islander (Not Hispanic or Latino)"
+           },
+           {
+            "label": "Asian (Not Hispanic or Latino)",
+            "value": "Asian (Not Hispanic or Latino)"
+           },
+           {
+            "label": "American Indian or Alaska Native (Not Hispanic or Latino)",
+            "value": "American Indian or Alaska Native (Not Hispanic or Latino)"
+           },
+           {
+            "label": "Two or More Races (Not Hispanic or Latino)",
+            "value": "Two or More Races (Not Hispanic or Latino)"
+           },
+           {
+            "label": "Decline to self-identify",
+            "value": "Decline to self-identify"
+           }
+          ]
+         }
+        },
+        {
+         "id": "entry-_systemfield_eeoc_veteran_status",
+         "isRequired": false,
+         "isHidden": false,
+         "descriptionHtml": null,
+         "field": {
+          "id": "_systemfield_eeoc_veteran_status",
+          "path": "_systemfield_eeoc_veteran_status",
+          "title": "Veteran Status",
+          "type": "ValueSelect",
+          "selectableValues": [
+           {
+            "label": "I identify as one or more of the classifications of protected veteran listed above",
+            "value": "I identify as one or more of the classifications of protected veteran listed above"
+           },
+           {
+            "label": "I am not a protected veteran",
+            "value": "I am not a protected veteran"
+           },
+           {
+            "label": "I decline to self-identify for protected veteran status",
+            "value": "I decline to self-identify for protected veteran status"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
