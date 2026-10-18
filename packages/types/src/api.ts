@@ -1143,8 +1143,11 @@ export interface AdminUsage {
   /** Approved UPI payments. */
   paid_inr: number;
   packs: number;
-  /** The last time the account used Orbit (a session, interview time, resume AI or edits, Jobs AI); not sign-ins. */
+  /** The last time the account used Orbit (a session, interview time, resume AI or edits, Jobs AI, documents,
+   *  stories, answers, evidence, Code AI, offers); not sign-ins. */
   last_active: string | null;
+  /** The last time any of its signed-in devices was used (signing in counts). Older servers leave it out. */
+  last_seen?: string | null;
 }
 
 /** The whole server at a glance. */

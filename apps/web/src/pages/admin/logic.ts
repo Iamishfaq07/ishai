@@ -43,6 +43,13 @@ export function sinceText(iso: string | null, now: Date = new Date()): string {
   return then.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
+/** "Last active" for an account that never used anything: whether it has at least signed in ("signed in today"), so
+ *  "Never" doesn't read as an account nobody opened. */
+export function seenText(lastActive: string | null, lastSeen: string | null | undefined, now: Date = new Date()): string | null {
+  if (lastActive || !lastSeen) return null;
+  return `signed in ${sinceText(lastSeen, now).toLowerCase()}`;
+}
+
 const ACTION_LABEL: Record<string, string> = {
   "admin.access.grant": "Gave a plan for a while",
   "admin.access.approve": "Approved for good",

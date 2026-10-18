@@ -19,7 +19,7 @@ import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { AccountHistory } from "./AccountHistory";
 import { CreditsAdjust } from "./CreditsAdjust";
-import { sinceText } from "./logic";
+import { seenText, sinceText } from "./logic";
 import { AccessBadge, Section, SuspendedBadge, Tag, inr, mins, when } from "./shared";
 
 const DURATIONS: Array<{ hours: number; label: string }> = [
@@ -92,6 +92,7 @@ export function UserDrawer({
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
               Joined {formatDate(u.created_at)} · {u.email_verified ? "email verified" : "email not verified"} · last active{" "}
               {sinceText(u.usage?.last_active ?? null).toLowerCase()}
+              {seenText(u.usage?.last_active ?? null, u.usage?.last_seen) ? ` (${seenText(u.usage?.last_active ?? null, u.usage?.last_seen)})` : ""}
             </p>
           </>
         ) : undefined
