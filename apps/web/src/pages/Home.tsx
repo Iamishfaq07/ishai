@@ -45,7 +45,7 @@ import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./UsageSummary";
 import { DueToday } from "./DueToday";
 import { KashSecHomeCard } from "../components/KashSec";
-import { summaryLine } from "./home/dashboard";
+import { greetingFor, summaryLine } from "./home/dashboard";
 import { AtAGlance, Pipeline, Upcoming } from "./home/Mission";
 import { FollowUps } from "./jobs/FollowUps";
 import { InterviewSoon } from "./jobs/interview/InterviewSoon";
@@ -56,11 +56,6 @@ import { scoreTone } from "./resume/product";
 
 const primaryLink = buttonClass("primary", "md", "min-h-11");
 const secondaryLink = buttonClass("secondary", "md", "min-h-10");
-
-function greeting(): string {
-  const h = new Date().getHours();
-  return h >= 5 && h < 12 ? "Good morning" : h >= 12 && h < 18 ? "Good afternoon" : "Good evening";
-}
 
 /**
  * Home: one "Your next step" first, picked from the welcome answers and what the account already has
@@ -113,7 +108,7 @@ export function HomePage() {
       {/* Mission Control: where the search stands, in one line, from the account's own records. */}
       <header>
         <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-          {greeting()}
+          {greetingFor(new Date().getHours())}
           {firstName ? `, ${firstName}` : ""}
         </h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
