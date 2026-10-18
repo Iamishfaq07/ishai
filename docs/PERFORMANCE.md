@@ -56,6 +56,12 @@ even when SQLite hides it.
   free line in the room it will need once the server answers, so nothing moves (CLS 0, below). The product pages
   carry it too, within their budgets; it's its own chunk, so the pages without it pay only its name in the preload map.
 
+  Orbit for Business (D82, 19 Oct 2026) raised Home, Sessions, Setup, Mock, Live and Resume AI by 1 kB each: the
+  entry grew ~0.3 kB (the business routes and the one loader for every `/business` and `/company` address; the app
+  itself, the careers pages and the admin screen are lazy chunks), and the table's sort-arrow icon became its own
+  chunk. Measured against an origin/main build: that is the whole cost. New budgets: the /business page 203, the
+  careers and job pages 195.
+
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
 - **INP** ≤ 200 ms at p75, and no task over 200 ms while a page opens (total blocking time ≤ 300 ms), under the same
