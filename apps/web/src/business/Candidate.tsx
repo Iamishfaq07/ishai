@@ -362,7 +362,7 @@ function Tags({ a, onSaved, canEdit }: { a: BizApplicationDetail; onSaved: (d: B
         <span key={t} className="inline-flex items-center gap-1">
           <Badge>{t}</Badge>
           {canEdit && (
-            <button type="button" aria-label={`Remove tag ${t}`} onClick={() => void save(a.tags.filter((x) => x !== t))} className={cx("rounded text-xs text-zinc-500 hover:text-rose-600", focusRing)}>
+            <button type="button" aria-label={`Remove tag ${t}`} onClick={() => void save(a.tags.filter((x) => x !== t))} className={cx("inline-flex h-6 w-6 items-center justify-center rounded text-xs text-zinc-500 hover:text-rose-600", focusRing)}>
               ×
             </button>
           )}

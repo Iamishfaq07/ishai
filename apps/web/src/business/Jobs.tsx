@@ -200,8 +200,8 @@ function RichText({ labelId, value, onChange }: { labelId: string; value: string
     { label: "Italic (Ctrl+I)", text: "I", run: () => cmd("italic"), className: "italic" },
     { label: "Heading", text: "H", run: () => cmd("formatBlock", "h3") },
     { label: "Paragraph", text: "¶", run: () => cmd("formatBlock", "p") },
-    { label: "Bulleted list", text: "• List", run: () => cmd("insertUnorderedList") },
-    { label: "Numbered list", text: "1. List", run: () => cmd("insertOrderedList") },
+    { label: "Bullets", text: "Bullets", run: () => cmd("insertUnorderedList") },
+    { label: "Numbered", text: "Numbered", run: () => cmd("insertOrderedList") },
     { label: "Link (Ctrl+K)", text: "Link", run: link },
   ];
   return (

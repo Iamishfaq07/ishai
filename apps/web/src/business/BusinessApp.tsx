@@ -439,7 +439,11 @@ function Notifications() {
           <ul className="divide-y divide-zinc-200 rounded-2xl border border-zinc-200 dark:divide-white/10 dark:border-white/10">
             {items.map((n) => (
               <li key={n.id} className="flex items-start gap-3 p-3.5 text-sm">
-                {!n.read && <span aria-label="New" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-600" />}
+                {!n.read && (
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-600">
+                    <span className="sr-only">New:</span>
+                  </span>
+                )}
                 <div className="min-w-0 flex-1">
                   <Link to={n.link} className={cx("rounded font-medium hover:underline", focusRing)}>
                     {n.text}

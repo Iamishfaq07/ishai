@@ -10,10 +10,17 @@ const BusinessLandingPage = lazy(async () => ({ default: (await import("./Busine
 const BusinessApp = lazy(async () => ({ default: (await import("./BusinessApp")).BusinessApp }));
 const InvitePage = lazy(async () => ({ default: (await import("./InvitePage")).InvitePage }));
 const NotFoundPage = lazy(async () => ({ default: (await import("../pages/NotFound")).NotFoundPage }));
-export const CompanyCareersPage = lazy(async () => ({ default: (await import("./CareersPages")).CompanyCareersPage }));
-export const PublicJobPage = lazy(async () => ({ default: (await import("./CareersPages")).PublicJobPage }));
-export const ApplicationStatusPage = lazy(async () => ({ default: (await import("./CareersPages")).ApplicationStatusPage }));
-export const AdminBusinessPage = lazy(async () => ({ default: (await import("./AdminBusiness")).AdminBusinessPage }));
+const Careers = lazy(async () => ({ default: (await import("./CareersPages")).CompanyCareersPage }));
+const Job = lazy(async () => ({ default: (await import("./CareersPages")).PublicJobPage }));
+const Status = lazy(async () => ({ default: (await import("./CareersPages")).ApplicationStatusPage }));
+const Admin = lazy(async () => ({ default: (await import("./AdminBusiness")).AdminBusinessPage }));
+
+// Plain components around the lazy ones: routes.ts loads this module lazily, and a lazy component can't resolve to
+// another lazy one.
+export const CompanyCareersPage = () => <Careers />;
+export const PublicJobPage = () => <Job />;
+export const ApplicationStatusPage = () => <Status />;
+export const AdminBusinessPage = () => <Admin />;
 
 /** /business/*: the public page (built as HTML too), the company app (signed in) and an invite. */
 export function BusinessRoutes() {
