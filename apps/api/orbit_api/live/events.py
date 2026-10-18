@@ -196,6 +196,16 @@ class MockAnswer(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
 
 
+class MockVoice(BaseModel):
+    """The AI video interview: what the client's voice did with one of the interviewer's lines (a question's id or
+    a `mock.say` line's): started or finished saying it, the candidate talked over it, or it couldn't be heard (the
+    browser refused to play it until a tap, it stalled, there's no voice at all, or it fell back to the device's)."""
+
+    event: Literal["started", "finished", "interrupted", "blocked", "stalled", "unavailable", "fallback"]
+    line_id: str | None = Field(None, max_length=36)
+    detail: str | None = Field(None, max_length=120)
+
+
 class SpeakerCorrect(BaseModel):
     turn_id: str = Field(max_length=36)  # a uuid the engine issued
     speaker: Speaker
@@ -215,6 +225,7 @@ CLIENT_EVENT_TYPES = frozenset(
         "answer.request",
         "mock.next",
         "mock.answer",
+        "mock.voice",
         "answer.pin",
         "answer.clear",
         "answer.stop",

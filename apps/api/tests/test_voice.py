@@ -40,7 +40,7 @@ def test_without_a_key_the_device_voice_is_used(client: TestClient, monkeypatch:
     h = _account(client)
     monkeypatch.setattr(voice, "get_tts_provider", lambda: None)
     s = client.get("/v1/voice", headers=h).json()
-    assert s == {"available": False, "voices": [], "default_voice": "us", "chars_left": 0}
+    assert s == {"available": False, "voices": [], "default_voice": "vesta", "chars_left": 0}
     assert client.post("/v1/voice/speak", headers=h, json={"text": "Hi"}).status_code == 503
 
 
@@ -49,13 +49,17 @@ def test_speaks_through_the_api_and_counts_characters(client: TestClient, monkey
     seen: list[httpx.Request] = []
     _deepgram(monkeypatch, seen=seen)
     s = client.get("/v1/voice", headers=h).json()
-    assert s["available"] is True and [v["model"] for v in s["voices"]] == ["aura-2-thalia-en"]  # one real voice
+    # A small choice of real Aura-2 voices (D76): two women's, two men's; "us" is still the first one people had.
+    assert s["available"] is True and [v["model"] for v in s["voices"]] == [
+        "aura-2-vesta-en", "aura-2-thalia-en", "aura-2-pluto-en", "aura-2-arcas-en"]
+    assert s["default_voice"] == "vesta" and {v["id"] for v in s["voices"]} >= {"us", "vesta"}
     assert s["chars_left"] == get_settings().tts_daily_chars
     r = client.post("/v1/voice/speak", headers=h, json={"text": "  Tell me   about yourself. ", "voice": "us"})
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == "audio/mpeg" and r.content == AUDIO
     req = seen[0]
     assert req.url.params["model"] == "aura-2-thalia-en" and req.url.params["encoding"] == "mp3"
+    assert "speed" not in req.url.params and r.headers["x-orbit-speed"] == "1"
     assert req.headers["authorization"] == "Token dg-secret-key"
     assert json.loads(req.content) == {"text": "Tell me about yourself."}  # whitespace tidied, nothing else sent
     assert "dg-secret-key" not in r.text
@@ -74,6 +78,27 @@ def test_the_daily_allowance_and_limits(client: TestClient, monkeypatch: pytest.
     # A voice saved by an older client (uk, au) gets the one voice instead of failing.
     old_choice = client.post("/v1/voice/speak", headers=h, json={"text": "hi", "voice": "uk"})
     assert old_choice.status_code == 200
+
+
+def test_a_pace_goes_to_deepgram_or_falls_back_to_the_normal_one(client: TestClient,
+                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    h = _account(client)
+    seen: list[httpx.Request] = []
+    _deepgram(monkeypatch, seen=seen)
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "Tell me about yourself.", "speed": 0.9})
+    assert r.status_code == 200 and seen[0].url.params["speed"] == "0.9" and r.headers["x-orbit-speed"] == "0.9"
+    assert client.post("/v1/voice/speak", headers=h, json={"text": "Hi", "speed": 3}).status_code == 422
+
+    # A voice that won't take a pace: the normal one, said so, and the client paces the playback itself.
+    def handle(request: httpx.Request) -> httpx.Response:
+        if "speed" in request.url.params:
+            return httpx.Response(400, json={"err_msg": "speed not supported"})
+        return httpx.Response(200, content=AUDIO, headers={"content-type": "audio/mpeg"})
+
+    provider = tts.DeepgramTTS("dg-secret-key", transport=httpx.MockTransport(handle))
+    monkeypatch.setattr(voice, "get_tts_provider", lambda: provider)
+    r = client.post("/v1/voice/speak", headers=h, json={"text": "Tell me about yourself.", "speed": 1.15})
+    assert r.status_code == 200 and r.content == AUDIO and r.headers["x-orbit-speed"] == "1"
 
 
 def test_a_provider_failure_is_a_json_error_and_free(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

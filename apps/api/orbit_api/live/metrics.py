@@ -7,6 +7,9 @@ packet was sent.
     question_after_speech     speech end   → question detected (finalizer + endpointing wait)
     first_token_after_speech  speech end   → first answer token (the number that matters in an interview)
     first_token_after_question  question detected → first answer token (LLM + retrieval)
+    mock_reply_after_speech   the AI interviewer: candidate's speech end → her next line sent (end of turn + writing)
+    mock_audio_after_speech   the AI interviewer: candidate's speech end → her voice starts on their device (what
+                              makes her feel human; the client reports when it starts)
 
 Samples are kept as raw lists (capped) so percentiles can be computed across sessions.
 """
@@ -15,7 +18,7 @@ import bisect
 from collections.abc import Iterable, Mapping
 
 METRICS = ("stt_first_partial", "stt_final", "question_after_speech", "first_token_after_speech",
-           "first_token_after_question")
+           "first_token_after_question", "mock_reply_after_speech", "mock_audio_after_speech")
 MAX_SAMPLES = 200  # per metric per session
 MAX_PLAUSIBLE_MS = 60_000  # anything beyond is clock misalignment (pause/resume), not latency
 

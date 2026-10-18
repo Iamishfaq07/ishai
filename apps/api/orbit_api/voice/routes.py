@@ -41,12 +41,19 @@ class Voice(BaseModel):
     model: str
 
 
-# One voice: Deepgram's own default Aura-2 voice, a clear American English one. Others weren't verifiable, and a
-# model name Deepgram doesn't have fails every request.
+# A small choice (D76): two women's and two men's Aura-2 voices that Deepgram describes as natural and suited to
+# interviews and conversation, picked after measuring how fast each starts. Every model name here was checked against
+# Deepgram's list (a name it doesn't have fails every request). "us" stays the id of the first one people had.
+# Deepgram has no Indian-English Aura-2 voice yet.
 VOICES: dict[str, Voice] = {
-    "us": Voice(id="us", label="Thalia · American English", model="aura-2-thalia-en"),
+    "vesta": Voice(id="vesta", label="Vesta · warm and patient", model="aura-2-vesta-en"),
+    "us": Voice(id="us", label="Thalia · clear and confident", model="aura-2-thalia-en"),
+    "pluto": Voice(id="pluto", label="Pluto · calm, deeper voice", model="aura-2-pluto-en"),
+    "arcas": Voice(id="arcas", label="Arcas · natural and clear", model="aura-2-arcas-en"),
 }
-DEFAULT_VOICE = "us"
+DEFAULT_VOICE = "vesta"
+# Speaking pace (Settings and the video interview's setup): slower, normal, brisk.
+MIN_SPEED, MAX_SPEED = 0.8, 1.25
 
 
 def _day_start() -> datetime:
@@ -81,6 +88,7 @@ class SpeakIn(BaseModel):
     text: str = Field(min_length=1, max_length=MAX_CHARS)
     voice: str = Field(DEFAULT_VOICE, max_length=16)
     session_id: str | None = Field(None, max_length=36)
+    speed: float = Field(1.0, ge=MIN_SPEED, le=MAX_SPEED)
 
 
 @router.post("/speak", dependencies=[speak_limit])
@@ -105,12 +113,24 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
     spent = UsageEvent(user_id=user.id, session_id=session_id, metric=METRIC, quantity=float(len(text)))
     db.add(spent)
     await db.commit()
-    chunks = provider.stream(text, voice.model)
+    speed = round(body.speed, 2)
+    chunks = provider.stream(text, voice.model, speed) if speed != 1.0 else provider.stream(text, voice.model)
     try:
         first = await anext(chunks)  # fail here (a JSON error the client can fall back on), not mid-stream
-    except (TTSError, StopAsyncIteration, httpx.HTTPError, OSError) as err:
-        await db.execute(delete(UsageEvent).where(UsageEvent.id == spent.id))
-        await db.commit()
+    except TTSError as err:
+        if speed == 1.0:
+            await _give_back(db, spent)
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
+        # A pace the provider won't take for this voice: the normal pace, and the client paces the playback itself.
+        speed = 1.0
+        chunks = provider.stream(text, voice.model)
+        try:
+            first = await anext(chunks)
+        except (TTSError, StopAsyncIteration, httpx.HTTPError, OSError) as again:
+            await _give_back(db, spent)
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from again
+    except (StopAsyncIteration, httpx.HTTPError, OSError) as err:
+        await _give_back(db, spent)
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, NO_ANSWER) from err
 
     async def audio() -> AsyncIterator[bytes]:
@@ -118,4 +138,13 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
         async for chunk in chunks:
             yield chunk
 
-    return StreamingResponse(audio(), media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
+    # X-Orbit-Speed: the pace the audio was made at (1 when the provider wouldn't take the one asked for).
+    return StreamingResponse(audio(), media_type="audio/mpeg",
+                             headers={"Cache-Control": "no-store", "X-Orbit-Speed": f"{speed:g}",
+                                      "Access-Control-Expose-Headers": "X-Orbit-Speed"})
+
+
+async def _give_back(db: AsyncSession, spent: UsageEvent) -> None:
+    """The provider made no audio: the characters taken for it are given back."""
+    await db.execute(delete(UsageEvent).where(UsageEvent.id == spent.id))
+    await db.commit()

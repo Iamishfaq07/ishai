@@ -514,10 +514,22 @@ class MockLLMProvider(LLMProvider):
                      "answer": "[mock] Track offsets and reconcile with the durable source."}]})
         if request.request_type == "mock_question":
             body = request.messages[-1].content if request.messages else ""
+            system = request.messages[0].content if request.messages else ""
+            # The video interviewer's own requests (D76): the candidate's question at the end, a question put
+            # another way.
+            if 'source="their_question"' in body:
+                return json.dumps({"answer": "[mock] Good question. I don't have the details on that, so the "
+                                             "recruiter is the best person to ask."})
+            if system.startswith("Rephrase this interview question"):
+                return json.dumps({"question": "[mock] In simpler words: what did you build, and how did it go?"})
             n = body.count("Interviewer:") + 1
             follow = "follow-up on the last answer" in body and n > 1 and n % 2 == 0
-            return json.dumps({"question": f"[mock] Question {n}: tell me about a project you're proud of.",
-                               "is_follow_up": follow, "last_answer_score": 4 if n > 1 else None})
+            out: dict[str, Any] = {"question": f"[mock] Question {n}: tell me about a project you're proud of.",
+                                   "is_follow_up": follow, "last_answer_score": 4 if n > 1 else None}
+            if '"reaction"' in system:
+                said = body.rsplit("Candidate:", 1)[-1].split("</reference_data>", 1)[0].split()
+                out["reaction"] = "[mock] So " + " ".join(said[:5]).strip(".,") + "."
+            return json.dumps(out)
         if request.request_type == "classify":
             # Deterministic stand-in for the ambiguous-question classifier: statements about prices/values are
             # not questions; anything else in the band is answered as-is.

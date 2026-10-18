@@ -17,7 +17,7 @@ SPEAK_URL = "https://api.deepgram.com/v1/speak"
 class TTSProvider(Protocol):
     name: str
 
-    def stream(self, text: str, model: str) -> AsyncIterator[bytes]: ...
+    def stream(self, text: str, model: str, speed: float = 1.0) -> AsyncIterator[bytes]: ...
 
 
 class TTSError(Exception):
@@ -31,10 +31,14 @@ class DeepgramTTS:
         self._key = api_key
         self._transport = transport
 
-    async def stream(self, text: str, model: str) -> AsyncIterator[bytes]:
+    async def stream(self, text: str, model: str, speed: float = 1.0) -> AsyncIterator[bytes]:
+        """`speed`: Deepgram's speaking-rate multiplier (it keeps the prosody natural); 1 sends nothing extra."""
         timeout = httpx.Timeout(15.0, connect=5.0)
+        params: dict[str, str] = {"model": model, "encoding": "mp3"}
+        if speed != 1.0:
+            params["speed"] = f"{speed:g}"
         async with httpx.AsyncClient(timeout=timeout, transport=self._transport) as client:
-            async with client.stream("POST", SPEAK_URL, params={"model": model, "encoding": "mp3"},
+            async with client.stream("POST", SPEAK_URL, params=params,
                                      headers={"Authorization": f"Token {self._key}"},
                                      json={"text": text}) as response:
                 if response.status_code != 200:
