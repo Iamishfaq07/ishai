@@ -233,8 +233,7 @@ export function AdminBusinessPage() {
             <option value="unverified">Not verified</option>
             <option value="active">Active</option>
             <option value="suspended">Suspended</option>
-            <option value="reported">With open reports</option>
-            <option value="plan_request">Asked for a plan</option>
+            <option value="requests">Asked for a plan</option>
           </Select>
         </div>
         {error ? (
