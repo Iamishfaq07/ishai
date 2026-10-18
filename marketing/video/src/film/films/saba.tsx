@@ -91,14 +91,14 @@ const VOICE_STATUS = { available: true, voices: [{ id: "aurora", label: "Aurora 
 
 const ROOM: Record<string, { vp: [number, number]; p: { sx: number; sy: number; scale: number } }> = {
   "16x9": { vp: [1280, 800], p: { sx: 960, sy: 546, scale: 1.28 } },
-  "9x16": { vp: [430, 900], p: { sx: 540, sy: 300 + 900, scale: 2.0 } },
+  "9x16": { vp: [440, 600], p: { sx: 540, sy: 276 + (600 * 1.8) / 2, scale: 1.8 } },
   "4x5": { vp: [470, 600], p: { sx: 540, sy: 92 + (600 * 1.76) / 2, scale: 1.76 } },
   "1x1": { vp: [580, 540], p: { sx: 540, sy: 70 + (540 * 1.56) / 2, scale: 1.56 } },
 };
 
 const CAPTIONS: Record<string, CaptionBox | undefined> = {
   "16x9": { x: 979, y: 690, max: 50, maxWidth: 500, size: 34 },
-  "9x16": { y: 1270, max: 52, maxWidth: 780 },
+  "9x16": { y: 1458, max: 50, maxWidth: 760, size: 44 },
 };
 
 function room(fmt: Fmt, from: number, to: number, conv: ReturnType<typeof conversation>, preroll = 1500): Scene {
