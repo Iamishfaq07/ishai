@@ -30,7 +30,7 @@ function freeNote(minutes: number) {
   return (
     <p>
       <strong className="font-medium text-zinc-900 dark:text-white">Live sessions use interview minutes.</strong>{" "}
-      {minutes ? `A new account gets ${minutes} free; ` : ""}more come with a plan or a credit pack, paid once.{" "}
+      {minutes ? `A new account gets ${minutes} free; more` : "More"} come with a plan or a credit pack, paid once.{" "}
       <Link to="/pricing" className={cx("rounded font-medium text-indigo-700 underline underline-offset-2 dark:text-indigo-300", focusRing)}>
         See pricing
       </Link>
