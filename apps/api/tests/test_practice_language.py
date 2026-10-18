@@ -102,7 +102,8 @@ def test_the_review_is_written_in_the_language(client: TestClient, monkeypatch: 
     client.portal.call(report.generate_report, sid)  # type: ignore[union-attr]
     system = llm.requests[-1].messages[0].content
     assert "The interview was in Hinglish" in system and "never marked down for its language" in system
-    assert llm.requests[-1].max_tokens == practice_language.max_tokens(700 + 160, "hinglish") > 700 + 160  # one pair
+    one_pair = report.review_tokens(1)
+    assert llm.requests[-1].max_tokens == practice_language.max_tokens(one_pair, "hinglish") > one_pair
 
 
 async def test_a_drill_in_the_language_leads_in_it_and_names_the_company() -> None:

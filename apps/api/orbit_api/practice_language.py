@@ -48,14 +48,17 @@ _INTERVIEWER: dict[str, str] = {
 
 _REPORT: dict[str, str] = {
     "hi": ("\nThe interview was in Hindi. Write every text value (summary, topics, follow-ups, weak areas, "
-           "preparation, strengths, improvements, practice, feedback, missing_points, better) in Hindi, in Devanagari "
-           "script, keeping technical words in English. Keep the JSON keys and scores exactly as specified. Grade the "
-           "same rubric as in English; an answer in Hindi, English or a mix is never marked down for its language."),
+           "preparation, strengths, improvements, practice, top_practice, feedback, missing_points, improvement, "
+           "the rubric's reasons, better) in Hindi, in Devanagari script, keeping technical words in English. A "
+           "rubric quote stays exactly as the candidate said it, in their own words and script. Keep the JSON keys "
+           "and scores exactly as specified. Grade the same rubric as in English; an answer in Hindi, English or a "
+           "mix is never marked down for its language."),
     "hinglish": ("\nThe interview was in Hinglish. Write every text value (summary, topics, follow-ups, weak areas, "
-                 "preparation, strengths, improvements, practice, feedback, missing_points, better) in Hinglish, in "
-                 "Latin script, the way the candidate spoke. Keep the JSON keys and scores exactly as specified. "
-                 "Grade the same rubric as in English; an answer in Hindi, English or a mix is never marked down for "
-                 "its language."),
+                 "preparation, strengths, improvements, practice, top_practice, feedback, missing_points, "
+                 "improvement, the rubric's reasons, better) in Hinglish, in Latin script, the way the candidate "
+                 "spoke. A rubric quote stays exactly as the candidate said it. Keep the JSON keys and scores exactly "
+                 "as specified. Grade the same rubric as in English; an answer in Hindi, English or a mix is never "
+                 "marked down for its language."),
 }
 
 

@@ -24,11 +24,20 @@ from orbit_api import jobs, live_language, practice_language
 from orbit_api.career.schema import DIMENSIONS
 from orbit_api.db import sessionmaker
 from orbit_api.live.context_builder import fence
-from orbit_api.models import LiveSessionRow, ProviderRequest, Question, SessionSummary, SessionTurn
+from orbit_api.models import (
+    Document,
+    DocumentChunk,
+    LiveSessionRow,
+    ProviderRequest,
+    Question,
+    SessionDocument,
+    SessionSummary,
+    SessionTurn,
+)
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMError, LLMMessage, LLMRequest
 from orbit_api.providers.llm.pricing import estimate_cost
-from orbit_api.sessions.delivery import delivery_stats
+from orbit_api.sessions.delivery import answer_speaking, delivery_stats
 from orbit_api.sessions.recorder import replay_failed_writes
 
 log = logging.getLogger(__name__)
@@ -40,6 +49,21 @@ YOU_SAID_CHARS = 600  # per question, stored for the UI
 # and the earlier questions (texts only), so the narrative covers all of it. Only the last questions are scored.
 MAX_TRANSCRIPT_CHARS = 12_000
 MAX_EARLIER_QUESTIONS_CHARS = 4_000
+# The candidate's resume and the job post, as the stronger answers may use them (their start: the most recent roles
+# come first). All of it is used to check the numbers a stronger answer cites.
+MAX_DOCUMENT_CHARS = 3_500
+MAX_DOCUMENT_CHECK_CHARS = 60_000
+# The review's output budget: the narrative, then each question's feedback, rubric and stronger answer.
+REVIEW_BASE_TOKENS = 800
+REVIEW_TOKENS_PER_QUESTION = 280
+# How each answer is judged beside its score: five plain criteria, each 1-5 with a reason quoting the candidate.
+RUBRIC = ("structure", "specifics", "relevance", "clarity", "conciseness")
+MAX_TOP_PRACTICE = 3
+
+
+def review_tokens(questions: int) -> int:
+    """The English output budget for a review of `questions` scored questions."""
+    return REVIEW_BASE_TOKENS + REVIEW_TOKENS_PER_QUESTION * questions
 
 _SYSTEM = (
     "You write a practical post-session report and review for someone who just finished an interview or "
@@ -50,7 +74,7 @@ _SYSTEM = (
     "  review: {overall_score (1-5 or null if nothing was answered), strengths (2-3 short items), "
     "improvements (2-3 short items), practice (2-3 concrete practice suggestions), items: [{q (the question "
     "number), feedback (<=40 words: what was strong, what was missing), score (1-5 integer, or null when the "
-    "candidate gave no answer), better (<=45 words: a stronger way to say it, first person)}]}.\n"
+    "candidate gave no answer), better (a stronger version of the answer, first person: see below)}]}.\n"
     "Score ONLY what the candidate actually said in the PAIRS block — never reward the question or invent an "
     "answer. When 'CANDIDATE SAID' is '(no answer)', score null and say it wasn't answered. Be specific and "
     "fair: 5 = complete, correct, well structured; 3 = partly there; 1 = off-topic or wrong. "
@@ -61,6 +85,22 @@ _SYSTEM += ("\nFor each review item also return missing_points (specific absent 
             "edge_case_rigor, communication_clarity}: each 1-5 or null when not assessed. "
             "Use transcript and answer timing for delivery; do not infer vocal tone. Do not assign technical or "
             "scalability scores to questions that did not test them. Unanswered questions have null scores.")
+_SYSTEM += (
+    "\nFor each answered item also return:\n"
+    "  rubric: {structure, specifics, relevance, clarity, conciseness}, each {score (1-5, or null when it can't be "
+    "judged), reason (<=14 words), quote (<=12 words copied EXACTLY from that answer's CANDIDATE SAID, showing it; "
+    "or null)}. structure = a clear order (for a story: the situation, what they did, the result; otherwise the "
+    "point, the reason, an example); specifics = concrete evidence (what they themselves did, the systems, the "
+    "numbers); relevance = answers what was asked; clarity = easy to follow; conciseness = no padding or repeats.\n"
+    "  improvement: ONE imperative sentence (<=20 words), the single most useful change for next time.\n"
+    "  better (<=70 words, first person): a stronger version of THIS answer built ONLY from what the candidate said "
+    "and the candidate_documents. Never invent employers, projects, tools, numbers, dates or facts about a "
+    "company: where a fact is missing, write a short bracketed placeholder such as [the result in numbers] or "
+    "[the team size]. For a behavioural question, tell it as a short story (the situation, what they did, the "
+    "result) without naming any framework.\n"
+    "In review also return top_practice: up to 3 items, the most useful first, each {practice (<=14 words, "
+    "imperative), questions (the numbers of the questions that showed it)}."
+)
 
 
 # Salary-negotiation practice (MockConfig.negotiation): the same report shape, graded on negotiation skill.
@@ -88,6 +128,8 @@ class QAPair:
     # From the first word of the answer to the last (pauses included, like the mock's answer timer); 0 if unknown.
     answer_ms: int = 0
     question_id: str | None = None
+    # The candidate's transcript lines that make the answer (their timings give its speaking stats).
+    turns: tuple[Any, ...] = ()
 
 
 def pair_questions_with_answers(questions: Sequence[Question], turns: Sequence[SessionTurn]) -> list[QAPair]:
@@ -100,8 +142,115 @@ def pair_questions_with_answers(questions: Sequence[Question], turns: Sequence[S
         mine = [t for t in cands if t.created_at >= q.created_at and (nxt is None or t.created_at < nxt)]
         said = [t.text.strip() for t in mine]
         span = max(t.end_ms for t in mine) - min(t.start_ms for t in mine) if mine else 0
-        pairs.append(QAPair(q.text, " ".join(s for s in said if s), max(span, 0), question_id=q.id))
+        pairs.append(QAPair(q.text, " ".join(s for s in said if s), max(span, 0), question_id=q.id,
+                            turns=tuple(mine)))
     return pairs
+
+
+_PUNCT = re.compile(r"[^\w\s']")
+
+
+def _plain(text: str) -> str:
+    """For comparing a quote with an answer: lower case, curly apostrophes straight, punctuation and extra space out
+    (the same on both sides, so a model that drops a comma still matches)."""
+    return " ".join(_PUNCT.sub(" ", text.lower().replace("’", "'").replace("‘", "'")).split())
+
+
+def quote_in_answer(quote: str, answer: str) -> bool:
+    """Whether `quote` is the candidate's own words: it appears, whole words, in their answer."""
+    q = _plain(quote.strip().strip("\"“”'…. "))
+    return len(q) >= 3 and f" {q} " in f" {_plain(answer)} "
+
+
+# A number a stronger answer might cite: a currency sign, the figure, a unit. Not part of a name ("S3", "EC2",
+# "v2.0", "3rd") and not inside a placeholder already.
+_NUMBER = re.compile(
+    r"(?<![\w.\[])([₹$€£]\s?)?(\d[\d,]*(?:\.\d+)?)"
+    r"(\s?(?:%|percent\b|x\b|k\b|K\b|M\b|B\b|L\b|LPA\b|lakhs?\b|crores?\b|cr\b))?(?![\w\]])")
+_FIGURE = re.compile(r"\d[\d,]*(?:\.\d+)?")
+
+
+def _figure(raw: str) -> str:
+    """A figure as compared: commas out, a trailing ".0" off ("1,200.0" and "1200" are the same number)."""
+    plain = raw.replace(",", "")
+    return plain[:-2] if plain.endswith(".0") else plain
+
+
+def ground_numbers(text: str, allowed: str) -> str:
+    """A stronger answer may only cite numbers the candidate said or their documents hold: any other figure (two or
+    more digits, or with a currency or a unit) becomes a placeholder they fill in. A lone small number ("3 steps")
+    is left alone."""
+    known = {_figure(m.group()) for m in _FIGURE.finditer(allowed)}
+
+    def swap(m: re.Match[str]) -> str:
+        currency, figure, unit = m.group(1), m.group(2), m.group(3)
+        if _figure(figure) in known or (len(figure.replace(",", "").split(".")[0]) < 2 and not currency and not unit):
+            return m.group()
+        if currency or (unit and unit.strip().lower() in ("l", "lpa", "lakh", "lakhs", "crore", "crores", "cr")):
+            return "[the amount]"
+        if unit and unit.strip() in ("%", "percent"):
+            return "[the percentage]"
+        if not unit and re.fullmatch(r"(19|20)\d\d", figure):
+            return "[the year]"
+        return "[the number]"
+
+    return _NUMBER.sub(swap, text)
+
+
+def _rubric(v: Any, answer: str) -> dict[str, dict[str, Any]]:
+    """The model's rubric, criterion by criterion: a score, a short reason, and a quote kept only if it is really the
+    candidate's words."""
+    if not isinstance(v, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for key in RUBRIC:
+        c = v.get(key, v.get("evidence") if key == "specifics" else None)
+        if isinstance(c, (int, float)) and not isinstance(c, bool):
+            c = {"score": c}
+        if not isinstance(c, dict):
+            continue
+        quote = " ".join(str(c.get("quote") or "").split()).strip("\"“”'")[:140]
+        out[key] = {
+            "score": _score(c.get("score")),
+            "reason": " ".join(str(c.get("reason") or "").split())[:160],
+            "quote": quote if quote and quote_in_answer(quote, answer) else None,
+        }
+    return out
+
+
+def _top_practice(v: Any, questions: int) -> list[dict[str, Any]]:
+    """The three things to practise, most useful first, each with the questions (1-based) that showed it."""
+    items: list[dict[str, Any]] = []
+    for x in v if isinstance(v, list) else []:
+        refs: Any = None
+        if isinstance(x, str):
+            text = x
+        elif isinstance(x, dict):
+            text, refs = str(x.get("practice") or x.get("text") or ""), x.get("questions")
+        else:
+            continue
+        text = " ".join(text.split())[:160]
+        if not text:
+            continue
+        nums = sorted({n for n in (_question_number(r) for r in (refs if isinstance(refs, list) else []))
+                       if n is not None and 1 <= n <= questions})
+        items.append({"practice": text, "questions": nums})
+        if len(items) == MAX_TOP_PRACTICE:
+            break
+    return items
+
+
+async def _documents_text(db: AsyncSession, session_id: str) -> str:
+    """The session's documents as the review may draw on them (the resume and the job post, in order)."""
+    rows = (await db.execute(
+        select(DocumentChunk.text, Document.kind)
+        .join(Document, Document.id == DocumentChunk.document_id)
+        .join(SessionDocument, SessionDocument.document_id == Document.id)
+        .where(SessionDocument.session_id == session_id)
+        .order_by(Document.created_at, DocumentChunk.ordinal)
+    )).all()
+    label = {"resume": "RESUME", "job_description": "JOB"}
+    return "\n".join(f"[{label.get(kind, 'DOC')}] {text}" for text, kind in rows if text)[:MAX_DOCUMENT_CHECK_CHARS]
 
 
 def _pairs_block(pairs: Sequence[QAPair]) -> str:
@@ -131,9 +280,12 @@ def _strings(v: Any, limit: int = 4) -> list[str]:
     return [str(x).strip() for x in v if str(x).strip()][:limit] if isinstance(v, list) else []
 
 
-def build_review(data: Any, pairs: Sequence[QAPair]) -> dict[str, Any] | None:
+def build_review(data: Any, pairs: Sequence[QAPair], *, documents: str = "",
+                 language: str = "en") -> dict[str, Any] | None:
     """Validate the model's review against the server-side pairing (question text and 'you said' come
-    from the transcript, never from the model; unanswered questions can't be scored)."""
+    from the transcript, never from the model; unanswered questions can't be scored). A rubric quote is kept only if
+    it is the candidate's own words; a number in a stronger answer only if they said it or their `documents` hold it
+    (otherwise it becomes a placeholder). Speaking stats come from each answer's own lines, never the model."""
     if not isinstance(data, dict) or not pairs:
         return None
     by_q: dict[int, dict[str, Any]] = {}
@@ -159,7 +311,7 @@ def build_review(data: Any, pairs: Sequence[QAPair]) -> dict[str, Any] | None:
             "you_said": p.answer[:YOU_SAID_CHARS] + ("…" if len(p.answer) > YOU_SAID_CHARS else ""),
             "score": score,
             "feedback": str(m.get("feedback") or fallback).strip(),
-            "better": str(m.get("better") or "").strip(),
+            "better": ground_numbers(str(m.get("better") or "").strip(), f"{p.answer}\n{documents}"),
             # How long the answer ran and how many words it had, for the review's length check.
             "answer_s": round(p.answer_ms / 1000) if answered and p.answer_ms > 0 else None,
             "words": len(p.answer.split()),
@@ -168,6 +320,11 @@ def build_review(data: Any, pairs: Sequence[QAPair]) -> dict[str, Any] | None:
             "clarity_score": _score(m.get("clarity_score")) if answered else None,
             "dimensions": {key: _score((m.get("dimensions") or {}).get(key)) if answered else None
                            for key in DIMENSIONS} if isinstance(m.get("dimensions"), dict) else {},
+            # Each criterion's score, reason and the candidate's own words that show it.
+            "rubric": _rubric(m.get("rubric"), p.answer) if answered else {},
+            "improvement": " ".join(str(m.get("improvement") or "").split())[:240] if answered else "",
+            # Pace, fillers and long pauses in this answer, from its transcript timings (None without audio).
+            "speaking": answer_speaking(p.turns, language=language) if answered and p.turns else None,
         })
     overall = _score(data.get("overall_score"))
     if overall is None and scored:
@@ -177,6 +334,7 @@ def build_review(data: Any, pairs: Sequence[QAPair]) -> dict[str, Any] | None:
         "strengths": _strings(data.get("strengths")),
         "improvements": _strings(data.get("improvements")),
         "practice": _strings(data.get("practice")),
+        "top_practice": _top_practice(data.get("top_practice"), len(pairs)),
         "items": items,
     }
 
@@ -200,6 +358,9 @@ async def generate_report(session_id: str) -> dict[str, Any]:
         interview = "en" if row.type == "mock" else live_language.normalize(row.language)
         written = live_language.answer_code(live_language.normalize_answer(row.answer_language, interview), interview)
         english = live_language.is_english(interview, written)
+        # A mock round's practice language ("hi", "hinglish"; else "en"): its words and fillers are counted in it.
+        language = practice_language.normalize(row.language, row.type)
+        documents = await _documents_text(db, session_id)
 
         report: dict[str, Any] = {
             "questions_asked": [q.text for q in questions],
@@ -214,7 +375,7 @@ async def generate_report(session_id: str) -> dict[str, Any]:
             "generated_by": None,
             # Pace, fillers, talk time: arithmetic on the transcript (sessions/delivery.py), no model call.
             "delivery": delivery_stats(turns, [p.answer for p in pair_questions_with_answers(questions, turns)],
-                                       english=english),
+                                       english=english, language=language),
         }
         if not english:
             report["language"] = written
@@ -240,9 +401,12 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 user += ("\n\nEarlier questions (not scored; cover them in the summary and topics):\n"
                          "<reference_data source=\"earlier_questions\">\n"
                          f"{fence(earlier[:MAX_EARLIER_QUESTIONS_CHARS])}\n</reference_data>")
+            if documents and pairs:
+                # What a stronger answer may draw on besides the candidate's words (it never invents the rest).
+                user += ("\n\n<reference_data source=\"candidate_documents\">\n"
+                         f"{fence(documents[:MAX_DOCUMENT_CHARS])}\n</reference_data>")
             # A live session in another language: its own rule and budget (live_language.py); English and a mock
             # interview (its practice language, practice_language.py) as on main.
-            language = practice_language.normalize(row.language, row.type)
             system = _SYSTEM + (practice_language.report_instruction(language) if english
                                 else live_language.report_rule(written, interview))
             negotiation = (row.mock_config or {}).get("negotiation") if row.type == "mock" else None
@@ -260,9 +424,9 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                 messages=[LLMMessage("system", system), LLMMessage("user", user)],
                 json_mode=llm.supports_structured_output(),
                 # Another language takes more tokens for the same review: cut short, its JSON wouldn't parse.
-                max_tokens=practice_language.max_tokens(700 + 160 * len(pairs), language) if english else min(
+                max_tokens=practice_language.max_tokens(review_tokens(len(pairs)), language) if english else min(
                     practice_language.MAX_OUTPUT_TOKENS,
-                    int((700 + 160 * len(pairs)) * live_language.token_factor(written))),
+                    int(review_tokens(len(pairs)) * live_language.token_factor(written))),
                 request_type="summary",
             )
             try:
@@ -277,7 +441,7 @@ async def generate_report(session_id: str) -> dict[str, Any]:
                     report["counter_offer_email"] = {
                         "subject": " ".join(str(email.get("subject") or "Following up on the offer").split())[:150],
                         "body": email["body"].strip()[:COUNTER_EMAIL_CHARS]}
-                review = build_review(data.get("review"), pairs)
+                review = build_review(data.get("review"), pairs, documents=documents, language=language)
                 if review is not None and len(all_pairs) > len(pairs):
                     review["questions_total"] = len(all_pairs)
                     review["note"] = (f"Only the last {len(pairs)} of this session's {len(all_pairs)} questions "

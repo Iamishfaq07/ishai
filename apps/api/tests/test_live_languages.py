@@ -407,13 +407,13 @@ def test_the_review_is_written_in_the_answer_language(client: TestClient, monkey
     system = llm.requests[-1].messages[0].content
     assert "in Spanish" in system and "never marked down for the language" in system
     assert out["language"] == "es"
-    assert llm.requests[-1].max_tokens > 700 + 160
+    assert llm.requests[-1].max_tokens > report.review_tokens(1)
 
     english = _session(client, h)["id"]
     _plant(client, english, "How do you handle conflict?", "I talk to the person first.")
     out = client.portal.call(report.generate_report, english)  # type: ignore[union-attr]
     assert llm.requests[-1].messages[0].content == report._SYSTEM and "language" not in out
-    assert llm.requests[-1].max_tokens == 700 + 160
+    assert llm.requests[-1].max_tokens == report.review_tokens(1)
 
 
 def test_speaking_stats_count_words_in_any_script() -> None:

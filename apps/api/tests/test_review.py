@@ -51,7 +51,9 @@ def test_review_uses_transcript_text_and_never_scores_unanswered_questions() -> 
     first, second = r["items"]
     assert first == {"question": "Q one?", "you_said": "my answer", "score": 5, "feedback": "good",
                      "better": "say more", "answer_s": 64, "words": 2, "question_id": None,
-                     "missing_points": [], "delivery_score": None, "clarity_score": None, "dimensions": {}}
+                     "missing_points": [], "delivery_score": None, "clarity_score": None, "dimensions": {},
+                     "rubric": {}, "improvement": "", "speaking": None}
+    assert r["top_practice"] == []  # an older model's review: no ranked practice, the UI falls back to `practice`
     assert second["answer_s"] is None and second["words"] == 0
     assert second["score"] is None and second["feedback"] == "Not answered in the recording."
     # nothing answered at all → no overall score
