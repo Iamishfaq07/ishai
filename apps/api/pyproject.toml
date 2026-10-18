@@ -26,6 +26,7 @@ dependencies = [
     "pypdfium2>=4.30",
     "pillow>=10.1",
     "webauthn>=2.5",
+    "tldextract>=5.1",
 ]
 
 [dependency-groups]

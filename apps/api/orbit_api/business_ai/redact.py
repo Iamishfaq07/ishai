@@ -203,6 +203,24 @@ class _Scrubber:
         return text
 
 
+HIDDEN = "[hidden]"
+
+
+def redact_identity(text: str, name: str | None, *literals: str | None) -> str:
+    """Who the person is out of a piece of text, for blind review: every part of the name, email addresses, phone
+    numbers, links, and any of `literals` (their own email and phone as given). Nothing else changes."""
+    out = text
+    for lit in sorted({v.strip() for v in literals if v and v.strip()}, key=len, reverse=True):
+        out = re.sub(re.escape(lit), HIDDEN, out, flags=re.IGNORECASE)
+    out = _EMAIL.sub(HIDDEN, out)
+    out = _URL.sub(HIDDEN, out)
+    out = _PHONE_LIKE.sub(lambda m: HIDDEN if 8 <= sum(ch.isdigit() for ch in m.group(0)) <= 15 else m.group(0), out)
+    pattern = _name_pattern(name)
+    if pattern is not None:
+        out = pattern.sub(HIDDEN, out)
+    return out
+
+
 def _years(v: float | None) -> str:
     return f"{v:g}" if v is not None else "not stated"
 

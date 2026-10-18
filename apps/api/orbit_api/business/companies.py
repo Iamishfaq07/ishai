@@ -10,17 +10,20 @@ import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from orbit_api import ratelimit
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.business import emails, rules
-from orbit_api.business.access import CompanyCtx, Ctx, audit, forbidden
+from orbit_api.business.access import CompanyCtx, Ctx, audit, forbidden, lock_company
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.documents.uploads import validate_image
 from orbit_api.models import (
+    BizApplication,
     BizAudit,
     BizCompany,
     BizInvite,
@@ -242,7 +245,10 @@ async def create_company(body: CompanyIn, user: Annotated[User, Depends(require_
     website = body.website.strip()
     if "://" not in website:
         website = "https://" + website
-    company = BizCompany(slug=await _unique_slug(db, body.name), name=body.name.strip(), website=website[:300],
+    name = rules.one_line(body.name)
+    if len(name) < 2:
+        raise HTTPException(422, "Add the company's name.")
+    company = BizCompany(slug=await _unique_slug(db, name), name=name, website=website[:300],
                          domain=domain, size=body.size, country=body.country.upper(), about=body.about.strip(),
                          dns_token=secrets.token_hex(16), created_by=user.id)
     db.add(company)
@@ -285,14 +291,20 @@ async def update_company(body: CompanyPatch, ctx: CompanyCtx,
             c.email_code_hash = c.email_code_to = c.email_code_until = None
             c.email_code_tries = 0
             changed["domain"] = domain
-    if body.name is not None and body.name.strip() != c.name:
-        c.name = body.name.strip()
+    if body.name is not None and rules.one_line(body.name) != c.name:
+        if len(rules.one_line(body.name)) < 2:
+            raise HTTPException(422, "Add the company's name.")
+        c.name = rules.one_line(body.name)
         changed["name"] = c.name
     for field in ("size", "about", "retention_months", "blind_review"):
         value = getattr(body, field)
         if value is not None and value != getattr(c, field):
             setattr(c, field, value.strip() if isinstance(value, str) else value)
             changed[field] = value if field != "about" else "(changed)"
+    if "retention_months" in changed:
+        # Each application keeps the retention it was given when the person applied (the notice said it): the new
+        # setting applies to applications made from now on.
+        changed["applies_to"] = "new applications"
     if body.country is not None:
         c.country = body.country.upper()
     if changed:
@@ -323,6 +335,7 @@ async def put_logo(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]
 @router.delete("/companies/{company_id}/logo", response_model=CompanyOut)
 async def delete_logo(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> CompanyOut:
     ctx.require("manage_company")
+    ctx.writable()
     ctx.company.logo, ctx.company.logo_type = None, None
     ctx.company.logo_version = (ctx.company.logo_version or 0) + 1
     await db.commit()
@@ -394,6 +407,7 @@ async def verification(ctx: CompanyCtx) -> VerificationOut:
 @router.post("/companies/{company_id}/verification/account", response_model=VerificationOut)
 async def verify_by_account(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> VerificationOut:
     ctx.require("manage_company")
+    ctx.writable()
     _refuse_blocked(ctx.company)
     if not (ctx.user.email_verified and rules.email_matches_domain(ctx.user.email, ctx.company.domain)):
         raise HTTPException(422, f"Your Orbit email isn't a verified address at {ctx.company.domain}.")
@@ -410,10 +424,12 @@ class WorkEmailIn(BaseModel):
 async def send_work_email_code(body: WorkEmailIn, ctx: CompanyCtx,
                                db: Annotated[AsyncSession, Depends(get_db)]) -> VerificationOut:
     ctx.require("manage_company")
+    ctx.writable()
     _refuse_blocked(ctx.company)
     address = str(body.email).strip().lower()
     if not rules.email_matches_domain(address, ctx.company.domain):
-        raise HTTPException(422, f"Use an email address at {ctx.company.domain}.")
+        raise HTTPException(422, f"Use an email address at {ctx.company.domain} itself (not a subdomain). A company "
+                                 "whose mail is on a subdomain verifies with a DNS record.")
     ratelimit.check(_code_sends, f"biz-code:{ctx.company.id}", "Too many codes sent. Try again in an hour.")
     code = f"{secrets.randbelow(10**6):06d}"
     c = ctx.company
@@ -442,6 +458,7 @@ class CodeIn(BaseModel):
 async def confirm_work_email(body: CodeIn, ctx: CompanyCtx,
                              db: Annotated[AsyncSession, Depends(get_db)]) -> VerificationOut:
     ctx.require("manage_company")
+    ctx.writable()
     c = ctx.company
     _refuse_blocked(c)
     if not c.email_code_hash or (_aware(c.email_code_until) or now()) <= now() or c.email_code_tries >= CODE_TRIES:
@@ -482,6 +499,7 @@ async def txt_records(name: str) -> list[str]:
 @router.post("/companies/{company_id}/verification/dns", response_model=VerificationOut)
 async def verify_by_dns(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> VerificationOut:
     ctx.require("manage_company")
+    ctx.writable()
     _refuse_blocked(ctx.company)
     ratelimit.check(_dns_checks, f"biz-dns:{ctx.company.id}")
     want = dns_value(ctx.company)
@@ -562,6 +580,7 @@ async def invite(body: InviteIn, ctx: CompanyCtx, db: Annotated[AsyncSession, De
     if already is not None:
         raise HTTPException(409, "They're already a member.")
     ratelimit.check(_invites, f"biz-invite:{ctx.company.id}")
+    await lock_company(db, ctx.company.id)  # two invites at once can't both take the last seat
     existing = await db.scalar(select(BizInvite).where(BizInvite.company_id == ctx.company.id, BizInvite.email == email,
                                                       BizInvite.accepted_at.is_(None), BizInvite.expires_at > now()))
     plan = effective_plan(ctx.company)
@@ -590,6 +609,7 @@ async def invite(body: InviteIn, ctx: CompanyCtx, db: Annotated[AsyncSession, De
 @router.delete("/companies/{company_id}/invites/{invite_id}", response_model=MembersOut)
 async def cancel_invite(invite_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> MembersOut:
     ctx.require("manage_members")
+    ctx.writable()
     inv = await db.get(BizInvite, invite_id)
     if inv is None or inv.company_id != ctx.company.id:
         raise HTTPException(404, "Not found.")
@@ -635,12 +655,23 @@ async def accept_invite(body: AcceptIn, user: Annotated[User, Depends(require_ve
     company = await db.get(BizCompany, inv.company_id)
     if company is None:
         raise HTTPException(404, "Not found.")
+    # Claimed with a conditional UPDATE: of two accepts at once exactly one changes the row (Postgres waits on the
+    # row lock, SQLite on its write lock); the other is told the link was used.
+    claimed = await db.execute(update(BizInvite).where(BizInvite.id == inv.id, BizInvite.accepted_at.is_(None))
+                               .values(accepted_at=now()).execution_options(synchronize_session=False))
+    if getattr(claimed, "rowcount", 0) != 1:
+        await db.rollback()
+        raise HTTPException(400, "This invite has expired or was already used. Ask for a new one.")
     exists = await db.scalar(select(BizMember).where(BizMember.company_id == company.id, BizMember.user_id == user.id))
     if exists is None:
         db.add(BizMember(company_id=company.id, user_id=user.id, role=inv.role))
-    inv.accepted_at = now()
     audit(db, company.id, user, "member.joined", mask_email(user.email), role=inv.role)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as e:  # the same person joined at the same moment (another tab, a double click)
+        await db.rollback()
+        raise HTTPException(409, detail={"code": "biz_already_member",
+                                         "message": "You're already a member of this company."}) from e
     role = exists.role if exists is not None else inv.role
     return CompanySummary(id=company.id, slug=company.slug, name=company.name, logo_url=logo_url(company), role=role,
                           verified=company.verified_at is not None, status=company.status,
@@ -677,12 +708,14 @@ async def change_role(member_id: str, body: RoleChange, ctx: CompanyCtx,
 @router.delete("/companies/{company_id}/members/{member_id}", response_model=MembersOut)
 async def remove_member(member_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> MembersOut:
     ctx.require("manage_members")
+    ctx.writable()
     m = await _member(db, ctx, member_id)
     if m.role == "owner":
         raise HTTPException(409, "The owner can't be removed. Transfer ownership first.")
     if m.role == "admin" and ctx.role != "owner":
         raise forbidden("Only the owner can remove an admin.")
     await db.delete(m)
+    await drop_from_teams(db, ctx.company.id, m.user_id)
     audit(db, ctx.company.id, ctx.user, "member.removed", m.user_id, role=m.role)
     await db.commit()
     return await _members_out(db, ctx)
@@ -696,6 +729,7 @@ class TransferIn(BaseModel):
 async def transfer(body: TransferIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> MembersOut:
     if ctx.role != "owner":
         raise forbidden("Only the owner can transfer ownership.")
+    ctx.writable()
     m = await _member(db, ctx, body.member_id)
     if m.id == ctx.member.id:
         raise HTTPException(409, "You're already the owner.")
@@ -710,6 +744,7 @@ async def leave(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -
     if ctx.role == "owner":
         raise HTTPException(409, "Transfer ownership before leaving.")
     await db.delete(ctx.member)
+    await drop_from_teams(db, ctx.company.id, ctx.user.id)
     audit(db, ctx.company.id, ctx.user, "member.left", ctx.user.id)
     await db.commit()
     return Response(status_code=204)
@@ -772,6 +807,7 @@ class PlanRequestIn(BaseModel):
 async def request_plan(body: PlanRequestIn, ctx: CompanyCtx,
                        db: Annotated[AsyncSession, Depends(get_db)]) -> PlanStatus:
     ctx.require("manage_plan")
+    ctx.writable()
     c = ctx.company
     c.plan_request, c.plan_request_at = body.plan, now()
     audit(db, c.id, ctx.user, "plan.requested", body.plan)
@@ -819,12 +855,15 @@ async def put_template(kind: emails.TemplateKind, body: TemplateIn, ctx: Company
     if not (ctx.can("manage_company") or ctx.role == "recruiter"):
         raise forbidden()
     ctx.writable()
+    subject = rules.one_line(body.subject)  # a subject is one line: no CR/LF (or other control characters) in it
+    if not subject:
+        raise HTTPException(422, "Write a subject.")
     row = await db.scalar(select(BizTemplate).where(BizTemplate.company_id == ctx.company.id, BizTemplate.kind == kind))
     if row is None:
-        row = BizTemplate(company_id=ctx.company.id, kind=kind, subject=body.subject, body=body.body)
+        row = BizTemplate(company_id=ctx.company.id, kind=kind, subject=subject, body=body.body)
         db.add(row)
     else:
-        row.subject, row.body = body.subject, body.body
+        row.subject, row.body = subject, body.body
     audit(db, ctx.company.id, ctx.user, "template.updated", kind)
     await db.commit()
     return TemplateOut(kind=kind, subject=row.subject, body=row.body, is_default=False, variables=emails.VARIABLES)
@@ -835,6 +874,7 @@ async def reset_template(kind: emails.TemplateKind, ctx: CompanyCtx,
                          db: Annotated[AsyncSession, Depends(get_db)]) -> TemplateOut:
     if not (ctx.can("manage_company") or ctx.role == "recruiter"):
         raise forbidden()
+    ctx.writable()
     row = await db.scalar(select(BizTemplate).where(BizTemplate.company_id == ctx.company.id, BizTemplate.kind == kind))
     if row is not None:
         await db.delete(row)
@@ -917,11 +957,25 @@ def customer_detail(detail: dict[str, Any] | None) -> dict[str, Any]:
     return {k: v for k, v in (detail or {}).items() if k not in ADMIN_ONLY_DETAIL}
 
 
+async def drop_from_teams(db: AsyncSession, company_id: str, user_id: str) -> None:
+    """Someone left the company: their id comes off every job's hiring team and every application's interviewers
+    (JSON lists), so nothing points at a person who's no longer a member."""
+    for job in (await db.scalars(select(BizJob).where(BizJob.company_id == company_id))).all():
+        if user_id in (job.hiring_team or []):
+            job.hiring_team = [u for u in job.hiring_team if u != user_id]
+    for app in (await db.scalars(select(BizApplication).where(BizApplication.company_id == company_id)
+                                 .options(load_only(BizApplication.id, BizApplication.interviewers)))).all():
+        if user_id in (app.interviewers or []):
+            app.interviewers = [u for u in app.interviewers if u != user_id]
+
+
 async def hand_over_on_account_deletion(db: AsyncSession, user_id: str) -> None:
     """The account is being deleted (auth/accounts.delete_account). Each company it owns passes to its longest-standing
     admin, else its longest-standing member, and the change is logged; a company with nobody else in it is deleted with
     it (its jobs, applicants and log go too: there's no one left to keep them for). Called in the deletion's
     transaction; the membership rows themselves go with the account (ON DELETE CASCADE)."""
+    for company_id in (await db.scalars(select(BizMember.company_id).where(BizMember.user_id == user_id))).all():
+        await drop_from_teams(db, company_id, user_id)
     owned = (await db.scalars(select(BizMember).where(BizMember.user_id == user_id, BizMember.role == "owner"))).all()
     for own in owned:
         others = (await db.scalars(select(BizMember).where(BizMember.company_id == own.company_id,

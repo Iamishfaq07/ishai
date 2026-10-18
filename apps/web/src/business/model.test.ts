@@ -7,6 +7,7 @@ import {
   commaList,
   describeKnockout,
   domainOf,
+  rejectedMessage,
   embedSnippet,
   fillTemplate,
   groupByStage,
@@ -189,5 +190,14 @@ describe("rich text", () => {
     expect(markdownToHtml("## About\nWe **build** <b>things</b>\n- one\n- two\n1. first")).toBe(
       "<h3>About</h3><p>We <strong>build</strong> &lt;b&gt;things&lt;/b&gt;</p><ul><li>one</li><li>two</li></ul><ol><li>first</li></ol>",
     );
+  });
+});
+
+describe("rejectedMessage", () => {
+  it("says when emails wait for a confirmed address", () => {
+    expect(rejectedMessage(1, false, 0)).toBe("Rejected 1 applicant");
+    expect(rejectedMessage(2, true, 0)).toBe("Rejected 2 applicants and emailed");
+    expect(rejectedMessage(1, true, 1)).toBe("Rejected 1 applicant. No email yet: waiting for the applicant to confirm their email");
+    expect(rejectedMessage(3, true, 1)).toBe("Rejected 3 applicants, emailed 2. 1 waiting for the applicant to confirm their email");
   });
 });

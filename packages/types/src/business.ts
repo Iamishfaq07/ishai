@@ -523,6 +523,14 @@ export interface BizRejectRequest {
   body?: string;
 }
 
+/** POST .../applications/move and .../applications/reject */
+export interface BizBulkResult {
+  moved: number;
+  items: BizApplicationListItem[];
+  /** Emails not sent because those applicants haven't confirmed their email yet (company emails wait for that). */
+  emails_waiting: number;
+}
+
 export interface BizScorecardInput {
   stage_id: string;
   ratings: BizScoreItem[];
@@ -620,6 +628,8 @@ export interface BizPublicCompany {
   about: string;
   country: string;
   verified: boolean;
+  /** The domain the company proved, for the badge ("Verified: acme.com"); null while unverified. */
+  verified_domain: string | null;
   jobs: BizPublicJobSummary[];
 }
 
@@ -641,7 +651,7 @@ export interface BizPublicJob {
   published_at: string | null;
   valid_through: string | null;
   questions: BizQuestion[]; // knock-out rules left out
-  company: { slug: string; name: string; logo_url: string | null; website: string; verified: boolean };
+  company: { slug: string; name: string; logo_url: string | null; website: string; verified: boolean; verified_domain: string | null };
   url: string;
   notice: { version: string; text: string };
   /** Google for Jobs JobPosting; null unless the job is open. */

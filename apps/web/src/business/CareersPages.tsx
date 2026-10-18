@@ -96,11 +96,15 @@ function CompanyMark({ name, logo, size = "h-14 w-14" }: { name: string; logo: s
   );
 }
 
-function Verified({ on }: { on: boolean }) {
+/** "Verified: acme.com": the badge names the domain the company proved, so a look-alike name can't borrow it. */
+function Verified({ on, domain }: { on: boolean; domain: string | null }) {
   if (!on) return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-200">
-      <ShieldCheck className="h-3 w-3" aria-hidden /> Verified company
+    <span
+      className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+      title={domain ? `This company proved it controls ${domain}` : undefined}
+    >
+      <ShieldCheck className="h-3 w-3" aria-hidden /> {domain ? `Verified: ${domain}` : "Verified company"}
     </span>
   );
 }
@@ -134,7 +138,7 @@ export function CompanyCareersPage() {
                 {data.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")}
               </a>
             )}
-            <Verified on={data.verified} />
+            <Verified on={data.verified} domain={data.verified_domain} />
           </p>
         </div>
       </header>
@@ -182,7 +186,7 @@ export function PublicJobPage() {
         <div className="min-w-0">
           <h1 className="font-display text-3xl font-semibold tracking-tight">{data.title}</h1>
           <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
-            <span>{data.company.name}</span> <Verified on={data.company.verified} />
+            <span>{data.company.name}</span> <Verified on={data.company.verified} domain={data.company.verified_domain} />
           </p>
         </div>
       </header>

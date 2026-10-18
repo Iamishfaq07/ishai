@@ -168,6 +168,24 @@ def apply_signed_out(client: TestClient, job_id: str, email: str, answers: list[
     return client.post(f"/v1/public/business/jobs/{job_id}/apply", data=data, files=files)
 
 
+def status_token(email: str) -> str:
+    """The status-page token in the latest email to this address that carries one."""
+    import re
+
+    mail = [m for m in mail_to(email) if "/application/" in m.text][-1]
+    found = re.search(r"/application/([\w-]+)", mail.text)
+    assert found is not None
+    return found.group(1)
+
+
+def confirm_applicant(client: TestClient, email: str) -> str:
+    """The applicant opens the link in Orbit's confirmation email (their address is confirmed); returns the token."""
+    token = status_token(email)
+    r = client.post(f"/v1/public/business/applications/{token}/confirm")
+    assert r.status_code == 200 and r.json()["email_confirmed"] is True, r.text
+    return token
+
+
 def wait_ranked(client: TestClient, h: dict[str, str], company_id: str, app_id: str) -> dict[str, Any]:
     for _ in range(100):
         d = client.get(f"/v1/business/companies/{company_id}/applications/{app_id}", headers=auth(h)).json()

@@ -19,6 +19,29 @@
   ~$0.0006 per fill). E2E 36/36 on a local stack with the mock model (fill, refine, per-field undo, publish, JSON-LD
   salary, axe clean light/dark/phone). No migration.
 
+## Orbit for Business: review fixes (2026-10-19)
+
+The remaining findings of the PR #400 review (#401 fixed 1, 2, 5 and 13); DECISIONS D82 and D83 amendments.
+- **Domains** by the Public Suffix List (tldextract, bundled snapshot): bare suffixes refused, registrable domains
+  compared, vendored free-mail and throwaway-mail lists, subdomain mailboxes verify by DNS only; the careers badge reads
+  "Verified: acme.com".
+- **No email relay**: until an applicant's address is confirmed only Orbit's fixed confirmation goes out; company
+  emails, rejections and interview invites wait ("Waiting for the applicant to confirm their email"), bulk results say
+  how many. An unconfirmed signed-out application is replaced by the next from that address; the bot check runs before
+  the per-email limit.
+- **Ranking** resists prompt injection: lines addressed to AI reviewers are left out (with a caution), quotes must name
+  the requirement, and the summary is built from the matches.
+- **Retention**: each application keeps the retention it was given; the sweep also deletes undecided applications on
+  long-closed jobs and requested deletions after 30 days (with reminders at 7 days and 1 day).
+- **Status links** are random per application (hashed, and sealed for later emails); existing links keep working.
+- Smaller: control characters out of titles, names and subjects; .ics CR escaping and 75-octet folding; the
+  sanitizer never cuts its output; plan limits under a row lock and a clean 409 for a doubled invite accept; more
+  routes refuse a suspended company; re-ranking rate-limited; blind review masks subjects, answers and parsed
+  experience; removed members leave hiring teams and interviewer lists.
+- Migration `25f71d009e96` (biz_applications: `status_token_sealed`, `retention_months`, `deletion_reminders`; existing
+  rows filled in place). Dependency: `tldextract`. Tests: tests/test_business_review.py (27, one or more per finding),
+  6 injection tests in test_business_ai.py, web vitest (badge, bulk-result message).
+
 ## Orbit Apply: auto-apply for candidates, the server side and the web app (2026-10-19)
 
 - **`orbit_api/auto_apply`** (DECISIONS D84, PROTOCOL.md "Orbit Apply"). The server plans each application and the

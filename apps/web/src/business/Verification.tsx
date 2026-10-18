@@ -48,7 +48,7 @@ export function Verification() {
       <PageTitle title="Verify your company" subtitle={`Show that you work at ${v.domain}. It's what lets your jobs go live, and what protects job seekers from fake employers.`} />
       {v.verified ? (
         <Callout tone="success" icon={<ShieldCheck className="h-4 w-4" />} title={`${company.name} is verified`}>
-          Verified {v.method === "dns" ? "with a DNS record" : v.method === "admin" ? "by the Orbit team" : "with a work email"} on {v.domain}. Your careers page shows a "Verified company" badge.
+          Verified {v.method === "dns" ? "with a DNS record" : v.method === "admin" ? "by the Orbit team" : "with a work email"} on {v.domain}. Your careers page shows a "Verified: {v.domain}" badge.
         </Callout>
       ) : v.blocked_domain ? (
         <Callout tone="error" title={`${v.domain} can't be verified`}>
@@ -65,7 +65,7 @@ export function Verification() {
               </Button>
             </Panel>
           )}
-          <Panel title="Option 1: a work email" hint={`We send a 6-digit code to an address at ${v.domain}.`}>
+          <Panel title="Option 1: a work email" hint={`We send a 6-digit code to an address at ${v.domain} itself. If your mail is on a subdomain (like you@mail.${v.domain}), use the DNS record instead.`}>
             <form
               className="flex flex-wrap items-end gap-2"
               noValidate
