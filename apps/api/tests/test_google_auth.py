@@ -365,3 +365,39 @@ def test_google_sign_in_refusals_go_back_to_the_sign_in_page(google_client: Test
         assert back.status_code == 302 and back.headers["location"].endswith("/login?error=busy")
     finally:
         ratelimit.reset_all()
+
+
+def test_google_starts_at_the_apis_own_address_and_returns_through_the_site(monkeypatch: pytest.MonkeyPatch) -> None:
+    """D80: the web app opens the start at api.orbitanswer.com, Google returns to the site's /api proxy (another host):
+    the state cookie is shared across the site, so the callback sees it, and the session cookie is too."""
+    monkeypatch.setenv("ORBIT_GOOGLE_CLIENT_ID", "orbit-client")
+    monkeypatch.setenv("ORBIT_GOOGLE_CLIENT_SECRET", "orbit-secret")
+    monkeypatch.setenv("ORBIT_GOOGLE_REDIRECT_URI", "https://orbitanswer.com/api/v1/auth/google/callback")
+    monkeypatch.setenv("ORBIT_COOKIE_DOMAIN", "orbitanswer.com")
+    get_settings.cache_clear()
+    from orbit_api.main import create_app
+
+    ident = {"sub": f"google-{uuid.uuid4().hex[:8]}", "email": f"shared-{uuid.uuid4().hex[:8]}@gmail.com", "name": "Ada"}
+
+    async def fake(code: str, verifier: str, uri: str) -> dict[str, str]:
+        assert uri == "https://orbitanswer.com/api/v1/auth/google/callback"
+        return ident
+
+    monkeypatch.setattr(google, "fetch_identity", fake)
+    try:
+        with TestClient(create_app(), base_url="https://api.orbitanswer.com") as direct:
+            start = direct.get("/v1/auth/google/start?next=/jobs", follow_redirects=False)
+            state_cookie = [v for v in start.headers.get_list("set-cookie") if v.startswith("orbit_google=ey")]
+            assert state_cookie and "Domain=orbitanswer.com" in state_cookie[0]
+            state = _state(start.headers["location"])
+            packed = direct.cookies.get("orbit_google")
+        # The callback reaches the API under the site's own host (the Worker's /api proxy).
+        with TestClient(create_app(), base_url="https://orbitanswer.com") as site:
+            site.cookies.set("orbit_google", packed or "", domain=".orbitanswer.com")
+            done = site.get(f"/v1/auth/google/callback?code=the-code&state={state}", follow_redirects=False)
+            assert done.status_code == 302 and done.headers["location"].endswith("/welcome")
+            cookies = done.headers.get_list("set-cookie")
+            assert any(v.startswith("orbit_session=ey") and "Domain=orbitanswer.com" in v for v in cookies)
+            assert any(v.startswith('orbit_google=""') and "Domain=orbitanswer.com" in v for v in cookies)
+    finally:
+        get_settings.cache_clear()

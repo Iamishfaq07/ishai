@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type InputHTMLAttri
 import { Check, Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck, cx, focusRing, passkeysSupported } from "@orbit/ui";
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input } from "../components/ui";
-import { api, API_URL } from "../lib/api";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { clearAsyncCache } from "../lib/useAsync";
 import { errorText } from "../lib/format";
@@ -232,7 +232,9 @@ function GoogleContinue({ next, label }: { next: string; label: GoogleLabel }) {
   if (!on) return null;
   // A link's invite or creator code rides through Google's page to the new account (lib/referral.ts).
   const ref = storedRef();
-  const href = `${API_URL}/v1/auth/google/start?next=${encodeURIComponent(next || "/")}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`;
+  // Straight to the API's own address when the web app already calls it there (D80): one trip through the slow edge
+  // proxy fewer. Google comes back through the site's /api (the redirect URI it has), and the state cookie is shared.
+  const href = api.urlFor(`/v1/auth/google/start?next=${encodeURIComponent(next || "/")}${ref ? `&ref=${encodeURIComponent(ref)}` : ""}`);
   return (
     <div className="mb-4 space-y-4">
       <GoogleButton href={href} label={label} className="w-full" />

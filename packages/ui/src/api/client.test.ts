@@ -332,6 +332,15 @@ describe("api client direct route (D80)", () => {
     expect(f.calls).toEqual(["PATCH https://api.orbitanswer.com/v1/auth/me/privacy"]);
   });
 
+  it("says where a page the browser opens itself should go (Google's sign-in start)", async () => {
+    const f = routed([{ status: 200, body: user, headers: shared }]);
+    const api = make(f, memory());
+    expect(api.urlFor("/v1/auth/google/start?next=%2F")).toBe("https://orbitanswer.com/api/v1/auth/google/start?next=%2F");
+    await api.me();
+    expect(api.urlFor("/v1/auth/google/start?next=%2F")).toBe("https://api.orbitanswer.com/v1/auth/google/start?next=%2F");
+    expect(api.urlFor("/v1/billing/upi/orders")).toBe("https://orbitanswer.com/api/v1/billing/upi/orders");
+  });
+
   it("a 401 from the API's own address is a real sign-out (no second try)", async () => {
     const f = routed([{ status: 401, body: { detail: "Not authenticated" } }]);
     const onUnauthorized = vi.fn();
