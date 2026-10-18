@@ -8,6 +8,9 @@ import { isResumeAiHome } from "./pages/resume/paths";
  * hover/focus/touch) and `prefetchLikelyRoutes()` warms the daily pages once the browser is idle.
  */
 const loaders = {
+  // Sign-in, sign-up and the email links: out of the first download, which everyone signed in (and every visitor of
+  // the front page) pays for; warmed at once on those addresses, and when idle on the public pages.
+  auth: () => import("./pages/Auth"),
   home: () => import("./pages/Home"),
   landing: () => import("./pages/Landing"),
   welcome: () => import("./pages/Welcome"),
@@ -55,6 +58,13 @@ function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
   return lazy(async () => ({ default: pick(await load()) }));
 }
 
+export const LoginPage = page(loaders.auth, (m) => m.LoginPage);
+export const RegisterPage = page(loaders.auth, (m) => m.RegisterPage);
+export const ForgotPasswordPage = page(loaders.auth, (m) => m.ForgotPasswordPage);
+export const ResetPasswordPage = page(loaders.auth, (m) => m.ResetPasswordPage);
+export const VerifyEmailPage = page(loaders.auth, (m) => m.VerifyEmailPage);
+export const ConfirmEmailChangePage = page(loaders.auth, (m) => m.ConfirmEmailChangePage);
+export const StopJobAlertsPage = page(loaders.auth, (m) => m.StopJobAlertsPage);
 export const HomePage = page(loaders.home, (m) => m.HomePage);
 export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
@@ -110,7 +120,11 @@ export const AdminReferralsPage = page(loaders.adminReferrals, (m) => m.AdminRef
 
 type PageKey = keyof typeof loaders;
 
+/** The sign-in pages' addresses (pages/Auth.tsx). */
+const AUTH_PATH = /^\/(login|register|forgot-password|reset-password|verify-email|confirm-email-change|jobs\/alerts\/off)\/?$/;
+
 const BY_PATH: Array<[RegExp, PageKey | null]> = [
+  [AUTH_PATH, "auth"],
   [/^\/$/, "home"],
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],
@@ -165,8 +179,19 @@ export function publicPageFor(pathname: string): "landing" | "resumeAiPublic" | 
  * cached.
  */
 export function preloadPublicPage(pathname: string): void {
+  if (AUTH_PATH.test(pathname)) {
+    void loaders.auth().catch(() => undefined);
+    return;
+  }
   const key = publicPageFor(pathname);
-  if (key) void loaders[key]().catch(() => undefined);
+  if (!key) return;
+  void loaders[key]().catch(() => undefined);
+  // "Sign in" and "Start free" are the next click from a public page: their code once the browser is idle.
+  const warm = () => void loaders.auth().catch(() => undefined);
+  const idle = (window as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void })
+    .requestIdleCallback;
+  if (idle) idle(warm, { timeout: 5000 });
+  else setTimeout(warm, 3000);
 }
 
 /** Start downloading a page's code (no-op once loaded; the browser caches the module). */

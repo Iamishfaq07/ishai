@@ -42,7 +42,7 @@ import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, 
 import { openSupport } from "../lib/shell";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync, type AsyncState } from "../lib/useAsync";
-import { UsageSummary } from "./Billing";
+import { UsageSummary } from "./UsageSummary";
 import { DueToday } from "./DueToday";
 import { KashSecHomeCard } from "../components/KashSec";
 import { summaryLine } from "./home/dashboard";
