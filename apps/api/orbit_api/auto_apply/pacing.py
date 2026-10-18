@@ -109,7 +109,7 @@ async def expire(db: AsyncSession, now: datetime, user_id: str | None = None) ->
             else:
                 p.status = "ready"
                 p.not_before = now + rules.MIN_GAP
-            p.lease_until = None
+            p.lease_until = p.lease_holder = None
         else:
             p.status, p.reason = "expired", "Not sent in time: the post may have changed since it was prepared."
     return changed
@@ -148,8 +148,12 @@ async def company_count(db: AsyncSession, user_id: str, company_key: str, now: d
     return int(await db.scalar(q) or 0)
 
 
-async def next_due(db: AsyncSession, user: User, now: datetime | None = None) -> Due:
-    """The packet to lease now, held and leased (the caller commits), or why there's none and when to ask again."""
+async def next_due(db: AsyncSession, user: User, now: datetime | None = None, holder: str = "") -> Due:
+    """The packet to lease now, held and leased (the caller commits), or why there's none and when to ask again.
+
+    Idempotent for the device holding a lease (`holder`: its session id): while its lease runs, asking again returns
+    the same packet, unchanged (same lease end, no second hold), so an executor that restarted mid-application picks
+    up where it was instead of being told it's busy. Any other device is told `busy`: one application at a time."""
     now = now or datetime.now(UTC)
     await expire(db, now, user.id)
     setup = await db.get(AutoApplySetup, user.id)
@@ -157,14 +161,19 @@ async def next_due(db: AsyncSession, user: User, now: datetime | None = None) ->
         return Due(None, "not_set_up")
     if setup.paused:
         return Due(None, "paused")
+    mine = ApplicationPacket.user_id == user.id
+    held = (await db.scalars(select(ApplicationPacket).where(mine, ApplicationPacket.status == "leased")
+                             .order_by(ApplicationPacket.leased_at.desc()))).all()
+    if held:
+        current = held[0]
+        if (current.lease_holder or "") == holder and (aware(current.lease_until) or now) > now:
+            return Due(current)
+        until = aware(current.lease_until)
+        return Due(None, "busy", until if until is not None and until > now else now + rules.MIN_GAP)
     if (until := quiet_until(setup, now)) is not None:
         return Due(None, "quiet_hours", until)
     if await today_count(db, user.id, setup, now) >= daily_limit(setup):
         return Due(None, "daily_limit", local_day_start(now, setup.tz_offset_min or 0) + timedelta(days=1))
-    mine = ApplicationPacket.user_id == user.id
-    if await db.scalar(select(func.count()).select_from(ApplicationPacket).where(
-            mine, ApplicationPacket.status == "leased")):
-        return Due(None, "busy", now + rules.MIN_GAP)
     last = aware(await db.scalar(select(func.max(ApplicationPacket.leased_at)).where(mine)))
     if last is not None and now - last < rules.MIN_GAP:
         return Due(None, "pacing", last + rules.MIN_GAP)
@@ -197,7 +206,7 @@ async def next_due(db: AsyncSession, user: User, now: datetime | None = None) ->
             continue
         if not await quota.hold(db, user, p):
             return Due(None, "no_quota")
-        p.status, p.leased_at, p.lease_until = "leased", now, now + rules.LEASE
+        p.status, p.leased_at, p.lease_until, p.lease_holder = "leased", now, now + rules.LEASE, holder
         p.attempts += 1
         p.not_before = now
         return Due(p)

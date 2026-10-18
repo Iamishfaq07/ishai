@@ -32,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.guards import require_verified_email
-from orbit_api.auth.security import current_user
+from orbit_api.auth.security import current_user, decode_claims, token_from_request
 from orbit_api.auto_apply import bank, pacing, packets, planner, quota, rules
 from orbit_api.auto_apply.pacing import aware
 from orbit_api.auto_apply.pdf import resume_pdf
@@ -589,11 +589,19 @@ def _eeo(p: ApplicationPacket) -> Literal["decline", "as_answered"]:
     return "as_answered" if any(not bank._DECLINE_RE.search(str(a.get("value"))) for a in eeo_values) else "decline"
 
 
+def lease_holder(request: Request) -> str:
+    """The device asking: its session id (an extension's connect makes one, auth/devices.py), "" without one."""
+    token = token_from_request(request)
+    claims = decode_claims(token) if token else None
+    sid = claims.get("sid") if claims else None
+    return sid[:64] if isinstance(sid, str) else ""
+
+
 @router.get("/next", response_model=ExecutorPacket, dependencies=[executor_limit],
             responses={204: {"description": "Nothing is due"}})
 async def next_packet(request: Request, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> Any:
-    due = await pacing.next_due(db, user)
+    due = await pacing.next_due(db, user, holder=lease_holder(request))
     await db.commit()
     p = due.packet
     if p is None:

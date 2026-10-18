@@ -344,9 +344,18 @@ def test_lease_submit_with_proof_updates_the_tracker_and_counts_the_quota(app: T
     pdf = app.get(path)
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF") and b"Asha Rao" in pdf.content
     assert app.get(path.replace("sig=", "sig=0")).status_code == 403
-    # One at a time: a second ask while it's leased gets nothing.
-    busy = app.get("/v1/apply/next", headers=ext)
+    # Asking again from the same browser (a restarted service worker) gets the same packet back, lease unchanged and
+    # not held twice; another browser of the same candidate is told it's busy (one application at a time).
+    again = app.get("/v1/apply/next", headers=ext)
+    assert again.status_code == 200, again.text
+    same = again.json()
+    assert same["id"] == p["id"] and same["lease_expires_at"] == p["lease_expires_at"]
+    assert {k: v for k, v in same.items() if k != "resume"} == {k: v for k, v in p.items() if k != "resume"}
+    assert app.get("/v1/apply/setup", headers=h).json()["quota"]["used"] == 1  # held once, not twice
+    other = ext_token(app, h)
+    busy = app.get("/v1/apply/next", headers=other)
     assert busy.status_code == 204 and busy.headers["X-Orbit-Apply-Why"] == "busy"
+    assert 0 < int(busy.headers["Retry-After"]) <= 15 * 60
     s = app.get("/v1/apply/status", headers=ext).json()
     assert s["today"] == 1 and s["limit"] == 10
     r = app.post(f"/v1/apply/{p['id']}/result", headers=ext, json={
