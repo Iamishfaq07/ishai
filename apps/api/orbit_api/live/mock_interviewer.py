@@ -61,7 +61,9 @@ ONE_WAY_GRACE_MS = 3000
 
 # "story": from the story bank's "Practise telling it": a question the story answers, then a follow-up testing it.
 # "answer": from the answer bank's "Practise it": the saved question, then a follow-up on the prepared answer's claims.
-DrillKind = Literal["retry", "concise", "prep", "story", "answer"]
+# "set": a round's usual questions (Practice's one-tap HR round and "Tell me about yourself"), asked as written with no
+# lead line: nothing was prepared, so "the questions from your prep" would be untrue. Followed up like "prep".
+DrillKind = Literal["retry", "concise", "prep", "story", "answer", "set"]
 
 
 class DrillItem(BaseModel):
@@ -376,6 +378,7 @@ _DRILL_LEAD = {
     "prep": "",
     "story": "",
     "answer": "",
+    "set": "",
 }
 
 
@@ -825,7 +828,7 @@ class MockInterviewer:
                        "make it specific to them.\n"
                        f'<reference_data source="topic">\n{fence(cfg.topic.strip())}\n</reference_data>')
         follow_ups = self._follow_ups_in_topic()
-        if follow_up_on is not None and follow_up_on.kind in ("prep", "answer"):
+        if follow_up_on is not None and follow_up_on.kind in ("prep", "answer", "set"):
             # A question from their prep, or one they've prepared an answer to: probe the claim behind it, the way the
             # prep said you would (or behind what the prepared answer says).
             steer = ("Ask ONE probing follow-up on the candidate's last answer (is_follow_up true), the way an "

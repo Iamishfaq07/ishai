@@ -211,11 +211,12 @@ export interface MockConfig {
   topic?: string | null;
   /** A one-way (recorded, HireVue-style) video interview: thinking time, then a fixed time to answer each prompt. */
   one_way?: { think_seconds: number; answer_seconds: number };
-  /** A fixed list of questions, asked in order (re-drills, or questions from interview prep: kind "prep"). */
+  /** A fixed list of questions, asked in order (re-drills; questions from interview prep: kind "prep"; a one-tap
+   *  round's usual questions, asked with no lead line: kind "set"). */
   drill?: Array<{
     question: string;
     /** "story": a question a story-bank story answers ("Practise telling it"), tested by its follow-up. */
-    kind?: "retry" | "concise" | "prep" | "story" | "answer";
+    kind?: "retry" | "concise" | "prep" | "story" | "answer" | "set";
     follow_up?: boolean;
     /** Steers the follow-up, never read out: what was weak last time, or (prep) where to push on the claim. */
     feedback?: string;

@@ -113,7 +113,7 @@ function mockFor(id: PresetId, country: string, language: string): MockConfig {
         persona: "recruiter",
         difficulty: "easy",
         duration_minutes: 5,
-        drill: hrQuestions(country, language).map((question) => ({ question, kind: "prep" as const })),
+        drill: hrQuestions(country, language).map((question) => ({ question, kind: "set" as const })),
       };
     case "tmay10": {
       const tmay = translated?.tmay ?? "Tell me about yourself.";
@@ -125,11 +125,11 @@ function mockFor(id: PresetId, country: string, language: string): MockConfig {
         drill: [
           {
             question: tmay,
-            kind: "prep",
+            kind: "set",
             follow_up: true,
             feedback: "Check it covers who they are now, one or two things they did with a result, and why this role. Push on anything vague.",
           },
-          { question: translated?.project ?? "Walk me through one project or internship from your resume that you're proud of.", kind: "prep", follow_up: true },
+          { question: translated?.project ?? "Walk me through one project or internship from your resume that you're proud of.", kind: "set", follow_up: true },
           { question: tmay, kind: "concise" },
         ],
       };
