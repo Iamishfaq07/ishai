@@ -60,6 +60,9 @@ The variables (the same on any host):
 | `ORBIT_PAYPAL_CLIENT_ID` / `ORBIT_PAYPAL_CLIENT_SECRET` | no | a PayPal REST app's keys: dollar prices outside India are paid through PayPal (docs/BILLING.md) |
 | `ORBIT_PAYPAL_ENV` | no | `sandbox` (default, no real money) or `live`, matching the keys |
 | `ORBIT_PAYPAL_WEBHOOK_ID` | no | the PayPal webhook's ID, so its events (`/v1/billing/paypal/webhook`) are believed |
+| `ORBIT_GOOGLE_INDEXING_SA_JSON` | no | Orbit for Business (D82): the whole JSON key of a Google service account with the Indexing API enabled in its Cloud project, whose `client_email` is added as an **Owner** of the orbitanswer.com property in Search Console. Job pages are then pinged on publish, change and close. Unset: no pings (the jobs sitemap still lists them) |
+| `ORBIT_BUSINESS_AI` | no | `fake` forces Orbit for Business's deterministic keyword matcher instead of `orbit_api.business_ai` (local runs only; tests use it automatically) |
+| `ORBIT_BUSINESS_SWEEP_S` | no | how often the Business retention sweep runs, in seconds (default 21600) |
 | `ORBIT_LLM_PRICING_JSON` | no | extra/override LLM prices for internal cost estimates (see `providers/llm/pricing.py`) |
 | `ORBIT_LIVE_HEARTBEAT_S` | no | live-minute commit/enforcement interval, default 15 |
 | `ORBIT_SPOOL_DIR` | no | where dead-lettered writes spool if the DB is unreachable (default: temp dir) |

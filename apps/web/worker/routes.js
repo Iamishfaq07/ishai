@@ -9,7 +9,7 @@
 // Keep APP_ROUTES in step with the router (apps/web/src/App.tsx); seo.test.js checks the two still agree.
 
 /** The public pages the app draws (the Worker's PAGE_META pages, worker/meta.js). */
-export const PUBLIC_APP_PAGES = ["/", "/resume-ai", "/jobs", "/warmup", "/contact", "/technical", "/pricing", "/interview-copilot", "/mock-interview", "/linkedin-ai"];
+export const PUBLIC_APP_PAGES = ["/", "/resume-ai", "/jobs", "/warmup", "/contact", "/technical", "/pricing", "/interview-copilot", "/mock-interview", "/linkedin-ai", "/business"];
 
 /** The policies: plain HTML files in public/, served at their address without ".html". */
 export const POLICY_PAGES = ["/privacy", "/terms", "/cookies", "/refund"];
@@ -17,6 +17,10 @@ export const POLICY_PAGES = ["/privacy", "/terms", "/cookies", "/refund"];
 /** Sections whose pages are built files (the question bank's guides, Orbit's articles): what isn't among the files
  *  there is a 404. */
 export const PUBLIC_SECTIONS = ["/companies", "/roles", "/guides"];
+
+/** Orbit for Business (D82): the companies' careers pages and their jobs, drawn by the Worker from the API
+ *  (careers.js). Slugs are lower case letters, digits and dashes. */
+export const CAREERS_ROUTES = [/^\/company\/[a-z0-9-]+$/, /^\/company\/[a-z0-9-]+\/jobs\/[a-z0-9-]+$/];
 
 /**
  * The app's own pages, signed in or on the way in: what React Router draws (App.tsx), as patterns over the path.
@@ -36,6 +40,10 @@ export const APP_ROUTES = [
   /^\/offers\/[^/]+$/,
   /^\/extension\/connect$/,
   /^\/admin\/[a-z-]+$/, // every admin page (users, payments, audit, inbox, support, and any added later)
+  // Orbit for Business (D82): the company app, an invite, and an applicant's status page (the link in their email).
+  /^\/business\/app(?:\/[^/]+)*$/,
+  /^\/business\/invite\/[^/]+$/,
+  /^\/application\/[^/]+$/,
 ];
 
 /** Invite links (feat/referrals): /r/<code>. */
@@ -63,6 +71,7 @@ export const ROBOTS_DISALLOW_EXACT = [
   "/reset-password",
   "/verify-email",
   "/confirm-email-change",
+  "/business/app",
 ];
 /**
  * The API calls the public pages make while they draw (prices, job counts, latency figures, whether someone is
@@ -79,7 +88,7 @@ export const ROBOTS_ALLOW_API = [
   "/api/v1/public/",
 ];
 /** Whole subtrees robots.txt keeps crawlers out of (the public page at "/jobs" and "/resume-ai" itself stays open). */
-export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/_prerender/", "/live/", "/sessions/", "/documents/", "/resume-ai/", "/jobs/", "/code/", "/offers/", "/extension/", "/admin/"];
+export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/_prerender/", "/live/", "/sessions/", "/documents/", "/resume-ai/", "/jobs/", "/code/", "/offers/", "/extension/", "/admin/", "/business/app/", "/business/invite/", "/application/", "/embed/"];
 
 /**
  * An address that moved, and where it is now (a 301, so search engines move their record too), or null. Mirrors the
@@ -108,6 +117,7 @@ export function movedPath(pathname, search = "") {
 export function routeKind(pathname) {
   if (PUBLIC_APP_PAGES.includes(pathname) || POLICY_PAGES.includes(pathname)) return "public";
   if (PUBLIC_SECTIONS.some((s) => pathname === s || pathname.startsWith(`${s}/`))) return "public";
+  if (CAREERS_ROUTES.some((re) => re.test(pathname))) return "public";
   if (REFERRAL_ROUTE.test(pathname)) return "referral";
   if (APP_ROUTES.some((re) => re.test(pathname))) return "app";
   return null;

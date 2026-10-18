@@ -234,3 +234,63 @@ apps: loopback redirect) with PKCE (RFC 7636, S256), on top of the web's server-
    - `400` "That sign-in expired or was already used…" for an unknown, expired, reused code, or a verifier that
      doesn't match its challenge (which spends the code too), or when the account signed out everywhere since;
    - `403` for a suspended account or one no longer on a private server's allowlist; `429` when rate-limited.
+
+## Orbit for Business (REST, D82)
+Not part of the live socket. TypeScript DTOs: `packages/types/src/business.ts`; source of truth
+`apps/api/orbit_api/business/`. A company is its own tenant on the same Orbit login. Every company route takes the
+company id in the path and answers **404** (never 403) to anyone who isn't a member, so a company's existence isn't
+confirmed to outsiders; a member whose role can't do something gets **403** `{"detail": {"code": "biz_forbidden"}}`.
+A suspended company answers writes with **403** `biz_suspended`. Plan limits answer **402**
+`{"detail": {"code": "biz_limit", "limit": "jobs"|"seats", "plan": ...}}`.
+
+**Roles.** owner (everything, plan, transfer) · admin (everything but plan and transfer) · recruiter (jobs, all
+applicants, emails, templates) · hiring_manager (only jobs whose `hiring_team` includes them: applicants, moves,
+notes, scorecards) · interviewer (only applications whose `interviewers` include them: read, notes, scorecards).
+
+**Company workspace** (`/v1/business`, signed in):
+- `GET /me` → BizMe. `POST /companies` → BizCompany (201; the caller is owner; at most 3 companies owned).
+- `GET|PATCH /companies/{cid}`; `PUT /companies/{cid}/logo` (multipart `file`, PNG/JPEG ≤ 1 MB) · `DELETE …/logo`.
+- `GET /companies/{cid}/verification` → BizVerification. `POST …/verification/account` (the member's own verified
+  email is at the domain), `POST …/verification/email {email}` (sends a 6-digit code to a work address at the
+  domain), `POST …/verification/email/confirm {code}`, `POST …/verification/dns` (looks up the TXT record
+  `orbit-verify=<token>` on the domain or `_orbit-verify.<domain>`). Free-mail and hosting domains can't verify.
+  Unverified companies can draft jobs; publishing answers **403** `biz_unverified`.
+- Members: `GET …/members` → BizMembers · `POST …/invites {email, role}` · `DELETE …/invites/{id}` ·
+  `PATCH …/members/{mid} {role}` · `DELETE …/members/{mid}` · `POST …/transfer {member_id}` (owner) ·
+  `POST …/leave`. Invites: `GET /v1/public/business/invites/{token}` → BizInviteLookup;
+  `POST /invites/accept {token}` (signed in as the invited address, verified).
+- Plan: `GET …/plan` → BizPlanStatus · `POST …/plan/request {plan}` (Starter or Growth; the Orbit team grants it).
+- Jobs: `GET …/jobs` → BizJobListItem[] · `POST …/jobs` (BizJobInput, a draft) · `GET|PATCH …/jobs/{jid}` ·
+  `POST …/jobs/{jid}/publish|pause|close|reopen` · `POST …/jobs/draft {BizJobBrief}` → BizJobDraft (the AI writer).
+- Applications: `GET …/jobs/{jid}/applications?stage=&q=&tag=&sort=score|applied|name&reveal=` →
+  BizApplicationList · `GET …/applications/{aid}?reveal=` → BizApplicationDetail · `POST …/applications/move
+  {ids, stage_id, notify}` · `POST …/applications/reject {ids, send_email, subject?, body?}` ·
+  `POST …/applications/{aid}/unreject` · `PATCH …/applications/{aid} {tags?, interviewers?}` ·
+  `POST …/applications/{aid}/notes {body}` (`@name` or `@email` mentions notify members) ·
+  `POST …/applications/{aid}/scorecards` BizScorecardInput · `POST …/applications/{aid}/email {kind|subject+body}` ·
+  `POST …/applications/{aid}/interview` BizSlotsInput · `POST …/applications/{aid}/rerank` ·
+  `DELETE …/applications/{aid}` (delete-on-request; the audit log keeps the reference only) ·
+  `GET …/jobs/{jid}/export.csv`. There is no automatic rejection: knock-out failures are flagged and sorted last.
+- `GET|PUT …/templates[/{kind}]` (BizTemplate) · `GET …/analytics` → BizCompanyAnalytics ·
+  `GET …/jobs/{jid}/analytics` → BizJobAnalytics · `GET …/audit?before=` → BizAuditEntry[] (owner, admin).
+- `GET /notifications` → BizNotification[] · `POST /notifications/read {ids}`.
+
+**Applying.** `GET /v1/business/apply/{job_id}/preview?resume_id=|document_id=` → BizApplyPreview and
+`POST /v1/business/apply/{job_id}` BizOneClickApply (signed in, verified email): the chosen resume's text is copied
+into the application (the company never reads the Orbit resume itself) and the job joins the candidate's Jobs AI
+tracker (`source: "orbit_direct"`, listing id `biz:<job_id>`), moved as the company moves it. Signed out:
+`POST /v1/public/business/jobs/{job_id}/apply` multipart (`name, email, phone, answers` JSON, `consent`,
+`notice_version`, `source`, `file` PDF/DOCX ≤ 5 MB, `captcha_token`, honeypot `website`); a confirmation email
+carries the status link. Both need `consent: true` and the current `notice_version` (recorded with the time). One
+application per email per job: a repeat answers `200 {"status": "already_applied"}`.
+
+**Public** (`/v1/public/business`, no sign-in, cacheable): `GET /companies/{slug}` → BizPublicCompany ·
+`GET /companies/{slug}/jobs/{job_slug}` → BizPublicJob (with `json_ld` while open) · `GET /companies/{slug}/logo` ·
+`GET /sitemap` → `[{loc, lastmod}]` · `POST /jobs/{job_id}/report {reason, details, email?}` ·
+`GET /applications/{token}` → BizApplicationStatus · `POST /applications/{token}/confirm` ·
+`POST /applications/{token}/book {slot}` · `POST /applications/{token}/delete-request`.
+
+**Orbit admin** (`/v1/admin/business`): `GET /companies?q=&status=` → BizAdminCompany[] ·
+`GET /companies/{cid}` → BizAdminCompanyDetail · `POST /companies/{cid}/suspend {reason}` · `/unsuspend` ·
+`/verify` · `POST /companies/{cid}/plan {plan, days}` · `POST /jobs/{jid}/take-down {reason}` · `/restore` ·
+`GET /reports?status=` → BizJobReport[] · `POST /reports/{id} {status}`.

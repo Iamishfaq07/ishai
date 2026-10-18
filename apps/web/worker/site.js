@@ -197,6 +197,17 @@ const PRODUCT_PAGES = {
   },
 };
 
+PRODUCT_PAGES["/business"] = {
+  crumb: "Orbit for Business",
+  app: {
+    id: "business",
+    name: "Orbit for Business",
+    description:
+      "Hiring software for companies: a careers page with Google for Jobs markup, one-click applications from Orbit job seekers, AI ranking that shows its evidence while a person decides, a shared pipeline, scorecards and data controls.",
+    category: "BusinessApplication",
+  },
+};
+
 const OTHER_PAGES = {
   "/contact": { crumb: "Contact", type: "ContactPage" },
   "/technical": { crumb: "How Orbit works", type: "WebPage" },

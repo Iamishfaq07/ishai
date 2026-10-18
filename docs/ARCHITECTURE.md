@@ -33,6 +33,7 @@ Built from scratch in this repo, starting 2026-09-23 (it held only a generated R
 | Observability: JSON logs with request / user / session ids and redaction, latency metrics per session (`GET /v1/admin/latency`), optional Sentry | ✅ (Sentry off until `ORBIT_SENTRY_DSN` is set, D18) |
 | Windows desktop (Tauri 2): native WASAPI mic + loopback + per-app capture, device follow / reopen, region screenshots, tray, global shortcuts, signed auto-update, per-user NSIS installer | ✅ driven end-to-end on real hardware |
 | Web app on the same shared live UI (`packages/ui`) | ✅ |
+| **Orbit for Business** (D82): company workspaces on the same login (verified by work email or DNS; roles owner, admin, recruiter, hiring manager, interviewer; invites and seats), jobs with Google for Jobs markup on Worker-served careers pages, one-click applies from Orbit accounts and resume uploads with recorded consent, a pipeline (kanban, notes and mentions, scorecards, scheduling, emails from Orbit with Reply-To the recruiter), background ranking with reasons through business/ai_port.py, analytics, retention, export, delete-on-request, an append-only audit log, plan limits granted by the Orbit admin | ✅ tested |
 | Accessibility: axe WCAG 2.1 AA clean on every desktop screen, light + dark; rem-based text sizes; one icon set (lucide) | ✅ |
 
 ## B. Not built (by choice, for now)
@@ -66,6 +67,10 @@ All provider keys live only in the API process. Clients stream audio to the API,
 SQLite), workspaces, workspace_documents, sessions, session_documents, session_turns, questions, answers,
 session_summaries, usage, failed_writes, jobs, provider_requests, audit_logs`. See `apps/api/orbit_api/models.py`.
 User-owned rows hang off `users.id` with `ON DELETE CASCADE`, so deleting an account deletes all of that user's data.
+Orbit for Business (D82) adds `biz_companies, biz_members, biz_invites, biz_jobs, biz_applications, biz_notes,
+biz_scorecards, biz_events, biz_interviews, biz_templates, biz_notifications, biz_reports, biz_audit`, each keyed by
+its `company_id` (a tenant). An application holds a copy of what the applicant shared; its `user_id` (the Orbit
+account that applied in one click) is `SET NULL` on account deletion and never shown to the company.
 
 ## E. Live session state machine
 ```

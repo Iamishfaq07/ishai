@@ -482,6 +482,11 @@ export function createApiClient(options: ApiClientOptions) {
   });
 
   return {
+    /** A JSON call to any path (CSRF, the direct route, errors and timeouts as every method here): for features whose
+     *  methods live in their own lazily loaded module (Orbit for Business, apps/web/src/business/api.ts). */
+    call: <T,>(path: string, init: RequestInit & { timeoutMs?: number } = {}) => json<T>(path, init),
+    /** The same, returning the Response itself (a file download, a CSV). */
+    callRaw: (path: string, init: RequestInit & { timeoutMs?: number } = {}) => raw(path, init),
     fullJobPrep: (id: string, resumeId?: string | null) => json<FullPreparation>(`/v1/jobs/listings/${encodeURIComponent(id)}/full-prep`,
       { method: "POST", body: body({ resume_id: resumeId ?? null }), timeoutMs: LONG_TIMEOUT_MS }),
     grillResume: (id: string, data: ResumeData, context: CareerContext) => json<OrbitSession>(`/v1/resumes/${encodeURIComponent(id)}/grill`,

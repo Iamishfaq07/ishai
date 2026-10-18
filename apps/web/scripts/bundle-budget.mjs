@@ -17,17 +17,20 @@ export const BUDGETS = {
     // +1 kB each for D79 (docs/PERFORMANCE.md): the product pages' shared pieces became chunks of their own, and each
     // chunk's name is in the entry's preload map (+0.3 kB on every first load); Landing shares the live answer and
     // the sticky bar with them, Mock its one-tap rounds with /mock-interview.
-    Home: 211, // the signed-in landing: the page everyone opens
+    // +1 kB on the signed-in pages for D82 (docs/PERFORMANCE.md): Orbit for Business's routes and its one loader in
+    // the entry (+0.3 kB), and the table's sort arrow became a chunk of its own, shared with the business app. The
+    // business app itself is lazy and in nobody's first load.
+    Home: 212, // the signed-in landing: the page everyone opens
     // The front page, signed out. +1 kB for SameBox (0.5 kB): its free line keeps its room until the server answers
     // (CLS 0; docs/PERFORMANCE.md).
     Landing: 207,
-    Sessions: 186, // +1 kB for D80, through the entry
-    SessionSetup: 200,
-    Mock: 206,
+    Sessions: 187, // +1 kB for D80, through the entry; +1 kB for D82
+    SessionSetup: 201,
+    Mock: 207,
     // The live copilot; the video room (D69, ~14 kB) loads only for a video interview (D73). +1 kB for D80 and D76's
     // natural voice that holds (the retry, sayNaturalLine, voiceSetup).
-    Live: 247,
-    Resumes: 205,
+    Live: 248,
+    Resumes: 206,
     ResumeEditor: 255,
     JobsAiPages: 280,
     // The public product pages (D79), signed out: the section kit and each page's own renders, lazy chunks.
@@ -36,6 +39,9 @@ export const BUDGETS = {
     CopilotPublic: 212, // with the live answer and the real code block
     PracticePublic: 207,
     LinkedInPublic: 207,
+    // Orbit for Business (D82): its public page, signed out (through its small router chunk), and the careers pages.
+    BusinessLanding: 203,
+    CareersPages: 195,
   },
 };
 

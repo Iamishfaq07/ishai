@@ -355,7 +355,10 @@ input[type="radio"] {
     border-color: rgb(255 255 255 / 0.6);
   }
 }
-input:is([type="checkbox"], [type="radio"]):is(:checked, :indeterminate) {
+/* A radio group with nothing chosen yet is :indeterminate too: only a checkbox shows that state. */
+input[type="checkbox"]:indeterminate,
+input[type="radio"]:checked,
+input[type="checkbox"]:checked {
   border-color: rgb(var(--accent-600));
   background-color: rgb(var(--accent-600));
 }
@@ -384,7 +387,9 @@ input[type="radio"]::before {
   height: 0.375rem;
   border-radius: 9999px;
 }
-input:is([type="checkbox"], [type="radio"]):is(:checked, :indeterminate)::before {
+input[type="checkbox"]:indeterminate::before,
+input[type="radio"]:checked::before,
+input[type="checkbox"]:checked::before {
   transform: scale(1);
 }
 @media (forced-colors: active) {

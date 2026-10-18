@@ -179,6 +179,11 @@ class Settings(BaseSettings):
         None, validation_alias=AliasChoices("ORBIT_UPDATES_GITHUB_TOKEN")
     )
     web_url: str = Field("http://localhost:5173", validation_alias=AliasChoices("ORBIT_WEB_URL"))
+    # Orbit for Business (D82): Google's Indexing API, told when a job page is published, changed or closed. The
+    # service account's JSON key (the whole file's text), whose client_email is an Owner of the site in Search
+    # Console. Unset: no pings (Google still finds jobs through the sitemap).
+    google_indexing_sa_json: SecretStr | None = Field(
+        None, validation_alias=AliasChoices("ORBIT_GOOGLE_INDEXING_SA_JSON"))
     # Continue with Google. Both must be set or the button stays hidden. The redirect URI registered in
     # Google Cloud is ORBIT_GOOGLE_REDIRECT_URI, or (when unset) localhost's own callback in development and
     # {ORBIT_WEB_URL}/api/v1/auth/google/callback in production, where the site proxies /api.

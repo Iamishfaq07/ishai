@@ -164,3 +164,6 @@ export { ArrowDown, ArrowUp, ChevronUp, ChevronsUpDown, Ellipsis, TriangleAlert 
 
 // The public site (front door): its security, how-it-works and comparison sections, and the theme switch.
 export { BadgeCheck, CalendarCheck, Cookie, Database, LockKeyhole, Laptop, Languages, MonitorSmartphone, Wallet } from "lucide-react";
+
+// Orbit for Business (D82): notifications, reports, the pipeline's list and drag handle, tags, invites.
+export { Bell, Flag, GripVertical, List, Tag as TagIcon, UserPlus } from "lucide-react";
