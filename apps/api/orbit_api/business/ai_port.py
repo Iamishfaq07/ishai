@@ -28,6 +28,9 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field
 
+from orbit_api.business_ai.job_fill import JobFill, JobFillRequest
+from orbit_api.business_ai.job_fill import fill_job as _fill_job
+
 log = logging.getLogger(__name__)
 
 Met = Literal["yes", "partly", "no"]
@@ -133,6 +136,8 @@ class BusinessAI(Protocol):
 
     async def rank_applicant(self, job: JobSpec, resume: ParsedResume, answers: list[QA]) -> Ranking: ...
 
+    async def fill_job(self, request: JobFillRequest) -> JobFill: ...
+
 
 def professional_only(resume: ParsedResume) -> ParsedResume:
     """What ranking may see: the work, skills and education. Who the person is (name, contact, where they live) is
@@ -186,6 +191,10 @@ class FakeBusinessAI:
         return JobDraft(title=title, summary=summary, responsibilities=responsibilities, must_haves=must,
                         nice_to_haves=nice, description_markdown="\n".join(parts).strip(),
                         suggested_screening_questions=questions)
+
+    async def fill_job(self, request: JobFillRequest) -> JobFill:
+        # The assistant's own deterministic reading (business_ai.job_fill, pure): no model, same answer every time.
+        return await _fill_job(request, use_model=False)
 
     async def parse_applicant_resume(self, text: str) -> ParsedResume:
         lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
@@ -350,6 +359,10 @@ class ModuleAI:
                                   about_company=brief.about_company, notes=brief.notes, language=brief.language)
         out = await self._m.write_job_description(theirs)
         return JobDraft.model_validate(out.model_dump())
+
+    async def fill_job(self, request: JobFillRequest) -> JobFill:
+        out = await self._m.fill_job(request)
+        return JobFill.model_validate(out.model_dump())
 
     async def parse_applicant_resume(self, text: str) -> ParsedResume:
         out = await self._m.parse_applicant_resume(text)
