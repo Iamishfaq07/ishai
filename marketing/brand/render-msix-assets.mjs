@@ -1,6 +1,7 @@
 // Renders the Microsoft Store (MSIX) package's tile and icon assets from the Orbit mark, in headless Chrome, into
 // apps/desktop/src-tauri/windows/msix/Assets/ (scripts/package-msix.ps1 copies them into the package and indexes them
-// with makepri, so Windows picks the right scale and size).
+// with makepri, so Windows picks the right scale and size), plus the Store listing's 300 x 300 app tile icon
+// (marketing/store/listing/app-tile-icon-300x300.png).
 //
 // Three looks, all from marketing/brand/orbit-mark-dark.svg on the front door's ink (#18202E into #0B0F17):
 //   app   - the app icon itself: the rounded tile, as in orbit-app-icon-1024.png and the exe's icon.ico. Used where
@@ -57,6 +58,9 @@ scaled("Square150x150Logo", 150, 150, "tile", 0.5); // medium tile (the name sho
 scaled("Wide310x150Logo", 310, 150, "tile", 0.5); // wide tile
 scaled("Square310x310Logo", 310, 310, "tile", 0.4); // large tile
 scaled("StoreLogo", 50, 50, "app"); // package logo: Settings > Apps, App Installer
+// The Store listing's own "1:1 App tile icon" (Partner Center > Store listings > Store logos), not in the package.
+const listing = join(repo, "marketing/store/listing/app-tile-icon-300x300.png");
+jobs.push([listing, 300, 300, "app"]);
 
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
@@ -67,8 +71,8 @@ for (const [file, w, h, look, s] of jobs) {
   await page.setViewportSize({ width: w, height: h });
   writeFileSync(tmp, looks[look](w, h, s));
   await page.goto(pathToFileURL(tmp).href);
-  await page.screenshot({ path: join(outDir, file), omitBackground: true, clip: { x: 0, y: 0, width: w, height: h } });
+  await page.screenshot({ path: file === listing ? file : join(outDir, file), omitBackground: true, clip: { x: 0, y: 0, width: w, height: h } });
 }
 await browser.close();
 unlinkSync(tmp);
-console.log(`${jobs.length} assets in ${outDir}`);
+console.log(`${jobs.length - 1} assets in ${outDir}, and ${listing}`);

@@ -1,0 +1,17 @@
+Mock interviews out loud with an AI interviewer that follows up on what you actually said
+A review after each round: what went well, what to improve and what to practise next
+Live transcription of your microphone and one meeting app, kept apart so Orbit knows who is speaking
+Short answer notes from your own resume, job post and stories, for calls where AI help is allowed
+Each answer shows the resume lines it used and marks details that aren't in your documents
+Select part of your screen, like a coding problem or a diagram, and ask about it
+A compact window that stays on top, with keyboard shortcuts you can change
+Interview in English, Hindi, Hinglish, Spanish, French, German and more, with notes in your chosen language
+Upcoming interviews: start from a job you're tracking, with its post and the resume you sent
+Session history with transcripts and reviews, which you can delete at any time
+Resume AI in your browser: a score out of 100 for the job you want, and help fixing what's missing
+Jobs AI in your browser: new jobs from companies' careers pages that fit your resume, and a tracker
+LinkedIn AI in your browser: a profile score and better wording, one part at a time
+Video interviews with Saba, an AI interviewer you see and hear, in your browser
+Audio is never stored, and Windows controls microphone access
+Optional window privacy: keep Orbit's window out of screenshots, recordings and Windows Recall on your PC
+Free to download; one-time packs and plans on Orbit's website, and nothing renews automatically

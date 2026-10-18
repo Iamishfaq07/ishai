@@ -1,5 +1,46 @@
 # Implementation log
 
+## Microsoft Store submission: the package, the listing and the owner's steps (2026-10-18)
+
+Orbit for Windows on the Microsoft Store as **Orbit AI Career Assistant** (Store ID `9NJ1ZXGTCZKL`): free, and
+Microsoft signs the MSIX (DECISIONS D78; owner guide `docs/MICROSOFT_STORE.md`).
+
+- **The package.**
+  - `AppxManifest.xml` carries the reserved name and the Partner Center identity (`store-identity.json`); tiles say
+    "Orbit".
+  - MaxVersionTested is Windows 11 26H2.
+  - Three capabilities: runFullTrust, microphone, internetClient.
+  - The tiles and icons come from the brand mark at every scale, plus the taskbar's target sizes (plain, unplated,
+    light-unplated): `marketing/brand/render-msix-assets.mjs` renders them, and makepri indexes them into one
+    `resources.pri` (`priconfig.xml` without resource packs, which had hidden every tile but the 100% one).
+- **Versioning.** The Store refuses a first part of 0, so Orbit X.Y.Z is package (X+1).Y.Z.0: 0.1.42 is 1.1.42.0.
+- **`package-msix.ps1`:**
+  - stops with the missing field names while the identity is empty;
+  - clears `VITE_*` and checks the production API address is in the build;
+  - checks the exe's version;
+  - writes the `.msixupload`.
+- **`check-msix.ps1`** runs the App Certification Kit's static checks without installing anything: manifest, image
+  sizes and qualifiers, the 204,800-byte limit, default images, PRI candidates, x64 binaries, no redistributable
+  runtime, path lengths.
+- **The listing** (`marketing/store/listing/`):
+  - text: description, short description, features, search terms, What's new for 0.1.42;
+  - settings: properties, age rating guidance, pricing (with the 10.8 citations);
+  - screenshots and captions, a 300 × 300 app tile icon;
+  - certification notes with the `runFullTrust` justification and reviewer placeholders.
+- **Website.** A Microsoft Store badge ("Download from the Microsoft Store", `StoreBadge`, Microsoft's own artwork in `public/badges/`) on Home's
+  Windows card and the interview assistant page. It sits behind `VITE_MS_STORE_LIVE`, **off** until certification
+  passes; while off, nothing on the site changes.
+- **Dry run on the release commit:**
+  - `release-desktop.ps1 -Version 0.1.42`, without `-Publish`; dep-info showed `ORBIT_KEYRING_SERVICE` unset.
+  - Then `package-msix.ps1 -Version 0.1.42`, which produced `Orbit_0.1.42_x64.msixupload`: 4,298,091 bytes,
+    package 1.1.42.0, identity `Orbitanswer.OrbitAICareerAssistant`.
+  - All 27 package checks pass, and makeappx validated the manifest.
+  - The App Certification Kit itself wasn't run: it requires administrator rights and installs and launches the
+    package. Nothing was installed or uploaded.
+- **Tested:**
+  - web: vitest (the badge is off by default and renders nothing; the direct-install link once live), tsc, eslint;
+  - the scripts: an empty identity fails with the field names; `-Test` and Store packages pass every check.
+
 ## Product audit: every product driven end to end, and what it found (2026-10-18)
 
 Three personas (a new free user in India, a paying user abroad in dollars, the admin) drove every product on a

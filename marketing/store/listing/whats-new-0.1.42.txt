@@ -1,0 +1,11 @@
+Orbit 0.1.42, now on the Microsoft Store.
+
+Interview in your language. Live help now works in English, Hindi, Hinglish, Spanish, French, German, Portuguese, Italian, Dutch, Japanese and Russian, or Auto-detect. Pick "Interview language" and "Answer in" on Setup.
+
+Your interviews, ready on Setup. "Upcoming interviews" lists the jobs you're tracking in Jobs AI. Pick one and the session starts with that job's post, the resume you sent and the company guide.
+
+A cleaner look: a calmer design, dark mode fixes, a new app icon and smoother transitions, all following your motion setting.
+
+Fixes: a new session starts even with more than 20 saved documents; the window stays on screen on small laptops; "Always on top" is remembered when you turn it off; plugging in a microphone clears "No microphone found"; shortcuts stay registered when you change them quickly; Setup remembers your answer length, style and auto-answer choice; a left click on the tray icon opens Orbit; the header says "Not connected" when the connection drops; the transcript holds your place when you scroll up.
+
+Answers also start a little sooner.
