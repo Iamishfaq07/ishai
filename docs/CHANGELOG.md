@@ -39,7 +39,9 @@ local stack at 1440, 820 and 390 px, light and dark, with axe on every route (DE
 - **Accessibility**: axe 0 on every route checked (WCAG 2.2 AA, light and dark, 1440 and 390 px); the first Tab
   stop is Skip to content; small targets, name mismatches, nested links and two contrast misses fixed.
 - **Performance follow-ups**: the video room loads only for a video interview (Live 234 kB, budget 246), its mic
-  meter wakes on iOS, and its full screen respects the safe areas.
+  meter wakes on iOS, and its full screen respects the safe areas. Plan & billing and Offer AI hold one placeholder
+  until their data is in, then draw everything at once (layout shift 0.42/0.84 and 0.11/0.45 on desktop/phone, now
+  0.01 and under; Home 0.03-0.07).
 - **Tests**: `tools/e2e/product-audit.spec.ts`; API tests in test_security_alerts.py, test_pricing_page.py and the
   suites each fix touched.
 
