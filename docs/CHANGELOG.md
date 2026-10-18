@@ -1,5 +1,12 @@
 # Implementation log
 
+## The desktop app plays the interviewer's natural voice (2026-10-18)
+
+The desktop app's Content-Security-Policy had no `media-src`, so `default-src 'self'` refused the `blob:` URLs the
+mock interviewer's natural voice plays from: every line was made (and counted against the day's voice characters),
+then read by the computer's voice anyway. `media-src 'self' blob:` now lets it play, and a Rust test keeps it there
+(found by the 0.1.43 smoke test; 0.1.41 and 0.1.42 had the same policy).
+
 ## Product pages that show the product working (2026-10-18)
 
 The public product pages, rebuilt on one section kit and in the depth of a good product page (DECISIONS D79;

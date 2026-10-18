@@ -312,6 +312,21 @@ mod tests {
     }
 
     #[test]
+    fn the_csp_lets_the_interviewers_natural_voice_play() {
+        // Her clips play from blob: URLs (packages/ui naturalVoice.ts). Without media-src, default-src 'self' refused
+        // every one, so each line was made, paid for, and then read by the device's voice anyway (D76).
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        let csp = conf["app"]["security"]["csp"].as_str().unwrap();
+        let media = csp
+            .split(';')
+            .map(str::trim)
+            .find(|d| d.starts_with("media-src "))
+            .expect("a media-src directive");
+        assert!(media.split(' ').any(|s| s == "blob:"), "{media}");
+    }
+
+    #[test]
     fn tray_items_show_quit_or_hand_the_window_a_screen() {
         assert_eq!(tray_action("show"), Some(TrayAction::Show));
         assert_eq!(tray_action("quit"), Some(TrayAction::Quit));
