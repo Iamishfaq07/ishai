@@ -1231,3 +1231,35 @@ when its route is direct (`api.urlFor`), and the state cookie is shared (`put_co
 redirect URI it has, through the site's proxy: one proxied trip of the two. Moving the callback too needs
 https://api.orbitanswer.com/v1/auth/google/callback added in Google's console and ORBIT_GOOGLE_REDIRECT_URI set to it
 (the owner's, both).
+
+**D81 — The desktop app signs in with Google in the user's own browser: a loopback redirect with PKCE (RFC 8252), on
+the web's Google flow, with no new redirect URI.** The owner: "Add Google login in the desktop app which should open
+the browser and get authenticated." So:
+- **The browser, not a webview.** Google refuses sign-in in embedded webviews, and a password typed into Orbit's own
+  window would be a password Orbit could read. The system browser also has the user's Google session already.
+- **Loopback + PKCE, the server's flow reused.** The app listens once on 127.0.0.1 (an OS-chosen port) and opens
+  `/v1/auth/google/start` with `desktop_port`, `desktop_challenge` (S256) and `desktop_state`. They ride through
+  Google in the signed state cookie, so Google still sees the one redirect URI it has (the site's
+  `/api/v1/auth/google/callback`, or `ORBIT_GOOGLE_REDIRECT_URI` once the owner moves it to api.orbitanswer.com;
+  both work, as the state cookie is shared across the site, D80). After Google the API sets no web session: it mints a
+  60-second, single-use code (SHA-256 at rest, in process memory beside the live WebSocket tickets, since there is
+  one API instance) bound to the challenge, and redirects to `http://127.0.0.1:<port>/callback`. Only that address,
+  with a port from 1024-65535; a malformed desktop request goes back to the web sign-in page instead. Errors go to
+  the loopback with a code so the app can say why. The app trades the code and verifier at
+  `POST /v1/auth/desktop/exchange` (docs/PROTOCOL.md), which is `/v1/auth/login`'s answer: the same token, device
+  row, keychain storage and `token_version` checks. A wrong verifier spends the code; "sign out everywhere" between
+  Google and the exchange voids it.
+- **Two-step sign-in: required, as on the web after Google and as after a password.** The exchange answers with the
+  same `two_factor_required` challenge the desktop already handles, and the code finishes it at `/v1/auth/login/2fa`.
+  Google proving the inbox is not the authenticator.
+- **In the app** (google_sign_in.rs, googleSignIn.ts): one attempt at a time (a new one ends the last), five minutes
+  at most, Cancel while waiting, the tab told "You're signed in to Orbit" (or to return to the app) on a page with no
+  outside resources, and Orbit brought forward. The button shows only when the server has Google set up
+  (`/v1/auth/config`), drawn to Google's branding rules like the web's. No new Tauri permission: the browser is opened
+  from Rust (the opener plugin), and the listener is plain std networking, which the Store's full-trust MSIX allows.
+  A test build (its own keyring service) can be told with ORBIT_TEST_GOOGLE_HANDOFF to write the URL to a file
+  instead of opening the browser, so an automated run never touches the PC's own browser; the real app never reads it.
+Rejected: a custom URL scheme (`orbit://`: needs registering, any app can claim it, and the MSIX would need a protocol
+declaration), a second Google OAuth client of the "desktop" type (a new console setup for the owner, and a second
+place for accounts to be found or made), and polling the API for the result (a code that sits on the server waiting
+for whoever asks).
