@@ -139,3 +139,17 @@ Run: `uv run pytest -q tests/test_business_hiring_studio.py` in `apps/api`,
 `pnpm test`, `pnpm --filter @orbit/web build`, and
 `pnpm exec playwright test tools/e2e/business-hiring.spec.ts` from the repository root.
 PR checks and the review summary record the actual results and any unavailable infrastructure.
+
+### Local results (19 October 2026)
+
+- Full SQLite API suite: **3,253 passed, 17 skipped**. The 18 Hiring Studio checks pass again after the final
+  unscoped-note privacy fix.
+- Frontend workspaces: **1,259 passed** (extension 41, shared UI 595, desktop 82, web 541).
+- Workspace TypeScript and lint pass; lint reports two existing hook warnings outside Business.
+- Production web build, server render/prerender and bundle budgets pass. Shared CSS measures 32.1 kB against the
+  documented 32.25 kB ceiling; existing JavaScript page ceilings remain unchanged.
+- The real browser workflow and axe checks pass, including candidate submissions, comparison, mobile dark mode,
+  reduced motion and overflow checks. Review screenshots use fictional data.
+- Ruff, mypy (255 source files), Bandit and the migration checks pass.
+- GitHub refuses to start this PR's CI jobs because of account payments/spending limits. Postgres and hosted CI
+  remain unverified here; the PR stays a draft for review.
