@@ -12,6 +12,10 @@ const TURNSTILE = "https://challenges.cloudflare.com";
 const RAZORPAY_SCRIPTS = "https://checkout.razorpay.com";
 const RAZORPAY_FRAMES = "https://api.razorpay.com https://checkout.razorpay.com";
 const RAZORPAY_CONNECT = "https://api.razorpay.com https://lumberjack.razorpay.com";
+// Cloudflare Web Analytics, which Cloudflare adds to every page it serves: a cookieless page-view and page-speed
+// count (its Core Web Vitals by country are how the India routing is watched). Its script, and where it reports.
+const CF_ANALYTICS_SCRIPT = "https://static.cloudflareinsights.com";
+const CF_ANALYTICS_CONNECT = "https://cloudflareinsights.com";
 
 /** `https://api.example.com` → [`https://api.example.com`, `wss://api.example.com`]; relative URLs are 'self'. */
 function origins(url: string | undefined): string[] {
@@ -27,6 +31,7 @@ export function contentSecurityPolicy(inlineScripts: string[], env: Record<strin
     "'self'",
     TURNSTILE,
     ...RAZORPAY_CONNECT.split(" "),
+    CF_ANALYTICS_CONNECT,
     ...origins(env.VITE_API_URL),
     ...origins(env.VITE_LIVE_URL),
     ...origins(env.VITE_API_DIRECT_URL),
@@ -34,7 +39,7 @@ export function contentSecurityPolicy(inlineScripts: string[], env: Record<strin
   return [
     "default-src 'self'",
     // 'wasm-unsafe-eval': the camera coach's face model runs as WebAssembly, served from this site (never eval).
-    `script-src 'self' 'wasm-unsafe-eval' ${hashes.join(" ")} ${TURNSTILE} ${RAZORPAY_SCRIPTS}`.replace(/\s+/g, " "),
+    `script-src 'self' 'wasm-unsafe-eval' ${hashes.join(" ")} ${TURNSTILE} ${RAZORPAY_SCRIPTS} ${CF_ANALYTICS_SCRIPT}`.replace(/\s+/g, " "),
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https://cdn.razorpay.com",
     "font-src 'self' data:",

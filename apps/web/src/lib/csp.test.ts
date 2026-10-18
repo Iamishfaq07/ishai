@@ -17,6 +17,10 @@ describe("content security policy", () => {
     expect(csp).toContain("https://cdn.razorpay.com");
     expect(csp).toContain("https://api.razorpay.com");
     expect(csp).toContain("https://challenges.cloudflare.com");
+    // Cloudflare Web Analytics (cookieless): its script and its report endpoint, nothing wider.
+    expect(csp).toMatch(/script-src [^;]*https:\/\/static\.cloudflareinsights\.com/);
+    expect(csp).toMatch(/connect-src [^;]*https:\/\/cloudflareinsights\.com/);
+    expect(csp).not.toMatch(/\*\.cloudflareinsights/);
     expect(csp).toContain("wss://api.orbitanswer.com");
     expect(csp).toContain("sha256-");
     expect(csp).toContain("frame-ancestors 'none'");

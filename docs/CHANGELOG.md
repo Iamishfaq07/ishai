@@ -1,5 +1,13 @@
 # Implementation log
 
+## Cloudflare Web Analytics is let through (2026-10-18)
+
+Cloudflare adds its Web Analytics beacon to every page it serves, and the site's Content-Security-Policy blocked it: a
+console error on every page and no data in Cloudflare's dashboard. The policy now allows its script
+(static.cloudflareinsights.com) and its report endpoint (cloudflareinsights.com), nothing wider. It counts page views
+and real visitors' page speed (Core Web Vitals by country, how the India routing is watched) without cookies; the
+privacy policy says so under Cloudflare.
+
 ## The product pages paint in 1.5-1.8 s on a phone with nothing moving, and LinkedIn AI's score grid has no gaps (2026-10-18)
 
 - **The built pages paint first, then start the app** (DECISIONS D79, dated note; docs/PERFORMANCE.md): a page built
