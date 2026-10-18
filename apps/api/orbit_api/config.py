@@ -191,11 +191,15 @@ class Settings(BaseSettings):
     # production sets this explicitly).
     api_public_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_API_PUBLIC_URL"))
     railway_public_domain: str | None = Field(None, validation_alias=AliasChoices("RAILWAY_PUBLIC_DOMAIN"))
-    # SameSite for the session cookie. The web app reaches the API through its own /api proxy (same site), so Lax
-    # works and blocks the cookie on cross-site requests. "none" only for a web app that calls the API cross-site.
+    # SameSite for the session cookie. The web app reaches the API through its own /api proxy or at the API's own
+    # address on a subdomain (same site either way), so Lax works and blocks the cookie on cross-site requests.
+    # "none" only for a web app that calls the API cross-site.
     cookie_samesite: Literal["lax", "strict", "none"] = Field(
         "lax", validation_alias=AliasChoices("ORBIT_COOKIE_SAMESITE")
     )
+    # The Domain of the web app's cookies (auth/security.py cookie_domain, D80). Unset: in production, the web app's
+    # own domain when the API is on a subdomain of it, so the site can call the API directly; "" = host-only.
+    cookie_domain: str | None = Field(None, validation_alias=AliasChoices("ORBIT_COOKIE_DOMAIN"))
     # Shared with the web app's edge proxy (wrangler secret PROXY_SECRET). Requests carrying it may state the real
     # client IP (X-Orbit-Client-IP); every other request is keyed by the address the host's own edge recorded
     # (right-most X-Forwarded-For), so a caller can't pick its own IP to dodge per-IP limits. Unset = trust the

@@ -1081,3 +1081,30 @@ completing; it found the items in the bullet above. Her voice's own time (1.8-4 
 word, from here) is now most of the wait. Rejected: streaming her voice over Deepgram's WebSocket or pushing it from the server (a bigger change, for
 the second round), a face or avatar (Saba is a voice, D69), and turning her down instead of stopping her when talked
 over (speech synthesis can't be, and stopping is what a person does).
+
+**D80 — The web app calls the API at its own address (api.orbitanswer.com) with a cookie shared across the site,
+and keeps the edge proxy only for what the visitor's country decides.** The owner: "the login is slow, and login with
+Google is slow". Measured from India on 18 October 2026: a call through the site's /api proxy took 1-7.8 s (0.96-3.2 s
+for /health), the same call to api.orbitanswer.com 0.3-0.46 s. Cloudflare's free plan serves visitors here from
+London, Paris, Marseille, Hong Kong or Seattle rather than Delhi (CF-Ray), and the Worker's request to the API then
+enters Railway's edge there; sign-in waited on 19 such calls, and Saba's voice, 1-3.7 s at the API, crossed her
+7-second limit and fell back to the device's voice. So:
+- The API sets its cookies (the session, the two-step challenge) with `Domain=orbitanswer.com` in production when the
+  request reached it under the web app's domain (`cookie_domain`; ORBIT_COOKIE_DOMAIN overrides, "" = host-only).
+  api.orbitanswer.com is the same site, so the cookie stays first-party and SameSite=Lax, CSRF (Origin + token) and
+  CORS (credentials for https://orbitanswer.com only) are unchanged. WebKit caps cookies set by a CNAME'd subdomain at
+  seven days; ours last at most the 72-hour idle window anyway. The only other subdomain in DNS is www (Cloudflare).
+- A host-only cookie from before is moved over on the next reply through the proxy (`share_cookie`: the same token,
+  only when it verifies, never on a reply that sets cookies itself), and clearing a cookie clears both kinds.
+- Every reply says `X-Orbit-Cookie-Domain` when the cookies are shared and the proxy secret is set (no secret, no
+  moving the old cookie over). The web client (`direct` in createApiClient) goes direct once a reply through the
+  proxy says so, remembers it, comes back to the proxy if one stops saying it, and for a day if the API's own address
+  can't be reached from the visitor's network (a read is asked again through the proxy; a write is never sent twice).
+- Still through the proxy (`VIA_PROXY` in apps/web/src/lib/api.ts): billing (prices and orders: `priced_by_the_edge`
+  is unchanged), /v1/region, Support (prices in replies), the resume allowance's offer, and sign-up (the country it's
+  made in, and the invite code's cookie, which is the website's own). Google's sign-in keeps its addresses: changing
+  the redirect URI needs the owner in Google's console, and it's two requests. Google's keys are now fetched once an
+  hour, not on every Google sign-in.
+Rejected: Cloudflare Pro or Argo (money, and no promise of Delhi for this zone), Smart Placement (moves the Worker
+near the API; the visitor's hop to London stays), bearer tokens in the browser (readable by any injected script),
+and a new cookie name (every test and client knows this one; the host-only copy is cleared in the same reply).

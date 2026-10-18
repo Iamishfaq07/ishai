@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_API_URL?: string;
   readonly VITE_LIVE_URL?: string;
+  readonly VITE_API_DIRECT_URL?: string;
   /** Optional support contacts (lib/contact.ts), offered next to the Contact page's form when set. */
   readonly VITE_SUPPORT_EMAIL?: string;
   /** WhatsApp number with the country code, digits only (919876543210). */

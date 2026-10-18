@@ -29,6 +29,7 @@ export function contentSecurityPolicy(inlineScripts: string[], env: Record<strin
     ...RAZORPAY_CONNECT.split(" "),
     ...origins(env.VITE_API_URL),
     ...origins(env.VITE_LIVE_URL),
+    ...origins(env.VITE_API_DIRECT_URL),
   ];
   return [
     "default-src 'self'",

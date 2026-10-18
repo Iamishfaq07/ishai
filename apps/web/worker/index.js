@@ -5,7 +5,10 @@
 // first-party: Safari (and every iOS browser, all WebKit) and other browsers that block third-party cookies drop a
 // cookie set by a different site (the API's host), so signing in "worked" but the very next request came back 401 and
 // the app bounced to the login page. Live-session WebSockets don't need the cookie (single-use ticket in the URL), so
-// they still go straight to the API.
+// they still go straight to the API. Since D80 most REST calls do too: api.orbitanswer.com is the same site, the API
+// shares its cookies with it (Domain=orbitanswer.com), and this proxy costs a second or more a call from where
+// Cloudflare's free plan routes India. What the visitor's country prices or words (billing, the region) still comes
+// through here, the only place the edge states the country (apps/web/src/lib/api.ts VIA_PROXY).
 //
 // The cron below: a host that sleeps when idle (free tiers do) would land its 30–60 s cold start on whoever opens the
 // app. /health never touches the DB, so pinging it keeps the API process warm without keeping the (separately

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACCOUNT_SUSPENDED, ApiError, DEFAULT_TIMEOUT_MS, LONG_TIMEOUT_MS, createApiClient, queryString, timeoutFor } from "./client";
+import { ACCOUNT_SUSPENDED, ApiError, COOKIE_DOMAIN_HEADER, DEFAULT_TIMEOUT_MS, LONG_TIMEOUT_MS, createApiClient, queryString, timeoutFor } from "./client";
 
 type Call = { url: string; method: string; headers: Headers };
 
@@ -234,5 +234,116 @@ describe("the camera coach's last numbers", () => {
     await api.saveCameraMetrics("s1", metrics);
     await api.saveCameraMetrics("s1", metrics, true);
     expect(seen.map((i) => i.keepalive)).toEqual([false, true]);
+  });
+});
+
+describe("api client direct route (D80)", () => {
+  type Reply = { status: number; body?: unknown; headers?: Record<string, string> } | "offline";
+
+  function routed(replies: Reply[]) {
+    const calls: string[] = [];
+    const impl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${String(input)}`);
+      const next = replies.shift() ?? { status: 200, body: {} };
+      if (next === "offline") throw new TypeError("Failed to fetch");
+      return new Response(next.status === 204 ? null : JSON.stringify(next.body ?? {}), { status: next.status, headers: next.headers });
+    }) as typeof fetch;
+    return { calls, impl };
+  }
+
+  function memory(initial: Record<string, string> = {}) {
+    const data = { ...initial };
+    return { data, getItem: (k: string) => data[k] ?? null, setItem: (k: string, v: string) => void (data[k] = v) };
+  }
+
+  const shared = { [COOKIE_DOMAIN_HEADER]: "orbitanswer.com" };
+  const viaProxy = (path: string) => path.startsWith("/v1/billing/");
+  const make = (f: ReturnType<typeof routed>, storage = memory(), siteHost = "orbitanswer.com") =>
+    createApiClient({
+      baseUrl: "https://orbitanswer.com/api",
+      auth: { mode: "cookie" },
+      direct: { url: "https://api.orbitanswer.com/", viaProxy, siteHost, storage },
+      fetchImpl: f.impl,
+    });
+
+  it("goes through the proxy until a reply from it says the cookies are shared, then direct (and remembers)", async () => {
+    const f = routed([{ status: 200, body: user }, { status: 200, body: user, headers: shared }, { status: 200, body: [] }]);
+    const storage = memory();
+    const api = make(f, storage);
+    await api.me();
+    await api.me();
+    await api.listDocuments();
+    expect(f.calls).toEqual([
+      "GET https://orbitanswer.com/api/v1/auth/me",
+      "GET https://orbitanswer.com/api/v1/auth/me",
+      "GET https://api.orbitanswer.com/v1/documents",
+    ]);
+    expect(storage.data["orbit.apiRoute"]).toBe("direct");
+    // The next visit starts direct.
+    const g = routed([{ status: 200, body: user }]);
+    await make(g, storage).me();
+    expect(g.calls).toEqual(["GET https://api.orbitanswer.com/v1/auth/me"]);
+  });
+
+  it("stays on the proxy for a page that isn't on the cookies' domain (a preview copy)", async () => {
+    const f = routed([{ status: 200, body: user, headers: shared }, { status: 200, body: [] }]);
+    const storage = memory();
+    const api = make(f, storage, "orbit-web-preview.example.workers.dev");
+    await api.me();
+    await api.listDocuments();
+    expect(f.calls.every((c) => c.startsWith("GET https://orbitanswer.com/api/"))).toBe(true);
+    expect(storage.data["orbit.apiRoute"]).toBeUndefined();
+  });
+
+  it("keeps the calls that need the edge on the proxy, and leaves direct when the API stops saying so", async () => {
+    const f = routed([{ status: 200, body: [] }, { status: 200, body: [] }, { status: 200, body: [] }]);
+    const storage = memory({ "orbit.apiRoute": "direct" });
+    const api = make(f, storage);
+    await api.listDocuments();
+    await api.listUpiOrders();
+    await api.listDocuments();
+    expect(f.calls).toEqual([
+      "GET https://api.orbitanswer.com/v1/documents",
+      "GET https://orbitanswer.com/api/v1/billing/upi/orders",
+      "GET https://orbitanswer.com/api/v1/documents",
+    ]);
+    expect(storage.data["orbit.apiRoute"]).toBe("");
+  });
+
+  it("falls back to the proxy for a day when the API's own address can't be reached, asking a read again", async () => {
+    const f = routed(["offline", { status: 200, body: [] }, "offline"]);
+    const storage = memory({ "orbit.apiRoute": "direct" });
+    const api = make(f, storage);
+    await expect(api.listDocuments()).resolves.toEqual([]);
+    expect(f.calls).toEqual(["GET https://api.orbitanswer.com/v1/documents", "GET https://orbitanswer.com/api/v1/documents"]);
+    expect(storage.data["orbit.apiRoute"]).toMatch(/^unreachable:\d+$/);
+    // A reply that says "shared" doesn't send it back there within the day.
+    const g = routed([{ status: 200, body: user, headers: shared }, { status: 200, body: [] }]);
+    const again = make(g, storage);
+    await again.me();
+    await again.listDocuments();
+    expect(g.calls.every((c) => c.includes("orbitanswer.com/api/"))).toBe(true);
+  });
+
+  it("never sends a write twice when the API's own address can't be reached", async () => {
+    const f = routed(["offline"]);
+    const api = make(f, memory({ "orbit.apiRoute": "direct" }));
+    await expect(api.updatePrivacy({ store_transcripts: false })).rejects.toMatchObject({ code: "offline" });
+    expect(f.calls).toEqual(["PATCH https://api.orbitanswer.com/v1/auth/me/privacy"]);
+  });
+
+  it("a 401 from the API's own address is a real sign-out (no second try)", async () => {
+    const f = routed([{ status: 401, body: { detail: "Not authenticated" } }]);
+    const onUnauthorized = vi.fn();
+    const api = createApiClient({
+      baseUrl: "https://orbitanswer.com/api",
+      auth: { mode: "cookie" },
+      direct: { url: "https://api.orbitanswer.com", viaProxy, siteHost: "orbitanswer.com", storage: memory({ "orbit.apiRoute": "direct" }) },
+      onUnauthorized,
+      fetchImpl: f.impl,
+    });
+    await expect(api.me()).rejects.toBeInstanceOf(ApiError);
+    expect(f.calls).toHaveLength(1);
+    expect(onUnauthorized).toHaveBeenCalledOnce();
   });
 });
