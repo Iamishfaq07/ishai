@@ -621,3 +621,58 @@ def test_lenient_json() -> None:
 def test_word_count_any_script() -> None:
     assert word_count("## Role\n- Build **things** fast") == 4
     assert word_count("आप हमारी टीम के साथ") == 5
+
+
+# ---- the summary paragraph ------------------------------------------------------------------------------------
+
+SUMMARY_ONLY = """Deepa Krishnan
+Data Engineer | Chennai | deepa.k.data@example.com | +91 98400 11223
+
+SUMMARY
+Data engineer who built Kafka streaming pipelines for a payments company.
+Authorised to work in India; no sponsorship needed. Married, she enjoys mentoring.
+
+EXPERIENCE
+Data Engineer | PayRail Systems | Jan 2021 - Present
+- Own the nightly reporting jobs.
+
+SKILLS
+SQL, Python
+"""
+
+
+def test_summary_is_parsed_deterministically() -> None:
+    assert _parsed("us_frontend_senior").summary == ("Frontend engineer with 8 years of experience building accessible "
+                                                     "React and TypeScript apps. US citizen.")
+    p = parse_deterministic(SUMMARY_ONLY)
+    assert p.summary is not None and p.summary.startswith("Data engineer who built Kafka streaming pipelines")
+    assert _parsed("pasted_one_line").summary is None
+
+
+async def test_parse_takes_a_grounded_summary_from_the_model(use) -> None:  # type: ignore[no-untyped-def]
+    text = ("Arun Das\narun@example.com\nI am a QA engineer who tests payment apps.\n"
+            "EXPERIENCE\nQA | Testco | 2020 - 2022")
+    use(Scripted({"summary": "I am a QA engineer who tests payment apps.", "experience": []}))
+    assert (await parse_applicant_resume(text)).summary == "I am a QA engineer who tests payment apps."
+    use(Scripted({"summary": "A visionary leader with 20 years at Google.", "experience": []}))
+    assert (await parse_applicant_resume(text)).summary is None  # not the resume's words
+
+
+async def test_summary_is_evidence_and_carries_work_authorisation(use) -> None:  # type: ignore[no-untyped-def]
+    job = JobSpec(title="Data Engineer", must_haves=["Kafka", "Authorised to work in India"],
+                  location_rules="Chennai; must be authorised to work in India")
+    llm = use(Scripted(_answer([
+        {"id": "M1", "met": "yes", "evidence": "Data engineer who built Kafka streaming pipelines for a payments "
+                                               "company."},
+        {"id": "M2", "met": "yes", "evidence": "Authorised to work in India; no sponsorship needed."}])))
+    r = await rank_applicant(job, parse_deterministic(SUMMARY_ONLY), [])
+    assert [m.met for m in r.must_haves] == ["yes", "yes"]
+    assert r.must_haves[0].evidence == "Data engineer who built Kafka streaming pipelines for a payments company."
+    assert "Authorised to work in India" in (r.must_haves[1].evidence or "")
+    assert not any("Work authorisation isn't stated" in c for c in r.cautions)
+    sent = llm.requests[0].messages[-1].content.lower()
+    assert "married" not in sent and " she " not in sent and "deepa" not in sent  # the summary is redacted too
+    # Without the model, keyword matching finds the summary line as well.
+    use(Scripted())
+    det = await rank_applicant(job, parse_deterministic(SUMMARY_ONLY), [])
+    assert det.must_haves[0].met == "yes" and "Kafka" in (det.must_haves[0].evidence or "")

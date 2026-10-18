@@ -1305,7 +1305,8 @@ the package docstring). So:
 - **Parsing is deterministic first**: contact details, stated experience, dates (incl. "Mar'19 - Till date",
   "Since 2022"), skills and degrees by regex; the model only structures roles and education, never supplies contact
   details (they're masked in what it reads, with CTC, notice period and the personal-details block dropped), and
-  whatever it returns must appear in the source.
+  whatever it returns must appear in the source. The summary paragraph (`ParsedResume.summary`) is redacted by the same
+  rules and is ranking evidence like any other line, work-authorisation statements included.
 Live eval (scripts/eval_business_ai.py, 2026-10-19, 31 calls): identity swaps changed no score or match (max
 difference 0 over 6 pairs), the same resume ranked twice moved 0 points, 100/100 model quotes were found in the
 source; about $0.0002 per ranking, $0.0002 per parse of a short resume and $0.001 per JD.

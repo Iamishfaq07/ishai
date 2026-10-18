@@ -11,7 +11,8 @@
   contact details, gender, age, marital status, religion, caste, nationality, photo and health mentions out before
   anything ranks. Each function has a deterministic path when the model is down, slow or answers badly twice.
 - The mock provider answers the three request types, so dev mode without a key gives working output.
-- Tests: 71 (golden parses of 17 synthetic resumes, Indian and global, fresher to senior, messy PDF/DOCX text and a
+- `ParsedResume.summary`: the summary/profile/objective paragraph (regex first, the model only if it is missing and only in the resume's words), redacted like every other line and used as ranking evidence, work-authorisation statements included.
+- Tests: 74 (golden parses of 17 synthetic resumes, Indian and global, fresher to senior, messy PDF/DOCX text and a
   pasted run-on line; 7 job specs; redaction; the evidence check; the score formula; model answers that invent
   evidence, recommend rejection, time out or aren't JSON; the JD checks; and the bias consistency test: identity
   swaps give the same prompt, score and matches). Opt-in live eval `scripts/eval_business_ai.py` (31 calls): 0 points

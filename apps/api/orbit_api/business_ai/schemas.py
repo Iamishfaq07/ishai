@@ -70,6 +70,7 @@ class ParsedResume(BaseModel):
     phone: str | None = Field(None, max_length=40)
     location: str | None = Field(None, max_length=160)
     headline: str | None = Field(None, max_length=200)
+    summary: str | None = Field(None, max_length=2_000)  # the summary / profile / objective paragraph, as written
     total_years: float | None = Field(None, ge=0, le=60)
     skills: list[str] = Field(default_factory=list, max_length=80)
     experience: list[Experience] = Field(default_factory=list, max_length=20)

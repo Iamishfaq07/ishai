@@ -215,6 +215,11 @@ def redact_for_ranking(resume: ParsedResume, answers: list[ScreeningAnswer],
     lines: list[str] = []
     if resume.headline and (h := s.line(resume.headline)):
         lines.append(f"Headline: {h}")
+    # The summary paragraph, a sentence per line, scrubbed like every other line (work-authorisation statements in it
+    # are kept by the same rule as anywhere else).
+    for sentence in re.split(r"(?<=[.;!?])\s+", resume.summary or ""):
+        if (t := s.line(sentence)):
+            lines.append(t)
     lines.append(f"Total experience (years): {_years(resume.total_years)}")
     skills = [x for x in (s.line(k) for k in resume.skills) if x]
     if skills:
