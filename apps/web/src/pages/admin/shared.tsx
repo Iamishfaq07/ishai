@@ -13,7 +13,7 @@ export const count = (n: number) => n.toLocaleString("en-IN");
 
 /** "30 Sep, 18:30", in the viewer's own time zone. */
 export function when(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 }
 
 /** "30 Sep 2026". */
