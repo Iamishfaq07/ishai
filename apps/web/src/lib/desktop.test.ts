@@ -12,7 +12,7 @@ describe("the Microsoft Store badge", () => {
     const { StoreBadge } = await import("../components/StoreBadge");
     expect(MS_STORE_LIVE).toBe(false);
     expect(StoreBadge({})).toBeNull();
-  });
+  }, 20_000); // the first import of the badge's module graph takes ~4.5 s, over the 5 s default on a busy machine
 
   it("links Orbit's listing in Microsoft's direct-install mode once live", async () => {
     vi.stubEnv("VITE_MS_STORE_LIVE", "true");
