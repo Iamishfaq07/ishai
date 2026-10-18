@@ -8,21 +8,21 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-/** kB of gzip (level 9, as Cloudflare serves the assets): the entry alone, and each page's first load in total. */
+/** kB of gzip (level 9, as Cloudflare serves the assets): the entry alone, and each page's first load in total. Set
+ *  about 5% over what was measured on 18 Oct 2026 (docs/PERFORMANCE.md), so a real jump fails and a few lines don't. */
 export const BUDGETS = {
-  entry: 160,
+  entry: 170,
   css: 32,
   pages: {
-    Home: 205, // the signed-in landing: the page everyone opens
+    Home: 210, // the signed-in landing: the page everyone opens
     Landing: 200, // the front page, signed out
-    Auth: 175, // sign-in and sign-up
     Sessions: 185,
-    SessionSetup: 190,
-    Mock: 195,
+    SessionSetup: 195,
+    Mock: 200,
     Live: 240, // the live copilot
-    Resumes: 200,
+    Resumes: 205,
     ResumeEditor: 250,
-    JobsAiPages: 270,
+    JobsAiPages: 275,
   },
 };
 

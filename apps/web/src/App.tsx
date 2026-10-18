@@ -22,6 +22,8 @@ import {
   ResetPasswordPage,
   VerifyEmailPage,
   StopJobAlertsPage,
+} from "./pages/Auth";
+import {
   BillingPage,
   CompanionPage,
   DocumentsPage,

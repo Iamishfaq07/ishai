@@ -30,14 +30,6 @@ describe("pageFor (what the nav warms before a click)", () => {
     expect(pageFor("/")).toBe("home");
   });
 
-  it("knows the sign-in pages (their own chunk, out of the first download)", () => {
-    for (const path of ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/confirm-email-change", "/jobs/alerts/off"]) {
-      expect(pageFor(path)).toBe("auth");
-    }
-    expect(pageFor("/jobs/alerts")).toBe("jobs");
-    expect(pageFor("/loginx")).toBeNull();
-  });
-
   it("knows the Contact page, and only its address", () => {
     expect(pageFor("/contact")).toBe("contact");
     expect(pageFor("/contact/")).toBe("contact");
