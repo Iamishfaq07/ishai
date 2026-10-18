@@ -127,7 +127,8 @@ async function fakeAudio(context: BrowserContext) {
   });
 }
 
-async function videoSession(context: BrowserContext, page: Page): Promise<string> {
+/** A video session; her voice takes `speakDelay` ms to come (the natural voice's request). */
+async function videoSession(context: BrowserContext, page: Page, speakDelay = 300): Promise<string> {
   const auth = { email: "qa-admin@example.com", password: "correct horse battery" };
   const r = await context.request.post(`${API}/v1/auth/register`, { data: { ...auth, name: "Priya Sharma" } });
   if (r.status() !== 201) expect((await context.request.post(`${API}/v1/auth/login`, { data: auth })).status()).toBe(200);
@@ -143,7 +144,7 @@ async function videoSession(context: BrowserContext, page: Page): Promise<string
       : route.continue(),
   );
   await page.route(`${API}/v1/voice/speak`, async (route) => {
-    await new Promise((res) => setTimeout(res, 300));
+    await new Promise((res) => setTimeout(res, speakDelay));
     await route.fulfill({ status: 200, contentType: "audio/wav", body: clip, headers: { "X-Orbit-Speed": "1" } });
   });
   return (await created.json()).id as string;
@@ -175,9 +176,10 @@ async function sample(page: Page, ms: number): Promise<Sample[]> {
 test("Saba's voice plays and her words appear as she says them", async ({ page, context }) => {
   test.setTimeout(60_000);
   await fakeAudio(context);
-  const id = await videoSession(context, page);
+  // Her first line takes 1.5 s to come, so the mic (which starts up to a second in) is streaming while she prepares.
+  const id = await videoSession(context, page, 1500);
   await page.goto(`/live/${id}`);
-  const rows = await sample(page, 6000);
+  const rows = await sample(page, 7000);
   const first = rows.findIndex((r) => r.playing);
   expect(first, JSON.stringify(rows.slice(0, 20))).toBeGreaterThan(-1);
   // It plays: the clip moves on, and its output carries sound.
@@ -191,7 +193,9 @@ test("Saba's voice plays and her words appear as she says them", async ({ page, 
   // The mic goes to the server while her voice is on its way (D76: the candidate's last words were lost then), and
   // is held back while she can be heard.
   const preparing = rows.filter((r) => /about to speak/.test(r.label));
-  if (preparing.length >= 2) expect(preparing.at(-1)!.frames, JSON.stringify(preparing)).toBeGreaterThan(preparing[0]!.frames);
+  const streaming = preparing.filter((r) => r.frames > 0);
+  expect(streaming.length, JSON.stringify(preparing)).toBeGreaterThanOrEqual(2);
+  expect(streaming.at(-1)!.frames, JSON.stringify(preparing)).toBeGreaterThan(streaming[0]!.frames);
   const speaking = played.slice(2, -2);
   if (speaking.length >= 3) expect(speaking.at(-1)!.frames - speaking[0]!.frames).toBeLessThanOrEqual(1);
   await context.request.post(`${API}/v1/sessions/${id}/end`);
