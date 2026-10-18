@@ -34,7 +34,7 @@ def default_plan(job: BizJob) -> HiringPlan:
 def plan_payload(row: BizHiringPlan | None, job: BizJob) -> dict[str, Any]:
     plan = HiringPlan.model_validate(row.content) if row else default_plan(job)
     return {"job_id": job.id, "revision": row.revision if row else 0, "plan": plan.model_dump(),
-            "updated_at": row.updated_at.isoformat() if row else None}
+            "updated_at": aware(row.updated_at).isoformat() if row else None}
 
 
 def blind_text(ctx: Ctx, app: BizApplication, text: str) -> str:
@@ -78,8 +78,8 @@ def sample_payload(sample: BizWorkSample | None) -> dict[str, Any] | None:
     return {"revision": sample.revision, "plan_revision": sample.plan_revision, "brief": brief,
         "answer": sample.answer, "follow_up": sample.follow_up,
         "change_request": sample.brief.get("change_request") if sample.answer is not None else None,
-        "submitted_at": sample.submitted_at.isoformat() if sample.submitted_at else None,
-        "completed_at": sample.completed_at.isoformat() if sample.completed_at else None}
+        "submitted_at": aware(sample.submitted_at).isoformat() if sample.submitted_at else None,
+        "completed_at": aware(sample.completed_at).isoformat() if sample.completed_at else None}
 
 
 def feedback_payload(row: BizInterviewFeedback, ctx: Ctx, app: BizApplication) -> dict[str, Any]:
@@ -92,8 +92,8 @@ def feedback_payload(row: BizInterviewFeedback, ctx: Ctx, app: BizApplication) -
     return {"id": row.id, "stage_id": row.stage_id, "author_id": row.author_id, "author": row.author_name,
         "revision": row.revision, "plan_revision": row.plan_revision, "plan_snapshot": row.plan_snapshot,
         "content": content, "mine": row.author_id == ctx.user.id,
-        "submitted_at": row.submitted_at.isoformat() if row.submitted_at else None,
-        "updated_at": row.updated_at.isoformat()}
+        "submitted_at": aware(row.submitted_at).isoformat() if row.submitted_at else None,
+        "updated_at": aware(row.updated_at).isoformat()}
 
 
 async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJob) -> dict[str, Any]:
@@ -159,6 +159,7 @@ async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: Biz
     return {"application_id": app.id, "reference": app.reference,
         "name": rules.candidate_label(app.reference) if ctx.company.blind_review else app.name,
         "job_id": job.id, "job_title": job.title, "stage_id": app.stage_id, "status": app.status,
+        "stages": [{"id": s["id"], "name": s["name"]} for s in job.stages],
         "feedback_stage_id": feedback_stage,
         "plan": plan_payload(row, job), "evidence": evidence_map(ctx, app, plan),
         "feedback": [feedback_payload(f, ctx, app) for f in shown],
@@ -166,6 +167,6 @@ async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: Biz
         "coverage": coverage, "gaps": gaps, "evidence_version": digest,
         "work_sample": sample_data,
         "candidate_questions": [{"id": q.id, "message": blind_text(ctx, app, str(q.data.get("message", ""))),
-                                "created_at": q.created_at.isoformat()} for q in questions],
-        "decisions": [{"id": d.id, "actor": d.actor_name, "created_at": d.created_at.isoformat(),
+                                "created_at": aware(q.created_at).isoformat()} for q in questions],
+        "decisions": [{"id": d.id, "actor": d.actor_name, "created_at": aware(d.created_at).isoformat(),
             **{**d.data, "rationale": blind_text(ctx, app, str(d.data.get("rationale", "")))}} for d in decisions]}

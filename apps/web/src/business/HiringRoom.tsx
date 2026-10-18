@@ -210,7 +210,7 @@ export function HiringRoomPage() {
     </div>}
     <div hidden={tab !== "interview"} className="space-y-4"><InterviewTimer />
       <Field label="Interview stage" htmlFor="feedback-stage"><Select id="feedback-stage" value={stage} onChange={async (e) => { const next = e.target.value; if (await confirmDialog({ title: "Switch interview stage?", body: "Save any private draft before switching. Unsaved text in this stage will be discarded.", confirmLabel: "Switch stage" })) setStage(next); }}>
-        {[...new Set(room.plan.plan.criteria.map((c) => c.stage_id))].map((s) => <option key={s} value={s}>{s.replaceAll("_", " ")}</option>)}
+        {[...new Set(room.plan.plan.criteria.map((c) => c.stage_id))].map((s) => <option key={s} value={s}>{room.stages.find((item) => item.id === s)?.name ?? s}</option>)}
       </Select></Field>
       {room.plan.revision > 0 && <FeedbackEditor key={`${stage}-${own?.revision ?? 0}`} room={room} stage={stage} onSaved={setRoom} />}
     </div>

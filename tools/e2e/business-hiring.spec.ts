@@ -50,17 +50,25 @@ async function seed(context: BrowserContext) {
   const list = await context.request.get(`${API}/v1/business/companies/${cid}/jobs/${jid}/applications`);
   const aid = (await list.json()).items[0].id as string;
   expect((await context.request.patch(`${API}/v1/business/companies/${cid}/applications/${aid}`, { data: { interviewers: [user.id] } })).ok()).toBe(true);
-  return { cid, jid, aid, token };
+  const second = await context.request.post(`${API}/v1/public/business/jobs/${jid}/apply`, { multipart: {
+    name: "Alex Candidate", email: `alex-${crypto.randomUUID().slice(0, 8)}@example.com`, consent: "true",
+    notice_version: "2026-10-19.2", answers: "[]",
+    file: { name: "resume.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: docx },
+  } });
+  expect(second.ok(), await second.text()).toBe(true);
+  const updated = await (await context.request.get(`${API}/v1/business/companies/${cid}/jobs/${jid}/applications`)).json();
+  const other = updated.items.find((a: { id: string }) => a.id !== aid).id as string;
+  return { cid, jid, aid, other, token };
 }
 async function a11y(page: Page) {
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
-  expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`)).toEqual([]);
+  expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`).join(", ")}`)).toEqual([]);
 }
 
 test("Business Hiring Studio: plan, private draft, candidate challenge, debrief and desk", async ({ page, context, browser }, info) => {
   test.setTimeout(180_000);
   await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
-  const { cid, jid, aid, token } = await seed(context);
+  const { cid, jid, aid, other, token } = await seed(context);
   const base = `/business/app/${cid}`;
   const room = `${base}/applications/${aid}/interview`;
   await page.goto(`${base}/jobs/${jid}/interview-plan`);
@@ -70,6 +78,7 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await page.getByRole("button", { name: "Save interview plan", exact: true }).click();
   await expect(page.getByText("Plan version 1", { exact: true })).toBeVisible();
   await a11y(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-interview-plan.png"), fullPage: true });
   await page.goto(room);
   await expect(page.getByRole("heading", { name: "Interview · Robin Candidate" })).toBeVisible();
@@ -88,6 +97,7 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await page.getByRole("alertdialog").getByRole("button", { name: "Submit feedback", exact: true }).click();
   await expect(page.getByText("Your submitted feedback is sealed", { exact: true })).toBeVisible();
   await a11y(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-sealed-feedback.png"), fullPage: true });
   // The bearer application link works in a separate signed-out browser; it exposes no team feedback.
   const candidate = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: "dark", reducedMotion: "reduce" });
@@ -112,6 +122,7 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await expect(applicant.getByText("Your question is saved.", { exact: false })).toBeVisible();
   await a11y(applicant);
   expect(await applicant.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await applicant.evaluate(() => window.scrollTo(0, 0));
   await applicant.screenshot({ path: info.outputPath("candidate-practical-challenge-mobile.png"), fullPage: true });
   await candidate.close();
   await page.reload();
@@ -121,14 +132,26 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await page.getByRole("button", { name: "Save decision record" }).click();
   await expect(page.getByText("Collect a further example for the remaining criterion", { exact: false })).toBeVisible();
   await a11y(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-evidence-debrief.png"), fullPage: true });
+  await page.goto(`${base}/jobs/${jid}/compare?ids=${aid}&ids=${other}`);
+  await expect(page.getByRole("heading", { name: "Compare evidence" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Robin Candidate", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Alex Candidate", exact: true })).toBeVisible();
+  await a11y(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: info.outputPath("business-candidate-comparison.png"), fullPage: true });
   await page.goto(`${base}/hiring-desk`);
   await expect(page.getByText("Candidate asked a question; reply from their application", { exact: true })).toBeVisible();
   await a11y(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-hiring-desk.png"), fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.reload();
+  await expect(page.getByText("Candidate asked a question; reply from their application", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await a11y(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-hiring-desk-mobile.png"), fullPage: true });
 });

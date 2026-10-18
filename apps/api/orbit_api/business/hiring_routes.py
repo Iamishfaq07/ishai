@@ -279,7 +279,7 @@ async def hiring_desk(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_d
             continue
         item = {"application_id": a.id, "reference": a.reference,
             "name": rules.candidate_label(a.reference) if ctx.company.blind_review else a.name,
-            "job_title": allowed[a.job_id].title, "when": iv.chosen.isoformat() if iv.chosen else None,
+            "job_title": allowed[a.job_id].title, "when": hiring.aware(iv.chosen).isoformat() if iv.chosen else None,
             "duration_min": iv.duration_min, "location": iv.location}
         criteria = plans[a.job_id].content["criteria"] if a.job_id in plans else []
         stage = a.stage_id if any(c["stage_id"] == a.stage_id for c in criteria) else (
@@ -297,7 +297,7 @@ async def hiring_desk(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_d
 @public_router.get("/work-sample")
 async def candidate_sample(token: str, request: Request,
                             db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
-    app, job, _company = await _by_token(db, token, request)
+    app, job, company = await _by_token(db, token, request)
     sample = await db.get(BizWorkSample, app.id)
     plan = await db.get(BizHiringPlan, job.id)
     brief = None
@@ -308,7 +308,7 @@ async def candidate_sample(token: str, request: Request,
                 if c.stage_id == stage["id"])} for stage in job.stages
                 if any(c.stage_id == stage["id"] for c in parsed.criteria)]}
     return {"sample": hiring.sample_payload(sample), "accepting": app.status == "active"
-            and app.deletion_requested_at is None, "interview_brief": brief}
+            and app.deletion_requested_at is None and company.status == "active", "interview_brief": brief}
 
 
 @public_router.post("/work-sample")

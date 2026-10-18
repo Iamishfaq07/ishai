@@ -16,6 +16,12 @@ export function CandidateChallenge({ token, confirmed, deletionRequested }: { to
   const [sent, setSent] = useState(false);
   const [load, setLoad] = useState(0);
   useEffect(() => {
+    if (!answer.response && !answer.explanation) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [answer]);
+  useEffect(() => {
     let live = true;
     setData(null); setError(null);
     hiringApi.sample(token).then((s) => { if (live) setData(s); })

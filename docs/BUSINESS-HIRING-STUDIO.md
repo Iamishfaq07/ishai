@@ -50,6 +50,10 @@ This change is for company hiring and the associated applicant portal. It does n
 - Analytics totals used a rolling 30-day timestamp while daily rows used a different window. Both now cover today
   and the previous 29 UTC calendar days, including zero-count days. Company analytics batches per-job data instead
   of issuing two additional queries per displayed job.
+- New interview timestamps carry an explicit UTC offset, including on SQLite, so local browser formatting does not
+  reinterpret stored UTC times as local wall-clock times.
+- Desktop notification stacks obscured the support launcher. Their shared placement now leaves the launcher clear;
+  candidate task completion is confirmed inline so a mobile popup cannot cover the next form action.
 
 ## Research and product decisions
 
@@ -128,6 +132,7 @@ rolling back a deployed feature. This PR is for review and is not merged or depl
   The API uses explicit mock/fake providers only in the test environment and a local dev email outbox.
 - Existing migration-link regression checks now name the historical downgrade target explicitly and also cover the
   new migration's independent downgrade/upgrade.
+- The Postgres CI race/lifecycle gate now includes the Business Hiring Studio and Business race suites.
 
 Run: `uv run pytest -q tests/test_business_hiring_studio.py` in `apps/api`,
 `pnpm test`, `pnpm --filter @orbit/web build`, and

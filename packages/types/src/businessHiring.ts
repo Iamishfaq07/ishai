@@ -50,6 +50,7 @@ export interface BizHiringRoom {
   application_id: string; reference: string; name: string; job_id: string; job_title: string;
   stage_id: string; status: string; plan: BizHiringPlanRecord; evidence: BizHiringEvidence[];
   feedback_stage_id: string;
+  stages: Array<{ id: string; name: string }>;
   feedback: BizInterviewFeedback[]; feedback_locked: boolean; pending_reviewers: number; expected_reviewers: number;
   coverage: BizEvidenceCoverage[]; gaps: string[]; evidence_version: string; work_sample: BizWorkSample | null;
   decisions: BizHiringDecision[]; candidate_questions: Array<{ id: string; message: string; created_at: string }>;
