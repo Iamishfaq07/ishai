@@ -213,12 +213,33 @@ def _product(product_id: str) -> tuple[str, str, pricing.Priced, int, int, int]:
     raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
 
 
-async def _offered(db: AsyncSession, user: User, cost: pricing.Price) -> tuple[pricing.Price, dict[str, Any]]:
+# Why an order lost its first-purchase discount to a newer one (shown on the old order, if anyone looks).
+SUPERSEDED_NOTE = "Replaced by a newer order: the first-purchase discount moved to that one."
+
+
+async def _offered(db: AsyncSession, user: User, cost: pricing.Price,
+                   keep: tuple[str, str] | None = None) -> tuple[pricing.Price, dict[str, Any]]:
     """`cost` less the account's first-purchase discount, if it has one (billing/referrals.py), and what the order
-    keeps of it: the code and how much came off."""
+    keeps of it: the code and how much came off.
+
+    One open order carries the discount at a time (red team): opening several discounted orders and paying them all
+    would make a first-purchase discount a discount on everything. A payment already on its way (a UTR waiting for
+    the admin, a gateway capture pending) keeps it, so a new order meanwhile is full price. Unpaid orders that still
+    have it lose it to the new one (they're marked expired, the way the reconciler retires an abandoned checkout;
+    one paid after all is still credited, never lost). `keep`: (plan, method) of an open order this one may be handed
+    back as (UPI reuses a day-old order for the same pack), which is left alone."""
     offer = await referrals.offer_for(db, user)
     if offer is None or offer.percent <= 0:
         return cost, {}
+    discounted = (Payment.user_id == user.id, Payment.referral_code_id.is_not(None))
+    if await db.scalar(select(func.count()).select_from(Payment)
+                       .where(*discounted, Payment.status.in_(("submitted", "processing")))):
+        return cost, {}
+    stale = update(Payment).where(*discounted, Payment.status == "awaiting_payment")
+    if keep is not None:
+        stale = stale.where(~((Payment.plan == keep[0]) & (func.coalesce(Payment.method, "upi") == keep[1])))
+    await db.execute(stale.values(status="expired", decided_at=datetime.now(UTC), note=SUPERSEDED_NOTE)
+                     .execution_options(synchronize_session=False))
     less, off = referrals.discounted(cost, offer.percent)
     return less, {"referral_code_id": offer.code_id, "discount_minor": off}
 
@@ -234,7 +255,7 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
         raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
     if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
-    cost, discount = await _offered(db, user, pricing.price(price, pricing.INR))
+    cost, discount = await _offered(db, user, pricing.price(price, pricing.INR), keep=(pid, "upi"))
     price = cost.inr
     since = datetime.now(UTC) - upi.OPEN_ORDER_REUSE
     open_order = await db.scalar(
