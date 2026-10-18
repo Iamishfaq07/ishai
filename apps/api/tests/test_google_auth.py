@@ -377,7 +377,8 @@ def test_google_starts_at_the_apis_own_address_and_returns_through_the_site(monk
     get_settings.cache_clear()
     from orbit_api.main import create_app
 
-    ident = {"sub": f"google-{uuid.uuid4().hex[:8]}", "email": f"shared-{uuid.uuid4().hex[:8]}@gmail.com", "name": "Ada"}
+    tag = uuid.uuid4().hex[:8]
+    ident = {"sub": f"google-{tag}", "email": f"shared-{tag}@gmail.com", "name": "Ada"}
 
     async def fake(code: str, verifier: str, uri: str) -> dict[str, str]:
         assert uri == "https://orbitanswer.com/api/v1/auth/google/callback"
