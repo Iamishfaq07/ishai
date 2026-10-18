@@ -24,7 +24,7 @@ How Orbit finds the resume, job-description and notes facts behind an answer.
 |---|---|---|
 | Model | local feature hashing | BAAI/bge-small-en-v1.5, quantized ONNX via fastembed |
 | Extra RAM | none | measured: API 107 MB → 274 MB resident with the model warm |
-| Query cost | 0.5 ms | ~10 ms here; slower on a 0.1-CPU host |
+| Query cost | 0.2 ms (retrieval_eval, 18 Oct 2026; was 0.4) | ~10 ms here; slower on a 0.1-CPU host |
 | Network | none | downloads the model once (67 MB) to `ORBIT_EMBEDDING_CACHE_DIR` or the temp dir |
 
 - **Loading:** bge-small loads in the background at boot. Until it's ready, retrieval uses BM25 alone rather than

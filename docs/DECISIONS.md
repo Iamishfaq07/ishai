@@ -847,3 +847,22 @@ headline and About drop an unsupported figure with its words. The "Where to past
 LinkedIn's Help Center on 2026-10-18 and name things as LinkedIn does (the pencil in your intro, Add profile section),
 each with a link to its help page. The recruiter-search preview is an Orbit-styled mock (initials, ink and the accent),
 not a copy of LinkedIn's page or logo.
+
+**D72 — Performance has budgets that tests check, and speed work never changes what the user sees.** The owner asked
+for "performance, latency, mobile access… prod-ready enterprise". Everything was measured first, on seeded local
+copies only (a heavy account among 2,000, a scratch Postgres; never production), and fixed by impact over risk; the
+numbers and the method are in PERFORMANCE.md. The budgets that matter are guarded where it's cheap: the hot endpoints'
+SQL statement counts (test_query_budget.py: the same count for a small and a big account, under a ceiling; the admin
+reports may not grow with the number of accounts) and the gzipped JavaScript of the entry and of each main page's
+first load (scripts/bundle-budget.mjs, a CI step after the build). Timing budgets (p95, LCP, INP, the live path per
+stage) are documented targets rather than tests, because wall-clock assertions are flaky on shared CI machines; the
+scripts that measure them are kept with the perf tools. Rules the fixes followed: an optimization must give the same
+result (retrieval's 400 test prompts are byte-identical; scores cached by content, not by id; the cost report's plans
+by the same rules as plan_for), caches live in memory and reset with a deploy, per-user API responses stay no-store,
+and the deliberate response-timing waits (Quick, Balanced, Patient) are a product setting the work never trims. Mobile
+fixes apply to touch screens only (`(pointer: coarse)`, the `coarse:` variant): 16 px fields so iOS doesn't zoom, tap
+areas of at least 44 px that move nothing, safe-area insets; a desktop with a mouse renders as before. The offline
+page's service worker answers only failed page loads (never the API or the app's files) and has two kill switches.
+Left as decisions for later, with their expected gains in PERFORMANCE.md: the live page's continuous canvas
+animations (the main-thread cost while a session listens), deltas instead of the whole answer in each answer.chunk
+(a protocol change for both clients), and batched drawing for the other long lists.

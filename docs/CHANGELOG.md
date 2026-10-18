@@ -1,5 +1,28 @@
 # Implementation log
 
+## Faster where it was slow, and built for phones (2026-10-18)
+
+- **Measured first** (DECISIONS D72; PERFORMANCE.md has the budgets, the before and after, and how to measure): a
+  heavy account among 2,000 on a seeded local Postgres, the live path with mock providers, signed-in pages under a
+  phone's budget (4x CPU, slow 4G), Lighthouse on the public pages, 25 pages at 360-768 px. Never production.
+- **API**: the admin cost report ran a query per account (4,002 for 2,000; 1.4 s): 13 queries, 0.36 s. Resume AI's
+  list scored every resume on every visit (60 ms for 30): scores kept by content, 5 ms. The interview-style list is
+  built and gzipped once (16 → 3 ms), the practice queue 15 → 9 ms, the tracker 27 → 17 ms, admin stats one pass
+  over the activity tables, gzip at level 6. No index was missing; no migration.
+- **Live copilot**: retrieval between a question firing and its LLM request 8.3 → 2.3 ms (C dot products, BM25
+  postings, scores kept for the four searches of one question, a cached stemmer), the same prompts byte for byte.
+- **Web**: the 400-job tracker held a phone's main thread 3-5 s on open; it draws one layout, in batches, with the
+  More menu on demand: longest task 0.19 s, taps 80 ms. Typing in the resume editor no longer re-reads every evidence
+  claim per keystroke, and the preview follows the form a moment later (keystroke p50 104 → 76 ms). Home no longer
+  pulls in the whole billing page for its usage card (first load 216 → 197 kB gzip).
+- **Phones** (touch screens only; a mouse sees no change): 16 px text fields (iOS zoomed into 119 per width), tap
+  areas of at least 44 px (targets under 24 px: 239 → 26), safe-area insets for the shell, bottom nav, live page,
+  sheet and support chat; the support chat sits above the keyboard; on iOS the microphone comes back after a call,
+  Siri or the screen locking; an offline page instead of the browser's error (service worker for failed page loads
+  only, two kill switches); the theme script cached a day.
+- **Guards**: `tests/test_query_budget.py` (SQL per request for the hot endpoints; fails on the old cost report) and
+  `scripts/bundle-budget.mjs` (`pnpm --filter @orbit/web budget`, a CI step after the build).
+
 ## LinkedIn AI fixes it like Resume AI (2026-10-18)
 
 - **A score by section** (DECISIONS D75): headline, About, each of the latest three roles, skills, search keywords,
