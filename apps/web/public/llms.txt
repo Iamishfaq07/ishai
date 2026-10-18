@@ -2,7 +2,7 @@
 
 > Orbit AI (orbitanswer.com) is a career suite for job seekers: interview practice and live interview help grounded in your own resume, a resume checker with an ATS score (Resume AI), and new jobs from companies' own careers pages matched to your resume (Jobs AI). One free account, no subscription. Web app in any modern browser, plus an app for Windows.
 
-Orbit is used mostly by job seekers in India (freshers, campus placements, IT services roles) and by English-speaking job seekers worldwide. Prices are in Indian rupees (INR) in India and US dollars (USD) elsewhere, shown on the front page. Nothing renews: plans run for a fixed time and are paid once, and credits never expire. A new account starts with free interview minutes and an AI credit.
+Orbit is used mostly by job seekers in India (freshers, campus placements, IT services roles) and by English-speaking job seekers worldwide. Prices are in Indian rupees (INR) in India and US dollars (USD) elsewhere, shown at https://orbitanswer.com/pricing. Nothing renews: plans run for a fixed time and are paid once, and credits never expire. A new account starts with free interview minutes and an AI credit.
 
 Orbit is built for practice, and for interviews and calls where notes or AI help are allowed. Users should check the rules first.
 
@@ -19,6 +19,9 @@ Key facts:
 - [Orbit AI front page](https://orbitanswer.com/): all the tools, pricing (section "Pricing") and common questions (section "Questions people ask first")
 - [Resume AI](https://orbitanswer.com/resume-ai): the ATS resume checker and builder
 - [Jobs AI](https://orbitanswer.com/jobs): jobs matched to your resume, from companies' own careers pages
+- [Interview copilot](https://orbitanswer.com/interview-copilot): live answers from your own resume, in interviews and calls where AI help is allowed
+- [Mock interviews](https://orbitanswer.com/mock-interview): practice rounds with an AI interviewer, a video interview and a scorecard
+- [Pricing](https://orbitanswer.com/pricing): plans and credit packs, in Indian rupees and US dollars
 - [Free interview warm-up](https://orbitanswer.com/warmup): practise common interview questions by speaking or typing, no account needed
 - [How Orbit works](https://orbitanswer.com/technical): measured live-answer latency, the answer pipeline, and how the desktop app protects sign-in and data
 

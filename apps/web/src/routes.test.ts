@@ -61,3 +61,13 @@ describe("publicPageFor (what a signed-out visitor sees instead of sign-in)", ()
     }
   });
 });
+
+describe("the public pricing and product pages (D73)", () => {
+  it("warm their own code, never the signed-in Practice or video interview", () => {
+    expect(pageFor("/pricing")).toBe("pricing");
+    expect(pageFor("/interview-copilot")).toBe("copilotPublic");
+    expect(pageFor("/mock-interview")).toBe("practicePublic");
+    expect(pageFor("/mock")).toBe("mock");
+    expect(pageFor("/pricings")).toBeNull();
+  });
+});

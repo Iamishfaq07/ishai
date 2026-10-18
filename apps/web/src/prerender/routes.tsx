@@ -7,6 +7,9 @@ import { companies as companyCards, roles as roleCards } from "virtual:question-
 import { ContactPage } from "../pages/Contact";
 import { LandingPage } from "../pages/Landing";
 import { TechnicalPage } from "../pages/Technical";
+import { PricingPage } from "../pages/Pricing";
+import { CopilotPublicPage } from "../pages/CopilotPublic";
+import { PracticePublicPage } from "../pages/PracticePublic";
 import { WarmupPage } from "../pages/Warmup";
 import { JobsAiPublicPage } from "../pages/jobs/JobsAiPublic";
 import { ResumeAiPublicPage } from "../pages/resume/ResumeAiPublic";
@@ -43,6 +46,9 @@ const WORKER_PAGES: Record<string, () => ReactNode> = {
   "/warmup": () => <WarmupPage />,
   "/contact": () => <ContactPage />,
   "/technical": () => <TechnicalPage />,
+  "/pricing": () => <PricingPage />,
+  "/interview-copilot": () => <CopilotPublicPage />,
+  "/mock-interview": () => <PracticePublicPage />,
 };
 
 /** Where the Worker finds a PAGE_META page's built copy (worker/prerendered.js `prerenderedAsset`). */

@@ -791,10 +791,11 @@ export function createApiClient(options: ApiClientOptions) {
     // Plans / entitlements
     listPlans: () => json<PlanInfo[]>("/v1/plans"),
     entitlements: () => json<Entitlements>("/v1/entitlements"),
-    /** The credit packs for sale (public). */
-    listPacks: () => json<CreditPack[]>("/v1/billing/packs"),
-    /** The monthly plans for sale (public): 30 days, paid once; buy through the same orders as packs. */
-    listMonthly: () => json<MonthlyPlan[]>("/v1/billing/monthly"),
+    /** The credit packs for sale (public). `currency`: the list in rupees or dollars, to read only (/pricing). */
+    listPacks: (currency?: "INR" | "USD") => json<CreditPack[]>(`/v1/billing/packs${queryString({ currency })}`),
+    /** The monthly plans for sale (public): 30 days, paid once; buy through the same orders as packs. `currency`: as
+     *  for packs. */
+    listMonthly: (currency?: "INR" | "USD") => json<MonthlyPlan[]>(`/v1/billing/monthly${queryString({ currency })}`),
     /** Start paying for a credit pack over UPI (an open order for the same pack is handed back). */
     createUpiOrder: (pack: string) =>
       json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ pack }) }),

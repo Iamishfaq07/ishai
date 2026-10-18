@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 // The front door: every signed-out page, checked against WCAG 2.0/2.1/2.2 A and AA in both themes, at desktop width
 // and on a 390 px phone (where nothing may scroll sideways). The workbench's screens, and more of the interview
 // guides, are accessibility.spec.ts.
-const PAGES = ["/", "/resume-ai", "/jobs", "/companies", "/companies/amazon", "/roles/data-analyst", "/login", "/register", "/forgot-password", "/contact", "/warmup", "/technical", "/no-such-page"];
+const PAGES = ["/", "/resume-ai", "/jobs", "/companies", "/companies/amazon", "/roles/data-analyst", "/login", "/register", "/forgot-password", "/contact", "/warmup", "/technical", "/pricing", "/interview-copilot", "/mock-interview", "/no-such-page"];
 
 for (const scheme of ["light", "dark"] as const) {
   test(`the public pages have no WCAG A/AA violations (${scheme})`, async ({ page, context }) => {

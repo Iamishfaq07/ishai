@@ -137,6 +137,25 @@ export const graph = (...nodes) => ({ "@context": "https://schema.org", "@graph"
 export const jsonLdText = (doc) => JSON.stringify(doc).replace(/</g, "\\u003c");
 
 const PRODUCT_PAGES = {
+  "/interview-copilot": {
+    crumb: "Interview copilot",
+    app: {
+      id: "interview-copilot",
+      name: "Orbit interview copilot",
+      description:
+        "During a live interview or call where AI help is allowed, Orbit hears the question and suggests an answer from the user's own resume and the job description. In Chrome, Edge or the Orbit app for Windows.",
+    },
+  },
+  "/mock-interview": {
+    crumb: "Mock interviews",
+    app: {
+      id: "mock-interview",
+      name: "Orbit mock interviews",
+      description:
+        "Mock interviews with an AI interviewer that asks out loud, follows up on what was said and scores every answer: HR, technical, panel, salary and video rounds.",
+      category: "EducationalApplication",
+    },
+  },
   "/resume-ai": {
     crumb: "Resume AI",
     app: {
@@ -170,6 +189,7 @@ const PRODUCT_PAGES = {
 const OTHER_PAGES = {
   "/contact": { crumb: "Contact", type: "ContactPage" },
   "/technical": { crumb: "How Orbit works", type: "WebPage" },
+  "/pricing": { crumb: "Pricing", type: "WebPage" },
   "/privacy": { crumb: "Privacy policy", type: "WebPage" },
   "/terms": { crumb: "Terms of use", type: "WebPage" },
   "/cookies": { crumb: "Cookie policy", type: "WebPage" },

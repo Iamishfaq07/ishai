@@ -116,18 +116,36 @@ def _priced(items: list[dict[str, Any]], currency: str,
     return out
 
 
+# A price list asked for in a currency (the public /pricing page shows both): for reading only.
+ShownCurrency = Annotated[Literal["INR", "USD"] | None, Query()]
+
+
+def _shown_in(items: list[dict[str, Any]], currency: str) -> list[dict[str, Any]]:
+    """The price list in `currency`, as the pricing page shows it to anyone, anywhere: list prices (no first-purchase
+    discount) and nothing buyable from it. What an order charges still follows the country the website's edge saw
+    (the order endpoints and `priced_by_the_edge`), never this."""
+    return [{**item, "buyable": False} for item in _priced(items, currency)]
+
+
 @router.get("/billing/monthly")
 async def list_monthly(request: Request, user: Annotated[User | None, Depends(optional_user)],
-                       db: Annotated[AsyncSession, Depends(get_db)]) -> list[dict[str, Any]]:
+                       db: Annotated[AsyncSession, Depends(get_db)],
+                       currency: ShownCurrency = None) -> list[dict[str, Any]]:
     """The monthly plans for sale (public): a plan for 30 days, paid once; nothing renews. Priced in rupees in
-    India and US dollars elsewhere (billing/pricing.py)."""
+    India and US dollars elsewhere (billing/pricing.py); `?currency=` lists them in that one, to read only."""
+    if currency is not None:
+        return _shown_in(public_monthly(), currency)
     return _priced(public_monthly(), pricing.currency_for(request, user), await referrals.offer_for(db, user))
 
 
 @router.get("/billing/packs")
 async def list_packs(request: Request, user: Annotated[User | None, Depends(optional_user)],
-                     db: Annotated[AsyncSession, Depends(get_db)]) -> list[dict[str, Any]]:
-    """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set)."""
+                     db: Annotated[AsyncSession, Depends(get_db)],
+                     currency: ShownCurrency = None) -> list[dict[str, Any]]:
+    """Public: the credit packs for sale, and whether they can be bought right now (a UPI ID is set).
+    `?currency=` lists them in that currency, to read only (the public pricing page)."""
+    if currency is not None:
+        return _shown_in(public_packs(), currency)
     return _priced(public_packs(), pricing.currency_for(request, user), await referrals.offer_for(db, user))
 
 

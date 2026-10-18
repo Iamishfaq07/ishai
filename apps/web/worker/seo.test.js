@@ -157,7 +157,7 @@ describe("routeKind (which addresses are pages)", () => {
   });
 
   it("calls everything else not a page", () => {
-    for (const p of ["/pricing", "/mock-interview", "/jobsearch", "/jobs/nope", "/sessions/a/b", "/admin", "/wp-login.php", "/llms.txt", "/companiesx"]) {
+    for (const p of ["/prices", "/mock-interviews", "/interview-copilots", "/jobsearch", "/jobs/nope", "/sessions/a/b", "/admin", "/wp-login.php", "/llms.txt", "/companiesx"]) {
       expect(routeKind(p)).toBeNull();
     }
     expect(isFixedAddress("/resume-ai/x")).toBe(false);
@@ -192,7 +192,7 @@ describe("routeKind (which addresses are pages)", () => {
 
 describe("the Worker's answers", () => {
   it("answers an address that isn't a page with a real 404, the app's page and noindex", async () => {
-    for (const p of ["/this-page-does-not-exist", "/companies/no-such-company", "/pricing"]) {
+    for (const p of ["/this-page-does-not-exist", "/companies/no-such-company", "/prices"]) {
       const res = await get(p);
       expect(res.status, p).toBe(404);
       expect(res.headers.get("x-robots-tag")).toBe("noindex");
@@ -386,6 +386,13 @@ describe("structured data (site.js)", () => {
         for (const banned of ["aggregateRating", "review", "offers", "price"]) expect(n[banned], `${p} ${banned}`).toBeUndefined();
       });
     }
+  });
+
+  it("describes the pricing page and the copilot's and Practice's pages, with breadcrumbs (D73)", () => {
+    const types = (p) => structuredDataFor(p, { title: "t", description: "d" })["@graph"].map((n) => n["@type"]);
+    expect(types("/pricing")).toEqual(["Organization", "WebSite", "WebPage", "BreadcrumbList"]);
+    expect(types("/interview-copilot")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList"]);
+    expect(types("/mock-interview")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList"]);
   });
 
   it("numbers breadcrumbs from 1 and escapes '<' so no value can end the script", () => {

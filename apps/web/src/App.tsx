@@ -70,6 +70,9 @@ import {
   ContactPage,
   NotFoundPage,
   TechnicalPage,
+  PricingPage,
+  CopilotPublicPage,
+  PracticePublicPage,
   CompaniesPage,
   CompanyPage,
   RolesPage,
@@ -233,6 +236,10 @@ export function App() {
       <Route path="/contact" element={<Prerendered><ContactPage /></Prerendered>} />
       {/* Public: live latency, the answer pipeline, the desktop app's protections. */}
       <Route path="/technical" element={<Prerendered><TechnicalPage /></Prerendered>} />
+      {/* Public: the prices in rupees and dollars, and the copilot's and Practice's product pages (D73). */}
+      <Route path="/pricing" element={<Prerendered><PricingPage /></Prerendered>} />
+      <Route path="/interview-copilot" element={<Prerendered><CopilotPublicPage /></Prerendered>} />
+      <Route path="/mock-interview" element={<Prerendered><PracticePublicPage /></Prerendered>} />
       {/* Public: the question bank, how companies interview and what interviews for a job test (pages/bank). Built
           as HTML too (src/prerender), like the pages above, so it reads without JavaScript. */}
       <Route path="/companies" element={<Prerendered><CompaniesPage /></Prerendered>} />
