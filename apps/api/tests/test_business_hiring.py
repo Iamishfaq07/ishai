@@ -313,8 +313,8 @@ def test_ranking_runs_in_the_background_with_reasons_and_no_protected_inputs(cli
     assert detail["match_label"] == "Matches 2/3 must-haves" and detail["must_haves_met"] == 2
     assert any(m["evidence"] for m in rk["must_haves"] if m["met"] == "yes")
     assert "Python" in detail["parsed"]["skills"]
-    [seen] = spy.ranked
-    assert seen.name is None and seen.email is None and seen.phone is None and seen.location is None
+    assert spy.ranked  # every resume ranked meanwhile (other tests' too) went in without who the person is
+    assert all(r.name is None and r.email is None and r.phone is None and r.location is None for r in spy.ranked)
     assert set(ParsedResume.model_fields) == {"name", "email", "phone", "location", "headline", "total_years",
                                               "skills", "experience", "education"}  # nothing protected to fill in
     assert detail["status"] == "active"  # a score never rejects anyone
@@ -597,14 +597,15 @@ def test_indexing_api_is_off_without_a_key_and_pings_with_one(client: TestClient
     monkeypatch.setattr(indexing, "publish", fake_publish)
     job = new_job(client, owner, company["id"], title="Indexed role")
     client.post(f"/v1/business/companies/{company['id']}/jobs/{job['id']}/close", headers=auth(owner))
-    for _ in range(100):
-        if any(s["type"] == "URL_DELETED" for s in sent):
-            break
-        import time
 
-        time.sleep(0.05)
-    urls = {(s["url"], s["type"]) for s in sent}
-    assert (job["public_url"], "URL_DELETED") in urls  # one job per URL: the latest state wins
+    async def queued(db: Any) -> list[dict[str, Any]]:
+        rows = (await db.scalars(select(Job).where(Job.kind == indexing.KIND))).all()
+        return [dict(j.payload) for j in rows if j.payload.get("url") == job["public_url"]]
+
+    payloads = db_call(client, queued)
+    assert payloads == [{"url": job["public_url"], "type": "URL_DELETED"}]  # one per URL: the latest state wins
+    client.portal.call(indexing._run, payloads[0])  # type: ignore[union-attr]
+    assert {"url": job["public_url"], "type": "URL_DELETED"} in sent
     assert indexing.enabled()
 
 

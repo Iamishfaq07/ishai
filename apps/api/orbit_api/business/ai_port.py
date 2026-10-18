@@ -131,7 +131,7 @@ def professional_only(resume: ParsedResume) -> ParsedResume:
 
 # ---- the deterministic fake ---------------------------------------------------------------------------------------
 
-FAKE_MODEL_VERSION = "orbit-fake-ranker-1"
+FAKE_MODEL_VERSION = "orbit-keywords-1"  # a keyword match, honestly named: no model is called
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _PHONE = re.compile(r"\+?\d[\d ()-]{7,}\d")
 _YEARS = re.compile(r"\b(19[89]\d|20[0-4]\d)\s*(?:-|–|—|to)\s*(present|current|now|(?:19[89]\d|20[0-4]\d))", re.I)
