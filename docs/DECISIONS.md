@@ -1006,3 +1006,70 @@ graphical, and advertise our tools there while installing"). The choices:
   with Orbit transcribing it.
 - **Not changed, on purpose**: the window-privacy prompt and card (D8: the owner is deciding them) and the uninstall
   hook (`hooks.nsh`).
+
+**D76 — Saba is heard (or says why not), her words come as she says them, a turn ends when you stop, and she talks
+like an interviewer on a call.** The owner: "Saba doesn't talk sometimes, it only gives the transcript", "it gives
+the full transcript first, then starts talking", "it's not very interactive, it must be like a human". Production's
+logs had every /v1/voice/speak at 200, so the silence was on the page. Each cause was reproduced in headless Chrome
+with her output measured on the page (each clip's own captureStream into an analyser, nothing played out loud), and
+then on a real call (Deepgram speech-to-text and voice, the AI model, a synthetic candidate made with another Aura
+voice).
+- **Why she went silent, and what changed.**
+  - Her own voice from the speakers stopped her: barge-in calibrated its echo in the first 300 ms after a line was
+    asked for, before any natural-voice audio had come, so her first loud syllable "interrupted" her (heard 3.3 s of a
+    5 s clip). The echo is learnt from her voice once it's heard, as a ratio to her output level.
+  - Her clip was routed through a shared AudioContext: suspended (another tab, a device change), it was silent and its
+    clock stopped while the room said "speaking" (0.5 s heard in 12.5 s). Audible output never goes through Web Audio
+    now; the bars read a decoded copy.
+  - A browser that won't play without a tap: "Tap to hear Saba" (any tap or key plays it), and the server is told.
+    Natural voice, then the device voice, then "Saba's voice is unavailable" with the text; a clip whose time stops
+    for 1.5 s is restarted once in a new element, then falls back, and each is logged to the API.
+  - On the real call: the page held the mic back from the moment a line was asked for, so the candidate's last words
+    were lost and the transcriber couldn't finish them until she'd spoken. It's held back only while she can be heard,
+    and on a barge-in the last 0.9 s it held (the start of their words) goes out first. Barge-in wanted 300 ms with no
+    dip at all, so a real voice talked over her for 3.7 s without stopping her: dips up to 180 ms between syllables are
+    part of speech (and at least half the readings in the stretch must be over).
+- **Words as she says them.** Her line is revealed word by word in the caption and the transcript (timing estimated
+  from the clip's speech, by syllables and pauses; the device voice's boundary events), "about to speak…" while her
+  voice is on its way, the whole line at once when her voice is off, Motion is Off or it can't play; screen readers
+  get the line once, in full. Before, all 61 words of her greeting were on screen 0.76 s before her voice; now none.
+- **Turns that end like a person's.** The transcriber's words come in bursts about a second apart, so "no new words
+  for 900 ms" fired mid-answer (she cut in during a story) and its finals came ~0.5 s after the voice had stopped (she
+  was slow). The server hears the candidate's voice in the mic audio itself (a level over the room's noise floor,
+  `live/voice_activity.py`) and counts the pause from there: 650 ms after a wrapped-up answer, 900 after a full stop,
+  1.1 s otherwise, 2.6 s when it trails off ("…and", a comma), and a final still coming is waited for (up to 1.5 s).
+  The next line is written from 400 ms into a pause (thrown away if they go on). Her reply is in growing pieces (the
+  first sentence alone, then up to 140 characters, then the rest), each asked for when it'll be needed, with a
+  cached "Mm-hmm." when her reply is slow to start (only right after they spoke, never twice in a row; her line waits
+  for it). Her "how are you?" waits from when she'd asked it (it timed out 9 s after the line went out, over the reply).
+- **The conversation.** The English video round (one interviewer; not panels, one-way, drills or negotiations)
+  opens with hello and their first name, small talk, a word back and the plan; reacts to something specific before each
+  question (a model note about the candidate is never said); repeats or rephrases when asked ("Sorry. Can you
+  repeat?" is how the transcriber writes it), gives a moment when asked, checks in once after 10 s of silence (not
+  while they're making a sound), meets "I don't know" with a hint or a kind move on, thanks them and asks "Do you have
+  any questions for me?" (answered honestly: she's a practice interviewer and has no inside facts about any company),
+  then says goodbye and ends the call. Planned coverage, the time budget and Hindi/Hinglish rounds are as before.
+- **Questions.** Pitched at the candidate's level and the company's known style, from the job post and resume;
+  adaptive (harder after a strong answer, simpler after a weak one); a story question invites the situation, what they
+  did and the result without naming a framework; never a fact about a company that isn't in the documents.
+- **Voices.** Two women's and two men's Aura-2 voices: Vesta (the default: Deepgram's "patient, empathetic" interview
+  voice), Aurora, Pluto, Arcas, chosen in the setup with a sample, kept on the device. Measured from here with one
+  connection kept open, they start within the network's noise of each other (1.3-2.7 s to the first byte for a
+  sentence; a new connection per sentence cost ~1 s more, so the API keeps one open). Deepgram has no Indian-English
+  Aura-2 voice. A pace (slower 0.88, normal, brisk 1.12) uses Deepgram's own speed (the client paces playback if a
+  voice won't take it). Text is shaped for speech (acronyms, ₹ and LPA, percentages, years, no markdown or list
+  numbers); each clip's loudness is evened out; acknowledgements are cached per voice.
+- **The review** (the report): each answer's rubric (structure, specifics, relevance, clarity, conciseness), each with
+  a reason and a quote that must be the candidate's own words; one improvement; a stronger answer built only from what
+  they said and their documents, with a bracketed placeholder for anything missing; speaking stats from the answer's
+  own lines; the top three to practise and Practise again. Its output budget was sized before the rubric existed: a
+  real 7-question review was cut off mid-JSON three times, so it's sized for it (560 tokens a question) and a long
+  session gives its earliest questions a short review.
+- **Read aloud** (the copilot) stays on the device's voice: only the interviewer's own lines go to Deepgram (the
+  privacy promise), and the copilot's answers are the user's.
+Measured on a real call (end of the candidate's answer to her reply being heard): before, 6.4 s median with her text
+on screen 3.9 s before her voice; after the first round of changes, 4.2 s with her words 0.05 s behind her voice; the
+fixes from that call (her turn from their voice, the cached acknowledgement) are checked by tests that replay what the
+call did. Rejected: streaming her voice over Deepgram's WebSocket or pushing it from the server (a bigger change, for
+the second round), a face or avatar (Saba is a voice, D69), and turning her down instead of stopping her when talked
+over (speech synthesis can't be, and stopping is what a person does).

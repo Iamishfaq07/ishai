@@ -486,17 +486,21 @@ interviewer: her tile, your camera, the transcript and a dock of controls.
 - **Saba is a voice, never a face** (`VoiceVisualizer`, `size="lg"` in her tile, `"sm"` where space is short): a flat
   disc with 40 rounded bars across it (24 small) that rise and fall with the real audio, fast up and slower down. Her
   voice in the accent while she speaks; yours in light ink while she hears you; a calm low wave while she listens; a
-  shimmer running across while she thinks; bars rising in from flat as she joins; flat, dimmed bars while your mic is
-  paused. Moods blend into each other. The mood is always written beside her (`Saba · listening`) and announced.
+  shimmer running across while she thinks; a slow breath while her voice is on its way ("about to speak…", only while
+  it really is); a small nod in the bars while she hears you; bars rising in from flat as she joins; flat, dimmed bars
+  while your mic is paused. Moods blend into each other. The mood is always written beside her (`Saba · listening`) and announced.
   `/dev/components` shows every mood with fake sources (word timing, or a fake voice through a real analyser) and
   each motion level.
-- **Where the bars come from**: the natural voice through one shared AudioContext and an analyser (or its decoded
-  samples where Web Audio can't take it), the device voice from its word-boundary events, your voice from the mic's
-  analyser (`useMicActivity`, which also draws your camera tile's speaking ring). One canvas, one animation frame loop
+- **Where the bars come from**: the natural voice from a decoded copy of each clip (its samples, read beside the
+  playing element; her audio itself never goes through Web Audio, which went silent when the context was suspended:
+  D76), the device voice from its word-boundary events, your voice from the mic's analyser (`useMicActivity`, which also draws your camera tile's speaking ring). One canvas, one animation frame loop
   reading the audio directly, no React render per frame; it stops when the tab is hidden or it's off screen.
 - **Around it**: a `Live` dot that pulses, the title with the role and company, the time, and the round's progress as
-  one segment per question (a hairline under the header on phones); captions whose words come in one after another and
-  mark the word being said when there's word timing; the camera coach's state as chips that come and go; a join
+  one segment per question (a hairline under the header on phones); her line appearing as she says it, in the caption
+  and the transcript alike (the natural voice's word timing estimated from the clip's speech, the device voice's from
+  its boundaries; in full at once when her voice is off, Motion is Off or the browser won't play it; D76), with the
+  word being said marked; "Tap to hear Saba" when the browser won't play her voice without a tap, and a note when it
+  can't be heard at all; the camera coach's state as chips that come and go; a join
   moment and an end moment drawn in the scenes' line style (`JoiningArt`, `WrapUpArt`).
 - **Controls**: round icon buttons, 40 px below 440 px so all seven fit a 360 px phone (#364,
   `tools/e2e/video-room.spec.ts`), then 48 and 52 px; something turned off is crossed out and toned rose; the press
