@@ -297,6 +297,69 @@ export interface BizJobDraft {
   source: "ai" | "template";
 }
 
+/** POST /v1/business/companies/{id}/jobs/assist (the job assistant, D85). A fill: `prompt` (and any quick fields
+ *  or pasted text). A refine: `instruction` with `current` (the form as it is). Nothing is saved or published. */
+export interface BizJobAssistInput {
+  prompt: string;
+  title?: string;
+  location?: string;
+  salary?: string;
+  experience?: string;
+  /** An old job post or notes. */
+  pasted?: string;
+  current?: BizJobAssistCurrent | null;
+  instruction?: string;
+  language?: "auto" | "en" | "hi";
+}
+
+export type BizJobAssistCurrent = Omit<BizJobInput, "hiring_team" | "valid_through">;
+
+/** The parts of the editor an answer can change. "salary" is min, max, currency, period and show/hide together. */
+export type BizAssistField =
+  | "title"
+  | "department"
+  | "locations"
+  | "workplace"
+  | "allowed_countries"
+  | "employment_type"
+  | "experience"
+  | "salary"
+  | "description"
+  | "must_haves"
+  | "nice_to_haves"
+  | "questions"
+  | "stages";
+
+export interface BizJobAssist {
+  title: string;
+  department: string;
+  locations: string[];
+  workplace: BizWorkplace;
+  allowed_countries: string[];
+  employment_type: BizEmploymentType;
+  experience: BizExperience;
+  /** Only ever the pay the recruiter wrote (never invented); null when they gave none. */
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_currency: string;
+  salary_period: BizSalaryPeriod;
+  show_salary: boolean;
+  description_html: string;
+  must_haves: string[];
+  nice_to_haves: string[];
+  questions: BizQuestion[];
+  /** null: keep the job's stages. */
+  stages: BizStage[] | null;
+  /** What was assumed and why ("Assumed full-time because you didn't say"). */
+  assumptions: string[];
+  /** Wording changed, or input left out because it screened on a personal characteristic. */
+  inclusive_language_notes: string[];
+  /** The fields this answer changes: all those filled for a fill, only the affected ones for a refine. */
+  changed_fields: BizAssistField[];
+  /** "template": the AI couldn't be reached; this is what the words say, laid out. */
+  source: "ai" | "template";
+}
+
 // ─── Applications (company side) ─────────────────────────────────────────────
 
 export type BizApplicationState = "active" | "rejected" | "hired";
