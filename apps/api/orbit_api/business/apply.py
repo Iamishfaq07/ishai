@@ -365,6 +365,8 @@ async def _create(db: AsyncSession, *, job: BizJob, company: BizCompany, name: s
 async def _confirmation(company: BizCompany, job: BizJob, app: BizApplication, raw: str) -> None:
     subject, body, _ = await _template(company.id, "received")
     values = emails.values(company, job, app, token=raw)
+    if app.email_confirmed_at is None:  # opening the link confirms the address (the status page posts confirm)
+        values["status_link"] += "?confirm=1"
     await emails.send_to_applicant(company, app, emails.render(subject, values), emails.render(body, values), None)
 
 

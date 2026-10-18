@@ -13,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.admin.routes import require_admin
 from orbit_api.business import indexing, rules
 from orbit_api.business.access import audit
-from orbit_api.business.companies import effective_plan
+from orbit_api.business.companies import AuditOut, effective_plan
 from orbit_api.business.jobs import public_url
 from orbit_api.db import get_db
-from orbit_api.models import AuditLog, BizApplication, BizCompany, BizJob, BizMember, BizReport, User
+from orbit_api.models import AuditLog, BizApplication, BizAudit, BizCompany, BizJob, BizMember, BizReport, User
 
 router = APIRouter(prefix="/v1/admin/business", tags=["admin-business"])
 Admin = Annotated[User, Depends(require_admin)]
@@ -247,6 +247,17 @@ async def restore(job_id: str, admin: Admin, db: DB) -> AdminCompanyDetail:
     audit(db, c.id, None, "job.restored_by_orbit", job.title, job_id=job.id)
     await db.commit()
     return await _detail(db, c)
+
+
+@router.get("/companies/{company_id}/audit", response_model=list[AuditOut])
+async def company_audit(company_id: str, _: Admin, db: DB) -> list[AuditOut]:
+    """The company's own audit log, for the Orbit team: who moved or rejected whom, and each ranking's model version
+    (which company members never see outside this log)."""
+    c = await _get(db, company_id)
+    rows = (await db.scalars(select(BizAudit).where(BizAudit.company_id == c.id)
+                             .order_by(BizAudit.created_at.desc()).limit(300))).all()
+    return [AuditOut(id=r.id, actor=r.actor_name, actor_id=r.actor_id, action=r.action, target=r.target,
+                     detail=r.detail or {}, created_at=_aware(r.created_at) or now()) for r in rows]
 
 
 @router.get("/reports", response_model=list[ReportOut])

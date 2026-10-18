@@ -715,6 +715,9 @@ class ProviderRequest(FitsProviderNames, TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     user_id: Mapped[str | None] = mapped_column(String(36), index=True)
     session_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    # Orbit for Business: the company whose job description or applicant this call was for (no FK, like user_id), so
+    # AI use can be counted per company for plan limits later (D82).
+    company_id: Mapped[str | None] = mapped_column(String(36), index=True)
     provider: Mapped[str] = mapped_column(String(PROVIDER_NAME_LEN))
     model: Mapped[str] = mapped_column(String(MODEL_NAME_LEN))
     request_type: Mapped[str] = mapped_column(String(32))
@@ -1201,7 +1204,7 @@ class BizApplication(TimestampMixin, Base):
     parsed: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     ranking: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     ranking_status: Mapped[str] = mapped_column(String(8), default="pending")  # pending | done | failed
-    ranking_model: Mapped[str | None] = mapped_column(String(64))
+    ranking_model: Mapped[str | None] = mapped_column(String(120))
     tracker_id: Mapped[str | None] = mapped_column(String(36))  # the candidate's JobApplication row, not an FK
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

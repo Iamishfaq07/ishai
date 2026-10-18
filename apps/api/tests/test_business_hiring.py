@@ -307,7 +307,8 @@ def test_ranking_runs_in_the_background_with_reasons_and_no_protected_inputs(cli
         ai_port.set_business_ai(None)
     assert detail["ranking_status"] == "done"
     rk = detail["ranking"]
-    assert rk["model_version"] == ai_port.FAKE_MODEL_VERSION and 0 <= rk["score"] <= 100
+    assert "model_version" not in rk and 0 <= rk["score"] <= 100  # it names the model: audit log only
+    assert detail["basic_match"] is True  # the fake is keyword matching, as business_ai's fallback is
     met = {m["requirement"]: m["met"] for m in rk["must_haves"]}
     assert met == {"Python": "yes", "Postgres": "yes", "Kubernetes": "no"}
     assert detail["match_label"] == "Matches 2/3 must-haves" and detail["must_haves_met"] == 2
@@ -315,11 +316,13 @@ def test_ranking_runs_in_the_background_with_reasons_and_no_protected_inputs(cli
     assert "Python" in detail["parsed"]["skills"]
     assert spy.ranked  # every resume ranked meanwhile (other tests' too) went in without who the person is
     assert all(r.name is None and r.email is None and r.phone is None and r.location is None for r in spy.ranked)
-    assert set(ParsedResume.model_fields) == {"name", "email", "phone", "location", "headline", "total_years",
+    assert set(ParsedResume.model_fields) == {"name", "email", "phone", "location", "headline", "summary",
+                                              "total_years",
                                               "skills", "experience", "education"}  # nothing protected to fill in
     assert detail["status"] == "active"  # a score never rejects anyone
     log = client.get(f"/v1/business/companies/{company['id']}/audit", headers=auth(owner)).json()
     ranked = next(e for e in log if e["action"] == "ranking.completed")
+    assert ai_port.FAKE_MODEL_VERSION not in json.dumps(detail)  # members see "basic match", never the version
     assert ranked["detail"]["model_version"] == ai_port.FAKE_MODEL_VERSION and ranked["target"] == detail["reference"]
 
 
@@ -352,6 +355,7 @@ def test_the_ai_writer_drafts_from_a_brief(client: TestClient) -> None:
     assert d["title"] == "Data Analyst" and d["must_haves"] == ["SQL", "Excel"]
     assert "<li>SQL</li>" in d["description_html"] and "We make rockets." in d["summary"]
     assert d["suggested_screening_questions"][0]["kind"] == "yes_no"
+    assert d["source"] == "ai" and d["inclusive_language_notes"] == []
 
 
 # ---- the pipeline --------------------------------------------------------------------------------------------------
@@ -632,3 +636,56 @@ def test_tracker_rows_belong_to_the_candidate_only(client: TestClient) -> None:
 
     entry = db_call(client, row)
     assert entry.user_id == uid(cand) and entry.listing_id.startswith("biz:") and len(entry.listing_id) <= 36
+
+
+RESUME_TEXT = "Asha Rao\nAnalyst\nasha@example.com\n\nSKILLS\nSQL, Excel\n"
+
+
+async def test_the_real_business_ai_behind_the_port_records_usage_per_call() -> None:
+    """ModuleAI drives orbit_api.business_ai (D83) with this port's models, and every model call it makes lands in
+    recording() for the company's usage. With the test suite's mock model the answers aren't usable JSON, so each
+    function falls back to its deterministic path, which the port reports as a basic match."""
+    import orbit_api.business_ai as real
+
+    port = ai_port.ModuleAI(real)
+    with ai_port.recording() as calls:
+        draft = await port.write_job_description(ai_port.JobBrief(title="Data Analyst", must_haves=["SQL"]))
+        parsed = await port.parse_applicant_resume(RESUME_TEXT)
+        ranking = await port.rank_applicant(
+            JobSpec(title="Data Analyst", must_haves=["SQL"], experience_band="junior"), parsed,
+            [QA(question="Authorised to work in India?", answer="yes")])
+    assert draft.title and draft.source in {"ai", "template"} and isinstance(draft.inclusive_language_notes, list)
+    assert "SQL" in " ".join(parsed.skills) and 0 <= ranking.score <= 100
+    assert ranking.must_haves[0].requirement == "SQL"
+    assert calls and all(c.request_type.startswith("business") for c in calls)
+    assert ai_port.basic_match(ranking.model_version) == ranking.model_version.endswith("deterministic-only")
+    assert ai_port.location_text(ai_port.LocationRules(workplace="remote", allowed_countries=["IN"])) == (
+        "Remote; open to applicants in IN")
+
+
+def test_ranking_usage_is_stored_against_the_company(client: TestClient) -> None:
+    from orbit_api.models import ProviderRequest
+
+    class Counting(FakeBusinessAI):
+        async def rank_applicant(self, job: JobSpec, resume: ParsedResume, answers: list[QA]) -> Ranking:
+            calls = ai_port._recording.get()
+            assert calls is not None  # the ranking job records what the AI calls
+            calls.append(ai_port.UsageRecord("mock", "mock-model", "business_rank", 10, 5, 0, 3, True))
+            return await super().rank_applicant(job, resume, answers)
+
+    owner, company, _ = new_company(client)
+    job = new_job(client, owner, company["id"])
+    ai_port.set_business_ai(Counting())
+    try:
+        apply_signed_out(client, job["id"], f"u-{tag()}@example.com").raise_for_status()
+        item = _one(client, owner, company["id"], job["id"])
+        wait_ranked(client, owner, company["id"], item["id"])
+    finally:
+        ai_port.set_business_ai(None)
+
+    async def rows(db: Any) -> list[ProviderRequest]:
+        return list((await db.scalars(select(ProviderRequest).where(
+            ProviderRequest.company_id == company["id"]))).all())
+
+    [row] = db_call(client, rows)
+    assert row.request_type == "business_rank" and row.input_tokens == 10 and row.user_id is None

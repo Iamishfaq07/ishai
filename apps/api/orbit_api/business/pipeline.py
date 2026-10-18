@@ -29,6 +29,7 @@ from orbit_api.business.access import (
     sees_application,
     timeline,
 )
+from orbit_api.business.ai_port import basic_match
 from orbit_api.business.apply import RANK_KIND, iso, latest_interview, sync_tracker_status
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -82,6 +83,8 @@ class ListItem(BaseModel):
     must_haves_met: int | None
     must_haves_total: int | None
     match_label: str | None
+    # Keyword matching alone (the AI model was unavailable): the UI says "basic match".
+    basic_match: bool = False
     deletion_requested: bool
 
 
@@ -180,6 +183,14 @@ def match_counts(ranking: dict[str, Any] | None) -> tuple[int | None, int | None
     return met, len(must), f"Matches {met}/{len(must)} must-haves"
 
 
+def company_ranking(ranking: dict[str, Any] | None) -> dict[str, Any] | None:
+    """The ranking as a company's members see it: without its model version, which names the model (that's for the
+    audit log and the Orbit admin, D82/D83)."""
+    if not ranking:
+        return None
+    return {k: v for k, v in ranking.items() if k != "model_version"}
+
+
 def _item(app: BizApplication, blind: bool) -> ListItem:
     met, total, label = match_counts(app.ranking)
     headline = (app.parsed or {}).get("headline") if app.parsed else None
@@ -192,6 +203,7 @@ def _item(app: BizApplication, blind: bool) -> ListItem:
         knockout_reasons=app.knockout_reasons or [], ranking_status=app.ranking_status,
         score=int(app.ranking["score"]) if app.ranking and app.ranking.get("score") is not None else None,
         must_haves_met=met, must_haves_total=total, match_label=label,
+        basic_match=app.ranking is not None and basic_match(app.ranking_model),
         deletion_requested=app.deletion_requested_at is not None)
 
 
@@ -244,7 +256,7 @@ _EVENT_TEXT = {
     "rejected": "Rejected", "unrejected": "Moved back into the pipeline", "hired": "Hired", "note": "Added a note",
     "scorecard": "Added a scorecard ({recommendation})", "email": "Emailed: {subject}",
     "interview_slots": "Offered interview times", "interview_booked": "Booked an interview time",
-    "ranked": "Ranked by Orbit's AI ({score}/100, {model_version})", "tags": "Tags: {tags}",
+    "ranked": "Ranked by Orbit's AI ({score}/100)", "tags": "Tags: {tags}",
     "deletion_requested": "Asked for their data to be deleted",
 }
 
@@ -279,7 +291,7 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
         location=None if blind else app.location,
         resume_text=rules.blind_text(app.resume_text, app.name) if blind else app.resume_text,
         resume_filename=None if blind else app.resume_filename, resume_source=app.resume_source, parsed=parsed,
-        answers=app.answers or [], ranking=app.ranking,
+        answers=app.answers or [], ranking=company_ranking(app.ranking),
         notes=[NoteOut(id=n.id, author=n.author_name, author_id=n.author_id, body=n.body, mentions=n.mentions or [],
                        created_at=_aware(n.created_at) or now()) for n in notes],
         scorecards=[ScorecardOut(id=c.id, stage_id=c.stage_id, author=c.author_name, author_id=c.author_id,
@@ -654,7 +666,7 @@ async def export_csv(job_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, D
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["reference", "name", "email", "phone", "stage", "status", "applied_at", "source", "via_orbit",
-                "email_confirmed", "score", "must_haves_met", "knockout", "tags", "ranking_model"])
+                "email_confirmed", "score", "must_haves_met", "knockout", "tags"])
 
     def cell(v: Any) -> str:
         s = "" if v is None else str(v)
@@ -666,8 +678,7 @@ async def export_csv(job_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, D
             a.reference, a.name, a.email, a.phone, stages.get(a.stage_id, a.stage_id), a.status,
             (_aware(a.created_at) or now()).isoformat(), a.source, a.resume_source != "upload",
             a.email_confirmed_at is not None, (a.ranking or {}).get("score"),
-            f"{met}/{total}" if total else "", "; ".join(a.knockout_reasons or []), ", ".join(a.tags or []),
-            a.ranking_model)])
+            f"{met}/{total}" if total else "", "; ".join(a.knockout_reasons or []), ", ".join(a.tags or []))])
     audit(db, ctx.company.id, ctx.user, "job.exported", job.title, job_id=job.id, rows=len(apps))
     await db.commit()
     name = rules.slugify(job.title, 40)

@@ -1,24 +1,30 @@
 """The AI that Orbit for Business uses, behind a port: writing a job description from a brief, parsing an applicant's
 resume, and ranking an applicant against a job with reasons.
 
-The real implementation is `orbit_api.business_ai` (built separately, D83). Until it is present, or when
-ORBIT_BUSINESS_AI=fake (tests), the deterministic `FakeBusinessAI` here answers: it never calls a model, so it costs
-nothing and always gives the same answer for the same input.
+The real implementation is `orbit_api.business_ai` (D83), adapted by `ModuleAI`. In tests, or with
+ORBIT_BUSINESS_AI=fake, the deterministic `FakeBusinessAI` here answers: it never calls a model, so it costs nothing
+and always gives the same answer for the same input.
 
 Fairness rules that hold whatever answers:
-- `rank_applicant` never receives protected attributes. `professional_only` strips the name, email, phone and
-  location before ranking, and the parsed resume has no field for gender, age, photo, religion, caste or marital
-  status.
+- No protected attribute reaches the ranking. business_ai redacts the parse itself (redact_for_ranking: name,
+  contact, gender, age, marital status, religion, caste, origin, health, photo references, the location line); the
+  fake gets `professional_only` (no name, contact or location). The parsed resume has no field for any of them.
 - A ranking is a recommendation. Nothing in Orbit rejects anyone because of it (pipeline.py: a person clicks Reject).
+- `Ranking.model_version` names the model: audit data, kept in the company's audit log and the Orbit admin's view,
+  never in what a company's members see (pipeline.py shows "basic match" for a keyword-only ranking instead).
 """
 
+import contextlib
 import importlib
 import logging
 import os
 import re
-from collections.abc import Awaitable, Callable
+import time
+from collections.abc import Iterator
+from contextvars import ContextVar
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Literal, Protocol, cast
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -53,6 +59,10 @@ class JobDraft(BaseModel):
     nice_to_haves: list[str] = Field(default_factory=list)
     description_markdown: str
     suggested_screening_questions: list[SuggestedQuestion] = Field(default_factory=list)
+    # Coded words the writer replaced, for the recruiter to see; "template": the model couldn't be reached and the
+    # draft is the brief laid out.
+    inclusive_language_notes: list[str] = Field(default_factory=list)
+    source: Literal["ai", "template"] = "ai"
 
 
 class ExperienceItem(BaseModel):
@@ -75,6 +85,7 @@ class ParsedResume(BaseModel):
     phone: str | None = None
     location: str | None = None
     headline: str | None = None
+    summary: str | None = None
     total_years: float | None = None
     skills: list[str] = Field(default_factory=list)
     experience: list[ExperienceItem] = Field(default_factory=list)
@@ -131,7 +142,7 @@ def professional_only(resume: ParsedResume) -> ParsedResume:
 
 # ---- the deterministic fake ---------------------------------------------------------------------------------------
 
-FAKE_MODEL_VERSION = "orbit-keywords-1"  # a keyword match, honestly named: no model is called
+FAKE_MODEL_VERSION = "fake-v1+deterministic-only"  # a keyword match: no model is called
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 _PHONE = re.compile(r"\+?\d[\d ()-]{7,}\d")
 _YEARS = re.compile(r"\b(19[89]\d|20[0-4]\d)\s*(?:-|–|—|to)\s*(present|current|now|(?:19[89]\d|20[0-4]\d))", re.I)
@@ -246,45 +257,123 @@ class FakeBusinessAI:
                        cautions=cautions[:5], model_version=FAKE_MODEL_VERSION)
 
 
-# ---- the real module, when present ---------------------------------------------------------------------------------
+# ---- the real module (orbit_api.business_ai, D83) ------------------------------------------------------------------
+
+EXPERIENCE_YEARS = {"entry": "0-1 years", "junior": "1-3 years", "mid": "3-5 years", "senior": "5+ years",
+                    "lead": "8+ years"}
 
 
-class _ModuleAI:
-    """orbit_api.business_ai's three functions, with its answers read into this port's models (by field name), so
-    the two can evolve without importing each other's classes."""
+def location_text(rules: LocationRules) -> str:
+    """The job's location rules in the words business_ai reads ("Remote; open to applicants in IN, AE")."""
+    places = ", ".join(rules.locations[:5])
+    if rules.workplace == "remote":
+        who = ", ".join(rules.allowed_countries) if rules.allowed_countries else "anywhere"
+        return f"Remote; open to applicants in {who}"[:300]
+    mode = "Hybrid" if rules.workplace == "hybrid" else "Onsite"
+    return f"{mode} {places}".strip()[:300]
+
+
+@dataclass
+class UsageRecord:
+    provider: str
+    model: str
+    request_type: str
+    input_tokens: int
+    output_tokens: int
+    cached_input_tokens: int
+    latency_ms: int
+    ok: bool
+
+
+_recording: ContextVar[list[UsageRecord] | None] = ContextVar("business_ai_usage", default=None)
+
+
+@contextlib.contextmanager
+def recording() -> Iterator[list[UsageRecord]]:
+    """Every model call business_ai makes inside this block, for the caller to store against the company
+    (provider_requests.company_id). business_ai itself writes nothing: it's a pure module."""
+    calls: list[UsageRecord] = []
+    token = _recording.set(calls)
+    try:
+        yield calls
+    finally:
+        _recording.reset(token)
+
+
+class _RecordingLLM:
+    """The app's LLM provider, noting each call's usage in the current `recording()` block."""
+
+    def __init__(self, inner: Any) -> None:
+        self._inner = inner
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._inner, name)
+
+    async def generate(self, request: Any) -> Any:
+        started = time.monotonic()
+        ok, model, usage = False, "", None
+        try:
+            resp = await self._inner.generate(request)
+            ok, model, usage = True, resp.model, resp.usage
+            return resp
+        finally:
+            calls = _recording.get()
+            if calls is not None:
+                calls.append(UsageRecord(
+                    provider=str(getattr(self._inner, "name", "llm")), model=str(model or ""),
+                    request_type=str(getattr(request, "request_type", "") or "business_ai")[:32],
+                    input_tokens=int(getattr(usage, "input_tokens", 0) or 0),
+                    output_tokens=int(getattr(usage, "output_tokens", 0) or 0),
+                    cached_input_tokens=int(getattr(usage, "cached_input_tokens", 0) or 0),
+                    latency_ms=int((time.monotonic() - started) * 1000), ok=ok))
+
+
+class ModuleAI:
+    """orbit_api.business_ai behind this port: its models built field by field from ours, its answers read back
+    into ours. Its functions never raise for a model failure (each has a deterministic path)."""
 
     def __init__(self, module: Any) -> None:
         self._m = module
+        llm = importlib.import_module(f"{module.__name__}.llm")
+        original = llm.provider
+        if not getattr(original, "_orbit_recording", False):
+            def provider() -> Any:
+                return _RecordingLLM(original())
 
-    async def _call(self, name: str, *args: Any) -> Any:
-        fn = cast(Callable[..., Awaitable[Any]], getattr(self._m, name))
-        converted = [self._theirs(a) for a in args]
-        out = await fn(*converted)
-        return out.model_dump() if isinstance(out, BaseModel) else out
-
-    def _theirs(self, value: Any) -> Any:
-        """Our model as theirs when the module has a class of the same name, else as it is."""
-        if isinstance(value, list):
-            return [self._theirs(v) for v in value]
-        if isinstance(value, BaseModel):
-            cls = getattr(self._m, type(value).__name__, None)
-            if isinstance(cls, type) and issubclass(cls, BaseModel):
-                return cls.model_validate(value.model_dump())
-            if type(value).__name__ == "QA":
-                return value.model_dump()
-        return value
+            provider._orbit_recording = True  # type: ignore[attr-defined]
+            setattr(llm, "provider", provider)  # noqa: B010 - business_ai.llm.provider is its seam
 
     async def write_job_description(self, brief: JobBrief) -> JobDraft:
-        return JobDraft.model_validate(await self._call("write_job_description", brief))
+        theirs = self._m.JobBrief(title=brief.title, seniority=brief.seniority or None,
+                                  location=brief.location or None, employment_type=brief.employment_type or None,
+                                  must_haves=brief.must_haves, nice_to_haves=brief.nice_to_haves,
+                                  about_company=brief.about_company, notes=brief.notes, language=brief.language)
+        out = await self._m.write_job_description(theirs)
+        return JobDraft.model_validate(out.model_dump())
 
     async def parse_applicant_resume(self, text: str) -> ParsedResume:
-        return ParsedResume.model_validate(await self._call("parse_applicant_resume", text))
+        out = await self._m.parse_applicant_resume(text)
+        return ParsedResume.model_validate(out.model_dump())
 
     async def rank_applicant(self, job: JobSpec, resume: ParsedResume, answers: list[QA]) -> Ranking:
-        return Ranking.model_validate(await self._call("rank_applicant", job, professional_only(resume), answers))
+        # business_ai redacts the parse itself (redact_for_ranking) and needs the name to strip it from the text, so it
+        # gets the whole parse; nothing protected reaches its model or its matcher (D83).
+        spec = self._m.JobSpec(title=job.title, must_haves=job.must_haves, nice_to_haves=job.nice_to_haves,
+                               experience_band=EXPERIENCE_YEARS.get(job.experience_band, job.experience_band),
+                               location_rules=location_text(job.location_rules))
+        theirs = self._m.ParsedResume.model_validate(resume.model_dump())
+        qa = [self._m.ScreeningAnswer(question=a.question[:300], answer=a.answer[:3000]) for a in answers]
+        out = await self._m.rank_applicant(spec, theirs, qa)
+        return Ranking.model_validate(out.model_dump())
+
+
+def basic_match(model_version: str | None) -> bool:
+    """The ranking is keyword matching alone (the model was unavailable, or the fake): shown as "basic match"."""
+    return bool(model_version) and str(model_version).endswith("deterministic-only")
 
 
 _override: BusinessAI | None = None
+_module_ai: ModuleAI | None = None
 
 
 def set_business_ai(ai: BusinessAI | None) -> None:
@@ -294,15 +383,12 @@ def set_business_ai(ai: BusinessAI | None) -> None:
 
 
 def get_business_ai() -> BusinessAI:
+    """orbit_api.business_ai, except in tests or with ORBIT_BUSINESS_AI=fake (the deterministic fake here)."""
+    global _module_ai
     if _override is not None:
         return _override
-    choice = os.environ.get("ORBIT_BUSINESS_AI", "").strip().lower()
-    if choice != "fake" and os.environ.get("ORBIT_ENV", "") != "test":
-        try:
-            module = importlib.import_module("orbit_api.business_ai")
-        except ImportError:
-            module = None
-        if module is not None and all(hasattr(module, n) for n in
-                                      ("write_job_description", "parse_applicant_resume", "rank_applicant")):
-            return _ModuleAI(module)
-    return FakeBusinessAI()
+    if os.environ.get("ORBIT_BUSINESS_AI", "").strip().lower() == "fake" or os.environ.get("ORBIT_ENV") == "test":
+        return FakeBusinessAI()
+    if _module_ai is None:
+        _module_ai = ModuleAI(importlib.import_module("orbit_api.business_ai"))
+    return _module_ai

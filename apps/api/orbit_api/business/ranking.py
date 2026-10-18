@@ -11,8 +11,18 @@ from datetime import UTC, datetime
 from typing import Any
 
 from orbit_api import jobs
+from orbit_api.business import usage
 from orbit_api.business.access import audit, timeline
-from orbit_api.business.ai_port import QA, JobSpec, LocationRules, get_business_ai, professional_only
+from orbit_api.business.ai_port import (
+    QA,
+    JobSpec,
+    LocationRules,
+    ModuleAI,
+    basic_match,
+    get_business_ai,
+    professional_only,
+    recording,
+)
 from orbit_api.business.apply import RANK_KIND
 from orbit_api.db import sessionmaker
 from orbit_api.models import BizApplication, BizJob
@@ -39,8 +49,11 @@ async def rank_application(application_id: str) -> None:
                                           for a in app.answers or []]
         spec = job_spec(job)
     try:
-        parsed = await ai.parse_applicant_resume(text)
-        ranking = await ai.rank_applicant(spec, professional_only(parsed), answers)
+        with recording() as calls:
+            parsed = await ai.parse_applicant_resume(text)
+            # business_ai redacts the parse itself and needs the name to strip it; anything else gets it without.
+            ranked_from = parsed if isinstance(ai, ModuleAI) else professional_only(parsed)
+            ranking = await ai.rank_applicant(spec, ranked_from, answers)
     except Exception:
         async with sessionmaker()() as db:
             app = await db.get(BizApplication, application_id)
@@ -56,8 +69,10 @@ async def rank_application(application_id: str) -> None:
         app.parsed = parsed.model_dump()
         if parsed.location and not app.location:
             app.location = parsed.location[:160]
-        app.ranking, app.ranking_status, app.ranking_model = stored, "done", ranking.model_version[:64]
-        timeline(db, app, "ranked", None, score=ranking.score, model_version=ranking.model_version)
+        app.ranking, app.ranking_status, app.ranking_model = stored, "done", ranking.model_version[:120]
+        # The model version names the model: the audit log only, never the timeline members read.
+        timeline(db, app, "ranked", None, score=ranking.score, basic=basic_match(ranking.model_version))
+        usage.store(db, app.company_id, None, calls)
         audit(db, app.company_id, None, "ranking.completed", app.reference, job_id=app.job_id, score=ranking.score,
               model_version=ranking.model_version)
         await db.commit()

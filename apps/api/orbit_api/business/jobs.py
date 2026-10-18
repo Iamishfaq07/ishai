@@ -16,9 +16,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import ratelimit
-from orbit_api.business import indexing, rules
+from orbit_api.business import indexing, rules, usage
 from orbit_api.business.access import CompanyCtx, Ctx, audit, job_for, sees_job
-from orbit_api.business.ai_port import JobBrief, get_business_ai
+from orbit_api.business.ai_port import JobBrief, get_business_ai, recording
 from orbit_api.business.companies import active_jobs, effective_plan, limit_error, logo_url
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
@@ -439,6 +439,10 @@ class DraftOut(BaseModel):
     description_markdown: str
     description_html: str
     suggested_screening_questions: list[SuggestedQuestionOut]
+    # Coded words the writer replaced (shown to the recruiter), and "template" when the AI writer couldn't be
+    # reached and the draft is the brief laid out.
+    inclusive_language_notes: list[str]
+    source: Literal["ai", "template"]
 
 
 @router.post("/companies/{company_id}/jobs/draft", response_model=DraftOut)
@@ -450,17 +454,20 @@ async def draft(body: BriefIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depe
     if not brief.about_company and ctx.company.about:
         brief.about_company = ctx.company.about[:2000]
     try:
-        out = await get_business_ai().write_job_description(brief)
+        with recording() as calls:
+            out = await get_business_ai().write_job_description(brief)
     except Exception as e:  # the provider failed: say so, nothing was saved
         raise HTTPException(503, "The AI writer isn't available right now. Try again in a minute.") from e
-    audit(db, ctx.company.id, ctx.user, "job.ai_draft", body.title)
+    audit(db, ctx.company.id, ctx.user, "job.ai_draft", body.title, source=out.source)
+    usage.store(db, ctx.company.id, ctx.user.id, calls)
     await db.commit()
     return DraftOut(title=out.title, summary=out.summary, responsibilities=out.responsibilities,
                     must_haves=out.must_haves, nice_to_haves=out.nice_to_haves,
                     description_markdown=out.description_markdown,
                     description_html=rules.markdown_to_html(out.description_markdown),
                     suggested_screening_questions=[SuggestedQuestionOut(**q.model_dump())
-                                                   for q in out.suggested_screening_questions])
+                                                   for q in out.suggested_screening_questions],
+                    inclusive_language_notes=out.inclusive_language_notes, source=out.source)
 
 
 # ---- the public face: location line and Google for Jobs ------------------------------------------------------------

@@ -589,6 +589,7 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("POST", "/v1/admin/business/companies/{company_id}/plan", {"json": {"plan": "growth"}}),
     ("POST", "/v1/admin/business/jobs/{job_id}/take-down", {"json": {"reason": "idor check"}}),
     ("POST", "/v1/admin/business/jobs/{job_id}/restore", {}),
+    ("GET", "/v1/admin/business/companies/{company_id}/audit", {}),
     ("GET", "/v1/admin/business/reports", {}),
     ("POST", "/v1/admin/business/reports/{report_id}", {"json": {"status": "dismissed"}}),
 ]

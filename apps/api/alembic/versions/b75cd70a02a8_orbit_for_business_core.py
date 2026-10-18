@@ -20,7 +20,10 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema. New tables only: nothing that exists changes."""
+    """Upgrade schema. New tables, and provider_requests.company_id (nullable): nothing that exists changes."""
+    with op.batch_alter_table('provider_requests') as batch:
+        batch.add_column(sa.Column('company_id', sa.String(length=36), nullable=True))
+        batch.create_index('ix_provider_requests_company_id', ['company_id'])
     op.create_table('biz_companies',
     sa.Column('id', sa.String(length=36), nullable=False),
     sa.Column('slug', sa.String(length=80), nullable=False),
@@ -187,7 +190,7 @@ def upgrade() -> None:
     sa.Column('parsed', sa.JSON(none_as_null=True), nullable=True),
     sa.Column('ranking', sa.JSON(none_as_null=True), nullable=True),
     sa.Column('ranking_status', sa.String(length=8), nullable=False),
-    sa.Column('ranking_model', sa.String(length=64), nullable=True),
+    sa.Column('ranking_model', sa.String(length=120), nullable=True),
     sa.Column('tracker_id', sa.String(length=36), nullable=True),
     sa.Column('deletion_requested_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
@@ -324,6 +327,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema. Every Orbit for Business table and its data is dropped."""
+    with op.batch_alter_table('provider_requests') as batch:
+        batch.drop_index('ix_provider_requests_company_id')
+        batch.drop_column('company_id')
 
 
     with op.batch_alter_table('biz_scorecards', schema=None) as batch_op:
