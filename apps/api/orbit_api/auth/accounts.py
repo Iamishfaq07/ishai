@@ -94,6 +94,10 @@ async def delete_account(db: AsyncSession, user: User, audit: AuditLog) -> None:
     await db.execute(delete(ContactMessage).where(ContactMessage.source_support_thread_id.in_(thread_ids)))
     await db.execute(delete(SupportMessage).where(SupportMessage.thread_id.in_(thread_ids)))
     await db.execute(delete(SupportThread).where(SupportThread.user_id == user_id))
+    # Orbit for Business: a company this account owns passes to another member, or goes if nobody's left (D82).
+    from orbit_api.business.companies import hand_over_on_account_deletion
+
+    await hand_over_on_account_deletion(db, user_id)
     await db.delete(user)
     await db.execute(update(AuditLog).where(AuditLog.user_id == user_id).values(ip=None))
     await db.execute(update(ProviderRequest).where(ProviderRequest.user_id == user_id).values(user_id=None))

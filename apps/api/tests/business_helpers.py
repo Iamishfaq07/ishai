@@ -127,7 +127,8 @@ JOB = {
 }
 
 
-def new_job(client: TestClient, h: dict[str, str], company_id: str, publish: bool = True, **over: Any) -> dict[str, Any]:
+def new_job(client: TestClient, h: dict[str, str], company_id: str, publish: bool = True,
+            **over: Any) -> dict[str, Any]:
     r = client.post(f"/v1/business/companies/{company_id}/jobs", headers=auth(h), json={**JOB, **over})
     assert r.status_code == 201, r.text
     job = r.json()

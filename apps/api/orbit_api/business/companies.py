@@ -9,7 +9,7 @@ from typing import Annotated, Any, Literal
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import ratelimit
@@ -889,3 +889,21 @@ async def audit_log(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)
     rows = (await db.scalars(q.order_by(BizAudit.created_at.desc()).limit(limit))).all()
     return [AuditOut(id=r.id, actor=r.actor_name, actor_id=r.actor_id, action=r.action, target=r.target,
                      detail=r.detail or {}, created_at=_aware(r.created_at) or now()) for r in rows]
+
+
+async def hand_over_on_account_deletion(db: AsyncSession, user_id: str) -> None:
+    """The account is being deleted (auth/accounts.delete_account). Each company it owns passes to its longest-standing
+    admin, else its longest-standing member, and the change is logged; a company with nobody else in it is deleted with
+    it (its jobs, applicants and log go too: there's no one left to keep them for). Called in the deletion's
+    transaction; the membership rows themselves go with the account (ON DELETE CASCADE)."""
+    owned = (await db.scalars(select(BizMember).where(BizMember.user_id == user_id, BizMember.role == "owner"))).all()
+    for own in owned:
+        others = (await db.scalars(select(BizMember).where(BizMember.company_id == own.company_id,
+                                                           BizMember.user_id != user_id)
+                                   .order_by(BizMember.created_at))).all()
+        heir = next((m for m in others if m.role == "admin"), others[0] if others else None)
+        if heir is None:
+            await db.execute(delete(BizCompany).where(BizCompany.id == own.company_id))
+            continue
+        heir.role = "owner"
+        audit(db, own.company_id, None, "company.owner_left", heir.user_id, reason="the owner deleted their account")

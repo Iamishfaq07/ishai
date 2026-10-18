@@ -244,7 +244,8 @@ def test_roles_are_enforced_by_the_api(client: TestClient) -> None:
     job = new_job(client, rec, cid)
     other_job = new_job(client, rec, cid, title="Designer")
     # Hiring managers see only the jobs whose hiring team they're on.
-    assert client.post(f"/v1/business/companies/{cid}/jobs", headers=auth(hm), json={"title": "Any role"}).status_code == 403
+    hm_job = client.post(f"/v1/business/companies/{cid}/jobs", headers=auth(hm), json={"title": "Any role"})
+    assert hm_job.status_code == 403
     assert client.get(f"/v1/business/companies/{cid}/jobs", headers=auth(hm)).json() == []
     client.patch(f"/v1/business/companies/{cid}/jobs/{job['id']}", headers=auth(rec),
                  json={"hiring_team": [uid(hm)]}).raise_for_status()
@@ -261,6 +262,7 @@ def test_roles_are_enforced_by_the_api(client: TestClient) -> None:
                  json={"interviewers": [uid(iv)]}).raise_for_status()
     assert client.get(f"/v1/business/companies/{cid}/applications/{app['id']}", headers=auth(iv)).status_code == 200
     assert [j["id"] for j in client.get(f"/v1/business/companies/{cid}/jobs", headers=auth(iv)).json()] == [job["id"]]
+    assert client.get(f"/v1/business/companies/{cid}/jobs/{other_job['id']}", headers=auth(iv)).status_code == 404
     move = client.post(f"/v1/business/companies/{cid}/applications/move", headers=auth(iv),
                        json={"ids": [app["id"]], "stage_id": "screen"})
     assert move.status_code == 403
@@ -482,3 +484,18 @@ def test_migration_up_and_down() -> None:
     assert not biz & tables()
     alembic("upgrade", "head")
     assert biz <= tables()
+
+
+def test_deleting_the_owners_account_hands_the_company_over(client: TestClient) -> None:
+    owner, company, _ = new_company(client)
+    grant(client, company["id"], "starter")
+    rec = add_member(client, owner, company["id"], "recruiter")
+    adm = add_member(client, owner, company["id"], "admin")
+    r = client.request("DELETE", "/v1/auth/me", headers=auth(owner), json={"password": "correct horse battery"})
+    assert r.status_code == 204, r.text
+    members = client.get(f"/v1/business/companies/{company['id']}/members", headers=auth(adm)).json()["members"]
+    assert {m["user_id"]: m["role"] for m in members} == {uid(rec): "recruiter", uid(adm): "owner"}
+    # A company with nobody else in it goes with its owner.
+    solo, alone, _ = new_company(client)
+    client.request("DELETE", "/v1/auth/me", headers=auth(solo), json={"password": "correct horse battery"})
+    assert client.get(f"/v1/public/business/companies/{alone['slug']}").status_code == 404

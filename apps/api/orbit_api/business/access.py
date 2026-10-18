@@ -24,6 +24,11 @@ from orbit_api.models import BizApplication, BizAudit, BizCompany, BizEvent, Biz
 NOT_FOUND = "Not found."
 
 
+def display_name(user: User) -> str:
+    """A member as the timeline and the log name them, cut to their columns (String(200))."""
+    return (user.name or user.email)[:200]
+
+
 def forbidden(message: str = "Your role in this company can't do that.") -> HTTPException:
     return HTTPException(status.HTTP_403_FORBIDDEN, detail={"code": "biz_forbidden", "message": message})
 
@@ -55,7 +60,7 @@ class Ctx:
 
     @property
     def actor_name(self) -> str:
-        return self.user.name or self.user.email
+        return display_name(self.user)
 
 
 async def company_ctx(company_id: str, user: Annotated[User, Depends(current_user)],
@@ -84,7 +89,10 @@ async def job_for(db: AsyncSession, ctx: Ctx, job_id: str, *, for_interviewer: b
     if sees_job(ctx, job):
         return job
     if for_interviewer and ctx.role == "interviewer":
-        return job  # the caller filters the applications to the interviewer's own
+        # Only a job they interview someone for; the caller filters the applications to their own.
+        people = (await db.scalars(select(BizApplication.interviewers).where(BizApplication.job_id == job.id))).all()
+        if any(ctx.user.id in (p or []) for p in people):
+            return job
     raise HTTPException(status.HTTP_404_NOT_FOUND, NOT_FOUND)
 
 
@@ -108,14 +116,14 @@ async def application_for(db: AsyncSession, ctx: Ctx, application_id: str) -> tu
 def audit(db: AsyncSession, company_id: str, actor: User | None, action: str, target: str | None = None,
           **detail: Any) -> None:
     db.add(BizAudit(company_id=company_id, actor_id=actor.id if actor else None,
-                    actor_name=(actor.name or actor.email) if actor else None, action=action,
+                    actor_name=display_name(actor) if actor else None, action=action,
                     target=target[:200] if target else None, detail=detail))
 
 
 def timeline(db: AsyncSession, app: BizApplication, kind: str, actor: User | None = None, **data: Any) -> None:
     db.add(BizEvent(company_id=app.company_id, job_id=app.job_id, application_id=app.id, kind=kind, data=data,
                     actor_id=actor.id if actor else None,
-                    actor_name=(actor.name or actor.email) if actor else None))
+                    actor_name=display_name(actor) if actor else None))
 
 
 class AuditImmutable(RuntimeError):
