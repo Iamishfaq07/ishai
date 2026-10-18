@@ -51,7 +51,8 @@ def test_without_a_key_the_device_voice_is_used(client: TestClient, monkeypatch:
     monkeypatch.setattr(voice, "get_tts_provider", lambda: None)
     s = client.get("/v1/voice", headers=h).json()
     assert s == {"available": False, "voices": [], "default_voice": "aurora", "chars_left": 0, "can_choose": False}
-    assert client.post("/v1/voice/speak", headers=h, json={"text": "Hi"}).status_code == 503
+    off = client.post("/v1/voice/speak", headers=h, json={"text": "Hi"})
+    assert off.status_code == 503 and off.json()["detail"]["code"] == "voice_off"
 
 
 def test_speaks_through_the_api_and_counts_characters(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,7 +85,8 @@ def test_the_daily_allowance_and_limits(client: TestClient, monkeypatch: pytest.
     monkeypatch.setattr(get_settings(), "tts_daily_chars", 30)
     assert client.post("/v1/voice/speak", headers=h, json={"text": "x" * 20}).status_code == 200
     over = client.post("/v1/voice/speak", headers=h, json={"text": "y" * 20})
-    assert over.status_code == 429 and "device's voice" in over.json()["detail"]
+    assert over.status_code == 429 and "device's voice" in over.json()["detail"]["message"]
+    assert over.json()["detail"]["code"] == "voice_allowance_used"  # the client stops asking for the session
     assert client.post("/v1/voice/speak", headers=h, json={"text": "x" * 801}).status_code == 422
     # A voice saved by an older client (uk, au) gets the one voice instead of failing.
     old_choice = client.post("/v1/voice/speak", headers=h, json={"text": "hi", "voice": "uk"})

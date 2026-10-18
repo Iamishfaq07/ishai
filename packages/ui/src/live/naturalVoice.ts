@@ -39,7 +39,10 @@ export function voiceForSpeaker(voices: string[], n: number): string | undefined
 
 /** After this failure, stop asking for the natural voice for the rest of the session (it won't come back soon). */
 export function naturalVoiceGone(err: unknown): boolean {
-  return err instanceof ApiError && (err.status === 429 || err.status === 503 || err.status === 401 || err.status === 403);
+  if (!(err instanceof ApiError)) return false;
+  // Today's allowance used, or not set up here (the API's codes). Its per-second limit (429) or a host restarting
+  // (503) passes in a moment: then only that line is said by the device's voice (D76).
+  return err.status === 401 || err.status === 403 || err.code === "voice_allowance_used" || err.code === "voice_off";
 }
 
 /**

@@ -36,6 +36,9 @@ router = APIRouter(prefix="/v1/voice", tags=["voice"])
 speak_limit = Depends(limit_user("voice-speak", rate_per_s=1, burst=20))
 METRIC = "tts_chars"
 NO_ANSWER = "The natural voice didn't answer. Using your device's voice."
+# The two refusals that last the rest of the session (D76): the client turns the natural voice off for it only on
+# these codes. Any other 429 (the per-second limit) or 503 (the host restarting) passes, and her next line tries again.
+VOICE_OFF, ALLOWANCE_USED = "voice_off", "voice_allowance_used"
 MAX_CHARS = 800  # one interviewer turn; questions are far shorter
 
 
@@ -106,7 +109,8 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
                 db: Annotated[AsyncSession, Depends(get_db)]) -> StreamingResponse:
     provider = get_tts_provider()
     if provider is None:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The natural voice isn't set up on this server.")
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                            {"code": VOICE_OFF, "message": "The natural voice isn't set up on this server."})
     voice = VOICES.get(body.voice) or VOICES[DEFAULT_VOICE]  # an older client's other choice: the one voice
     text = " ".join(body.text.split())
     # Only a session of the caller's own is named on the usage row.
@@ -119,8 +123,10 @@ async def speak(body: SpeakIn, user: Annotated[User, Depends(require_verified_em
     left = await chars_left(db, user, admin=admin)
     if left is not None and len(text) > left:
         await db.rollback()
-        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
-                            "Today's natural-voice allowance is used up. Your device's voice reads the questions now.")
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, {
+            "code": ALLOWANCE_USED,
+            "message": "Today's natural-voice allowance is used up. Your device's voice reads the questions now.",
+        })
     spent = UsageEvent(user_id=user.id, session_id=session_id, metric=METRIC, quantity=float(len(text)))
     db.add(spent)
     await db.commit()

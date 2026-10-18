@@ -133,7 +133,7 @@ describe("the natural voice asks for each piece when it'll be needed (D76)", () 
     let calls = 0;
     const refused: SpeakFn = async () => {
       calls += 1;
-      throw new ApiError(429, "used up");
+      throw new ApiError(429, "used up", "voice_allowance_used");
     };
     const err = await speakNatural("Tell me about yourself.", refused, "aurora", new AbortController().signal).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(NaturalVoiceError);
@@ -172,8 +172,11 @@ describe("a line in the natural voice, with the device's voice as its fallback (
     };
     const flaky = await sayNaturalLine("Why this company?", fails(new ApiError(502, "provider hiccup")), "aurora", new AbortController(), { limitMs: 1000 });
     expect(flaky).toMatchObject({ said: false, rest: "Why this company?", gone: false });
-    const usedUp = await sayNaturalLine("Why this company?", fails(new ApiError(429, "used up")), "aurora", new AbortController(), { limitMs: 1000 });
+    const usedUp = await sayNaturalLine("Why this company?", fails(new ApiError(429, "used up", "voice_allowance_used")), "aurora", new AbortController(), { limitMs: 1000 });
     expect(usedUp).toMatchObject({ said: false, gone: true });
+    // The per-second limit passes in a moment: that line only.
+    const busy = await sayNaturalLine("Why this company?", fails(new ApiError(429, "Too many requests")), "aurora", new AbortController(), { limitMs: 1000 });
+    expect(busy).toMatchObject({ said: false, gone: false });
   });
 
   it("says nothing more when the caller stops it (the next line took over)", async () => {

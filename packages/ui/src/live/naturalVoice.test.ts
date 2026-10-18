@@ -23,8 +23,12 @@ describe("natural voice choices", () => {
   });
 
   it("stops asking for the session only when it won't come back", () => {
-    expect(naturalVoiceGone(new ApiError(429, "used up"))).toBe(true);
-    expect(naturalVoiceGone(new ApiError(503, "off"))).toBe(true);
+    expect(naturalVoiceGone(new ApiError(429, "used up", "voice_allowance_used"))).toBe(true);
+    expect(naturalVoiceGone(new ApiError(503, "off", "voice_off"))).toBe(true);
+    expect(naturalVoiceGone(new ApiError(401, "signed out"))).toBe(true);
+    // The per-second limit, or the host restarting: only that line falls back.
+    expect(naturalVoiceGone(new ApiError(429, "Too many requests"))).toBe(false);
+    expect(naturalVoiceGone(new ApiError(503, "Service unavailable"))).toBe(false);
     expect(naturalVoiceGone(new ApiError(502, "provider hiccup"))).toBe(false); // next question tries again
     expect(naturalVoiceGone(new Error("autoplay refused"))).toBe(false);
   });
