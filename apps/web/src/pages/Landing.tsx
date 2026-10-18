@@ -237,9 +237,14 @@ function MoreTools({ products }: { products: SiteProduct[] }) {
             <h3 className="mk-h3 mt-5 text-zinc-950 dark:text-white">{p.name}</h3>
             <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{p.line}</p>
             <div className="mt-5 flex flex-col items-start gap-1">
-              <ArrowLink to="/register" state={{ from: app[p.id] }}>
-                Use {p.name}
-              </ArrowLink>
+              {/* A tool with a page of its own (LinkedIn AI, D79) links there; the others start in the account. */}
+              {p.href.startsWith("/#") ? (
+                <ArrowLink to="/register" state={{ from: app[p.id] }}>
+                  Use {p.name}
+                </ArrowLink>
+              ) : (
+                <ArrowLink to={p.href}>See {p.name}</ArrowLink>
+              )}
             </div>
           </li>
         ))}

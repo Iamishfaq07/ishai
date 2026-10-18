@@ -21,6 +21,7 @@ Key facts:
 - [Jobs AI](https://orbitanswer.com/jobs): jobs matched to your resume, from companies' own careers pages
 - [Interview copilot](https://orbitanswer.com/interview-copilot): live answers from your own resume, in interviews and calls where AI help is allowed
 - [Mock interviews](https://orbitanswer.com/mock-interview): practice rounds with an AI interviewer, a video interview and a scorecard
+- [LinkedIn AI](https://orbitanswer.com/linkedin-ai): a LinkedIn profile scored out of 100, the fixes to paste in, and a preview of how a recruiter search shows it
 - [Pricing](https://orbitanswer.com/pricing): plans and credit packs, in Indian rupees and US dollars
 - [Free interview warm-up](https://orbitanswer.com/warmup): practise common interview questions by speaking or typing, no account needed
 - [How Orbit works](https://orbitanswer.com/technical): measured live-answer latency, the answer pipeline, and how the desktop app protects sign-in and data

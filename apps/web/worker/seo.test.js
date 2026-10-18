@@ -12,6 +12,7 @@ import {
   robotsTxt,
 } from "./seo.js";
 import { breadcrumbs, jsonLdText, structuredDataFor } from "./site.js";
+import { faqsFor } from "./faqs.js";
 
 const SITE = "https://orbitanswer.com";
 const read = (rel) => readFileSync(new URL(rel, import.meta.url), "utf8");
@@ -391,8 +392,24 @@ describe("structured data (site.js)", () => {
   it("describes the pricing page and the copilot's and Practice's pages, with breadcrumbs (D73)", () => {
     const types = (p) => structuredDataFor(p, { title: "t", description: "d" })["@graph"].map((n) => n["@type"]);
     expect(types("/pricing")).toEqual(["Organization", "WebSite", "WebPage", "BreadcrumbList"]);
-    expect(types("/interview-copilot")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList"]);
-    expect(types("/mock-interview")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList"]);
+    expect(types("/interview-copilot")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList", "FAQPage"]);
+    expect(types("/mock-interview")).toEqual(["Organization", "WebSite", "WebPage", "WebApplication", "BreadcrumbList", "FAQPage"]);
+  });
+
+  it("states a product page's questions as FAQ markup only where the page shows them, word for word (D79)", () => {
+    for (const p of ["/resume-ai", "/jobs", "/linkedin-ai", "/interview-copilot", "/mock-interview"]) {
+      const faq = structuredDataFor(p, { title: "t", description: "d" })["@graph"].find((n) => n["@type"] === "FAQPage");
+      expect(faq.mainEntity.map((q) => [q.name, q.acceptedAnswer.text]), p).toEqual(faqsFor(p).map(([q, a]) => [q, a]));
+      expect(faq["@id"]).toBe(`${SITE}${p}#faq`);
+      for (const [q, a] of faqsFor(p)) {
+        expect(q.length + a.length, q).toBeGreaterThan(40);
+        expect(`${q} ${a}`, q).not.toMatch(/[<>]|deepseek|undetectable|guaranteed/i);
+      }
+    }
+    // Pages without a visible FAQ get none.
+    for (const p of ["/", "/pricing", "/warmup", "/contact", "/technical"]) {
+      expect(structuredDataFor(p, { title: "t", description: "d" })["@graph"].map((n) => n["@type"]), p).not.toContain("FAQPage");
+    }
   });
 
   it("numbers breadcrumbs from 1 and escapes '<' so no value can end the script", () => {

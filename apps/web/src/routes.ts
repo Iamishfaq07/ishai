@@ -24,6 +24,8 @@ const loaders = {
   pricing: () => import("./pages/Pricing"),
   copilotPublic: () => import("./pages/CopilotPublic"),
   practicePublic: () => import("./pages/PracticePublic"),
+  // LinkedIn AI's product page (the tool itself is /linkedin, signed in; D79).
+  linkedinPublic: () => import("./pages/linkedin/LinkedInPublic"),
   setup: () => import("./pages/SessionSetup"),
   live: () => import("./pages/Live"),
   sessions: () => import("./pages/Sessions"),
@@ -76,6 +78,7 @@ export const TechnicalPage = page(loaders.technical, (m) => m.TechnicalPage);
 export const PricingPage = page(loaders.pricing, (m) => m.PricingPage);
 export const CopilotPublicPage = page(loaders.copilotPublic, (m) => m.CopilotPublicPage);
 export const PracticePublicPage = page(loaders.practicePublic, (m) => m.PracticePublicPage);
+export const LinkedInPublicPage = page(loaders.linkedinPublic, (m) => m.LinkedInPublicPage);
 export const SessionSetupPage = page(loaders.setup, (m) => m.SessionSetupPage);
 export const LivePage = page(loaders.live, (m) => m.LivePage);
 export const SessionsPage = page(loaders.sessions, (m) => m.SessionsPage);
@@ -128,6 +131,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/pricing\/?$/, "pricing"],
   [/^\/interview-copilot\/?$/, "copilotPublic"],
   [/^\/mock-interview\/?$/, "practicePublic"],
+  [/^\/linkedin-ai\/?$/, "linkedinPublic"],
   [/^\/start/, "setup"],
   [/^\/live\//, "live"],
   [/^\/sessions\/[^/]+/, "sessionDetail"],

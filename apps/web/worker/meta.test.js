@@ -24,6 +24,16 @@ describe("metaFor (the Worker's per-page link previews)", () => {
       expect(description.length).toBeLessThanOrEqual(200);
     }
   });
+
+  it("gives every product page a title within 60 characters, a description of 120 to 160, and its own card (D79)", () => {
+    for (const path of ["/resume-ai", "/jobs", "/linkedin-ai", "/interview-copilot", "/mock-interview"]) {
+      const { title, description } = PAGE_META[path];
+      expect(title.length, path).toBeLessThanOrEqual(60);
+      expect(description.length, path).toBeGreaterThanOrEqual(120);
+      expect(description.length, path).toBeLessThanOrEqual(160);
+      expect(imageFor(path), path).toBe(`/og${path}.jpg`);
+    }
+  });
 });
 
 describe("imageFor (each page's preview picture)", () => {

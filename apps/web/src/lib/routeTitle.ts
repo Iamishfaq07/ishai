@@ -40,6 +40,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/pricing/, "Pricing"],
   [/^\/interview-copilot/, "Interview copilot"],
   [/^\/mock-interview/, "Mock interviews"],
+  [/^\/linkedin-ai/, "LinkedIn AI"],
   [/^\/login/, "Sign in"],
   [/^\/register/, "Create account"],
   [/^\/forgot-password/, "Reset password"],
@@ -68,8 +69,7 @@ const ROUTE_DESCRIPTIONS: Array<[RegExp, string]> = [
   [/^\/technical/, "Live latency, the answer pipeline, and how the desktop app keeps your data safe."],
   [/^\/pricing/, "Plans and credit packs in rupees and US dollars. Start free, pay once, nothing renews."],
   [/^\/interview-copilot/, "Live interview answers from your resume, in calls where AI help is allowed."],
-  [/^\/mock-interview/, "Mock interviews with an AI interviewer: follow-ups, a video round and a scorecard."],
-  [/^\/login/, "Sign in to Orbit to practise, fix your resume, and see jobs that fit you."],
+  [/^\/mock-interview/, "Mock interviews with an AI interviewer: follow-ups, a video round and a scorecard."],  [/^\/login/, "Sign in to Orbit to practise, fix your resume, and see jobs that fit you."],
   [/^\/register/, "Create a free Orbit account. No subscription. Interview practice, Resume AI and Jobs AI are included."],
   [/^\/billing/, "Buy interview minutes and Resume AI credits once. Nothing renews, and what you buy never expires."],
 ];

@@ -1,41 +1,43 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { Link } from "react-router-dom";
 import type { CreditPack } from "@orbit/types";
-import { ArrowRight, CountUp, FileText, Palette, Send, Wand2, buttonClass, cx, focusRing, isIndia, regionWords } from "@orbit/ui";
-import { api } from "../../lib/api";
-import { useCountry } from "../../lib/country";
-import { useWelcomeGrant } from "../../lib/welcome";
+import { ArrowRight, AudioLines, Briefcase, FileText, Gauge, Mail, MessagesSquare, OrbitLogo, Target, Wand2, buttonClass, cx, focusRing } from "@orbit/ui";
+import { RESUME_AI_FAQ } from "../../../worker/faqs/resume-ai.js";
 import { JOBS_AI_HOME } from "../jobs/paths";
+import { COPILOT_PAGE, PRACTICE_PAGE } from "../../marketing/catalog";
+import { Carousel, ComparisonBlock, CrossSell, FactsBand, FaqBlock, FinalCta, HeroShowcase, StepsWithUI, ToolkitGrid, usePublicData } from "../../marketing/kit";
+import { PricingSection } from "../../marketing/PricingSection";
+import { PublicLayout } from "../../marketing/PublicLayout";
+import { Container, SectionIntro } from "../../marketing/primitives";
+import { StickyCta } from "../../marketing/StickyCta";
+import type { WelcomeGrant } from "../../lib/welcome";
 import { TEMPLATES } from "./model";
 import { RESUME_AI_HOME } from "./paths";
-import { CtaBand, FeatureGrid, ProductHero, inkButton, type Feature } from "../../marketing/ProductPage";
-import { PublicLayout } from "../../marketing/PublicLayout";
-import { resumeAiFeatures, scoreTone } from "./product";
-import { MM_TO_PX, PAGE_MM, ResumePreview } from "./ResumePreview";
-import { sampleResume } from "./sample";
+import {
+  ChatbotArt,
+  ChecksArt,
+  DownloadStepArt,
+  FixArt,
+  ImportStepArt,
+  LetterArt,
+  MatchArt,
+  PrepArt,
+  ResumeHeroArt,
+  ResumeOutArt,
+  ScoreStepArt,
+  TemplateCard,
+  useTemplates,
+} from "./publicArt";
 
 /** Sign-up and sign-in from here come back to Resume AI. */
 const BACK_HERE = { from: RESUME_AI_HOME };
 
-/** The cheapest pack with resume credits, for the honest "more credits cost this" line. */
-function useCheapestResumePack(): CreditPack | null {
-  const [pack, setPack] = useState<CreditPack | null>(null);
-  useEffect(() => {
-    api
-      .listPacks()
-      .then((packs) => setPack(packs.filter((p) => p.resume_credits > 0).sort((a, b) => a.price_inr - b.price_inr)[0] ?? null))
-      .catch(() => undefined);
-  }, []);
-  return pack;
-}
-
 /** What a new account gets, said plainly: the free AI credit (from the server), what never costs one, and packs. */
-function FreeNote({ className }: { className?: string }) {
-  const welcome = useWelcomeGrant();
-  const pack = useCheapestResumePack();
+function FreeNote({ welcome, packs }: { welcome: WelcomeGrant | null; packs: CreditPack[] | null }) {
+  const pack = packs?.filter((p) => p.resume_credits > 0).sort((a, b) => a.price_inr - b.price_inr)[0] ?? null;
   const credits = welcome?.resume_credits ?? 0;
   return (
-    <p className={cx("text-sm text-zinc-600 dark:text-zinc-400", className)}>
+    <p>
       {credits > 0 && (
         <strong className="font-medium text-zinc-900 dark:text-white">
           {credits === 1 ? "Your first AI action is free." : `Your first ${credits} AI actions are free.`}{" "}
@@ -45,145 +47,154 @@ function FreeNote({ className }: { className?: string }) {
       {pack &&
         (pack.currency === "USD" && pack.price_text
           ? ` More AI credits come in packs, from ${pack.price_text} for ${pack.resume_credits}, and they never expire.`
-          : ` More AI credits come in UPI packs, from ₹${pack.price_inr.toLocaleString("en-IN")} for ${pack.resume_credits}, and they never expire.`)}
+          : ` More AI credits come in packs, from ₹${pack.price_inr.toLocaleString("en-IN")} for ${pack.resume_credits}, and they never expire.`)}
     </p>
   );
 }
 
-/** The sample resume at real size, scaled to its column and cut off with a fade, with its ATS score beside it. It's
- *  written for where the visitor applies (sample.ts). */
-function SampleResume() {
-  const sample = sampleResume(useCountry());
-  const box = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.5);
-  const pageWidth = PAGE_MM[sample.design.page].w * MM_TO_PX;
-  const pageHeight = PAGE_MM[sample.design.page].h * MM_TO_PX;
-  useLayoutEffect(() => {
-    const measure = () => setScale(Math.min(1, (box.current?.clientWidth ?? pageWidth) / pageWidth));
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (box.current) ro.observe(box.current);
-    return () => ro.disconnect();
-  }, [pageWidth]);
-  const { score } = sample;
-  // Solid, not glass: the resume's text would show through.
-  const floating = "mk-menu-shadow absolute rounded-xl mk-surface";
+function Templates() {
+  const { templates } = useTemplates();
   return (
-    <figure className="relative mx-auto w-full min-w-0 max-w-[30rem] lg:mr-0">
-      <div
-        ref={box}
-        role="img"
-        aria-label="A sample resume made with Resume AI"
-        className="mk-float relative overflow-hidden rounded-xl bg-white"
-        style={{
-          height: pageHeight * scale * 0.64,
-          maskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
-          WebkitMaskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
-        }}
-      >
-        <div aria-hidden="true" inert style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }}>
-          <ResumePreview data={sample.data} design={sample.design} decorative />
+    <section id="templates" aria-labelledby="templates-title" className="scroll-mt-20 border-t mk-line py-16 sm:py-24 lg:py-28">
+      <Container>
+        <SectionIntro
+          id="templates-title"
+          eyebrow={`${templates.length} templates`}
+          title="Switch the look. Your words stay put."
+          lead="Every template is the same resume laid out another way, so you can try them all without retyping a line. The one-column ones read cleanly in screening software."
+        />
+        <div className="mt-12">
+          <Carousel label="Resume AI's templates" count={templates.length} eager={2} render={(i, near) => <TemplateCard index={i} near={near} />} />
         </div>
-      </div>
-      {score > 0 && (
-        <div className={cx(floating, "-right-2 -top-4 flex items-center gap-3 p-3 sm:-right-6")}>
-          <span className={cx("flex h-12 w-12 flex-col items-center justify-center rounded-xl ring-1", scoreTone(score))}>
-            <CountUp to={score} from={54} className="font-display text-xl font-semibold leading-none" />
-            <span className="text-[0.625rem] leading-none">ATS</span>
-          </span>
-          <span className="pr-1 text-xs leading-tight">
-            <span className="block font-medium">ATS score</span>
-            <span className="text-zinc-500 dark:text-zinc-400">out of 100</span>
-          </span>
-        </div>
-      )}
-      <div className={cx(floating, "inset-x-3 bottom-0 p-3.5 sm:inset-x-auto sm:-left-10 sm:bottom-3 sm:w-72")}>
-        <p className="flex items-center gap-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
-          <Wand2 className="h-3.5 w-3.5" aria-hidden /> AI rewrite
-        </p>
-        <p className="mt-1.5 text-xs text-zinc-500 line-through decoration-zinc-400/70 dark:text-zinc-400">
-          Worked on Power BI dashboards for 40+ store managers to replace 12 weekly Excel reports.
-        </p>
-        <p className="mt-1 text-xs font-medium text-zinc-800 dark:text-zinc-100">
-          Built a Power BI sales dashboard used by 40+ store managers, replacing 12 weekly Excel reports.
-        </p>
-        <p className="mt-1.5 text-[0.6875rem] text-zinc-500 dark:text-zinc-400">It keeps your numbers and never makes one up.</p>
-      </div>
-      <figcaption className="sr-only">
-        A sample resume for a data analyst, scored {score} out of 100, with one of its bullets rewritten by the AI.
-      </figcaption>
-    </figure>
+      </Container>
+    </section>
   );
 }
 
 /**
- * Resume AI for signed-out visitors (at /resume-ai, where a signed-in person gets their resumes): what it does, a
- * sample, and "Start free", which signs up and comes back here. Nothing here calls the AI. The public site's product
- * page template (marketing/ProductPage.tsx) inside the shared layout.
+ * Resume AI for signed-out visitors (at /resume-ai, where a signed-in person gets their resumes), built with the
+ * product pages' section kit (DECISIONS D79): the hero with the sample resume being scored and fixed, the facts, three
+ * steps, the real templates, the toolkit as working pieces, a fair comparison, the prices, the questions, what comes
+ * next and one last action. Nothing here calls the AI; the prices and the free allowance come from the server.
  */
 export function ResumeAiPublicPage() {
-  const country = useCountry();
-  const india = isIndia(country);
-  const features: Feature[] = [
-    ...resumeAiFeatures(country).map(({ icon, title, text }) => ({ icon, title, text })),
-    {
-      icon: Palette,
-      title: `${TEMPLATES.length} templates, Word and PDF`,
-      text: `Classic, Modern, ${regionWords(country).campusTemplate}, Harvard and more, downloaded as a Word file or a PDF ready to send.`,
-    },
-    {
-      icon: Send,
-      title: "Outreach, in Jobs AI",
-      text: (
-        <>
-          {india
-            ? "Referral requests, emails to HR and your Naukri and LinkedIn profiles are written from your resume in"
-            : `Referral requests, ${regionWords(country).coldEmails} and your LinkedIn profile are written from your resume in`}{" "}
-          <Link to={JOBS_AI_HOME} className={cx("font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
-            Jobs AI
-          </Link>
-          , for the jobs you find there.
-        </>
-      ),
-    },
-  ];
+  const data = usePublicData();
+  const heroCtas = useRef<HTMLDivElement>(null);
+  const finalCta = useRef<HTMLElement>(null);
   return (
     <PublicLayout authState={BACK_HERE} context="Resume AI">
-      <ProductHero
+      <HeroShowcase
         product={{ id: "resume", name: "Resume AI", icon: FileText }}
-        title="Your resume, ready for every job."
-        lead="An ATS score, AI rewrites for every job, and interview prep from your own resume."
-        detail="Most resumes are read by screening software before a person sees them. Resume AI scores yours the way that software reads it, then helps you fix it for each job you apply to. It keeps your numbers and never makes one up."
+        title={["Your resume,", "scored and fixed."]}
+        lead="Resume AI reads your resume the way screening software does, scores it out of 100 and fixes what it finds with you, line by line. It keeps your numbers and never makes one up."
+        ctas={heroCtas}
         actions={
           <>
             <Link to="/register" state={BACK_HERE} className={buttonClass("primary", "lg", "min-h-12 px-6")}>
-              Start free <ArrowRight className="h-4 w-4" aria-hidden />
+              Score my resume free <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
-            <Link to="/login" state={BACK_HERE} className={buttonClass("secondary", "lg", "min-h-12 px-6")}>
-              I have an account
-            </Link>
+            <a href="#templates" className={buttonClass("secondary", "lg", "min-h-12 px-6")}>
+              See the templates
+            </a>
           </>
         }
-        note={<FreeNote />}
-        visual={<SampleResume />}
+        note={<FreeNote welcome={data.welcome} packs={data.packs} />}
+        visual={<ResumeHeroArt />}
       />
-      <FeatureGrid
-        id="features-title"
-        eyebrow="What Resume AI does"
-        title="Every change shown, and any of them undone."
-        lead="You see every change the AI makes to your resume, and you can undo any of them."
-        features={features}
+
+      <FactsBand
+        label="Resume AI in numbers"
+        facts={[
+          { value: 100, label: "points in the ATS score, from eight parts of the resume" },
+          { value: TEMPLATES.length, label: "templates, switched without retyping" },
+          { value: "Word, PDF", label: "downloads, both free" },
+          { value: "1/5", label: "of an AI credit for a single AI fix" },
+        ]}
+      />
+
+      <StepsWithUI
+        id="steps-title"
+        eyebrow="How it works"
+        title="From the resume you have to one you can send."
+        lead="Everything up to the download is free; AI help uses credits only when you ask for it."
+        steps={[
+          { title: "Import it, or start fresh", text: "Upload a PDF or Word file, or LinkedIn's PDF of your profile, and it's read into sections you can edit. Or start from a template.", ui: <ImportStepArt /> },
+          { title: "Score it, then tailor it", text: "Work through the fixes the score shows, then paste a job post to see which of its keywords you cover and make a copy for that job.", ui: <ScoreStepArt /> },
+          { title: "Download it", text: "Word or PDF, the pages you previewed, as real text screening software reads. Downloads are free, as often as you like.", ui: <DownloadStepArt /> },
+        ]}
+      />
+
+      <Templates />
+
+      <ToolkitGrid
+        id="toolkit-title"
+        eyebrow="The toolkit"
+        title="Every tool works from the same resume."
+        lead="Each one shows you what it changes before anything changes, and you can undo any of it."
         band
+        tools={[
+          { title: "Fix with AI", icon: Wand2, text: "Pick a check that failed and the AI rewrites exactly that line or section. You see the change marked, then keep it or undo it.", widget: <FixArt />, wide: true },
+          { title: "The ATS check", icon: Gauge, text: "Out of 100, part by part, the same way every time, with the fix for every point it misses.", widget: <ChecksArt /> },
+          { title: "Job-post match", icon: Briefcase, text: "Paste a job post to see its keywords: the ones your resume covers, and the ones it doesn't yet.", widget: <MatchArt /> },
+          { title: "Cover letters", icon: Mail, text: "Written from your resume and the job post, in the tone and length you choose.", widget: <LetterArt /> },
+          { title: "Interview prep", icon: MessagesSquare, text: "The questions your resume will get you asked, and the skills the job wants that it doesn't show yet.", widget: <PrepArt /> },
+        ]}
       />
-      <CtaBand
-        id="cta-title"
-        title="See what your resume scores."
-        text="Create a free Orbit account, import the resume you have, and get its ATS score in a minute. The same account has Orbit's interview copilot for when the interviews come."
-        actions={
-          <Link to="/register" state={BACK_HERE} className={inkButton.primary}>
-            Start free <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
+
+      <ComparisonBlock
+        id="compare-title"
+        eyebrow="Why not just ask a chatbot?"
+        title={
+          <>
+            A chatbot gives you text. <span className="text-indigo-700 dark:text-indigo-300">Resume AI gives you a resume.</span>
+          </>
         }
+        lead="A general chatbot can rewrite a resume well. What it hands back is the words; Resume AI hands back the finished file, checked."
+        left={{
+          name: "A general chatbot",
+          tag: "Plain text",
+          visual: <ChatbotArt />,
+          lines: ["Plain text: you lay it out and format it yourself", "No score, and no list of what's missing", "You check the job post's keywords by eye", "Rewritten in one go: you find what changed"],
+        }}
+        right={{
+          name: "Orbit Resume AI",
+          tag: "Ready to send",
+          mark: <OrbitLogo size={20} animated={false} />,
+          visual: <ResumeOutArt />,
+          lines: ["Laid out in a template, as Word or PDF", "A score out of 100, with a fix for every missing point", "The job post's keywords, matched one by one", "Every change marked, to keep or undo", "Your own numbers kept, none invented"],
+        }}
+      />
+
+      <PricingSection
+        packs={data.packs}
+        monthly={data.monthly}
+        welcome={data.welcome}
+        stats={data.stats}
+        title="Free to build. Pay once for AI help."
+        lead="Editing, the score and downloads are free for good. AI credits come with a plan or in packs that never expire, and nothing renews."
+      />
+
+      <FaqBlock id="faq-title" items={RESUME_AI_FAQ} />
+
+      <CrossSell
+        id="next-title"
+        eyebrow="The same account"
+        title="After the resume, the interview."
+        lead="Your resume carries over: Jobs AI finds jobs that fit it, Practice asks about it, and the copilot answers from it."
+        items={[
+          { product: { id: "jobs", name: "Jobs AI", icon: Briefcase }, title: "Jobs that fit this resume", text: "New openings from companies' own careers pages, matched to it, with a free AI fit check and a tracker.", to: JOBS_AI_HOME, cta: "See Jobs AI" },
+          { product: { id: "practice", name: "Practice", icon: Target }, title: "Practise the questions it raises", text: "A mock interview built from your resume and the job post, then a score for every answer.", to: PRACTICE_PAGE, cta: "See mock interviews" },
+          { product: { id: "copilot", name: "Interview copilot", icon: AudioLines }, title: "Answers from it, live", text: "In calls where AI help is allowed, suggested answers built from your resume as the question is asked.", to: COPILOT_PAGE, cta: "See the copilot" },
+        ]}
+      />
+
+      <FinalCta
+        id="cta-title"
+        innerRef={finalCta}
+        title={["See what your resume scores.", "Then fix it, line by line."]}
+        text="Create a free Orbit account, import the resume you have, and get its ATS score in a minute."
+        primary={{ to: "/register", label: "Score my resume free", state: BACK_HERE }}
+        secondary={{ to: "/login", label: "I have an account", state: BACK_HERE }}
         footnote={
           <>
             Looking for jobs too?{" "}
@@ -194,6 +205,7 @@ export function ResumeAiPublicPage() {
           </>
         }
       />
+      <StickyCta after={heroCtas} before={finalCta} line="Your resume's ATS score, free." />
     </PublicLayout>
   );
 }
