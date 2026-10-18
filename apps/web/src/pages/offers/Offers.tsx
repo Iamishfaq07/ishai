@@ -155,7 +155,7 @@ function Compare({ offers }: { offers: JobOfferRecord[] }) {
         <Spot kind="compare" /> Side by side
       </h2>
       {currencies.size > 1 && <p className="mb-2 text-sm text-amber-800 dark:text-amber-200">These offers are in different currencies, so the best on each row isn't marked.</p>}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Offers side by side (scrolls sideways)">
         <table className="w-full min-w-[28rem] text-sm">
           <thead>
             <tr className="text-left">

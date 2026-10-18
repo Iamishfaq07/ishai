@@ -1213,7 +1213,7 @@ const ScaledPage = memo(function ScaledPage({
         )}
       </div>
       <div ref={box} className="relative w-full" aria-label={`Resume preview, ${pages} page${pages === 1 ? "" : "s"}`} role="img" style={{ height: realHeight * scale }}>
-        <div ref={page} data-resume-preview="" style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
+        <div ref={page} data-resume-preview="" inert style={{ transform: `scale(${scale})`, transformOrigin: "top left", width: "max-content" }} className="overflow-hidden rounded-sm shadow-xl ring-1 ring-black/5">
           <ResumePreview data={data} design={design} />
         </div>
         {guides.map((y, i) => (

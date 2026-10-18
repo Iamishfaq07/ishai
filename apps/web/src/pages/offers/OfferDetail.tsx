@@ -29,7 +29,7 @@ export function OfferDetailPage() {
         ) : offer ? (
           <Detail offer={offer} onChange={replace} onDeleted={() => offers.setData((prev) => (prev ?? []).filter((o) => o.id !== offer.id))} />
         ) : (
-          <CosmicEmptyState variant="no-results" title="That offer isn't here" body="It may have been deleted." action={<Link to={OFFERS_HOME} className="text-indigo-600 underline">See your offers</Link>} />
+          <CosmicEmptyState variant="no-results" title="That offer isn't here" body="It may have been deleted." action={<Link to={OFFERS_HOME} className="text-indigo-700 underline dark:text-indigo-300">See your offers</Link>} />
         )}
       </LoadGate>
     </>
