@@ -85,3 +85,41 @@ html.glass-low body {
 html.dark.glass-low body {
   text-shadow: 0 1px 1px rgb(0 0 0 / 0.9);
 }
+
+/* Continue with Google (Login.tsx, D81), to Google's branding guidelines like the web's .mk-google: the standard "G",
+   40 px tall, 12 px padding, 10 px between the G and the label, Medium 14/20, white with a #747775 hairline in light
+   mode and #131314 with #8E918F in dark mode. */
+.google-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-family: "Google Sans Signin", "Google Sans", Roboto, Arial, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.25px;
+  background: #ffffff;
+  color: #1f1f1f;
+  box-shadow: inset 0 0 0 1px #747775;
+  transition: background-color 120ms ease-out;
+}
+.google-button:hover {
+  background: #f8f9fa;
+}
+html.dark .google-button {
+  background: #131314;
+  color: #e3e3e3;
+  box-shadow: inset 0 0 0 1px #8e918f;
+}
+html.dark .google-button:hover {
+  background: #1b1b1d;
+}
+.google-button img {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
