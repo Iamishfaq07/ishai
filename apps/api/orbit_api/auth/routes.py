@@ -737,3 +737,6 @@ async def export_my_data(user: Annotated[User, Depends(current_user)],
 from orbit_api.auth.google import mount as _mount_google  # noqa: E402
 
 _mount_google(router)
+from orbit_api.auth.desktop_sign_in import mount as _mount_desktop_sign_in  # noqa: E402
+
+_mount_desktop_sign_in(router)

@@ -24,6 +24,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
+from orbit_api.auth import desktop_sign_in
+from orbit_api.auth.desktop_sign_in import Desktop
 from orbit_api.auth.security import (
     create_access_token,
     drop_cookie,
@@ -97,13 +99,16 @@ def _home(path: str) -> str:
     return f"{get_settings().web_url.rstrip('/')}{path}"
 
 
-def _pack(state: str, verifier: str, nxt: str, uri: str, ref: str | None = None) -> str:
+def _pack(state: str, verifier: str, nxt: str, uri: str, ref: str | None = None,
+          desktop: Desktop | None = None) -> str:
     """The signed state cookie. `ref`: the invite or creator code of the link they came from (billing/referrals.py),
-    carried through Google's page to the new account."""
+    carried through Google's page to the new account. `desktop`: where a desktop app's sign-in returns (D81)."""
     secret = get_settings().jwt_secret.get_secret_value()
     claims: dict[str, Any] = {"st": state, "cv": verifier, "nx": nxt, "ru": uri, "exp": int(time.time()) + 600}
     if ref:
         claims["rf"] = ref
+    if desktop:
+        claims.update(desktop_sign_in.claims(desktop))
     return jwt.encode(claims, secret, algorithm="HS256")
 
 
@@ -254,29 +259,41 @@ def _ip(request: Request) -> str | None:
     return None if ip == "unknown" else ip
 
 
+def _refuse(request: Request, code: str, desktop: Desktop | None) -> RedirectResponse:
+    """Back where the sign-in started, saying why: the desktop app's listener (D81), else the web sign-in page."""
+    response = RedirectResponse(desktop_sign_in.loopback(desktop, error=code) if desktop else _login_url(code),
+                                status_code=302)
+    _clear_state(response, request)
+    return response
+
+
 def mount(router: APIRouter) -> None:
     # Imported here: this module is loaded at the bottom of routes, once auth_limit exists.
     from orbit_api.auth.routes import auth_limit
 
-    def over_limit(request: Request) -> RedirectResponse | None:
-        """The sign-in limit, answered as a trip back to the sign-in page: the browser is on the API's own address for
-        these two routes, so a 429 would leave it on bare JSON."""
+    def over_limit(request: Request, desktop: Desktop | None) -> RedirectResponse | None:
+        """The sign-in limit, answered as a trip back to the sign-in page (or the desktop app): the browser is on the
+        API's own address for these two routes, so a 429 would leave it on bare JSON."""
         try:
             auth_limit(request)
         except HTTPException:
-            response = RedirectResponse(_login_url("busy"), status_code=302)
-            _clear_state(response, request)
-            return response
+            return _refuse(request, "busy", desktop)
         return None
 
     @router.get("/google/start")
-    async def google_start(request: Request, next: str = "/", ref: str | None = None) -> RedirectResponse:
+    async def google_start(request: Request, next: str = "/", ref: str | None = None,
+                           desktop_port: str | None = None, desktop_challenge: str | None = None,
+                           desktop_state: str | None = None) -> RedirectResponse:
         from orbit_api.billing import referrals
 
-        if (busy := over_limit(request)) is not None:
+        desktop = desktop_sign_in.parse(desktop_port, desktop_challenge, desktop_state)
+        if desktop is None and desktop_sign_in.requested(desktop_port, desktop_challenge, desktop_state):
+            # Half a desktop request, or a port outside 1024-65535: nowhere safe to send the browser but the site.
+            return _refuse(request, "google", None)
+        if (busy := over_limit(request, desktop)) is not None:
             return busy
         if not get_settings().google_enabled:  # a stale link or bookmark: the button isn't shown then
-            return RedirectResponse(_login_url("google_off"), status_code=302)
+            return _refuse(request, "google_off", desktop)
         state = secrets.token_urlsafe(24)
         verifier = secrets.token_urlsafe(64)
         uri = redirect_uri(request)
@@ -294,7 +311,7 @@ def mount(router: APIRouter) -> None:
         response = RedirectResponse(f"{_AUTH_URL}?{query}", status_code=302)
         # A link's code: the web app sends it along (else its first-party cookie); a sign-up through Google keeps it.
         code = referrals.normalize(ref or request.cookies.get(referrals.REF_COOKIE))
-        _set_state(response, request, _pack(state, verifier, nxt, uri, code))
+        _set_state(response, request, _pack(state, verifier, nxt, uri, code, desktop))
         return response
 
     @router.get("/google/callback")
@@ -303,26 +320,27 @@ def mount(router: APIRouter) -> None:
         db: Annotated[AsyncSession, Depends(get_db)],
         code: str = "",
         state: str = "",
+        error: str = "",
     ) -> RedirectResponse:
-        if (busy := over_limit(request)) is not None:
-            return busy
         packed = _unpack(request.cookies.get(GOOGLE_COOKIE, ""))
+        desktop = desktop_sign_in.from_claims(packed) if packed else None
+        if (busy := over_limit(request, desktop)) is not None:
+            return busy
         mismatch = packed is None or not secrets.compare_digest(packed["st"], state) or not code
         if packed is None or not get_settings().google_enabled or mismatch:
-            response = RedirectResponse(_login_url("google"), status_code=302)
-            _clear_state(response, request)
-            return response
+            # "Cancel" on Google's page comes back with ?error=access_denied and no code: the app says so.
+            return _refuse(request, "denied" if desktop and error == "access_denied" else "google", desktop)
         try:
             ident = await fetch_identity(code, packed["cv"], packed["ru"])
             from orbit_api.billing.referrals import REF_COOKIE
 
             ref = packed.get("rf") if isinstance(packed.get("rf"), str) else request.cookies.get(REF_COOKIE)
             user, created, claimed = await _find_or_create(db, request, ident, ref)
+            if desktop:
+                return _desktop_signed_in(request, user, desktop)
             return await _signed_in(db, request, user, created, claimed, packed["nx"])
         except GoogleDenied as denied:
-            response = RedirectResponse(_login_url(denied.code), status_code=302)
-            _clear_state(response, request)
-            return response
+            return _refuse(request, denied.code, desktop)
         except Exception:
             # The browser is on the API's own address here: a database error (or anything unexpected) must not
             # leave it on a bare "Internal Server Error" page. What wasn't committed is rolled back (an account is
@@ -330,9 +348,17 @@ def mount(router: APIRouter) -> None:
             log.exception("google sign-in failed")
             with contextlib.suppress(Exception):
                 await db.rollback()
-            response = RedirectResponse(_login_url("server"), status_code=302)
-            _clear_state(response, request)
-            return response
+            return _refuse(request, "server", desktop)
+
+
+def _desktop_signed_in(request: Request, user: User, desktop: Desktop) -> RedirectResponse:
+    """A desktop sign-in (D81): no web session here. A 60-second, single-use code bound to the app's PKCE challenge goes
+    to its listener on 127.0.0.1; the app trades it at POST /v1/auth/desktop/exchange, where two-step sign-in (if on)
+    is asked for as after a password."""
+    response = RedirectResponse(desktop_sign_in.loopback(desktop, code=desktop_sign_in.mint(user, desktop)),
+                                status_code=302)
+    _clear_state(response, request)
+    return response
 
 
 async def _signed_in(db: AsyncSession, request: Request, user: User, created: bool, claimed: bool,

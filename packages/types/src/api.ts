@@ -98,6 +98,16 @@ export interface TwoFactorChallenge {
   challenge: string;
 }
 
+/**
+ * POST /v1/auth/desktop/exchange (D81): the desktop app's Continue with Google. `code` came back to its loopback
+ * listener from the browser; `verifier` is the PKCE verifier whose S256 challenge started the sign-in. Answers like
+ * POST /v1/auth/login: an AuthResponse with `access_token`, or a TwoFactorChallenge.
+ */
+export interface DesktopExchangeRequest {
+  code: string;
+  verifier: string;
+}
+
 /** GET /v1/auth/passkeys: one passkey (only its public key is on the server). */
 export interface Passkey {
   id: string;

@@ -447,6 +447,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/jobs/alerts/off"),
     # Google sign-in: the redirect out and back, before anyone is signed in (the state cookie guards the return).
     ("GET", "/v1/auth/google/start"), ("GET", "/v1/auth/google/callback"),
+    # The desktop app's Google sign-in (D81): the loopback code and its PKCE verifier are the credential.
+    ("POST", "/v1/auth/desktop/exchange"),
     # What an invite link's code gives, for the sign-up page (a creator's or campus's label at most, never an
     # inviter's name).
     ("GET", "/v1/referrals/codes/{code}"),
