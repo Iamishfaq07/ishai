@@ -459,17 +459,28 @@ class _Checker:
             named = find_cities(self.corpus)
             if not loc or (city not in self.corpus_low and not any(c.lower() == city for _, c, _ in named)):
                 continue  # a place nobody named
+            if city in _COUNTRY_WORDS or city.removeprefix("the ") in _COUNTRY_WORDS:
+                continue  # "India, IN" is where remote applicants may live, not a place of work
             out.append(loc)
         return list(dict.fromkeys(out))
 
     def countries(self, v: Any) -> list[str]:
         return list(dict.fromkeys(c.upper() for c in _strs(v, 60, 2) if len(c) == 2 and c.isalpha()))
 
+    def unstated_language(self, text: str) -> bool:
+        """`text` asks for a language the recruiter never named (a model adding "Marathi" for a Mumbai job)."""
+        return any(re.search(rf"\b{lang}\b", text, re.IGNORECASE) and not
+                   re.search(rf"\b{lang}\b", self.corpus, re.IGNORECASE) for lang in _LANGUAGE_NAMES)
+
     def requirement_list(self, v: Any) -> list[str]:
         out = []
         for item in _strs(v, MAX_REQUIREMENTS + 5, 160):
             if screens_on_person(item):
                 self.note(REFUSED_NOTE.format(said=item[:60]))
+                continue
+            # Where, the right to work and when: screening questions ask those; the ranking reads must-haves
+            # against the resume, which can't show them.
+            if _LOGISTICS.search(item) or self.unstated_language(item):
                 continue
             t = self.g.text(item)
             if t:
@@ -537,6 +548,8 @@ class _Checker:
             if asks_protected(text) or screens_on_person(text):
                 self.note(f"Dropped a screening question about a personal characteristic or pay history: "
                           f"'{text[:80]}'")
+                continue
+            if self.unstated_language(text):
                 continue
             text = self.g.text(text, drop_if_invented=False)
             if not text:
@@ -606,6 +619,18 @@ class _Checker:
         return md[:12_000]
 
 
+_LOGISTICS = re.compile(r"right\s+to\s+work|authori[sz](?:ed|ation)\s+to\s+work|work\s+permit|\bvisa\b|"
+                        r"(?:able|ability|willing(?:ness)?)\s+to\s+(?:work|commute|relocate)\s+(?:from|in|on|at|to)|"
+                        r"\bwork\s+from\s+(?:the|our)\b|\bon[- ]?site\s+in\b|"
+                        r"\bimmediate(?:ly)?\s+(?:availab|join|start)|"
+                        r"\bavailab(?:le|ility)\s+(?:to\s+(?:join|start)|immediately|for\s+the\s+full)|"
+                        r"open\s+to\s+freshers|no\s+(?:prior\s+)?experience\s+(?:needed|required)", re.IGNORECASE)
+_LANGUAGE_NAMES = ("Hindi", "Marathi", "Kannada", "Tamil", "Telugu", "Malayalam", "Bengali", "Gujarati", "Punjabi",
+                   "Urdu", "Odia", "Assamese", "Arabic", "French", "German", "Spanish", "Japanese", "Mandarin",
+                   "Portuguese", "Italian", "Dutch")
+_COUNTRY_WORDS = frozenset({*(n.lower().removeprefix("the ") for n in COUNTRY_NAMES.values()), "usa", "us", "uk",
+                            "europe", "eu", "emea", "apac", "anywhere", "worldwide", "remote"})
+
 _COMMON_WORDS = frozenset("""
 have with your this that what work able years year experience many much from there they them will would could
 should about into does done like more most other some such than then very when where which while who whom whose
@@ -647,8 +672,9 @@ Rules:
   company profile gives facts, "About {company}". Describe the work itself; address the reader as "you". No
   benefits or perks section unless the recruiter gave them.
 - "must_haves": 3-8 short requirements stated or directly implied by the role ("React" for a React developer, "5+
-  years of professional experience" only if they said 5+). "nice_to_haves": 0-5. Never turn a nice-to-have into a
-  must-have.
+  years of professional experience" only if they said 5+): skills and experience a resume can show. Not the place,
+  the right to work or a start date (the questions ask those), and no language the recruiter didn't name.
+  "nice_to_haves": 0-5. Never turn a nice-to-have into a must-have.
 - "questions": 2-6 quick screening questions. A knock-out only for a hard requirement the recruiter stated: the
   right to work where the job is ({"equals": "yes"}), being able to work from the stated place for on-site or
   hybrid jobs, a minimum of years ({"min": N}, only an N the recruiter gave), a language they named, an immediate
@@ -850,14 +876,16 @@ async def _fill(request: JobFillRequest, use_model: bool) -> JobFill:
     model_assumptions = sink.get("assumptions", [])
     if facts.pay is None and fields.salary_min is None and fields.salary_max is None:
         model_assumptions = [a for a in model_assumptions if not re.search(r"salary|pay|ctc|lpa|stipend", a, re.I)]
-    server = [a for a in assumptions if not a.startswith(("Assumed full-time", "Set the level"))
-              or not _covered(a, model_assumptions)]
-    return _finish(fields, None, [*model_assumptions, *server], [*refused, *sink.get("notes", [])], "ai")
+    # The server's own reading goes first (it's what the form now holds); the model's notes on the same topic go.
+    topics = [t for t in _TOPICS if any(t.search(a) for a in assumptions)]
+    model_assumptions = [a for a in model_assumptions if not any(t.search(a) for t in topics)]
+    return _finish(fields, None, [*assumptions, *model_assumptions], [*refused, *sink.get("notes", [])], "ai")
 
 
-def _covered(assumption: str, others: list[str]) -> bool:
-    key = "full-time" if "full-time" in assumption else "level"
-    return any(key in o.lower() for o in others)
+_TOPICS = (re.compile(r"full[- ]time", re.I), re.compile(r"on[- ]?site|remote|hybrid", re.I),
+           re.compile(r"\blevel\b|senior|junior|entry|mid[- ]level|\blead\b", re.I),
+           re.compile(r"salary|\bpay\b|stipend|\bctc\b|lpa|inr|usd|eur|gbp|aed|[$€£₹]|a year|a month", re.I),
+           re.compile(r"europe", re.I))
 
 
 # ---- refine --------------------------------------------------------------------------------------------------------

@@ -454,3 +454,20 @@ def test_route_through_the_real_module_with_the_mock_model(client: TestClient, u
     d = r.json()
     assert d["source"] == "ai" and d["workplace"] == "remote" and d["salary_currency"] == "USD"
     assert "<h3>" in d["description_html"]
+
+
+async def test_live_eval_findings_are_cleaned(use) -> None:  # type: ignore[no-untyped-def]
+    """What the live eval showed a model doing: a country as a place of work, logistics as must-haves, a language
+    nobody asked for, and the same assumption twice."""
+    use(Scripted(_answer(
+        locations=["India", "Bengaluru, IN"], workplace="remote",
+        must_haves=["React", "Right to work in India", "Ability to work from Bengaluru (hybrid)",
+                    "Comfort speaking Marathi", "Immediate availability to join"],
+        questions=[{"text": "Do you speak Kannada?", "kind": "yes_no", "knockout": None},
+                   {"text": "Are you authorised to work in India?", "kind": "yes_no", "knockout": {"equals": "yes"}}],
+        assumptions=["Assumed INR a year because you said LPA.", "Assumed the team ships weekly."])))
+    out = await fill_job(JobFillRequest(description="Senior React developer, Bengaluru hybrid, 18-28 LPA", company=CO))
+    assert out.locations == ["Bengaluru, IN"]
+    assert out.must_haves == ["React"]
+    assert [q.text for q in out.questions] == ["Are you authorised to work in India?"]
+    assert sum("LPA" in a for a in out.assumptions) == 1 and "Assumed the team ships weekly." in out.assumptions

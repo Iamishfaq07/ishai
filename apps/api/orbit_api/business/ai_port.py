@@ -1,5 +1,6 @@
 """The AI that Orbit for Business uses, behind a port: writing a job description from a brief, parsing an applicant's
-resume, and ranking an applicant against a job with reasons.
+resume, ranking an applicant against a job with reasons, and filling the job form from a few words (the job
+assistant, D85: business_ai.fill_job; the fake answers with its deterministic path).
 
 The real implementation is `orbit_api.business_ai` (D83), adapted by `ModuleAI`. In tests, or with
 ORBIT_BUSINESS_AI=fake, the deterministic `FakeBusinessAI` here answers: it never calls a model, so it costs nothing

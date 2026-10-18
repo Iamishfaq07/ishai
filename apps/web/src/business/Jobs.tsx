@@ -440,12 +440,12 @@ const ASSISTANT_KEY = "orbit.biz.assistant";
 function AiMark({ field, marks, onUndo, children, className }: { field: BizAssistField; marks: Marks; onUndo: (f: BizAssistField) => void; children: ReactNode; className?: string }) {
   const on = field in marks;
   return (
-    <div className={cx("relative rounded-lg transition-shadow", on && "ring-1 ring-indigo-300 ring-offset-4 ring-offset-white dark:ring-indigo-400/40 dark:ring-offset-zinc-900", className)} data-ai-field={on ? field : undefined}>
+    <div className={cx("relative rounded-lg transition-shadow", on && "-mx-2 bg-indigo-50/60 px-2 py-1.5 ring-1 ring-indigo-200 dark:bg-indigo-500/10 dark:ring-indigo-400/30", className)} data-ai-field={on ? field : undefined}>
       {children}
       {on && (
-        <span className="absolute -top-3 right-0 z-[1] inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 py-0.5 pl-2 pr-0.5 text-[11px] font-medium text-indigo-800 dark:border-indigo-400/30 dark:bg-indigo-950 dark:text-indigo-200">
+        <span className="absolute -top-3 right-0 z-[1] inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white py-0.5 pl-2 pr-0.5 text-xs font-medium text-indigo-700 dark:border-indigo-400/30 dark:bg-zinc-900 dark:text-indigo-300">
           <Sparkles className="h-3 w-3" aria-hidden /> AI
-          <button type="button" onClick={() => onUndo(field)} aria-label={`Undo the AI's ${FIELD_LABEL[field]}`} className={cx("rounded-full px-1.5 py-px hover:bg-indigo-100 dark:hover:bg-indigo-900", focusRing)}>
+          <button type="button" onClick={() => onUndo(field)} aria-label={`Undo the AI's ${FIELD_LABEL[field]}`} className={cx("rounded-full px-1.5 hover:bg-zinc-100 dark:hover:bg-white/10", focusRing)}>
             Undo
           </button>
         </span>
@@ -575,7 +575,7 @@ export function JobEditor() {
   };
 
   const showDocked = canEdit && wide && docked;
-  const assistant = (onClose: () => void, closeLabel: string) => (
+  const assistant = (onClose: () => void, closeLabel: string, inSheet = false) => (
     <Suspense fallback={<Loading />}>
       <JobAssistant
         companyId={company.id}
@@ -589,6 +589,7 @@ export function JobEditor() {
         disabled={!canEdit}
         onClose={onClose}
         closeLabel={closeLabel}
+        inSheet={inSheet}
       />
     </Suspense>
   );
@@ -841,8 +842,8 @@ export function JobEditor() {
         </aside>
       )}
       {canEdit && !wide && (
-        <Dialog open={sheet} onClose={() => setSheet(false)} title="Fill with AI" size="lg">
-          {assistant(() => setSheet(false), "Back to the form")}
+        <Dialog open={sheet} onClose={() => setSheet(false)} title="Orbit assistant" size="lg">
+          {assistant(() => setSheet(false), "Back to the form", true)}
         </Dialog>
       )}
     </div>

@@ -320,6 +320,11 @@ notes, scorecards) · interviewer (only applications whose `interviewers` includ
 - Plan: `GET …/plan` → BizPlanStatus · `POST …/plan/request {plan}` (Starter or Growth; the Orbit team grants it).
 - Jobs: `GET …/jobs` → BizJobListItem[] · `POST …/jobs` (BizJobInput, a draft) · `GET|PATCH …/jobs/{jid}` ·
   `POST …/jobs/{jid}/publish|pause|close|reopen` · `POST …/jobs/draft {BizJobBrief}` → BizJobDraft (the AI writer).
+- Job assistant (D85): `POST …/jobs/assist` BizJobAssistInput → BizJobAssist. A fill: `prompt` (+ `title`, `location`,
+  `salary`, `experience`, `pasted`); a refine: `instruction` + `current` (the form). Returns every job field in
+  BizJobInput names with `description_html`, `stages` (null: keep), `assumptions`, `inclusive_language_notes`,
+  `changed_fields`, `source` ("ai" | "template"). Pay is only ever what the recruiter wrote. Nothing is saved; shares
+  the AI writer's daily limit (429).
 - Applications: `GET …/jobs/{jid}/applications?stage=&q=&tag=&sort=score|applied|name&reveal=` →
   BizApplicationList · `GET …/applications/{aid}?reveal=` → BizApplicationDetail · `POST …/applications/move
   {ids, stage_id, notify}` · `POST …/applications/reject {ids, send_email, subject?, body?}` ·

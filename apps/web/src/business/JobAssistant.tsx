@@ -9,8 +9,8 @@ import { EXAMPLES, REFINES, SALARY_HINT, turnFrom, type Applied, type PanelState
 import { errorText } from "./ui";
 
 const chip = cx(
-  "rounded-full border border-zinc-200 bg-white px-3 py-1 text-left text-xs text-zinc-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-900",
-  "dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:border-indigo-400/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-100",
+  "rounded-full border border-zinc-200 bg-white px-3 py-1 text-left text-xs text-zinc-700 transition-colors hover:border-indigo-300 hover:bg-indigo-50",
+  "dark:border-white/10 dark:bg-white/5 dark:text-zinc-300 dark:hover:bg-white/10",
   focusRing,
 );
 
@@ -31,9 +31,11 @@ export interface JobAssistantProps {
   /** Collapse the panel (wide screens) or close the sheet (phones). */
   onClose?: () => void;
   closeLabel?: string;
+  /** Inside the phone sheet: the sheet has the title and the close button; a "Review the form" button follows a fill. */
+  inSheet?: boolean;
 }
 
-export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer, marked, onUndoAll, salaryMissing, disabled, onClose, closeLabel = "Hide the assistant" }: JobAssistantProps) {
+export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer, marked, onUndoAll, salaryMissing, disabled, onClose, closeLabel = "Hide the assistant", inSheet = false }: JobAssistantProps) {
   const id = useId();
   const [busy, setBusy] = useState<"fill" | "refine" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +83,8 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
   };
 
   return (
-    <section aria-labelledby={`${id}-h`} className="overflow-hidden rounded-2xl border border-indigo-200/70 bg-white shadow-sm dark:border-indigo-400/20 dark:bg-zinc-900/70">
-      <div className="flex items-center justify-between gap-2 border-b border-indigo-100 bg-gradient-to-r from-indigo-50 to-white px-4 py-3 dark:border-indigo-400/15 dark:from-indigo-500/10 dark:to-transparent">
+    <section aria-labelledby={inSheet ? undefined : `${id}-h`} aria-label={inSheet ? "Orbit assistant" : undefined} className={inSheet ? "" : "overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-zinc-900/60"}>
+      {!inSheet && <div className="flex items-center justify-between gap-2 border-b border-zinc-200 bg-indigo-50/60 px-4 py-3 dark:border-white/10 dark:bg-indigo-500/10">
         <h2 id={`${id}-h`} className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
           <span className="grid h-7 w-7 place-items-center rounded-lg bg-indigo-600 text-white dark:bg-indigo-500" aria-hidden>
             <Sparkles className="h-4 w-4" />
@@ -94,9 +96,9 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
             {closeLabel}
           </button>
         )}
-      </div>
+      </div>}
 
-      <div className="space-y-4 p-4">
+      <div className={inSheet ? "space-y-4 px-5 pb-5 pt-1" : "space-y-4 p-4"}>
         <form onSubmit={(e) => void fill(e)} className="space-y-3" noValidate>
           <Field label="Describe the job in a few words" htmlFor={`${id}-p`} hint="Role, place, pay, experience: whatever you know. Orbit fills the form; you review it.">
             <Textarea
@@ -158,7 +160,7 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
 
         <div role="status" aria-live="polite" className="space-y-3">
           {last && (
-            <div className="space-y-2 rounded-xl border border-zinc-200 bg-zinc-50/70 p-3 text-sm dark:border-white/10 dark:bg-white/[0.03]">
+            <div className="space-y-2 rounded-xl border border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-white/10 dark:bg-white/5">
               <p className="font-medium text-zinc-900 dark:text-white">{last.summary}</p>
               {last.template && <p className="text-amber-800 dark:text-amber-300">We couldn't reach the AI writer, so this is what you wrote, laid out. It's in the editor: fill in the rest there.</p>}
               {last.assumptions.length > 0 && (
@@ -186,6 +188,11 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
             </div>
           )}
         </div>
+        {inSheet && last && onClose && (
+          <Button type="button" className="w-full" onClick={onClose}>
+            Review the form
+          </Button>
+        )}
         {marked > 0 && (
           <Button type="button" variant="secondary" size="sm" onClick={onUndoAll} disabled={disabled || !!busy}>
             Undo fill ({marked} field{marked === 1 ? "" : "s"})
@@ -221,7 +228,7 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
                   .slice(0, -1)
                   .reverse()
                   .map((t) => (
-                    <li key={t.id} className="rounded-lg bg-zinc-50 px-2.5 py-1.5 dark:bg-white/[0.03]">
+                    <li key={t.id} className="rounded-lg bg-zinc-50 px-2.5 py-1.5 dark:bg-white/5">
                       <span className="font-medium text-zinc-800 dark:text-zinc-200">{t.kind === "fill" ? "Filled" : `“${t.said}”`}</span> · {t.summary}
                     </li>
                   ))}
