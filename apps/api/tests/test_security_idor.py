@@ -460,7 +460,7 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/v1/apply/{packet_id}/resume.pdf"),
     # Orbit for Business (D82): the careers pages, their sitemap and a company's logo are public by design; applying
     # and reporting a job work signed out (rate-limited, the bot check when configured); an invite's lookup shows
-    # only the company and a masked address; the applicant's status page is reached by its emailed HMAC link.
+    # only the company and a masked address; the applicant's high-entropy emailed link is its own credential.
     ("GET", "/v1/public/business/companies/{slug}"), ("GET", "/v1/public/business/companies/{slug}/jobs/{job_slug}"),
     ("GET", "/v1/public/business/companies/{slug}/logo"), ("GET", "/v1/public/business/sitemap"),
     ("POST", "/v1/public/business/jobs/{job_id}/apply"), ("POST", "/v1/public/business/jobs/{job_id}/report"),
@@ -469,6 +469,11 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/public/business/applications/{token}/confirm"),
     ("POST", "/v1/public/business/applications/{token}/book"),
     ("POST", "/v1/public/business/applications/{token}/delete-request"),
+    # Hiring Studio uses that same application-token boundary (tested with missing/deleted tokens and valid bodies).
+    ("GET", "/v1/public/business/applications/{token}/work-sample"),
+    ("POST", "/v1/public/business/applications/{token}/work-sample"),
+    ("POST", "/v1/public/business/applications/{token}/clarification"),
+    ("GET", "/v1/public/business/applications/{token}/calendar.ics"),
 })
 
 

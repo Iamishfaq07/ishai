@@ -30,6 +30,8 @@ import { useAuth } from "../lib/auth";
 import { handOff } from "../lib/prerender";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { biz } from "./api";
+import { CandidateChallenge } from "./CandidateChallenge";
+import { hiringApi } from "./hiringApi";
 import { EMAIL_RE, EMPLOYMENT_LABEL, EXPERIENCE_LABEL, careersPath, dayTime, publicJobPath, resumeFileProblem, salaryLine } from "./model";
 import { errorText } from "./ui";
 
@@ -610,11 +612,13 @@ export function ApplicationStatusPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [slot, setSlot] = useState<string>("");
+  const [changingTime, setChangingTime] = useState(false);
   useDocumentTitle("Your application | Orbit", null, true);
   const confirmNow = params.get("confirm") === "1";
 
   useEffect(() => {
     let live = true;
+    setData(null); setError(null); setSlot(""); setChangingTime(false);
     (confirmNow ? biz.confirm(token) : biz.status(token))
       .then((d) => live && setData(d))
       .catch((e: unknown) => live && setError(errorText(e)));
@@ -680,37 +684,42 @@ export function ApplicationStatusPage() {
           <h2 id="slots-title" className="text-lg font-semibold">
             Your interview
           </h2>
-          {data.interview.chosen ? (
-            <p className="mt-2 text-sm">
+          {data.interview.chosen && !changingTime ? (
+            <div className="mt-2 space-y-3"><p className="text-sm">
               Booked for <strong>{dayTime(data.interview.chosen)}</strong> ({data.interview.duration_min} min). {data.interview.location && <>Where: {data.interview.location}</>}
-            </p>
+            </p><div className="flex flex-wrap items-center gap-3"><a href={hiringApi.calendar(token)} referrerPolicy="no-referrer" className="text-sm underline" download>Download calendar event (.ics)</a>
+              <Button size="sm" variant="secondary" onClick={() => setChangingTime(true)}>Choose another offered time</Button></div>
+            <p className="text-xs text-zinc-500">Times use your local zone: {Intl.DateTimeFormat().resolvedOptions().timeZone}. Update your imported calendar if your booking changes.</p></div>
           ) : (
             <form
               className="mt-3 space-y-3"
               onSubmit={(e) => {
                 e.preventDefault();
-                if (slot) void act("book", () => biz.book(token, slot), "Your time is booked. We've emailed you the invite.");
+                if (slot) void act("book", async () => { const result = await biz.book(token, slot); setChangingTime(false); return result; }, "Your time is booked. Your calendar event is available here.");
               }}
             >
               <fieldset>
                 <legend className="text-sm">Pick a time that works ({data.interview.duration_min} min{data.interview.location ? `, ${data.interview.location}` : ""}):</legend>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {slots.map((s) => (
+                  {slots.filter((s) => new Date(s).getTime() > Date.now()).map((s) => (
                     <label key={s} className={cx("flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm", slot === s ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-400/10" : "border-zinc-200 dark:border-white/10")}>
                       <input type="radio" name="slot" value={s} checked={slot === s} onChange={() => setSlot(s)} className={cx("h-4 w-4", focusRing)} />
                       {dayTime(s)}
                     </label>
                   ))}
                 </div>
+                {!slots.some((s) => new Date(s).getTime() > Date.now()) && <p className="mt-3 text-sm text-zinc-500">No offered times are available. Ask the hiring team for new times below.</p>}
               </fieldset>
               <Button type="submit" disabled={!slot} loading={busy === "book"}>
                 Book this time
               </Button>
+              {data.interview.chosen && <Button type="button" variant="ghost" onClick={() => setChangingTime(false)}>Keep current booking</Button>}
             </form>
           )}
         </section>
       )}
 
+      <CandidateChallenge key={token} token={token} confirmed={data.email_confirmed} deletionRequested={data.deletion_requested} />
       <section aria-labelledby="data-title" className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
         <h2 id="data-title" className="font-semibold text-zinc-800 dark:text-zinc-200">
           Your data

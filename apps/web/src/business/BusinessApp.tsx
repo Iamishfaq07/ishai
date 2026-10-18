@@ -40,6 +40,10 @@ const JobsList = lazy(async () => ({ default: (await import("./Jobs")).JobsList 
 const JobEditor = lazy(async () => ({ default: (await import("./Jobs")).JobEditor }));
 const Pipeline = lazy(async () => ({ default: (await import("./Pipeline")).Pipeline }));
 const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Candidate }));
+const HiringDesk = lazy(async () => ({ default: (await import("./HiringDesk")).HiringDeskPage }));
+const HiringPlan = lazy(async () => ({ default: (await import("./HiringPlan")).HiringPlanPage }));
+const HiringRoom = lazy(async () => ({ default: (await import("./HiringRoom")).HiringRoomPage }));
+const CandidateCompare = lazy(async () => ({ default: (await import("./CandidateCompare")).CandidateComparePage }));
 const Team = lazy(async () => ({ default: (await import("./Team")).Team }));
 const SettingsPage = lazy(async () => ({ default: (await import("./Settings")).CompanySettings }));
 const PlanPage = lazy(async () => ({ default: (await import("./Settings")).PlanPage }));
@@ -108,6 +112,7 @@ function Header({ company }: { company?: BizCompany | undefined }) {
 const NAV = [
   { to: "", label: "Dashboard", icon: Gauge, end: true },
   { to: "jobs", label: "Jobs", icon: Briefcase },
+  { to: "hiring-desk", label: "Hiring desk", icon: Users },
   { to: "team", label: "Team", icon: Users },
   { to: "settings", label: "Settings", icon: SettingsIcon },
   { to: "plan", label: "Plan", icon: CreditCard },
@@ -206,7 +211,7 @@ function CompanyLayout() {
         </Page>
       </>
     );
-  if (!company)
+  if (!company || company.id !== cid)
     return (
       <>
         <Header />
@@ -216,7 +221,7 @@ function CompanyLayout() {
       </>
     );
   return (
-    <Ctx.Provider value={{ company, reload, setCompany }}>
+    <Ctx.Provider key={company.id} value={{ company, reload, setCompany }}>
       <Header company={company} />
       <CompanyNav company={company} />
       <Page wide>
@@ -229,7 +234,11 @@ function CompanyLayout() {
             <Route path="jobs/new" element={<JobEditor />} />
             <Route path="jobs/:jid" element={<Pipeline />} />
             <Route path="jobs/:jid/edit" element={<JobEditor />} />
+            <Route path="hiring-desk" element={<HiringDesk />} />
+            <Route path="jobs/:jid/interview-plan" element={<HiringPlan />} />
+            <Route path="jobs/:jid/compare" element={<CandidateCompare />} />
             <Route path="applications/:aid" element={<Candidate />} />
+            <Route path="applications/:aid/interview" element={<HiringRoom />} />
             <Route path="team" element={<Team />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="plan" element={<PlanPage />} />

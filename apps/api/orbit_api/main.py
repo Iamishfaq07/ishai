@@ -41,6 +41,8 @@ from orbit_api.business.apply import public_router as business_apply_public_rout
 from orbit_api.business.apply import router as business_apply_router
 from orbit_api.business.companies import public_router as business_public_router
 from orbit_api.business.companies import router as business_router
+from orbit_api.business.hiring_routes import public_router as business_hiring_public_router
+from orbit_api.business.hiring_routes import router as business_hiring_router
 from orbit_api.business.job_assist import router as business_job_assist_router
 from orbit_api.business.jobs import router as business_jobs_router
 from orbit_api.business.pipeline import router as business_pipeline_router
@@ -399,6 +401,8 @@ def create_app() -> FastAPI:
     app.include_router(business_job_assist_router)  # the job assistant (D85)
     app.include_router(business_pipeline_router)
     app.include_router(business_analytics_router)
+    app.include_router(business_hiring_router)
+    app.include_router(business_hiring_public_router)
     app.include_router(business_apply_router)
     app.include_router(business_apply_public_router)
     app.include_router(business_admin_router)

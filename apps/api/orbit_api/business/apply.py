@@ -635,17 +635,20 @@ async def _by_token(db: AsyncSession, token: str, request: Request) -> tuple[Biz
 
 async def latest_interview(db: AsyncSession, app_id: str) -> BizInterview | None:
     row: BizInterview | None = await db.scalar(select(BizInterview).where(BizInterview.application_id == app_id)
-                           .order_by(BizInterview.created_at.desc()).limit(1))
+                           .order_by(BizInterview.created_at.desc(), BizInterview.id.desc())
+                           .execution_options(populate_existing=True).limit(1))
     return row
 
 
 async def _status(db: AsyncSession, app: BizApplication, job: BizJob, company: BizCompany) -> StatusOut:
+    from orbit_api.business.scheduling import available_slots
     kind = "rejected" if app.status == "rejected" else rules.stage_kind(job.stages, app.stage_id)
     label, detail = rules.CANDIDATE_STAGE.get(kind, rules.CANDIDATE_STAGE["applied"])
     iv = await latest_interview(db, app.id)
-    interview = StatusInterview(slots=iv.slots, duration_min=iv.duration_min, location=iv.location,
+    interview = StatusInterview(slots=await available_slots(db, iv, app.interviewers or []),
+                                duration_min=iv.duration_min, location=iv.location,
                                 chosen=iso(iv.chosen)) \
-        if iv is not None and app.status == "active" else None
+        if iv is not None and iv.slots and app.status == "active" else None
     return StatusOut(company=StatusCompany(name=company.name, logo_url=logo_url(company), slug=company.slug),
                      job_title=job.title, job_url=public_url(company, job), stage_label=label, stage_detail=detail,
                      applied_at=_aware(app.created_at) or now(), email_confirmed=app.email_confirmed_at is not None,
@@ -675,25 +678,40 @@ class BookIn(BaseModel):
 
 @public_router.post("/applications/{token}/book", response_model=StatusOut)
 async def book(token: str, body: BookIn, request: Request, db: Annotated[AsyncSession, Depends(get_db)]) -> StatusOut:
+    from orbit_api.business.access import lock_company
+    from orbit_api.business.scheduling import available_slots, booking_writes
+
     app, job, company = await _by_token(db, token, request)
+    if company.status == "suspended" or app.deletion_requested_at is not None:
+        raise HTTPException(403, "This application is not accepting interview bookings.")
+    ratelimit.check(booking_writes, f"biz-book:{app.status_token_hash}")
+    await lock_company(db, company.id)
+    await db.refresh(app)
+    if app.deletion_requested_at is not None:
+        raise HTTPException(409, "This application is not accepting interview bookings.")
     iv = await latest_interview(db, app.id)
     if iv is None or app.status != "active":
         raise HTTPException(409, "There's no interview to book.")
     if body.slot not in iv.slots:
         raise HTTPException(422, "Pick one of the times offered.")
     when = datetime.fromisoformat(body.slot.replace("Z", "+00:00"))
+    if iv.chosen is not None and _aware(iv.chosen) == when:
+        return await _status(db, app, job, company)  # A retried response does not send duplicate invitations.
+    if body.slot not in await available_slots(db, iv, app.interviewers or []):
+        raise HTTPException(409, "That time is no longer available for the interview panel. Pick another time.")
     if when <= now():
         raise HTTPException(422, "That time has passed. Ask the team for new times.")
     first = iv.chosen is None
     iv.chosen = when
+    iv.revision += 1
     if app.email_confirmed_at is None:
         app.email_confirmed_at = now()  # the link came to their inbox
     timeline(db, app, "interview_booked", None, slot=body.slot)
     await db.commit()
-    cal = emails.ics(uid=f"{iv.id}-{uuid.uuid4().hex[:6]}", start=when, minutes=iv.duration_min,
+    cal = emails.ics(uid=iv.id, start=when, minutes=iv.duration_min,
                      summary=f"Interview: {job.title} at {company.name}",
                      description=f"Interview for {job.title} at {company.name}.", location=iv.location,
-                     organizer=iv.reply_to)
+                     organizer=iv.reply_to, sequence=iv.revision)
     when_text = when.strftime("%A %d %B %Y, %H:%M UTC")
     await emails.send_to_applicant(
         company, app, f"Interview booked: {job.title}, {when_text}",

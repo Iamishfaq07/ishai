@@ -196,7 +196,7 @@ export function ToastHost() {
   return (
     <section
       aria-label="Notifications"
-      className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-toast md:inset-x-auto md:bottom-6 md:right-6"
+      className="pointer-events-none fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-toast md:inset-x-auto md:bottom-20 md:right-6"
     >
       <ol
         ref={list}

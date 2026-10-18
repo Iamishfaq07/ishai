@@ -409,6 +409,16 @@ def test_finding8_the_migration_keeps_existing_links_working() -> None:
     source = s.config_secret.get_secret_value() if s.config_secret else "biz-status:" + secret
     opened = Fernet(base64.urlsafe_b64encode(hashlib.sha256(source.encode()).digest())).decrypt(sealed.encode())
     assert opened.decode() == legacy and months == 6 and reminders == 0
+    # Hiring Studio's additive migration can be rolled back independently without touching existing links.
+    with sqlite3.connect(db) as conn:
+        assert {r[1] for r in conn.execute("pragma table_info(biz_interview_feedback)")} >= {
+            "plan_snapshot", "content", "submitted_at", "revision"}
+        assert {r[1] for r in conn.execute("pragma table_info(biz_interviews)")} >= {"panel_user_ids", "revision"}
+    alembic("downgrade", "7c1e5d2b9f30")
+    with sqlite3.connect(db) as conn:
+        assert not conn.execute("pragma table_info(biz_work_samples)").fetchall()
+        assert conn.execute("select status_token_sealed from biz_applications").fetchone()[0] == sealed
+    alembic("upgrade", "head")
     alembic("downgrade", "4a93a7c927ef")  # back to this migration's parent (later ones sit on top of it)
     with sqlite3.connect(db) as conn:
         cols = {r[1] for r in conn.execute("pragma table_info(biz_applications)")}
