@@ -343,10 +343,21 @@ def test_lease_submit_with_proof_updates_the_tracker_and_counts_the_quota(app: T
     path = p["resume"]["download_url"].split("testserver", 1)[-1]
     pdf = app.get(path)
     assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF") and b"Asha Rao" in pdf.content
+    assert pdf.headers["content-type"] == "application/pdf"
+    assert p["resume"]["filename"] == "Asha Rao - Resume.pdf"
     assert app.get(path.replace("sig=", "sig=0")).status_code == 403
-    # One at a time: a second ask while it's leased gets nothing.
-    busy = app.get("/v1/apply/next", headers=ext)
+    # Asking again from the same browser (a restarted service worker) gets the same packet back, lease unchanged and
+    # not held twice; another browser of the same candidate is told it's busy (one application at a time).
+    again = app.get("/v1/apply/next", headers=ext)
+    assert again.status_code == 200, again.text
+    same = again.json()
+    assert same["id"] == p["id"] and same["lease_expires_at"] == p["lease_expires_at"]
+    assert {k: v for k, v in same.items() if k != "resume"} == {k: v for k, v in p.items() if k != "resume"}
+    assert app.get("/v1/apply/setup", headers=h).json()["quota"]["used"] == 1  # held once, not twice
+    other = ext_token(app, h)
+    busy = app.get("/v1/apply/next", headers=other)
     assert busy.status_code == 204 and busy.headers["X-Orbit-Apply-Why"] == "busy"
+    assert 0 < int(busy.headers["Retry-After"]) <= 15 * 60
     s = app.get("/v1/apply/status", headers=ext).json()
     assert s["today"] == 1 and s["limit"] == 10
     r = app.post(f"/v1/apply/{p['id']}/result", headers=ext, json={
@@ -636,7 +647,7 @@ def test_an_extension_token_reaches_only_the_executor_routes(app: TestClient) ->
     for method, path in (("GET", "/v1/apply/setup"), ("PUT", "/v1/apply/setup"), ("GET", "/v1/apply/bank"),
                          ("PUT", "/v1/apply/bank"), ("POST", "/v1/apply/plan"), ("GET", "/v1/apply/packets"),
                          ("GET", f"/v1/apply/packets/{pid}"), ("POST", f"/v1/apply/packets/{pid}/answers"),
-                         ("POST", f"/v1/apply/packets/{pid}/done"), ("POST", "/v1/apply/pause"),
+                         ("POST", f"/v1/apply/packets/{pid}/done"), ("POST", f"/v1/apply/packets/{pid}/retry"),
                          ("GET", f"/v1/apply/packets/{pid}/resume.pdf"), ("GET", "/v1/admin/apply/sites"),
                          ("POST", f"/v1/apply/{pid}/result/extra"), ("GET", "/v1/jobs/tracker")):
         r = app.request(method, path, headers=ext, json={})
@@ -648,6 +659,46 @@ def test_an_extension_token_reaches_only_the_executor_routes(app: TestClient) ->
     assert app.get("/v1/apply/status", headers=h).status_code == 200
     # Signed out: nothing.
     assert app.get("/v1/apply/next").status_code == 401
+
+
+def test_the_extension_pauses_and_resumes_the_same_switch_the_web_app_shows(app: TestClient) -> None:
+    h, _ = account(app)
+    jobs(app)
+    plan(app, h)
+    assert app.get("/v1/apply/setup", headers=h).json()["executor_seen_at"] is None
+    ext = ext_token(app, h)
+    r = app.post("/v1/apply/pause", headers=ext)
+    assert r.status_code == 200 and r.json() == {"paused": True}
+    assert app.get("/v1/apply/setup", headers=h).json()["paused"] is True
+    s = app.get("/v1/apply/status", headers=ext).json()
+    assert s["paused"] is True and s["why_not"] == "paused"
+    nothing = app.get("/v1/apply/next", headers=ext)
+    assert nothing.status_code == 204 and nothing.headers["X-Orbit-Apply-Why"] == "paused"
+    # The web app sees that an extension is asking for work (it tells the candidate to set one up until then).
+    assert app.get("/v1/apply/setup", headers=h).json()["executor_seen_at"]
+    assert app.post("/v1/apply/resume", headers=ext).json() == {"paused": False}
+    assert app.get("/v1/apply/setup", headers=h).json()["paused"] is False
+    assert app.get("/v1/apply/next", headers=ext).status_code == 200
+
+
+def test_a_submission_without_a_screenshot_keeps_the_confirmation_as_proof(app: TestClient) -> None:
+    # The extension can't capture the page (no access to every site): the confirmation text and address are the proof.
+    h, _ = account(app)
+    jobs(app)
+    plan(app, h)
+    ext = ext_token(app, h)
+    p = app.get("/v1/apply/next", headers=ext).json()
+    r = app.post(f"/v1/apply/{p['id']}/result", headers=ext, json={
+        "status": "submitted", "reason": None, "unknown_questions": [], "screenshot_png_b64": None,
+        "confirmation_text": "Thank you for applying.", "final_url": "https://jobs.ashbyhq.com/sarvam/x/application",
+        "submitted": {"fields": {"email": "asha@example.com"}, "answers": [{"question_id": "q1", "label": "Sponsorship",
+                                                                            "value": "No"}]}})
+    assert r.status_code == 200 and r.json()["charged"] is True
+    detail = app.get(f"/v1/apply/packets/{p['id']}", headers=h).json()
+    assert detail["has_proof"] is True and detail["screenshot_url"] is None
+    assert detail["confirmation_text"] == "Thank you for applying." and detail["final_url"].startswith("https://")
+    summary = next(x for x in app.get("/v1/apply/packets?group=applied", headers=h).json() if x["id"] == p["id"])
+    assert summary["has_proof"] is True
 
 
 def test_deleting_the_account_deletes_its_packets_and_proof(app: TestClient) -> None:

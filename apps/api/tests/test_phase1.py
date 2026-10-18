@@ -587,6 +587,36 @@ def test_a_job_cut_off_by_a_deploy_runs_again_at_once_without_spending_an_attemp
     assert runs == [0, 1]
 
 
+def test_a_job_requeued_with_a_new_payload_while_running_runs_again_with_it() -> None:
+    """A job closed while its URL_UPDATED ping was running lost the URL_DELETED: enqueue skipped running jobs and
+    the end of the run then marked it done."""
+    import threading
+
+    from orbit_api import jobs
+    from orbit_api.main import create_app
+
+    runs: list[str] = []
+    requeued = threading.Event()
+
+    @jobs.handler("test_superseded")
+    async def ping(payload: dict[str, Any]) -> None:
+        runs.append(payload["type"])
+        while len(runs) == 1 and not requeued.is_set():  # the close comes while the first ping is in flight
+            await asyncio.sleep(0.02)
+
+    key = f"s:{uuid.uuid4()}"
+    with TestClient(create_app()) as c:
+        _call(c, jobs.enqueue_now, "test_superseded", {"type": "URL_UPDATED"}, key)
+        deadline = time.monotonic() + 5
+        while not runs and time.monotonic() < deadline:
+            time.sleep(0.02)
+        _call(c, jobs.enqueue_now, "test_superseded", {"type": "URL_UPDATED"}, key)  # same payload: left alone
+        _call(c, jobs.enqueue_now, "test_superseded", {"type": "URL_DELETED"}, key)
+        requeued.set()
+        assert _until_done(c, key) == ("done", 1)
+    assert runs == ["URL_UPDATED", "URL_DELETED"]
+
+
 def test_a_job_left_running_by_a_killed_process_runs_when_the_next_one_starts() -> None:
     from orbit_api import db, jobs
     from orbit_api.main import create_app

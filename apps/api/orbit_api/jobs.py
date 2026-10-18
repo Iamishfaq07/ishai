@@ -51,11 +51,13 @@ def report_key(session_id: str) -> str:
 
 async def enqueue(db: AsyncSession, kind: str, payload: dict[str, Any], dedupe_key: str | None = None) -> None:
     """Queue a job in the caller's transaction (commit is the caller's). A job with the same dedupe key is
-    re-armed rather than duplicated — e.g. a report re-queued after its session was rejoined and ended again."""
+    re-armed rather than duplicated — e.g. a report re-queued after its session was rejoined and ended again. A
+    running one is left alone unless the payload changed (an Indexing API ping superseded by URL_DELETED): then it's
+    re-armed too, and runs again with the new payload once the current run ends."""
     if dedupe_key is not None:
         existing = await db.scalar(select(Job).where(Job.dedupe_key == dedupe_key))
         if existing is not None:
-            if existing.status != "running":
+            if existing.status != "running" or dict(existing.payload) != payload:
                 existing.status, existing.attempts, existing.last_error = "queued", 0, None
                 existing.run_after, existing.payload = datetime.now(UTC), payload
             return
@@ -148,18 +150,17 @@ async def run_due_jobs(limit: int = 5) -> int:
         except Exception as e:
             error = f"{type(e).__name__}: {e}"[:2000]
             log.warning("job %s (%s) attempt %d failed: %s", job_id, kind, attempts, error)
+        if error is None:
+            values: dict[str, Any] = {"status": "done", "last_error": None}
+        elif attempts >= MAX_ATTEMPTS:
+            values = {"status": "failed", "last_error": error}
+            log.error("job %s (%s) failed permanently after %d attempts", job_id, kind, attempts)
+        else:
+            values = {"status": "queued", "last_error": error,
+                      "run_after": datetime.now(UTC) + timedelta(seconds=RETRY_BACKOFF_S[min(attempts, 3) - 1])}
         async with sessionmaker()() as db:
-            job = await db.get(Job, job_id)
-            if job is None:
-                continue
-            if error is None:
-                job.status, job.last_error = "done", None
-            elif attempts >= MAX_ATTEMPTS:
-                job.status, job.last_error = "failed", error
-                log.error("job %s (%s) failed permanently after %d attempts", job_id, kind, attempts)
-            else:
-                job.status, job.last_error = "queued", error
-                job.run_after = datetime.now(UTC) + timedelta(seconds=RETRY_BACKOFF_S[min(attempts, 3) - 1])
+            # Only while it's still ours: a job re-armed during the run (enqueue, new payload) stays queued.
+            await db.execute(update(Job).where(Job.id == job_id, Job.status == "running").values(**values))
             await db.commit()
     return ran
 

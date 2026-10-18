@@ -93,8 +93,9 @@ Load `apps/extension/dist` in `chrome://extensions` (Developer mode → Load unp
   own questions are left alone, and that nothing is submitted.
 
 ## OWNER ACTION REQUIRED to publish
-0. Before publishing auto-apply: the site's `privacy.html` still says the extension "never submits anything". Update
-   it (and the store's privacy practices) to describe auto-apply, its opt-in host access and what it sends back.
+0. `privacy.html` now describes auto-apply ("Orbit Apply (applying for you)": opt-in in the web app and here, the
+   four ATS sites, what's sent, the proof kept, how to turn it off). The store listing's description and privacy
+   practices must say the same before auto-apply is published (step 2).
 1. Build with the production `ORBIT_WEB_URL` and zip `dist/`.
 2. Chrome Web Store: register a developer account (one-time fee). Upload the zip and fill in the privacy practices:
    it handles the email and name shown in the popup, job details you choose to save, and resume basics for autofill;

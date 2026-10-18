@@ -132,8 +132,35 @@ describe("planning: what Orbit answers and what it hands back", () => {
     expect(plan([consent], packet()).steps).toHaveLength(0); // optional, no answer: left unticked
     consent.required = true;
     expect(plan([consent], packet()).unknown).toEqual([consent]);
-    const agreed = plan([consent], packet([ans(consent.label, true)]));
+    const agreed = plan([consent], packet([ans(consent.label, "Yes")]));
     expect(agreed.steps).toHaveLength(1);
+  });
+
+  it("eeo \"as_answered\" uses the candidate's own answer, by the server's demographic id, and declines the rest", () => {
+    const { qs } = questionsOf("greenhouse-discord");
+    const gender = qs.find((q) => q.questionId === "4033064002")!;
+    const veteran = qs.find((q) => q.questionId === "veteran_status")!;
+    const own = { ...ans("Gender", "Woman", "demographic_4033064002"), kind: "select" };
+    const p = plan([gender, veteran], packet([own], { eeo: "as_answered" }));
+    expect(p.steps.map((s) => [s.q.questionId, s.source])).toEqual([["4033064002", "answer"], ["veteran_status", "eeo"]]);
+    expect(plan([gender], packet([], { eeo: "as_answered" })).steps[0]!.source).toBe("eeo");
+  });
+
+  it("a question the server read as required is required, even when the page doesn't mark it", () => {
+    const { qs } = questionsOf("lever-spotify");
+    const consent = qs.find((q) => q.questionId === "consent[marketing]")!;
+    expect(consent.required).toBe(false);
+    const p = plan([consent], packet([{ ...ans(consent.label, "Maybe", "consent[marketing]"), required: true }]));
+    expect(p.unknown).toEqual([consent]);
+  });
+
+  it("an answer outside the options the server read is no answer (the form changed)", () => {
+    const { qs } = questionsOf("lever-palantir");
+    const uni = qs.find((q) => q.label.startsWith("Which university"))!;
+    const stale = { ...ans(uni.label, "Other - School Not Listed"), kind: "select", options: ["IIT Bombay", "IIT Delhi"] };
+    expect(plan([uni], packet([stale])).unknown).toEqual([uni]);
+    const fresh = { ...stale, options: ["IIT Bombay", "Other - School Not Listed"] };
+    expect(plan([uni], packet([fresh])).steps).toHaveLength(1);
   });
 
   it("a value that isn't one of the options is unknown, not a near match", () => {
@@ -147,8 +174,8 @@ describe("planning: what Orbit answers and what it hands back", () => {
 describe("filling a real form, and never submitting on its own", () => {
   const palantirAnswers = [
     ans("Language Skill(s) (Check all that apply)", ["English (ENG)", "Hindi (HIN)"]),
-    ans("Are you legally authorized to work in the country for which you are applying?", true),
-    ans("Will you now or in the future require sponsorship for employment visa status (e.g., H-1B, etc.)?", false),
+    ans("Are you legally authorized to work in the country for which you are applying?", "Yes"),
+    ans("Will you now or in the future require sponsorship for employment visa status (e.g., H-1B, etc.)?", "No"),
     ans("Which university are you currently attending or did you last attend? Please select \"Other (School Not Listed)\" if your school is not listed.", "Other - School Not Listed"),
     ans("Please tell us how you heard about this opportunity.", "LinkedIn"),
     ans("Are you a Singapore citizen?", "No"),
@@ -173,7 +200,7 @@ describe("filling a real form, and never submitting on its own", () => {
     const out = await fillApplication(d, { adapter: ADAPTERS.lever, packet: packet(palantirAnswers), resume: RESUME });
     expect(out).toMatchObject({ kind: "stop", status: "needs_you", reason: "unknown_question" });
     if (out.kind !== "stop") throw new Error();
-    expect(out.unknown).toEqual([expect.objectContaining({ label: expect.stringContaining("AI notetakers"), kind: "radio", options: ["Yes, I consent", "No, I do not consent"] })]);
+    expect(out.unknown).toEqual([expect.objectContaining({ label: expect.stringContaining("AI notetakers"), kind: "select", options: ["Yes, I consent", "No, I do not consent"] })]);
     expect((d.querySelector("input[name=name]") as HTMLInputElement).value).toBe(""); // stopped before typing anything
     expect(submitted()).toBe(false);
   });

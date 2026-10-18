@@ -9,6 +9,7 @@ import { RESUME_AI_HOME } from "../../resume/paths";
 import { linkButton, textLink } from "../links";
 import { JOBS_APPLICATIONS } from "../paths";
 import { applyApi } from "./applyApi";
+import { ExtensionNeeded } from "./ExtensionNeeded";
 import { fromTri, listText, minutesToTime, parseList, timeToMinutes, toTri } from "./model";
 
 const STEPS = ["Resume", "Your facts", "Answers", "Filters", "Mode and limits", "Consent"] as const;
@@ -150,6 +151,8 @@ function Wizard({
           ))}
         </ol>
       </nav>
+
+      <ExtensionNeeded seenAt={setup.executor_seen_at} />
 
       <Card>
         <div className="space-y-4 p-5">
@@ -655,6 +658,10 @@ function ConsentStep({ setup, agree, setAgree }: { setup: ApplySetup; agree: boo
       </label>
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         You can pause it or turn it off any time, and every application shows exactly what was sent in your name.
+      </p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        Applications are sent from your own browser by the Orbit extension, on Greenhouse, Lever and Ashby forms only,
+        once you also switch on “Apply for me automatically” in the extension. Turning it on here alone sends nothing.
       </p>
     </Section>
   );

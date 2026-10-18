@@ -61,6 +61,21 @@ def test_greenhouse_questions_compliance_and_standard_fields() -> None:
     assert by["Why Anthropic?"].kind == "textarea" and "200-400 words" in by["Why Anthropic?"].description
 
 
+def test_a_choice_that_names_the_current_employer_is_not_the_current_company_field() -> None:
+    # GitLab asks "Are you subject to any employment agreements ... with your current employer?" (Yes/No): answering it
+    # with the candidate's company name would be wrong. The ids are the page's own (question_<n>), as the extension
+    # reads them from the recorded page (tools/e2e/ats-fixtures/greenhouse-gitlab.html).
+    from pathlib import Path
+
+    data = json.loads((Path(__file__).resolve().parents[3] / "tools" / "e2e" / "apply-integrated"
+                       / "greenhouse-gitlab.json").read_text("utf8"))
+    by = {q.id: q for q in forms.greenhouse_form(data)}
+    agreements = by["question_38624170002"]
+    assert agreements.kind == "select" and agreements.standard is None
+    assert by["question_38624168002"].standard == "linkedin"
+    assert {"gender", "hispanic_ethnicity", "veteran_status"} <= {i for i, q in by.items() if q.section == "eeo"}
+
+
 def test_lever_standard_fields_custom_cards_and_links() -> None:
     qs = forms.lever_form(lever_page())
     by = {q.label: q for q in qs}

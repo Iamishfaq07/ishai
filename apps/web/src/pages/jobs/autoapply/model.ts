@@ -32,7 +32,7 @@ export const STATUS_LABEL: Record<ApplyPacketStatus, string> = {
 
 export const WHY_NOT: Record<ApplyWhyNot, string> = {
   not_set_up: "Orbit Apply isn't turned on yet.",
-  paused: "Paused.",
+  paused: "Paused. Resume here or in the extension.",
   quiet_hours: "Quiet hours.",
   daily_limit: "Today's limit is reached.",
   busy: "One is being sent now.",
@@ -91,4 +91,14 @@ export function actionsFor(status: ApplyPacketStatus): { approve: boolean; dontA
     retry: ["needs_you", "failed", "expired", "skipped", "cancelled"].includes(status),
     finish: status === "needs_you" || status === "handoff",
   };
+}
+
+/** Whether the browser extension is applying: Orbit Apply sends nothing without it. "never": it has never asked for
+ *  work; "quiet": not for over 2 days (that browser closed, or auto-apply switched off there); "on": recently. */
+export type ExecutorState = "never" | "quiet" | "on";
+export const EXECUTOR_QUIET_MS = 2 * 24 * 3600_000;
+export function executorState(seenAt: string | null | undefined, now = Date.now()): ExecutorState {
+  const at = seenAt ? Date.parse(seenAt) : NaN;
+  if (!Number.isFinite(at)) return "never";
+  return now - at > EXECUTOR_QUIET_MS ? "quiet" : "on";
 }

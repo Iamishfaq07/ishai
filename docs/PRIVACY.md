@@ -22,6 +22,7 @@ be checked.
 | Usage (minutes, screenshots) | plan limits | `usage` |
 | Security log (sign-ins, resets, email changes) | account security | `audit_logs` |
 | Messages sent from the Contact page (see below) | answering them | `contact_messages` |
+| Orbit Apply, only if you turn it on (D84): the setup and consent, your answer bank, each prepared application (tailored resume, cover letter, answers) and its proof (what was entered, the confirmation text and address, a screenshot when the browser could take one) | applying for you, and showing what was sent | `auto_apply_setups`, `answer_bank`, `application_packets`, `apply_proofs` |
 
 Transcript storage can be switched off (Settings → Privacy → *Store transcripts*). It's then used live and
 discarded when the session ends.
@@ -38,6 +39,7 @@ discarded when the session ends.
 | Change your email (confirmed from the new inbox; the old one is told) | Settings → Account | `POST /v1/auth/me/email` |
 | See where you're signed in, and sign out one device | Settings → Devices | `GET /v1/auth/sessions`, `DELETE /v1/auth/sessions/{id}` |
 | Sign out of every device | Settings → Privacy | `POST /v1/auth/logout-all` |
+| Orbit Apply: pause or resume it; withdraw your agreement (nothing more is submitted); switch it off in the extension (which gives back its access to the four ATS sites) | Jobs → Applications, the extension popup | `POST /v1/apply/pause`, `/resume`, `PUT /v1/apply/setup {consent: false}` |
 | Delete your account and everything in it | Settings → Privacy | `DELETE /v1/auth/me` |
 | Privacy shield (keep the desktop window out of screenshots/recordings) and hide-from-taskbar: both off until chosen; changed 16 Oct 2026 from always-on | Desktop → Settings → Window privacy | local (`set_window_privacy`) |
 

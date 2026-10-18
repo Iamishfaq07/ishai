@@ -55,6 +55,7 @@ from orbit_api.models import (
     Resume,
     User,
 )
+from orbit_api.region import country_name
 from orbit_api.resumes.schema import ResumeData
 from orbit_api.sessions.loop_memory import same_company
 
@@ -145,7 +146,9 @@ def _fields(facts: Facts) -> dict[str, str]:
     return {"first_name": facts.first_name, "last_name": facts.last_name, "full_name": facts.full_name(),
             "email": facts.email, "phone": facts.phone, "location": facts.location(), "linkedin": facts.linkedin,
             "website": facts.website, "github": facts.github, "current_company": facts.current_company,
-            "current_title": facts.current_title}
+            "current_title": facts.current_title,
+            # The country's name ("India"): forms ask for it as a list of names, apart from the location.
+            "country": country_name(facts.country) or ""}
 
 
 def _handoff_answers(ctx: bank.Context, entries: dict[str, str]) -> list[dict[str, Any]]:

@@ -1,0 +1,291 @@
+{
+ "id": 1,
+ "title": "Backend Engineer",
+ "questions": [
+  {
+   "label": "First Name",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "first_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Last Name",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "last_name",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Email",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "email",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Phone",
+   "required": false,
+   "description": null,
+   "fields": [
+    {
+     "name": "phone",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Resume/CV",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "resume",
+     "type": "input_file",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Cover Letter",
+   "required": false,
+   "description": null,
+   "fields": [
+    {
+     "name": "cover_letter",
+     "type": "input_file",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "LinkedIn Profile",
+   "required": false,
+   "description": null,
+   "fields": [
+    {
+     "name": "question_38624168002",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "What's the name you'd prefer us to use throughout the interview process?",
+   "required": false,
+   "description": null,
+   "fields": [
+    {
+     "name": "question_38624169002",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Are you subject to any employment agreements and/or post-employment restrictions with your current employer or a past employer?",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "question_38624170002",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": "1"
+      },
+      {
+       "label": "No",
+       "value": "2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "It is important to us to create an accessible and inclusive interview experience. Please let us know if there are any adjustments we can make to assist you during the hiring and interview process.",
+   "required": false,
+   "description": null,
+   "fields": [
+    {
+     "name": "question_38624171002",
+     "type": "input_text",
+     "values": []
+    }
+   ]
+  },
+  {
+   "label": "Will you now or in the future require sponsorship for a visa to remain in your current location?",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "question_38624172002",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": "1"
+      },
+      {
+       "label": "No",
+       "value": "2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "Have you previously worked at or consulted for GitLab?",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "question_38624173002",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "Yes",
+       "value": "1"
+      },
+      {
+       "label": "No",
+       "value": "2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "label": "What is your current country of residence?",
+   "required": true,
+   "description": null,
+   "fields": [
+    {
+     "name": "question_38624174002",
+     "type": "multi_value_single_select",
+     "values": [
+      {
+       "label": "India",
+       "value": "1"
+      },
+      {
+       "label": "Indonesia",
+       "value": "2"
+      },
+      {
+       "label": "United Kingdom",
+       "value": "3"
+      },
+      {
+       "label": "United States",
+       "value": "4"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "location_questions": [],
+ "compliance": [
+  {
+   "type": "eeoc",
+   "questions": [
+    {
+     "label": "Gender",
+     "required": false,
+     "description": null,
+     "fields": [
+      {
+       "name": "gender",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Male",
+         "value": "1"
+        },
+        {
+         "label": "Female",
+         "value": "2"
+        },
+        {
+         "label": "Decline To Self Identify",
+         "value": "3"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "label": "Are you Hispanic/Latino?",
+     "required": false,
+     "description": null,
+     "fields": [
+      {
+       "name": "hispanic_ethnicity",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "Yes",
+         "value": "1"
+        },
+        {
+         "label": "No",
+         "value": "2"
+        },
+        {
+         "label": "Decline To Self Identify",
+         "value": "3"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "label": "Veteran Status",
+     "required": false,
+     "description": null,
+     "fields": [
+      {
+       "name": "veteran_status",
+       "type": "multi_value_single_select",
+       "values": [
+        {
+         "label": "I am not a protected veteran",
+         "value": "1"
+        },
+        {
+         "label": "I identify as one or more of the classifications of protected veteran",
+         "value": "2"
+        },
+        {
+         "label": "I don't wish to answer",
+         "value": "3"
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "demographic_questions": null,
+ "data_compliance": []
+}

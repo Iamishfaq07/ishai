@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { actionsFor, answerText, fromTri, minutesToTime, parseList, timeToMinutes, toTri } from "./model";
+import { actionsFor, answerText, executorState, fromTri, minutesToTime, parseList, timeToMinutes, toTri } from "./model";
 
 describe("Orbit Apply's helpers", () => {
+  it("says whether the browser extension is applying", () => {
+    const now = Date.parse("2026-10-19T12:00:00Z");
+    expect(executorState(null, now)).toBe("never");
+    expect(executorState("not a date", now)).toBe("never");
+    expect(executorState("2026-10-19T11:00:00Z", now)).toBe("on");
+    expect(executorState("2026-10-16T11:00:00Z", now)).toBe("quiet");
+  });
+
   it("reads lists the way they're typed", () => {
     expect(parseList("Backend Engineer, SRE\n  backend engineer ,,Platform  Engineer")).toEqual([
       "Backend Engineer",

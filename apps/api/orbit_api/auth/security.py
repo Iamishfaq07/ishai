@@ -61,8 +61,9 @@ def _now() -> int:
 SCOPED_PATHS: dict[str, frozenset[str]] = {
     "extension": frozenset({"/v1/extension/me", "/v1/extension/profile", "/v1/extension/fit",
                             "/v1/jobs/tracker/manual", "/v1/auth/logout",
-                            # Orbit Apply's executor (auto_apply/routes.py): lease the next packet, see the status.
-                            "/v1/apply/next", "/v1/apply/status"}),
+                            # Orbit Apply's executor (auto_apply/routes.py): lease the next packet, see the status,
+                            # and pause or resume it from the popup (the same switch as the web app's).
+                            "/v1/apply/next", "/v1/apply/status", "/v1/apply/pause", "/v1/apply/resume"}),
 }
 # Scoped routes with an id in the path, matched whole: Orbit Apply's executor reporting one packet's result.
 SCOPED_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {

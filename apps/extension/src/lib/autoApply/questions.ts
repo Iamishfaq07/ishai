@@ -1,6 +1,7 @@
 // The questions on an application form, as the adapters read them: what's asked, whether it's required, and the
 // control(s) that answer it.
 import { labelOf, shown, text } from "./dom";
+import type { QuestionKind } from "./contract";
 import { cleanLabel } from "./match";
 
 export type Widget =
@@ -60,20 +61,25 @@ export function optionLabel(input: HTMLInputElement): string {
   return labelOf(input) || cleanLabel(input.value);
 }
 
-/** How a question is reported to Orbit when it can't be answered. */
-export function kindOf(w: Widget): string {
+const INPUT_KIND: Record<string, QuestionKind> = { email: "email", tel: "phone", url: "url", number: "number", date: "date" };
+
+/** How a question is reported to Orbit when it can't be answered: one of the server's kinds (others are refused). */
+export function kindOf(w: Widget): QuestionKind {
   switch (w.type) {
     case "text":
-      return w.el.tagName === "TEXTAREA" ? "textarea" : "text";
+      return w.el.tagName === "TEXTAREA" ? "textarea" : (INPUT_KIND[(w.el.getAttribute("type") ?? "").toLowerCase()] ?? "text");
     case "select":
     case "combobox":
+    case "radio":
       return "select";
     case "checkboxes":
-      return "multi_select";
+      return "multiselect";
     case "yesno":
       return "boolean";
-    default:
-      return w.type;
+    case "checkbox":
+      return "checkbox";
+    case "file":
+      return "file";
   }
 }
 

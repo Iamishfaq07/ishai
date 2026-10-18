@@ -1,6 +1,6 @@
 // Matching a form's questions to the candidate's pre-approved answers, and picking options. Pure: no DOM.
 // The rule throughout: exact or normalized-exact matches only. Anything else is "unknown", and the candidate answers it.
-import type { PacketAnswer } from "./contract";
+import type { AnswerValue, PacketAnswer } from "./contract";
 
 /** Lower case, accents and punctuation dropped, required/optional markers removed, spaces collapsed. */
 export function normalize(text: string): string {
@@ -22,7 +22,9 @@ export function cleanLabel(text: string): string {
   return text.replace(/[*✱]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-const stripPrefix = (id: string) => id.trim().replace(/^question_/, "");
+/** Greenhouse ids as Orbit's server reads them from the board API (`question_123`, `demographic_456`) and as the page
+ * shows them (`question_123` or `123`, `456`): the same question either way. */
+const stripPrefix = (id: string) => id.trim().replace(/^(question_|demographic_)/, "");
 
 /**
  * The packet answer for a question: by the ATS's question id first, then the label exactly, then the normalized
@@ -44,6 +46,14 @@ export function matchAnswer(q: { questionId: string | null; label: string }, ans
   return close.length ? unique(close) : null;
 }
 
+/** A select-type answer the server read the form's options for must name them exactly (a stale answer doesn't). */
+export function withinOptions(answer: PacketAnswer): boolean {
+  const options = answer.options;
+  if (!options?.length || !/^(select|multiselect|multi_select)$/.test(answer.kind)) return true;
+  const values = Array.isArray(answer.value) ? answer.value : [answer.value];
+  return values.every((v) => options.some((o) => o.trim() === v.trim()));
+}
+
 function unique(found: PacketAnswer[]): PacketAnswer | null {
   const first = JSON.stringify(found[0]!.value);
   return found.every((a) => JSON.stringify(a.value) === first) ? found[0]! : null;
@@ -52,16 +62,16 @@ function unique(found: PacketAnswer[]): PacketAnswer | null {
 const YES = new Set(["yes", "y", "true"]);
 const NO = new Set(["no", "n", "false"]);
 
-/** The index of the option an answer names: exact text, then normalized. Yes/no answers match "Yes"/"No". -1 if
- * none (or more than one) matches. */
-export function pickOption(options: string[], value: string | boolean): number {
-  const want = typeof value === "boolean" ? (value ? "yes" : "no") : value;
+/** The index of the option an answer names: exact text, then normalized. Yes/no answers ("Yes"/"No", the server's
+ * labels for a boolean) match "Yes"/"No" options. -1 if none (or more than one) matches. */
+export function pickOption(options: string[], value: string): number {
+  const want = value;
   const exact = options.map((o, i) => (o.trim() === want.trim() ? i : -1)).filter((i) => i >= 0);
   if (exact.length === 1) return exact[0]!;
   const norm = normalize(want);
   const close = options.map((o, i) => (normalize(o) === norm ? i : -1)).filter((i) => i >= 0);
   if (close.length === 1) return close[0]!;
-  if (typeof value === "boolean" || YES.has(norm) || NO.has(norm)) {
+  if (YES.has(norm) || NO.has(norm)) {
     const set = YES.has(norm) ? YES : NO.has(norm) ? NO : null;
     if (set) {
       const yn = options.map((o, i) => (set.has(normalize(o)) ? i : -1)).filter((i) => i >= 0);
@@ -104,8 +114,7 @@ export function isConsent(label: string): boolean {
 }
 
 /** Truthy yes/no from an answer value, or null when the value isn't a yes/no. */
-export function asBoolean(value: string | string[] | boolean): boolean | null {
-  if (typeof value === "boolean") return value;
+export function asBoolean(value: AnswerValue): boolean | null {
   if (Array.isArray(value)) return null;
   const n = normalize(value);
   if (YES.has(n) || /^(i )?(agree|accept|consent)/.test(n)) return true;

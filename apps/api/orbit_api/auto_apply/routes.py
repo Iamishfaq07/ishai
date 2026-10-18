@@ -32,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.guards import require_verified_email
-from orbit_api.auth.security import current_user
+from orbit_api.auth.security import current_user, decode_claims, token_from_request
 from orbit_api.auto_apply import bank, pacing, packets, planner, quota, rules
 from orbit_api.auto_apply.pacing import aware
 from orbit_api.auto_apply.pdf import resume_pdf
@@ -106,6 +106,9 @@ class SetupOut(BaseModel):
     threshold: int
     ai_line: bool
     paused: bool
+    # When the browser extension (auto-apply switched on there) last asked for work; None: never. Nothing is sent
+    # without it.
+    executor_seen_at: datetime | None = None
     quiet_hours: QuietHours | None
     tz_offset_min: int
     resume: MasterResume | None
@@ -188,6 +191,7 @@ async def _setup_out(db: AsyncSession, user: User, setup: AutoApplySetup | None)
         configured=bool(setup and setup.consent_at), consent_at=aware(setup.consent_at) if setup else None,
         mode="review" if s.mode == "review" else "automatic", daily_limit=pacing.daily_limit(s),
         threshold=s.threshold or rules.DEFAULT_THRESHOLD, ai_line=bool(s.ai_line), paused=bool(s.paused),
+        executor_seen_at=aware(s.executor_seen_at),
         quiet_hours=QuietHours(start=s.quiet_start, end=s.quiet_end)
         if s.quiet_start is not None and s.quiet_end is not None else None,
         tz_offset_min=s.tz_offset_min or 0, resume=master,
@@ -376,6 +380,12 @@ class PacketDetail(PacketSummary):
     tracker_id: str | None
 
 
+def _has_proof(p: ApplicationPacket, screenshot: bool) -> bool:
+    """A submission's proof: the site's own confirmation text and page address (the extension can't always take a
+    screenshot, and sends none then), and the screenshot when there is one."""
+    return screenshot or (p.status == "submitted" and bool(p.confirmation_text or p.final_url))
+
+
 def _summary(p: ApplicationPacket, has_proof: bool) -> dict[str, Any]:
     return dict(id=p.id, listing_id=p.listing_id, status=p.status, group=packets.GROUP_OF.get(p.status, "prepared"),
                 ats=p.ats, site=p.site, company=p.company, title=p.title, url=p.url, apply_url=p.apply_url,
@@ -387,7 +397,7 @@ def _summary(p: ApplicationPacket, has_proof: bool) -> dict[str, Any]:
 async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
     proof = await db.get(ApplyProof, p.id)
     return PacketDetail(
-        **_summary(p, proof is not None), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
+        **_summary(p, _has_proof(p, proof is not None)), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
         cover_letter=p.cover_letter, fields=p.fields or {}, answers=p.answers or [],
         missing_questions=p.missing or [], unknown_questions=p.unknown_questions or [], form_source=p.form_source,
         result_status=p.result_status, result_reason=p.result_reason, confirmation_text=p.confirmation_text,
@@ -407,7 +417,7 @@ async def list_packets(user: Annotated[User, Depends(current_user)], db: Annotat
     rows = (await db.scalars(q.order_by(ApplicationPacket.updated_at.desc()).limit(300))).all()
     proofs = set((await db.scalars(select(ApplyProof.packet_id).where(
         ApplyProof.packet_id.in_([p.id for p in rows])))).all()) if rows else set()
-    return [PacketSummary(**_summary(p, p.id in proofs)) for p in rows]
+    return [PacketSummary(**_summary(p, _has_proof(p, p.id in proofs))) for p in rows]
 
 
 @router.get("/packets/{packet_id}", response_model=PacketDetail, dependencies=[read_limit])
@@ -589,11 +599,34 @@ def _eeo(p: ApplicationPacket) -> Literal["decline", "as_answered"]:
     return "as_answered" if any(not bank._DECLINE_RE.search(str(a.get("value"))) for a in eeo_values) else "decline"
 
 
+def lease_holder(request: Request) -> str:
+    """The device asking: its session id (an extension's connect makes one, auth/devices.py), "" without one."""
+    token = token_from_request(request)
+    claims = decode_claims(token) if token else None
+    sid = claims.get("sid") if claims else None
+    return sid[:64] if isinstance(sid, str) else ""
+
+
+def from_executor(request: Request) -> bool:
+    """A bearer token (the extension, the Windows app), not the web app's cookie."""
+    return request.headers.get("authorization", "").lower().startswith("bearer ")
+
+
+async def seen(db: AsyncSession, user: User, now: datetime) -> None:
+    """Notes that an executor asked (at most once a minute, so the setup's row isn't written on every poll)."""
+    setup = await db.get(AutoApplySetup, user.id)
+    last = aware(setup.executor_seen_at) if setup is not None else None
+    if setup is not None and (last is None or now - last > rules.MIN_GAP):
+        setup.executor_seen_at = now
+
+
 @router.get("/next", response_model=ExecutorPacket, dependencies=[executor_limit],
             responses={204: {"description": "Nothing is due"}})
 async def next_packet(request: Request, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> Any:
-    due = await pacing.next_due(db, user)
+    due = await pacing.next_due(db, user, holder=lease_holder(request))
+    if from_executor(request):
+        await seen(db, user, datetime.now(UTC))
     await db.commit()
     p = due.packet
     if p is None:
@@ -647,13 +680,16 @@ class StatusOut(BaseModel):
     needs_you: int
     quota_left: int
     sites_paused: list[str]
+    executor_seen_at: datetime | None = None  # when an executor last asked for work (see SetupOut)
 
 
 @router.get("/status", response_model=StatusOut, dependencies=[executor_limit])
-async def apply_status(user: Annotated[User, Depends(current_user)],
+async def apply_status(request: Request, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> StatusOut:
     now = datetime.now(UTC)
     await pacing.expire(db, now, user.id)
+    if from_executor(request):
+        await seen(db, user, now)
     await db.commit()
     setup = await db.get(AutoApplySetup, user.id)
     counts: dict[str, int] = {str(s): int(n) for s, n in (await db.execute(
@@ -682,7 +718,7 @@ async def apply_status(user: Annotated[User, Depends(current_user)],
         limit=pacing.daily_limit(setup) if setup else rules.DEFAULT_DAILY_LIMIT, next_due_at=next_at, why_not=why,
         ready=int(counts.get("ready", 0)),
         needs_you=sum(counts.get(s, 0) for s in packets.GROUPS["needs_you"]), quota_left=q.left,
-        sites_paused=sorted(paused_sites))
+        sites_paused=sorted(paused_sites), executor_seen_at=aware(setup.executor_seen_at) if setup else None)
 
 
 # ---- admin: the per-site kill switch -----------------------------------------------------------------------------

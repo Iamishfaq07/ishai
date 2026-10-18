@@ -1101,6 +1101,9 @@ class AutoApplySetup(TimestampMixin, Base):
     tz_offset_min: Mapped[int] = mapped_column(Integer, default=0)
     last_planned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # the last "needs you" email
+    # The last time an executor (the extension with auto-apply switched on) asked for work: the web app says whether
+    # one is set up.
+    executor_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
@@ -1164,6 +1167,9 @@ class ApplicationPacket(TimestampMixin, Base):
     tenant_gap_s: Mapped[int] = mapped_column(Integer, default=300)  # this packet's random 3-8 min spacing
     leased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The signed-in device holding the lease (its session id; "" for a token without one): asking again from it gets
+    # the same packet back, and any other device is told it's busy.
+    lease_holder: Mapped[str | None] = mapped_column(String(64))
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     charge: Mapped[str | None] = mapped_column(String(8))  # plan | credit, while leased or once submitted
     result_status: Mapped[str | None] = mapped_column(String(12))

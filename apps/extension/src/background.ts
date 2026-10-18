@@ -36,8 +36,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (m?.type === "autoApply:refresh" || m?.type === "autoApply:changed") {
-    void tick().then(() => sendResponse(true));
-    return true;
+    // Answered at once: an application takes minutes, and holding the message open would keep this event (and the
+    // service worker) pinned to it. The run keeps itself alive (runner.ts), and the popup reads the result from storage.
+    void tick();
+    sendResponse(true);
+    return;
   }
   return;
 });

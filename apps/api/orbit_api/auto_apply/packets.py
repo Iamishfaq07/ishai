@@ -252,7 +252,7 @@ async def record_result(db: AsyncSession, user: User, packet: ApplicationPacket,
     if payload is not None and len(json.dumps(payload)) > rules.MAX_PAYLOAD_CHARS:
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "The submitted payload is too big.")
     packet.result_status, packet.result_reason, packet.result_at = body.status, body.reason, now
-    packet.lease_until = None
+    packet.lease_until = packet.lease_holder = None
     packet.confirmation_text = (body.confirmation_text or "")[:8000] or None
     packet.final_url = (body.final_url or "")[:2000] or None
     if shot is not None:
