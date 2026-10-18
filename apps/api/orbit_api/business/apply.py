@@ -548,7 +548,8 @@ async def apply_one_click(job_id: str, body: OneClickIn, user: Annotated[User, D
     if not text.strip():
         raise HTTPException(422, "That resume is empty. Pick another one.")
     app, raw = await _create(db, job=job, company=company, name=name or user.email.split("@")[0], email=user.email,
-                             phone=body.phone or phone, resume_text=text, filename=title[:200], resume_source=source_kind,
+                             phone=body.phone or phone, resume_text=text, filename=title[:200],
+                             resume_source=source_kind,
                              answers=body.answers, source=body.source, user=user)
     if app is None:
         existing = await db.scalar(select(BizApplication).where(BizApplication.job_id == job.id,
