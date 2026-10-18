@@ -25,8 +25,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
 from orbit_api.auth.security import (
-    cookie_policy,
     create_access_token,
+    drop_cookie,
     hash_password,
     put_cookie,
     set_session_cookie,
@@ -117,14 +117,14 @@ def _unpack(token: str) -> dict[str, Any] | None:
     return data
 
 
-def _set_state(response: Response, token: str) -> None:
-    secure, samesite = cookie_policy()
-    response.set_cookie(GOOGLE_COOKIE, token, httponly=True, secure=secure, samesite=samesite, max_age=600, path="/")
+def _set_state(response: Response, request: Request, token: str) -> None:
+    # Shared across the site (D80): the web app starts at the API's own address and Google returns through the site's
+    # /api proxy (the redirect URI Google has), so the callback must see a cookie the start set on the other host.
+    put_cookie(response, request, GOOGLE_COOKIE, token, 600)
 
 
-def _clear_state(response: Response) -> None:
-    secure, samesite = cookie_policy()
-    response.delete_cookie(GOOGLE_COOKIE, path="/", secure=secure, samesite=samesite, httponly=True)
+def _clear_state(response: Response, request: Request) -> None:
+    drop_cookie(response, request, GOOGLE_COOKIE)
 
 
 def _challenge(verifier: str) -> str:
@@ -265,7 +265,7 @@ def mount(router: APIRouter) -> None:
             auth_limit(request)
         except HTTPException:
             response = RedirectResponse(_login_url("busy"), status_code=302)
-            _clear_state(response)
+            _clear_state(response, request)
             return response
         return None
 
@@ -294,7 +294,7 @@ def mount(router: APIRouter) -> None:
         response = RedirectResponse(f"{_AUTH_URL}?{query}", status_code=302)
         # A link's code: the web app sends it along (else its first-party cookie); a sign-up through Google keeps it.
         code = referrals.normalize(ref or request.cookies.get(referrals.REF_COOKIE))
-        _set_state(response, _pack(state, verifier, nxt, uri, code))
+        _set_state(response, request, _pack(state, verifier, nxt, uri, code))
         return response
 
     @router.get("/google/callback")
@@ -310,7 +310,7 @@ def mount(router: APIRouter) -> None:
         mismatch = packed is None or not secrets.compare_digest(packed["st"], state) or not code
         if packed is None or not get_settings().google_enabled or mismatch:
             response = RedirectResponse(_login_url("google"), status_code=302)
-            _clear_state(response)
+            _clear_state(response, request)
             return response
         try:
             ident = await fetch_identity(code, packed["cv"], packed["ru"])
@@ -321,7 +321,7 @@ def mount(router: APIRouter) -> None:
             return await _signed_in(db, request, user, created, claimed, packed["nx"])
         except GoogleDenied as denied:
             response = RedirectResponse(_login_url(denied.code), status_code=302)
-            _clear_state(response)
+            _clear_state(response, request)
             return response
         except Exception:
             # The browser is on the API's own address here: a database error (or anything unexpected) must not
@@ -331,7 +331,7 @@ def mount(router: APIRouter) -> None:
             with contextlib.suppress(Exception):
                 await db.rollback()
             response = RedirectResponse(_login_url("server"), status_code=302)
-            _clear_state(response)
+            _clear_state(response, request)
             return response
 
 
@@ -350,10 +350,10 @@ async def _signed_in(db: AsyncSession, request: Request, user: User, created: bo
         # httpOnly cookie, never in the URL, and the sign-in page asks for the code.
         response = RedirectResponse(_home("/login?step=2fa"), status_code=302)
         put_cookie(response, request, CHALLENGE_COOKIE, challenge_for(user), CHALLENGE_TTL_S)
-        _clear_state(response)
+        _clear_state(response, request)
         return response
     sid = await start_session(db, user, request)
     await db.commit()
     set_session_cookie(response, create_access_token(user.id, user.token_version, idle=True, sid=sid), request)
-    _clear_state(response)
+    _clear_state(response, request)
     return response

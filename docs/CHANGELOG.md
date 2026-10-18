@@ -1,5 +1,12 @@
 # Implementation log
 
+## Google sign-in starts at the API's own address (2026-10-18)
+
+"Continue with Google" opens its start at api.orbitanswer.com when the web app already calls the API there (D80), one
+trip through the slow edge proxy fewer. Google still returns through the site's /api (the redirect URI it has), so the
+state cookie is now shared across the site like the session cookie. The client's `urlFor(path)` says where a page the
+browser opens itself should go.
+
 ## The desktop app plays the interviewer's natural voice (2026-10-18)
 
 The desktop app's Content-Security-Policy had no `media-src`, so `default-src 'self'` refused the `blob:` URLs the

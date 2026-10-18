@@ -500,6 +500,9 @@ export function createApiClient(options: ApiClientOptions) {
     requestLaunchAccess: (pack: string, country: string) => json<{ reference: string; status: "requested"; message: string }>(
       "/v1/billing/launch-access", { method: "POST", body: body({ pack, country }) }),
     baseUrl,
+    /** The address a call to `path` goes to now: the API's own once the direct route is on (D80), else baseUrl. For a
+     *  page the browser itself opens (Google's sign-in start), which the client can't fetch for it. */
+    urlFor: (path: string) => `${direct && goDirect && !direct.viaProxy(path) ? direct.url : baseUrl}${path}`,
 
     // Auth
     authConfig: () => json<AuthConfig>("/v1/auth/config"),

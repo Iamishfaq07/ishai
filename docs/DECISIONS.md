@@ -1182,3 +1182,8 @@ enters Railway's edge there; sign-in waited on 19 such calls, and Saba's voice, 
 Rejected: Cloudflare Pro or Argo (money, and no promise of Delhi for this zone), Smart Placement (moves the Worker
 near the API; the visitor's hop to London stays), bearer tokens in the browser (readable by any injected script),
 and a new cookie name (every test and client knows this one; the host-only copy is cleared in the same reply).
+**2026-10-18: Google's start goes direct too.** The web app opens `/v1/auth/google/start` at the API's own address
+when its route is direct (`api.urlFor`), and the state cookie is shared (`put_cookie`), because Google returns to the
+redirect URI it has, through the site's proxy: one proxied trip of the two. Moving the callback too needs
+https://api.orbitanswer.com/v1/auth/google/callback added in Google's console and ORBIT_GOOGLE_REDIRECT_URI set to it
+(the owner's, both).
