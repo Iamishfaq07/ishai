@@ -1093,6 +1093,8 @@ export interface Entitlements {
      * or this inbox, and nothing was bought or granted. The app says why the balance is zero. */
     welcome_missed?: boolean;
   } | null;
+  /** On a plan with its own allowance: credits bought or given before, kept (never expiring) for after it. */
+  saved_credits?: { resume: number; interview_minutes_left: number } | null;
 }
 
 export interface Usage {

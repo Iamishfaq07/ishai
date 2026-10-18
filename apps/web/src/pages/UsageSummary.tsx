@@ -112,15 +112,32 @@ export function UsageRows({ e }: { e: Entitlements }) {
           <div className="flex justify-between text-sm">
             <span>{r.label}</span>
             <span className="tabular-nums text-zinc-500">
-              {r.used}
-              {r.limit !== null ? ` / ${r.limit}` : " · unlimited"}
+              {r.used.toLocaleString()}
+              {r.limit !== null ? ` / ${r.limit.toLocaleString()}` : " · unlimited"}
             </span>
           </div>
           {r.limit !== null && <Bar used={r.used} limit={r.limit} />}
         </div>
       ))}
       <p className="text-xs text-zinc-500">Each session can run up to {e.limits.max_session_minutes} minutes.</p>
+      {e.saved_credits && <SavedCredits saved={e.saved_credits} />}
     </div>
+  );
+}
+
+/** Credits bought or given before the plan: kept, not spent while it runs, and there for after it. */
+export function SavedCredits({ saved }: { saved: NonNullable<Entitlements["saved_credits"]> }) {
+  const minutes = Math.floor(saved.interview_minutes_left);
+  const parts = [
+    minutes >= 1 && `${minutes.toLocaleString()} interview minute${minutes === 1 ? "" : "s"}`,
+    saved.resume > 0 && `${saved.resume.toLocaleString()} Resume AI credit${saved.resume === 1 ? "" : "s"}`,
+  ].filter(Boolean);
+  if (!parts.length) return null;
+  return (
+    <p className="rounded-xl border border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-white/10 dark:text-zinc-300">
+      <span className="font-medium text-zinc-800 dark:text-zinc-100">Your credits are kept:</span> {parts.join(" and ")}. They aren't used while
+      your plan runs, and they don't expire.
+    </p>
   );
 }
 

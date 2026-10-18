@@ -93,3 +93,34 @@ def test_bad_monthly_plans_are_refused(monkeypatch: pytest.MonkeyPatch) -> None:
             monthly.monthly_plans()
     monkeypatch.setattr(s, "monthly_plans_json", "[]")
     assert monthly.monthly_plans() == {}
+
+
+def test_credits_from_before_a_plan_are_still_shown_while_it_runs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Credits aren't spent while a plan with its own allowance runs, and they don't expire: the app shows them as
+    kept (`saved_credits`), or a pack paid for seems to vanish the day a plan starts."""
+    from orbit_api import entitlements
+    from orbit_api.db import sessionmaker
+    from orbit_api.models import User
+
+    gen = _client(monkeypatch, ORBIT_ADMIN_EMAIL=f"admin-{uuid.uuid4().hex[:8]}@example.com")
+    client = next(gen)
+    try:
+        h, user = _register_named(client, f"kept-{uuid.uuid4().hex[:8]}@example.com")
+        before = client.get("/v1/entitlements", headers=h).json()
+        assert before["credits"] is not None and before["saved_credits"] is None
+
+        async def grant() -> None:
+            async with sessionmaker()() as db:
+                u = await db.get(User, user["id"])
+                assert u is not None
+                entitlements.add_grant(u, "premium", timedelta(days=30), paid=True)
+                await db.commit()
+
+        client.portal.call(grant)  # type: ignore[union-attr]
+        on_plan = client.get("/v1/entitlements", headers=h).json()
+        assert on_plan["plan"] == "premium" and on_plan["credits"] is None
+        wallet = before["credits"]
+        assert on_plan["saved_credits"] == {"resume": wallet["resume"],
+                                            "interview_minutes_left": wallet["interview_minutes_left"]}
+    finally:
+        gen.close()
