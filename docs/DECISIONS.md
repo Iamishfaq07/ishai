@@ -1263,3 +1263,52 @@ Rejected: a custom URL scheme (`orbit://`: needs registering, any app can claim 
 declaration), a second Google OAuth client of the "desktop" type (a new console setup for the owner, and a second
 place for accounts to be found or made), and polling the API for the result (a code that sits on the server waiting
 for whoever asks).
+
+**D83 — Orbit for Business's AI is a pure module (`orbit_api/business_ai`): the model judges, the server checks and
+scores, protected attributes never reach it, and nothing in it can reject anyone.** Phase 1 of Orbit for Business
+needs a JD writer, a resume parser and an applicant ranking with explanations (research note
+orbit-business-autoapply.md §5.2 item 7, §6.2). The Business routes and UI (built separately) import three functions:
+`write_job_description(JobBrief) -> JobDraft`, `parse_applicant_resume(str) -> ParsedResume` and
+`rank_applicant(JobSpec, ParsedResume, list[ScreeningAnswer]) -> Ranking` (the interface, formula and rules are in
+the package docstring). So:
+- **The score is a formula, not a model's number** (score-v1): must-haves weigh 70, nice-to-haves 20, the experience
+  band 10; yes = 1, partly = 0.5, no = 0; a part with nothing to measure drops out and the rest share its weight.
+  Experience above the band is never marked down (it would act as an age proxy), and location is never scored (it's
+  a caution for a person, and an Illinois-style "no ZIP proxies" rule is easiest kept by not scoring it at all).
+- **Evidence is checked.** Every quote the model gives is looked up in the text it was given, verbatim or near
+  verbatim (85% of its words in order on one line, exact for four words or fewer), and stored as the source's own
+  line. A "yes" or "partly" whose quote isn't there falls back to the deterministic matcher ("partly" if the terms
+  are named, else "no"), with a caution; a "yes" on "N+ years of X" becomes "partly" when the resume's total is
+  under N.
+- **Protected attributes are taken out before anything ranks** (`redact_for_ranking()`): name, contact details,
+  links, photo references, gender words, gendered titles and pronouns (mapped to one neutral form), age (date of
+  birth, stated ages, education years), marital and family status, religion, caste, nationality and origin,
+  disability and health, and the location line. Work-authorisation statements stay only when the job's location
+  rules ask for them. Company and school names stay as written: they're the same whoever applies, and scrubbing a
+  surname out of "Sundaram Traders" would make two applicants differ by their names. The model, the matcher and the
+  evidence check all read only this text, so a resume that differs only in those details gets the same prompt,
+  score and matches: a test, and the live eval below.
+- **No auto-reject.** There's no reject output; model text recommending rejection is dropped, cautions are neutral
+  things to check ("about 29 months between roles; worth asking about"), and a requirement that screens on a
+  protected characteristic ("male candidates only", "age below 30") is never scored and is flagged.
+- **Auditable.** `model_version` is "rank-v1+score-v1+<model id>" (the model that actually answered, a backup
+  included), or "match-v1+score-v1+deterministic-only". It's audit data: customer-facing text names no provider.
+- **Bounded and never down.** Per call a token cap and a timeout (JD 3,000 / 60 s, parse 2,500 / 45 s, rank 1,500 /
+  30 s at temperature 0), JSON validated by pydantic, then one retry: a plain retry after a failure, or a repair
+  prompt showing the model its invalid answer. After that each function takes its deterministic path (a template JD
+  from the brief, `source="template"`; the regex parse; keyword matching), so the routes never need an error state
+  for the AI.
+- **The JD writer is checked like the ranking**: coded words replaced and listed (`inclusive_language_notes`),
+  discriminatory requirements removed from the brief before the model reads it, any line with a figure, benefit or
+  company claim the brief doesn't give removed, 300-700 words in the requested language (Hindi must be Devanagari),
+  no screening question about a protected characteristic or salary history.
+- **Parsing is deterministic first**: contact details, stated experience, dates (incl. "Mar'19 - Till date",
+  "Since 2022"), skills and degrees by regex; the model only structures roles and education, never supplies contact
+  details (they're masked in what it reads, with CTC, notice period and the personal-details block dropped), and
+  whatever it returns must appear in the source.
+Live eval (scripts/eval_business_ai.py, 2026-10-19, 31 calls): identity swaps changed no score or match (max
+difference 0 over 6 pairs), the same resume ranked twice moved 0 points, 100/100 model quotes were found in the
+source; about $0.0002 per ranking, $0.0002 per parse of a short resume and $0.001 per JD.
+Rejected: a model-given score (unauditable and unstable), sending the full resume and asking the model to ignore
+personal details (it can't un-read them), embedding similarity for evidence (a quote either is in the resume or it
+isn't), and auto-rejecting below a threshold (GDPR Art. 22, the EU AI Act's human oversight, Mobley v. Workday).
