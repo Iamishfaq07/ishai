@@ -883,10 +883,11 @@ primitive, and DESIGN.md "Interaction" is the table of timings:
   see-through, so it reads on any surface in either theme.
 - A button's states share one grid cell (`MorphLabel`), so it is always as wide as its widest state: `loading` +
   `loadingText` (a ring spinner and "Saving…"), `done` ("Saved" and a tick that draws in, for 1.6 s, announced), and
-  `CopyButton` ("Copied"). Sixteen hand-swapped busy labels in the web app, and the desktop's Start, moved to it. `disabledReason` keeps a disabled button
-  focusable (aria-disabled) and says why in a tooltip and its description; icon buttons reach a 40 px target (44 on
-  touch) without being drawn bigger, and their tooltip is the styled one (portaled, keyboard focus only, warm along a
-  toolbar) instead of the browser's title.
+  `CopyButton` ("Copied"). Sixteen hand-swapped busy labels in the web app, and the desktop's Start, moved to it.
+  `disabledReason` keeps a disabled button focusable (aria-disabled) and says why in a tooltip and its description;
+  icon buttons reach a 40 px target with a mouse (and the touch layer's 44 px height, D72) without being drawn bigger,
+  and their tooltip is the styled one (portaled, keyboard focus only, warm along a toolbar) instead of the browser's
+  title.
 - Selections move: tabs, segmented controls and now a product's tabs (whose pill slides from the page you came from)
   re-measure on resize; every checkbox and radio is drawn by base.css so its tick pops (high-contrast mode keeps the
   system's); a switch's thumb glides; a chosen card gets a tick (`SelectCheck`); a stepper's tick and line fill in.

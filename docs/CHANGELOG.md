@@ -18,7 +18,7 @@
 - **Lists and overlays**: `useFlip` on the tracker (a card glides across columns), the story bank, answers and
   documents; dialogs, sheets, side panels and confirms play an exit; toasts stack and close up smoothly; a details
   grows open when opened by hand; content fades in after a skeleton; one route fade; tooltips portaled and warm.
-- **Icon buttons and desktop**: 40 px targets (44 on touch) without changing their size; styled tooltips instead of
+- **Icon buttons and desktop**: 40 px targets with a mouse (and the touch layer's 44 px on phones) without changing their size; styled tooltips instead of
   the browser's. Desktop: Setup's title-bar buttons and Start button, the window buttons, the close dialog's
   choices and the live control bar press and tint like the rest.
 - **Tokens everywhere**: stray `duration-150/200/300/500/700` and hand-written timings moved to the scale; progress

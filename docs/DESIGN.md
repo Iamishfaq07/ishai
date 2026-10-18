@@ -124,7 +124,7 @@ class string; `/dev/components` (development builds) shows each in its states, i
   tick for a moment; the button is always as wide as its widest state. `disabledReason` says why it's disabled (a
   tooltip, and its description; it stays focusable); `tip` adds a tooltip; `aria-pressed` styles a toggle; `block`
   is full width on phones.
-- `IconButton` (icon only, named by `label`, which is also its tooltip; a 40 px target, 44 on touch, however small
+- `IconButton` (icon only, named by `label`, which is also its tooltip; a 40 px target with a mouse, 44 px tall on touch, however small
   it's drawn), `ButtonGroup`, `MenuButton`, `SplitButton`, `buttonClass(variant, size)` for links that look like
   buttons (it carries `.btn`, so a link presses like a button).
 - `CopyButton` — copies and says "Copied" on itself (or "Couldn't copy"). `MorphLabel` for words that take turns in
@@ -277,7 +277,7 @@ way. The rules live in `base.css` ("Interaction") and the primitives, so a page 
 - **Primary actions never jump.** A button keeps the width of its widest state (`MorphLabel`: every state laid out
   in one cell), and its label never changes length while you look at it: no `{busy ? "Saving…" : "Save"}`.
 - **Touch:** `hover:` applies only where there's a real hover (Tailwind's `hoverOnlyWhenSupported`), so a tap never
-  leaves a button tinted; presses (`:active`) show on touch too. Icon buttons reach 44 px on a touch screen.
+  leaves a button tinted; presses (`:active`) show on touch too. Icon buttons reach 44 px tall on a touch screen (the touch layer's `.tap-y`), and a lone one (a dialog's close) 44 px square.
 - **Haptics:** `haptic()` for a key confirmation only (a save's "Saved", a copy): one 8 to 12 ms pulse, on Android
   only (iPhones have no vibration API, desktops no motor), and only at Full motion. Never for a press, a hover, a
   selection or an error.

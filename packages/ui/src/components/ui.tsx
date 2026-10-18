@@ -234,7 +234,8 @@ export function Button({
 /**
  * An icon-only button: a square of its size, named for screen readers by `label`, which is also its tooltip (the
  * styled one: after a moment on hover, at once on keyboard focus; `title` replaces the words). The icon is
- * decorative. Its target is at least 40 px (44 on touch) however small it's drawn (.hit-area). Default `ghost`
+ * decorative. Its target is at least 40 px square with a mouse however small it's drawn (.hit-area), and 44 px tall on a
+ * touch screen (.tap-y). Default `ghost`
  * (toolbars, rows, a dialog's close).
  */
 export function IconButton({

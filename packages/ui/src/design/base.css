@@ -245,15 +245,17 @@ button:not(:disabled),
   :is(button, .btn):not(:disabled, [aria-disabled="true"], [role="switch"], [role="tab"], [role="radio"], [role="menuitem"], [role="option"], .lift):active {
   transform: scale(0.97);
 }
-/* An icon-only button's target is at least 40 px square (44 on a touch screen) however small it's drawn: a clear
-   layer around it takes the press. (WCAG 2.5.8 asks for 24.) */
+/* An icon-only button's target is at least 40 px square with a mouse however small it's drawn: a clear layer around
+   it takes the press. (WCAG 2.5.8 asks for 24.) On a touch screen one on its own (a dialog's close) grows to 44 px
+   square; one in a row (IconButton, which has buttonClass's .tap-y) follows .tap-y below: 44 px tall at its own
+   width, so neighbours never take each other's taps. */
 .hit-area::before {
   content: "";
   position: absolute;
   inset: min(0px, calc(50% - 20px));
 }
 @media (pointer: coarse) {
-  .hit-area::before {
+  .hit-area:not(.tap-y)::before {
     inset: min(0px, calc(50% - 22px));
   }
 }

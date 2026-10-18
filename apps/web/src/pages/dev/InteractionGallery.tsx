@@ -103,7 +103,7 @@ function ButtonStates() {
         </Button>
       </Row>
       <Row label="Icon targets">
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">30 px drawn, 40 px to press (44 on touch):</span>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">30 px drawn, 40 px to press (44 px tall on touch):</span>
         <IconButton icon={PenLine} label="Edit" size="sm" />
         <IconButton icon={Trash2} label="Delete" size="sm" />
         <IconButton icon={Plus} label="Add" size="sm" variant="secondary" />
