@@ -99,7 +99,7 @@ export function SessionDetailPage() {
   };
 
   const removeTranscript = async () => {
-    if (!(await confirmDialog({ title: "Delete the transcript?", body: "What was said in this session is deleted. The answers and the report are kept.", confirmLabel: "Delete transcript", danger: true }))) return;
+    if (!(await confirmDialog({ title: "Delete the transcript?", body: "What was said in this session is deleted: the transcript and its questions, also from the answers. The answers and the report (with its short quotes) are kept.", confirmLabel: "Delete transcript", danger: true }))) return;
     try {
       await api.deleteTranscript(session.id);
       await refresh();

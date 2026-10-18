@@ -493,6 +493,10 @@ async def delete_transcript(session_id: str, user: Annotated[User, Depends(curre
         raise HTTPException(status.HTTP_409_CONFLICT, "End the live session first.")
     await db.execute(delete(SessionTurn).where(SessionTurn.session_id == row.id))
     await db.execute(delete(Question).where(Question.session_id == row.id))
+    # Each answer carries the question it answered, word for word: that's what was said too.
+    for answer in (await db.scalars(select(Answer).where(Answer.session_id == row.id))).all():
+        if isinstance(answer.content, dict) and answer.content.get("question"):
+            answer.content = {**answer.content, "question": ""}
     # A dropped connection's saved state holds recent turns and questions too.
     row.carryover = None
     carryover.discard(row.id)

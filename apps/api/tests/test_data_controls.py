@@ -88,7 +88,13 @@ def test_delete_transcript_keeps_answers(client: TestClient) -> None:
     assert before["turns"] and before["answers"]
     assert client.delete(f"/v1/sessions/{sid}/transcript", headers=h).status_code == 204
     after = client.get(f"/v1/sessions/{sid}", headers=h).json()
-    assert after["turns"] == [] and after["answers"] == before["answers"]
+    assert after["turns"] == [] and after["questions"] == []
+    # The answers stay, but not the question each one quoted word for word (that was said in the session too).
+    assert any(a["content"]["question"] for a in before["answers"])
+    assert [a["id"] for a in after["answers"]] == [a["id"] for a in before["answers"]]
+    assert all(a["content"]["question"] == "" for a in after["answers"])
+    assert [a["content"]["direct_answer"] for a in after["answers"]] == [
+        a["content"]["direct_answer"] for a in before["answers"]]
     _, other = _user(client)
     assert client.delete(f"/v1/sessions/{sid}/transcript", headers=other).status_code == 404
 
