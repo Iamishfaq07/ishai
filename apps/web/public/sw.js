@@ -26,7 +26,9 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      for (const key of await caches.keys()) if (RETIRE || key !== CACHE) await caches.delete(key);
+      // Only its own old copies: the page's own caches (Saba's voice clips, "orbit-voice-v1") are the page's to keep,
+      // and a new worker wiped them, so a returning user paid for her hello and acknowledgements again.
+      for (const key of await caches.keys()) if (key.startsWith("orbit-offline-") && (RETIRE || key !== CACHE)) await caches.delete(key);
       if (RETIRE) {
         await self.registration.unregister();
         return;
