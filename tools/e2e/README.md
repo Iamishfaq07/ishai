@@ -20,4 +20,8 @@ A and AA) on the app's main screens in light and dark, and fails on any violatio
 Screenshots and traces are in `test-results/`.
 The frontend CI job runs this gate; Postgres locking and career endpoint tests run in the API CI job.
 
+`extension-autoapply.spec.ts` brings its own fake Orbit API and a local HTTPS fake ATS (it needs `openssl` on PATH for a
+throwaway certificate). Its browser resolves only the four ATS hostnames, to that server, so no real employer site is
+ever reached. The pages in `ats-fixtures/` were recorded once from public postings (GET only).
+
 The older `resume-race.mjs` script remains available for manual route-switch diagnostics.

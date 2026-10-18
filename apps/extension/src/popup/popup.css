@@ -18,3 +18,10 @@ textarea { min-height: 70px; resize: vertical; }
 .chip { border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; font-size: 12px; }
 hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
 a { color: var(--accent); }
+h2 { font-size: 13px; margin: 0 0 6px; } h3 { font-size: 12px; margin: 10px 0 4px; color: var(--muted); }
+label.switch { display: flex; align-items: center; gap: 8px; color: var(--fg); font-size: 13px; margin: 6px 0; }
+label.switch input { width: auto; margin: 0; accent-color: var(--accent); }
+button.small { padding: 3px 9px; font-size: 12px; }
+ul.results { list-style: none; padding: 0; margin: 0; }
+ul.results li { padding: 6px 0; border-top: 1px solid var(--line); font-size: 12px; }
+ul.results li.needs_you strong { color: var(--warn); } ul.results li.submitted strong { color: var(--ok); }
