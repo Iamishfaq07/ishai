@@ -46,7 +46,7 @@ function banner(count: number): void {
     "border-radius:12px;background:#1e1b4b;color:#fff;font:14px/1.45 system-ui,sans-serif;box-shadow:0 8px 30px rgba(0,0,0,.3)";
   box.textContent =
     count > 0
-      ? `Orbit filled ${count} field${count === 1 ? "" : "s"} (outlined in purple). Check every field, answer the rest yourself, then submit when you're ready. Orbit never submits for you.`
+      ? `Orbit filled ${count} field${count === 1 ? "" : "s"} (outlined in purple). Check every field, answer the rest yourself, then submit when you're ready. Orbit doesn't submit this form for you.`
       : "Orbit didn't find empty name, email, phone or link fields to fill on this page.";
   const close = document.createElement("button");
   close.type = "button";
@@ -60,7 +60,8 @@ function banner(count: number): void {
 /**
  * Fills this page's empty name, email, phone, location and link fields from the profile, outlines each one it
  * filled, and shows a banner asking the person to review. Never overwrites what's typed, never touches answers that
- * are theirs to give (salary, visa, why-us…), never uploads a file and never submits.
+ * are theirs to give (salary, visa, why-us…), never uploads a file and never submits (auto-apply, which can, is separate
+ * and opt-in: lib/autoApply).
  */
 export function fillForm(profile: Profile): { filled: string[] } {
   const filled: string[] = [];

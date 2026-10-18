@@ -1,5 +1,6 @@
 import type { ClippedJob } from "../lib/job";
 import type { Profile } from "../page/fill";
+import { autoApplySection } from "./autoApply";
 
 declare const __ORBIT_WEB_URL__: string;
 declare const __ORBIT_API_URL__: string;
@@ -79,7 +80,7 @@ function connectView(): void {
   show(
     h("p", {}, "Clip jobs to your Orbit tracker, see which of a job's keywords your resume covers, and fill an application's basic fields for you to check."),
     h("div", { className: "row" }, button),
-    h("p", { className: "muted" }, "You'll sign in on Orbit's site. The extension only reads the page you're on when you click a button here, and never submits anything."),
+    h("p", { className: "muted" }, "You'll sign in on Orbit's site. The extension only reads the page you're on when you click a button here. It submits applications only if you turn on auto-apply."),
   );
 }
 
@@ -106,6 +107,8 @@ async function home(): Promise<void> {
     h("p", { className: "muted" }, `Signed in as ${me.email}`),
     h("div", { className: "row" }, clip, fill),
     out,
+    h("hr"),
+    autoApplySection(call),
     h("hr"),
     h("div", { className: "row" }, signOut),
   );
@@ -183,7 +186,7 @@ async function fillApplication(out: HTMLElement, button: HTMLButtonElement): Pro
       filled.length
         ? h("p", { className: "ok" }, `Filled ${filled.length} field${filled.length === 1 ? "" : "s"} from ${profile.resume_title ? `"${profile.resume_title}"` : "your profile"}.`)
         : h("p", { className: "muted" }, "No empty name, email, phone or link fields found on this page."),
-      h("p", { className: "muted" }, "Check every field on the page and answer the rest yourself. Orbit never submits an application."),
+      h("p", { className: "muted" }, "Check every field on the page and answer the rest yourself. Orbit doesn't submit this one: that's yours."),
     );
   } catch (err) {
     out.replaceChildren(error(err));
