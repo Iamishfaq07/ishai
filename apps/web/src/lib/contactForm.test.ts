@@ -24,7 +24,7 @@ const READY: ContactFields = {
 
 describe("the topics", () => {
   it("are the server's seven, in its order, each with a hint", () => {
-    expect(CONTACT_TOPICS.map((t) => t.id)).toEqual(["general", "payment", "technical", "report_job", "business", "feedback", "other"]);
+    expect(CONTACT_TOPICS.map((t) => t.id)).toEqual(["general", "payment", "technical", "report_job", "report", "business", "feedback", "other"]);
     expect(CONTACT_TOPICS.every((t) => t.label && t.hint)).toBe(true);
     expect(topicLabel("report_job")).toBe("Report a job");
     expect(topicLabel("mystery")).toBe("mystery");
@@ -46,6 +46,8 @@ describe("readPrefill and contactHref (Report this job → the form)", () => {
 
   it("assumes a report when only a listing is given, and ignores what it doesn't know", () => {
     expect(readPrefill("?listing=j1").topic).toBe("report_job");
+    // The desktop app's "Report a problem" (Microsoft Store policy 11.16) starts on reporting generated content.
+    expect(readPrefill("?topic=report&utm_source=orbit-desktop&utm_campaign=report").topic).toBe("report");
     expect(readPrefill("?topic=sales")).toEqual({ topic: null, listing: null, reason: null, from: null });
     expect(readPrefill("?topic=feedback&listing=bad%20id!").listing).toBeNull();
     expect(readPrefill(`?reason=${"x".repeat(81)}`).reason).toBeNull();

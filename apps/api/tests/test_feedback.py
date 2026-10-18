@@ -103,6 +103,25 @@ def test_repeated_reasons_become_learned_preferences(client: TestClient) -> None
         _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
 
 
+def test_an_inappropriate_answer_can_be_reported_and_never_becomes_a_style_hint(client: TestClient) -> None:
+    h = _register(client)
+    sid, aid = _answered_session(client, h)
+    _answers(client, sid, "bad-1", "bad-2")
+    for answer in (aid, "bad-1", "bad-2"):
+        assert _rate(client, h, sid, answer, rating="down", reason="inappropriate")["reason"] == "inappropriate"
+    assert client.get(f"/v1/sessions/{sid}", headers=h).json()["answers"][0]["feedback"] == {
+        "rating": "down", "reason": "inappropriate"}
+
+    # Three reports are a report, not a style: no hint reaches the next session's prompt.
+    nxt = client.post("/v1/sessions", headers=h, json={"title": "next"}).json()["id"]
+    ticket = client.post(f"/v1/sessions/{nxt}/live-ticket", headers=h).json()["ticket"]
+    with client.websocket_connect(f"/v1/sessions/{nxt}/live?ticket={ticket}") as ws:
+        _collect(ws, lambda ev: any(e["type"] == "session.started" for e in ev))
+        assert _live_engines[nxt].profile.learned == []
+        ws.send_text(json.dumps({"type": "session.end", "data": {}}))
+        _collect(ws, lambda ev: any(e["type"] == "session.ended" for e in ev))
+
+
 def test_learned_hints_are_in_the_prompt() -> None:
     inputs = PromptInputs(question="Why us?", qtype=QuestionType.culture, is_follow_up=False,
                           session_type="interview", role=None, length="standard", style="natural",
@@ -122,6 +141,8 @@ def test_admin_feedback_report(monkeypatch: pytest.MonkeyPatch) -> None:
         _rate(client, h, sid, aid, rating="down", reason="too_generic")
         _answers(client, sid, "second-answer")
         _rate(client, h, sid, "second-answer", rating="up")
+        _answers(client, sid, "reported-answer")
+        _rate(client, h, sid, "reported-answer", rating="down", reason="inappropriate")
         # A made-up answer id, after the session: refused (it would skew this report).
         made_up = client.put(f"/v1/sessions/{sid}/answers/not-an-answer/feedback", headers=h, json={"rating": "up"})
         assert made_up.status_code == 404
@@ -130,6 +151,7 @@ def test_admin_feedback_report(monkeypatch: pytest.MonkeyPatch) -> None:
         report = client.get("/v1/admin/feedback", headers=admin).json()
         assert report["up"] >= 1 and report["down"] >= 1 and 0 < report["satisfaction"] < 1
         assert report["reasons"].get("too_generic", 0) >= 1
+        assert report["reasons"].get("inappropriate", 0) >= 1  # reports reach the admin's quality page
         assert {g["key"] for g in report["by_type"]} >= {"chat"}  # ratings without a question row
         assert all("text" not in g and "content" not in g for g in report["by_model"])  # counts only
     finally:

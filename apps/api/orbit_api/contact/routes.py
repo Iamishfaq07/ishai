@@ -58,11 +58,14 @@ TOPICS: dict[str, str] = {
     "payment": "Payment or credits",
     "technical": "Technical problem",
     "report_job": "Report a job",
+    # Something Orbit generated was inappropriate, harmful or wrong (Microsoft Store policy 11.16): the desktop app's
+    # "Report a problem" opens the form on it (/contact?topic=report).
+    "report": "Report an answer or content",
     "business": "Business or partnership",
     "feedback": "Feedback",
     "other": "Other",
 }
-Topic = Literal["general", "payment", "technical", "report_job", "business", "feedback", "other"]
+Topic = Literal["general", "payment", "technical", "report_job", "report", "business", "feedback", "other"]
 STATUSES = ("new", "open", "done", "spam")
 Status = Literal["new", "open", "done", "spam"]
 

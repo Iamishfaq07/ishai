@@ -409,8 +409,9 @@ export interface SessionAnswer {
 // ─── Answer feedback ─────────────────────────────────────────────────────────
 
 export type AnswerRating = "up" | "down";
-/** Why an answer got 👎. Repeated reasons become style hints in later sessions. */
-export type AnswerFeedbackReason = "too_long" | "too_generic" | "inaccurate" | "off_topic" | "too_formal";
+/** Why an answer got 👎. Repeated reasons become style hints in later sessions ("inappropriate", a report of an
+ *  inappropriate or harmful answer, never does). */
+export type AnswerFeedbackReason = "too_long" | "too_generic" | "inaccurate" | "off_topic" | "too_formal" | "inappropriate";
 
 export interface AnswerFeedback {
   rating: AnswerRating;
@@ -1360,7 +1361,7 @@ export interface Announcement {
 
 // ---- Contact page and the admin's Inbox (POST /v1/contact, /v1/admin/inbox) ----------------------------------
 
-export type ContactTopic = "general" | "payment" | "technical" | "report_job" | "business" | "feedback" | "other";
+export type ContactTopic = "general" | "payment" | "technical" | "report_job" | "report" | "business" | "feedback" | "other";
 /** new = unread · open = read, still to answer · done · spam */
 export type ContactStatus = "new" | "open" | "done" | "spam";
 

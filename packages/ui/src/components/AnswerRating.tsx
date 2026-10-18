@@ -10,6 +10,8 @@ export const FEEDBACK_REASONS: Array<{ key: AnswerFeedbackReason; label: string 
   { key: "inaccurate", label: "Not accurate" },
   { key: "off_topic", label: "Missed the question" },
   { key: "too_formal", label: "Too formal" },
+  // A report, not a style (Microsoft Store policy 11.16): the admin's feedback report counts it.
+  { key: "inappropriate", label: "Inappropriate or harmful" },
 ];
 
 export interface AnswerRatings {
