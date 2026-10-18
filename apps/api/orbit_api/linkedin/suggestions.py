@@ -15,6 +15,7 @@ for a role's description or a recommendation request): writing it again replaces
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Literal
 
@@ -103,8 +104,17 @@ def dump(profile: Profile, state: State) -> dict[str, Any]:
     return {**profile.model_dump(mode="json"), "orbit": state.model_dump(mode="json")}
 
 
-def put(state: State, s: Suggestion) -> State:
-    """`s` in place of the suggestion for the same part (and role), newest first, at most MAX_SUGGESTIONS."""
+def put(state: State, s: Suggestion, *, add_options: bool = False) -> State:
+    """`s` in place of the suggestion for the same part (and role), newest first, at most MAX_SUGGESTIONS. Its
+    "before" is the part as LinkedIn has it. `add_options`: a headline joins the one already there as another option
+    (the rewrite from a resume), so the one picked, maybe applied, stays."""
+    if s.part in APPLIES and s.part != "photo" and state.read is not None:
+        s = s.model_copy(update={"before": current(state.read, s)[:4_000]})
+    old = next((x for x in state.suggestions if (x.part, x.role_key) == (s.part, s.role_key)), None)
+    if add_options and old is not None and old.options and s.options:
+        texts = {o.text.lower() for o in old.options}
+        options = [*old.options, *(o for o in s.options if o.text.lower() not in texts)][:5]
+        s = old.model_copy(update={"options": options, "created_at": s.created_at})
     kept = [x for x in state.suggestions if (x.part, x.role_key) != (s.part, s.role_key)]
     out = [s, *kept]
     while len(out) > MAX_SUGGESTIONS:  # the oldest finished one goes first, else the oldest
@@ -195,11 +205,19 @@ def out(p: Profile, s: Suggestion) -> SuggestionOut:
     return SuggestionOut(**s.model_dump(), applies=s.part in APPLIES, applied=applied(p, s))
 
 
-def projected(p: Profile, suggestions: list[Suggestion]) -> Profile:
-    """Orbit's copy with every suggestion applied, the one written last winning (they're stored newest first)."""
+def projected(p: Profile, suggestions: list[Suggestion], score: Callable[[Profile], int] | None = None) -> Profile:
+    """Orbit's copy with the suggestions applied, the one written last winning (they're stored newest first). With
+    `score`, each one only where it doesn't lower the score: a newer version that scores below the one already
+    applied doesn't drag the "with your fixes" score under the score now."""
+    best = score(p) if score else 0
     for s in reversed(suggestions):
-        if s.part in APPLIES:
-            p = apply(p, s)
+        if s.part not in APPLIES:
+            continue
+        q = apply(p, s)
+        if score is None:
+            p = q
+        elif (got := score(q)) >= best:
+            p, best = q, got
     return p
 
 

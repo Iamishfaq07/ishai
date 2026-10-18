@@ -59,8 +59,11 @@ router = APIRouter(prefix="/v1/linkedin", tags=["linkedin"])
 read_limit = Depends(limit_user("linkedin-read", rate_per_s=3, burst=60))
 ai_limits = [Depends(limit("linkedin-ai", rate_per_s=0.5, burst=20)),
              Depends(limit_user("linkedin-ai-user", rate_per_s=10 / 3600, burst=5))]
-# Writing a fix is Resume AI's kind of call, spending its credits: its limits (resumes/routes.py).
+# An AI fix is Resume AI's kind of call, spending its credits, so it counts against Resume AI's limits
+# (resumes/routes.py); a fix worked out here (skills, the URL, a checklist) only against a light one of its own.
 fix_limits = [Depends(ai_limit), Depends(ai_user_limit)]
+free_fix_limit = limit_user("linkedin-free-fix", rate_per_s=1, burst=30)
+fix_ip_limit = Depends(limit("linkedin-fix", rate_per_s=1, burst=40))
 MIN_TEXT = 200
 MAX_KEYWORDS = 15
 
@@ -218,10 +221,13 @@ async def _out(db: AsyncSession, user: User, row: LinkedInProfileRow | None,
     roles = await _resume_roles(db, user)
 
     def work() -> tuple[auditmod.Audit, int, int]:
-        # CPU-bound (regexes over the profile, three times): off the event loop.
+        # CPU-bound (regexes over the profile, a few times over): off the event loop.
         a = auditmod.audit(profile, target, keywords, roles)
-        return (a, auditmod.audit(read, target, keywords).score,
-                auditmod.audit(sug.projected(profile, state.suggestions), target, keywords).score)
+
+        def score(p: Profile) -> int:
+            return auditmod.audit(p, target, keywords).score
+
+        return a, score(read), score(sug.projected(profile, state.suggestions, score))
 
     a, before, after = await asyncio.to_thread(work)
     return LinkedInOut(profile=profile, read=read, target_role=target, read_at=row.updated_at, reads_left=left,
@@ -376,12 +382,13 @@ async def _sources(db: AsyncSession, user: User, row: LinkedInProfileRow, reques
                          market=keywords, country=user.country)
 
 
-async def _store(db: AsyncSession, user: User, row: LinkedInProfileRow, *new: Suggestion) -> None:
+async def _store(db: AsyncSession, user: User, row: LinkedInProfileRow, *new: Suggestion,
+                 add_options: bool = False) -> None:
     async with _lock(user):
         await db.refresh(row)  # whatever landed while the AI was writing
         profile, state = sug.load(row.data)
         for s in reversed(new):
-            state = sug.put(state, s)
+            state = sug.put(state, s, add_options=add_options)
         row.data = sug.dump(profile, state)
         await db.commit()
 
@@ -441,12 +448,17 @@ def _free_fix(body: FixIn, src: fixes.Sources) -> Suggestion:
     return fixes.open_to_work_fix(p, src.target)
 
 
-@router.post("/fix", response_model=FixOut, dependencies=fix_limits)
+@router.post("/fix", response_model=FixOut, dependencies=[fix_ip_limit])
 async def fix(request: Request, body: FixIn, user: Annotated[User, Depends(require_verified_email)],
               db: Annotated[AsyncSession, Depends(get_db)],
               allowance: Annotated[Allowance, Depends(account_allowance)]) -> FixOut:
     """One part of the profile, written as a suggestion and kept with the profile. The AI's parts cost one single
     fix (a fraction of a resume credit), given back if nothing usable comes of it; the rest are free."""
+    if body.part in fixes.FREE_PARTS:
+        await free_fix_limit(user)
+    else:
+        ai_limit(request)
+        await ai_user_limit(user)
     row = await _row(db, user)
     src = await _sources(db, user, row, request, body.source, body.resume_id)
     if body.part in ("experience", "recommendation"):
@@ -501,7 +513,7 @@ async def rewrite(request: Request, body: RewriteIn, user: Annotated[User, Depen
         if (skills := fixes.skills_fix(src)) is not None:
             top = list(dict.fromkeys([*written.skills, *skills.items]))
             made.append(skills.model_copy(update={"items": top, "after": ", ".join(top), "ai": True}))
-        await _store(db, user, row, *made)
+        await _store(db, user, row, *made, add_options=True)  # its headline joins the options already there
 
     await _spend(allowance, run())
     return await _out(db, user, row, request)

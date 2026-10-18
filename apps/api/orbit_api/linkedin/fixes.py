@@ -41,7 +41,7 @@ from orbit_api.resumes import kit
 from orbit_api.resumes.ats import resume_text
 from orbit_api.resumes.claims import invented_figures, strip_invented_figures
 from orbit_api.resumes.fixes import evidence_skills
-from orbit_api.resumes.schema import Experience, ResumeData
+from orbit_api.resumes.schema import Basics, Experience, ResumeData
 
 log = logging.getLogger(__name__)
 
@@ -425,6 +425,12 @@ def skills_fix(src: Sources) -> Suggestion | None:
     extra: list[str] = []
     if src.resume is not None:
         extra += [s for g in src.resume.skills for s in g.items if s.strip()] + evidence_skills(src.resume)
+    if src.use_profile:
+        # Tools the profile's own About and role descriptions name that its Skills section lacks.
+        own = ResumeData(basics=Basics(summary=p.about), experience=[
+            Experience(title=r.title, company=r.company, bullets=[r.description]) for r in p.experience
+            if r.description.strip()])
+        extra += evidence_skills(own)
     for s in extra:
         if len(s) <= 40:
             ordered.setdefault(same_skill(s), s.strip())
@@ -509,7 +515,7 @@ def headline_suggestion(src: Sources, options: list[Option]) -> Suggestion:
     return Suggestion(id=new_id(), part="headline", label=label_for(p, "headline"), before=p.headline,
                       after=options[0].text, options=options, limit=HEADLINE_MAX, shown=HEADLINE_SHOWN,
                       where=where("headline"), help_url=HELP["headline"], source=src.source, ai=True,
-                      note="Three styles: pick the one that sounds like you, edit it if you like, then copy it.")
+                      note="Different styles: pick the one that sounds like you, edit it if you like, then copy it.")
 
 
 def about_suggestion(src: Sources, about: str) -> Suggestion:

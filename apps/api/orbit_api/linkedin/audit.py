@@ -218,7 +218,7 @@ def audit(p: Profile, target: str, keywords: list[str], resume_roles: list[tuple
         else "Set the role you're after (above) so the audit can check it.", part="headline", kind="ai")
     hk = [k for k in kw if _has(h, k)]
     add("headline_keywords", "headline", len(hk) >= 2, 4, "Headline has 2+ in-demand skills",
-        f"Add two or three skills employers ask for: {', '.join(missing[:3]) or ', '.join(kw[:3])}.",
+        f"Add two or three skills employers ask for, the ones you have: {', '.join(missing[:3]) or ', '.join(kw[:3])}.",
         partial=0.5 if hk else None, part="headline", kind="ai")
     add("headline_strong", "headline", bool(h) and not _WEAK_HEADLINE.search(h) and not _AT_ONLY.match(h), 3,
         "Headline says what you do, not just a job title or \"looking for work\"",

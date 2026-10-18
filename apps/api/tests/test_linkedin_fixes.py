@@ -489,3 +489,42 @@ def test_a_fix_never_writes_to_the_resume_it_reads(jobs: TestClient) -> None:  #
     assert jobs.post("/v1/linkedin/fix", headers=h,
                      json={"part": "about", "source": "resume", "resume_id": rid}).status_code == 200
     assert run(jobs, data) == before
+
+
+def test_a_new_version_never_drags_the_projection_down_and_the_rewrite_adds_an_option() -> None:
+    read = _profile()
+    good = fixes.headline_suggestion(_src(), [sug.Option(label="A", text="Backend Engineer | Go, Kafka, PostgreSQL")])
+    state = sug.put(sug.State(read=read), good)
+    copy = sug.apply(read, good)
+    # Before is LinkedIn's text, not Orbit's copy with something applied.
+    about = fixes.about_suggestion(_src(copy.model_copy(update={"about": "Applied text"})), "x" * 300)
+    assert sug.put(state, about).suggestions[0].before == read.about
+    # A worse headline written later: the projection keeps the better one already applied.
+    worse = fixes.headline_suggestion(_src(), [sug.Option(label="B", text="Engineer")])
+    later = sug.put(state, worse)
+
+    def score(p: Profile) -> int:
+        return audit(p, "Backend Engineer", KW).score
+
+    assert score(sug.projected(copy, later.suggestions, score)) >= score(copy)
+    assert score(sug.projected(copy, later.suggestions)) < score(copy)  # applying it blindly would lower it
+    # The rewrite's headline joins the options there, keeping the pick.
+    merged = sug.put(later, fixes.headline_suggestion(_src(), [sug.Option(label="From your resume", text="Data")]),
+                     add_options=True)
+    head = merged.suggestions[0]
+    assert [o.label for o in head.options] == ["B", "From your resume"] and head.id == worse.id
+
+
+def test_free_fixes_dont_use_up_the_ai_limit(jobs: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    from orbit_api import ratelimit
+
+    h = _setup(jobs)
+    monkeypatch.setattr(ratelimit, "ENFORCE_IN_TESTS", True)
+    ratelimit.reset_all()
+    try:
+        for _ in range(12):  # more than Resume AI's burst of 10: free, so not counted against it
+            assert jobs.post("/v1/linkedin/fix", headers=h, json={"part": "url"}).status_code == 200
+        codes = [jobs.post("/v1/linkedin/fix", headers=h, json={"part": "headline"}).status_code for _ in range(11)]
+        assert codes[:10] == [200] * 10 and codes[10] == 429
+    finally:
+        ratelimit.reset_all()
