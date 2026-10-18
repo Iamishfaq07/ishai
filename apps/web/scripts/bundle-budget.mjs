@@ -11,7 +11,7 @@ import { gzipSync } from "node:zlib";
 /** kB of gzip (level 9, as Cloudflare serves the assets): the entry alone, and each page's first load in total. Set
  *  about 5% over what main measured on 18 Oct 2026 (docs/PERFORMANCE.md), so a real jump fails and a few lines don't. */
 export const BUDGETS = {
-  entry: 170,
+  entry: 171, // +1 kB for D80: the API client's direct route (docs/PERFORMANCE.md)
   css: 32,
   pages: {
     // +1 kB each for D79 (docs/PERFORMANCE.md): the product pages' shared pieces became chunks of their own, and each
@@ -19,10 +19,12 @@ export const BUDGETS = {
     // the sticky bar with them, Mock its one-tap rounds with /mock-interview.
     Home: 211, // the signed-in landing: the page everyone opens
     Landing: 206, // the front page, signed out
-    Sessions: 185,
+    Sessions: 186, // +1 kB for D80, through the entry
     SessionSetup: 200,
     Mock: 206,
-    Live: 246, // the live copilot; the video room (D69, ~14 kB) loads only for a video interview (D73)
+    // The live copilot; the video room (D69, ~14 kB) loads only for a video interview (D73). +1 kB for D80 and D76's
+    // natural voice that holds (the retry, sayNaturalLine, voiceSetup).
+    Live: 247,
     Resumes: 205,
     ResumeEditor: 255,
     JobsAiPages: 280,

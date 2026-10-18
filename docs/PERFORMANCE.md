@@ -47,6 +47,11 @@ even when SQLite hides it.
   product audit (D73) then loaded the room only for video interviews (Live 234 kB with the audit's additions), and
   Live's budget came back down to 246. Raising a budget needs its reason here.
 
+  The entry, Sessions and Live went up 1 kB each on 18 Oct 2026 (entry 169.9 → 170.3, Sessions 185.5, Live 246.5
+  with D79): D80 put the API client's direct route (the cookie-domain handshake, the fallback) in the entry, which
+  every page loads, and D76's addendum added Saba's retry, `sayNaturalLine` and `voiceSetup` to Live. Both are
+  behaviour that has to be there before the first call or the first line, not code a page could load later.
+
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
 - **INP** ≤ 200 ms at p75, and no task over 200 ms while a page opens (total blocking time ≤ 300 ms), under the same
