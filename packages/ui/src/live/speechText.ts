@@ -121,6 +121,7 @@ export function speakable(text: string): string {
 
 /** The second piece's length (characters): long enough to be worth a request, short enough to be ready in time. */
 export const SECOND_CHUNK_CHARS = 140;
+const SHORT_PIECE_CHARS = 50;
 
 /**
  * How a line is said, in up to `max` growing pieces (D76): the first sentence alone (its first clause if it's long),
@@ -150,7 +151,10 @@ export function speechChunks(text: string, max = 3): string[] {
   let i = 1;
   if (max > 2 && i < merged.length) {
     let second = merged[i++]!;
-    while (i < merged.length && second.length + 1 + merged[i]!.length <= SECOND_CHUNK_CHARS) second += ` ${merged[i++]}`;
+    // A short one ("Let's shift a bit.") takes the next sentence with it anyway: a request of its own isn't worth it.
+    const fits = (next: string) =>
+      second.length + 1 + next.length <= (second.length < SHORT_PIECE_CHARS ? SECOND_CHUNK_CHARS + 100 : SECOND_CHUNK_CHARS);
+    while (i < merged.length && fits(merged[i]!)) second += ` ${merged[i++]}`;
     out.push(second);
   }
   if (i < merged.length) out.push(merged.slice(i).join(" "));

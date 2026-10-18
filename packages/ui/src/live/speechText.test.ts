@@ -59,6 +59,12 @@ describe("sentence by sentence", () => {
       "Thanks for joining. How are you doing today?",
     ]);
     expect(speechChunks("One two three. Four five six. Seven eight nine. Ten eleven twelve. Thirteen fourteen fifteen.")).toHaveLength(2);
+    // A short transition goes with the question after it (one request, not two).
+    const reply = "Report-only mode after two weeks, that's a rollout decision. Let's shift a bit. Can you walk me through one specific finding you triaged that turned out to be a real risk, and what you did about it yourself?";
+    expect(speechChunks(reply)).toEqual([
+      "Report-only mode after two weeks, that's a rollout decision.",
+      "Let's shift a bit. Can you walk me through one specific finding you triaged that turned out to be a real risk, and what you did about it yourself?",
+    ]);
   });
 });
 
