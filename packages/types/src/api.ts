@@ -2802,6 +2802,8 @@ export interface SecurityEvent {
 export interface SecurityActivity {
   items: SecurityEvent[];
   notice_days: number;
+  /** The server can send email, so each change is emailed too (otherwise the app is the only alert). */
+  emailed?: boolean;
 }
 
 export interface SignedInDevice {

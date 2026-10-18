@@ -133,6 +133,12 @@ export function rupees(n: number): string {
   return `₹${n.toLocaleString("en-IN", whole ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Interview minutes left as a whole number, rounded down (never more than there is: 15.9 is 15), except that a hair
+ *  under a whole minute is that minute (59.97 is 60). The support bot counts them the same way (support/routes.py). */
+export function wholeMinutes(n: number): number {
+  return Math.max(0, Math.floor(n + 0.05));
+}
+
 // A believable mid-level offer, and a target a fair step above it, in the way offers are written there.
 const OFFERS: Record<string, [string, string]> = {
   IN: ["₹12 LPA fixed + ₹2 L variable", "₹15 LPA fixed"],

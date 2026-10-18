@@ -296,3 +296,30 @@ def test_lines_written_at_once_keep_distinct_ordered_times(client: TestClient) -
     assert len(set(times)) == len(times) == 21  # the greeting, then 10 questions and 10 answers
     roles = [m.role for m in rows[1:]]
     assert roles == ["user", "bot"] * 10, roles  # no answer lands between another question and its own answer
+
+
+def test_the_ticket_follows_the_chat_and_is_filed_by_what_was_asked(client: TestClient) -> None:
+    """The chat asks for the question after the handoff, but the Inbox ticket was written at the handoff: the admin
+    saw only the bot's hello, filed as a technical problem. The ticket now follows the chat."""
+    from orbit_api.models import ContactMessage
+    from orbit_api.support.knowledge import GREETING
+
+    headers, user = _register(client, f"ticket-{uuid.uuid4().hex[:8]}@example.com")
+    thread_id, token = _open(client, headers)
+    handed = client.post(f"/v1/support/threads/{thread_id}/handoff", headers=headers,
+                         json={"token": token, "email": user["email"]})
+    assert handed.status_code == 200, handed.text
+    ticket = _rows(client, ContactMessage, ContactMessage.source_support_thread_id == thread_id)[0]
+    assert GREETING not in ticket.message and "(nothing typed yet)" in ticket.message
+    _say(client, thread_id, token, "I paid by UPI an hour ago and my credits haven't arrived", headers)
+    ticket = _rows(client, ContactMessage, ContactMessage.source_support_thread_id == thread_id)[0]
+    assert "my credits haven't arrived" in ticket.message and ticket.topic == "payment"
+
+
+def test_the_bot_says_theres_nothing_to_cancel(client: TestClient) -> None:
+    from orbit_api.support.knowledge import respond
+
+    for asked in ("How do I cancel my plan?", "stop auto renew", "unsubscribe me"):
+        said, chips = respond(asked)
+        assert said.startswith("There's nothing to cancel: nothing renews."), asked
+        assert ("refund", "Refund") in chips

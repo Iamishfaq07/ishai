@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Callout, CountUp, Crown, LoadGate, Mic, Sparkles, cx, focusRing, type LucideIcon } from "@orbit/ui";
+import { Callout, CountUp, Crown, LoadGate, Mic, Sparkles, cx, focusRing, wholeMinutes, type LucideIcon } from "@orbit/ui";
 import type { Entitlements } from "@orbit/types";
 import { ErrorNote } from "../components/ui";
 import { api } from "../lib/api";
@@ -54,13 +54,13 @@ function Balance({ icon: Icon, tone, value, unit, label, children }: { icon: Luc
 export function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolean }) {
   const c = e.credits;
   if (!c) return null;
-  const empty = Math.round(c.interview_minutes_left) <= 0 && c.resume === 0;
+  const empty = wholeMinutes(c.interview_minutes_left) <= 0 && c.resume === 0;
   return (
     <div className="space-y-4">
       {/* Side by side when the card has room for both (13rem each), stacked when it doesn't: Home puts this card in
           a full row or beside Recent sessions, Plan & billing in a narrow column. */}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
-        <Balance icon={Mic} tone="interview" value={Math.round(c.interview_minutes_left)} unit="min left" label="Interview minutes">
+        <Balance icon={Mic} tone="interview" value={wholeMinutes(c.interview_minutes_left)} unit="min left" label="Interview minutes">
           Live and mock interviews both use these. 60 minutes = 1 interview credit.
         </Balance>
         <Balance icon={Sparkles} tone="resume" value={c.resume} unit="left" label="Resume AI credits">
@@ -127,7 +127,7 @@ export function UsageRows({ e }: { e: Entitlements }) {
 
 /** Credits bought or given before the plan: kept, not spent while it runs, and there for after it. */
 export function SavedCredits({ saved }: { saved: NonNullable<Entitlements["saved_credits"]> }) {
-  const minutes = Math.floor(saved.interview_minutes_left);
+  const minutes = wholeMinutes(saved.interview_minutes_left);
   const parts = [
     minutes >= 1 && `${minutes.toLocaleString()} interview minute${minutes === 1 ? "" : "s"}`,
     saved.resume > 0 && `${saved.resume.toLocaleString()} Resume AI credit${saved.resume === 1 ? "" : "s"}`,

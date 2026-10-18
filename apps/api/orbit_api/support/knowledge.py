@@ -195,6 +195,16 @@ _TOPICS: tuple[Topic, ...] = (
             "PayPal transaction ID. A refund goes back through PayPal to the account or card you paid with."),
     ),
     Topic(
+        "cancel",
+        "Cancel a plan",
+        "There's nothing to cancel: nothing renews. A pack is one payment, and a plan (a week, a month or a year) "
+        "ends on its own on its last day; you're never charged again unless you buy again. Credits you have never "
+        "expire. For a refund, see the refund policy at /refund, then tap Talk to a person.",
+        ("cancel", "unsubscribe", "auto renew", "auto-renew", "autorenew", "renewal", "renews", "stop billing",
+         "stop charging", "subscription"),
+        ("refund", "prices"),
+    ),
+    Topic(
         "windows",
         "Windows app",
         "The live copilot is the Windows app. While signed in, open Me, then Windows app, and download it. "
@@ -250,7 +260,7 @@ _TOPICS: tuple[Topic, ...] = (
 TOPICS: dict[str, Topic] = {t.id: t for t in _TOPICS}
 # Specific packs and problems before the broad "prices" phrases.
 _MATCH_ORDER: tuple[str, ...] = (
-    "mini", "starter", "plus", "pro", "refund", "utr", "missing", "razorpay", "paypal", "upi",
+    "cancel", "mini", "starter", "plus", "pro", "refund", "utr", "missing", "razorpay", "paypal", "upi",
     "what_spends", "welcome", "windows", "signin", "resume", "jobs", "practice", "buy", "prices",
 )
 

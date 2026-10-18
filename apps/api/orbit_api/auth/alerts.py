@@ -22,7 +22,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import AuditLog, User
-from orbit_api.providers.email import OutgoingEmail, send_safely
+from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -87,6 +87,8 @@ class SecurityEvent(BaseModel):
 class SecurityActivityOut(BaseModel):
     items: list[SecurityEvent]
     notice_days: int = NOTICE_DAYS
+    # This server can send email (SMTP is set up), so each change is emailed too. Without it, the app is the alert.
+    emailed: bool = False
 
 
 @router.get("/security-activity", response_model=SecurityActivityOut)
@@ -101,7 +103,7 @@ async def security_activity(user: Annotated[User, Depends(current_user)],
     def aware(d: datetime) -> datetime:
         return d if d.tzinfo else d.replace(tzinfo=UTC)
 
-    return SecurityActivityOut(items=[
+    return SecurityActivityOut(emailed=can_deliver(), items=[
         SecurityEvent(id=r.id, action=r.action, text=SECURITY_EVENTS[r.action][0], at=aware(r.created_at),
                       notice=r.action in ALERTED and aware(r.created_at) >= since)
         for r in rows])

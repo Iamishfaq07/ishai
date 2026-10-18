@@ -342,6 +342,7 @@ export {
   localeFor,
   rupees,
   sampleOffer,
+  wholeMinutes,
   speechLang,
   type Country,
 } from "./region";

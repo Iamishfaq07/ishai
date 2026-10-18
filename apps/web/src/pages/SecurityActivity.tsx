@@ -19,7 +19,7 @@ export function SecurityActivityCard() {
         Recent security activity
       </h2>
       <p className="mb-4 text-sm text-zinc-500 dark:text-zinc-400">
-        Changes to how your account is signed in to. Each one is also emailed to you. Don't recognise one? Reset your password, then check your passkeys and two-step sign-in above.
+        Changes to how your account is signed in to{activity.data?.emailed ? ", each one also emailed to you" : ""}. Don't recognise one? Reset your password, then check your passkeys and two-step sign-in above.
       </p>
       <LoadGate loading={activity.loading && !activity.data} variant="line" count={2} label="Loading your security activity">
         {activity.error && !activity.data ? (

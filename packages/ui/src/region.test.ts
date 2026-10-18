@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COUNTRIES, countryName, currencyFor, detectCountry, formatNumber, isIndia, rupees, sampleOffer } from "./region";
+import { COUNTRIES, countryName, currencyFor, detectCountry, formatNumber, isIndia, rupees, sampleOffer, wholeMinutes } from "./region";
 
 describe("region", () => {
   it("lists India first and every country once", () => {
@@ -47,5 +47,11 @@ describe("rupees", () => {
     expect(rupees(26499)).toBe("₹26,499");
     expect(rupees(150000)).toBe("₹1,50,000");
     expect(rupees(499.5)).toBe("₹499.50");
+  });
+});
+
+describe("minutes left", () => {
+  it("round down, as the support bot counts them", () => {
+    expect([15.9, 59.97, 0.4, 0, -2, 317.3].map(wholeMinutes)).toEqual([15, 60, 0, 0, 0, 317]);
   });
 });

@@ -786,7 +786,7 @@ async def decide_payment(payment_id: str, body: DecisionIn, background: Backgrou
                                    f"{reason}\n\nIf you did pay, check the UTR in your UPI app and send it again: "
                                    f"{web}/billing"))
     db.add(AuditLog(user_id=admin.id, action=f"admin.payment.{body.action}",
-                    target=f"{p.id} {p.plan} ₹{p.amount_inr} {p.utr}"))
+                    target=f"{p.id} {_label(p)} {pricing.payment_text(p)} UTR {p.utr}"))
     try:
         await db.commit()
     except IntegrityError as e:  # the credits for this payment were already added (uq_credit_entries_payment_kind)
