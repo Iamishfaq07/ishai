@@ -103,7 +103,7 @@ export function VideoRoomTranscript({
       aria-label="Interview transcript"
       className={cx(
         "flex min-h-0 flex-col overflow-hidden rounded-3xl bg-zinc-900 ring-1 ring-white/10",
-        variant === "drawer" ? "h-[min(42dvh,22rem)] animate-rise" : "animate-panel-in",
+        variant === "drawer" ? "h-[min(42vh,22rem)] animate-rise supports-[height:100dvh]:h-[min(42dvh,22rem)]" : "animate-panel-in",
         className,
       )}
     >

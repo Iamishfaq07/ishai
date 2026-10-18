@@ -1156,6 +1156,29 @@ had turned her natural voice off for the rest of the call, but the per-second sp
 answer those too, so only `voice_allowance_used` (today's characters used) and `voice_off` (not set up), 401 and 403
 do. The web's API calls leaving the slow proxy is D80.
 
+**2026-10-18: fewer voice requests, a join that says where it is, a dock that always fits.** Three things found around
+the room. (1) The acknowledgements: all five were asked for after her first line, though at most one is said every
+other answer, and they crossed her next line's requests under the per-user limit (20 in 20 s). Now two (the most
+natural, "Mm-hmm." and "Okay.") for her own voice, one request each time she goes quiet (her line all said: the
+candidate is about to talk for a while), and only while she's listening (nothing of hers being written or on its way,
+no acknowledgement playing), and one more each time she says one (`AckWarmer`); what an earlier session kept in Cache
+Storage costs nothing. The offline page's service worker deleted every cache but its own when a new one took over, the
+voice clips too: it now clears only its own. (2) The first words: her hello was already fixed (no model call), so the
+wait was the socket, the transcriber's handshake and her voice. The hello now goes out before the transcriber's
+sockets are up (`MockInterviewer.opens_at_once`: a new English video round; what the candidate says meanwhile waits in
+the socket), and its audio is kept like the acknowledgements' (the same words every time for that name and setup; it
+stays on the device, as they do), so a returning user hears her at once (mock stack: 1.57 s from Join to her first
+sound, now 0.25 s, no speak request). The room says where the call is ("Connecting…", "Saba is joining…", then "about
+to speak…"; not "listening" while the voice is still being worked out), and the join moment ends when she can be
+heard. Rejected: the room guessing her hello's text to ask for it before it arrives (two copies of one template). Left
+for later: sending the hello with the session's creation, so a first-time user's voice is asked for while the socket
+connects (an API change). (3) The dock: 100dvh with a 100vh fallback, the home bar's inset inside the room (under its
+controls), a grid row and caption that can't outgrow the room, and a layout for a phone on its side (landscape, at
+most 560 px tall and at least 640 px wide: the transcript beside the call, the camera in her tile's corner, the
+controls in one row), where the camera tile had stood over End. A portrait phone at 390×844, 360×800 or 540×960 didn't
+cut the dock in headless Chrome, before or after; the 9:16 Saba film (marketing/video) does frame the room's bottom
+out (its 430×900 room at 2× from y 300 of a 1920 px frame).
+
 **D80 — The web app calls the API at its own address (api.orbitanswer.com) with a cookie shared across the site,
 and keeps the edge proxy only for what the visitor's country decides.** The owner: "the login is slow, and login with
 Google is slow". Measured from India on 18 October 2026: a call through the site's /api proxy took 1-7.8 s (0.96-3.2 s

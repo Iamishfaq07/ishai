@@ -129,6 +129,22 @@ describe("the natural voice asks for each piece when it'll be needed (D76)", () 
     }
   });
 
+  it("keeps her hello (said the same way every time), so the next time it's heard at once, for nothing", async () => {
+    const hello = "Hi Priya, I'm Saba. Thanks for joining. How are you doing today?";
+    const first = speaker();
+    await playThrough(speakNatural(hello, first.speak, "aurora-keep", new AbortController().signal, { keep: true }));
+    expect(first.asked).toEqual(["Hi Priya, I'm Saba.", "Thanks for joining. How are you doing today?"]);
+    const again = speaker();
+    await playThrough(speakNatural(hello, again.speak, "aurora-keep", new AbortController().signal, { keep: true }));
+    expect(again.asked).toEqual([]);
+    expect(FakeAudio.all).toHaveLength(4); // both times heard in full
+    // A line that isn't kept (a question) is asked for every time.
+    const question = speaker();
+    await playThrough(speakNatural("Tell me about yourself.", question.speak, "aurora-keep", new AbortController().signal));
+    await playThrough(speakNatural("Tell me about yourself.", question.speak, "aurora-keep", new AbortController().signal));
+    expect(question.asked).toHaveLength(2);
+  });
+
   it("never asks again after a refusal that won't pass (the allowance, off, signed out)", async () => {
     let calls = 0;
     const refused: SpeakFn = async () => {

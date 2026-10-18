@@ -6,9 +6,12 @@ const SOURCE = readFileSync(new URL("../../public/sw.js", import.meta.url), "utf
 
 type Handler = (event: unknown) => void;
 
-function worker(network: (req: Request) => Promise<Response>) {
+function worker(network: (req: Request) => Promise<Response>, existing: string[] = []) {
   const handlers: Record<string, Handler> = {};
   const stored = new Map<string, Response>();
+  // Caches the browser already has (an older worker's, the page's own), and the ones the worker deletes.
+  const names = new Set(existing);
+  const deleted: string[] = [];
   const self = {
     location: new URL("https://orbitanswer.com/sw.js"),
     addEventListener: (type: string, fn: Handler) => (handlers[type] = fn),
@@ -18,8 +21,11 @@ function worker(network: (req: Request) => Promise<Response>) {
   };
   const caches = {
     open: async () => ({ put: async (key: string, res: Response) => void stored.set(key, res) }),
-    keys: async () => [...stored.keys()].length ? ["orbit-offline-v1"] : [],
-    delete: async () => true,
+    keys: async () => [...names, ...([...stored.keys()].length ? ["orbit-offline-v1"] : [])],
+    delete: async (name: string) => {
+      deleted.push(name);
+      return names.delete(name);
+    },
     match: async (key: string) => stored.get(key)?.clone(),
   };
   const fetchFn = (input: string | { url: string }) =>
@@ -38,7 +44,12 @@ function worker(network: (req: Request) => Promise<Response>) {
     handlers.fetch!({ request, preloadResponse: Promise.resolve(undefined), respondWith: (p: Promise<Response>) => (answered = p) });
     return answered;
   }
-  return { install, answer };
+  async function activate(): Promise<void> {
+    let done: Promise<unknown> = Promise.resolve();
+    handlers.activate!({ waitUntil: (p: Promise<unknown>) => (done = p) });
+    await done;
+  }
+  return { install, answer, activate, deleted };
 }
 
 const page = (body: string) => new Response(body, { headers: { "content-type": "text/html" } });
@@ -67,6 +78,13 @@ describe("the offline page's service worker", () => {
     const offline = (await sw.answer("https://orbitanswer.com/jobs"))!;
     expect(await offline.text()).toBe("You're offline");
     expect(offline.headers.get("content-type")).toContain("text/html");
+  });
+
+  it("clears only its own old copies when it takes over, never the page's caches (Saba's voice clips)", async () => {
+    const sw = worker(async () => page("You're offline"), ["orbit-offline-v0", "orbit-voice-v1"]);
+    await sw.install();
+    await sw.activate();
+    expect(sw.deleted).toEqual(["orbit-offline-v0"]);
   });
 
   it("is switched off by one flag, kept in the file", () => {

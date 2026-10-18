@@ -15,7 +15,7 @@ from orbit_api.live.events import LiveSettings
 from orbit_api.live.mock_interviewer import VIDEO_OPENING_QUESTION, MockConfig, MockInterviewer
 from orbit_api.providers.llm.base import LLMRequest, LLMResponse, Usage
 from orbit_api.providers.llm.mock import MockLLMProvider
-from orbit_api.providers.stt.base import TranscriptEvent
+from orbit_api.providers.stt.base import STTConfig, STTSession, TranscriptEvent
 from orbit_api.providers.stt.mock import MockSTTProvider
 from orbit_api.retrieval.index import SessionIndex
 from tests.test_engine import Sink
@@ -317,6 +317,65 @@ async def test_the_engine_records_her_lines_and_the_voice_reports(caplog: pytest
     await eng.handle_client({"type": "mock.voice", "data": {"event": "nonsense"}})
     assert sink.of("error")[-1]["code"] == "invalid_event"
     await eng.end()
+
+
+class SlowSTT(MockSTTProvider):
+    """A transcriber whose sockets take as long as the test says to connect (Deepgram's handshake, in production)."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.ready = asyncio.Event()
+
+    async def _open(self, config: STTConfig) -> STTSession:
+        await self.ready.wait()
+        return await super()._open(config)
+
+
+def _video_engine(sink: Sink, stt: MockSTTProvider, llm: MockLLMProvider | None = None, **cfg: Any) -> LiveEngine:
+    return LiveEngine(SessionProfile("s5", "mock", "Backend Engineer", "en", "en", dev_mode=True,
+                                     mock=MockConfig(duration_minutes=10, **cfg), candidate_name="Arjun Mehta"),
+                      LiveSettings(auto_answer=False), send=sink, llm=llm or Scripted(), stt=stt,
+                      index=SessionIndex([]))
+
+
+async def test_her_hello_goes_out_while_the_transcriber_is_still_connecting() -> None:
+    sink, stt = Sink(), SlowSTT()
+    eng = _video_engine(sink, stt, video=True)
+    starting = asyncio.ensure_future(eng.start())
+    await sink.wait_for("mock.say")  # her fixed hello: no model call, nothing to hear yet (D76)
+    assert sink.of("mock.say")[0]["text"].startswith("Hi Arjun, I'm Saba.")
+    assert not sink.of("session.started")  # the transcriber's sockets aren't up yet
+    stt.ready.set()
+    await starting
+    assert sink.of("session.started")
+    assert len(sink.of("mock.say")) == 1  # said once, not again when the transcriber is ready
+    await eng.on_transcript("mic", TranscriptEvent("final", "Good, thanks.", 0, 900, endpoint=True))
+    await sink.wait_for("mock.question")  # the conversation goes on as before
+    await eng.end()
+
+
+async def test_a_round_whose_opening_is_written_still_waits_for_the_transcriber() -> None:
+    sink, stt = Sink(), SlowSTT()
+    eng = _video_engine(sink, stt, video=False)
+    starting = asyncio.ensure_future(eng.start())
+    await asyncio.sleep(0.05)
+    assert not [e for e in sink.events if e["type"].startswith("mock.")]
+    stt.ready.set()
+    await starting
+    await sink.wait_for("mock.question")
+    await eng.end()
+
+
+async def test_ending_while_the_transcriber_connects_says_nothing_more() -> None:
+    sink, stt = Sink(), SlowSTT()
+    eng = _video_engine(sink, stt, video=True)
+    starting = asyncio.ensure_future(eng.start())
+    await sink.wait_for("mock.say")
+    await eng.end()
+    stt.ready.set()
+    await starting
+    assert not sink.of("session.started")
+    assert len(sink.of("mock.say")) == 1
 
 
 # ---- turns from the candidate's voice, as a real call goes (D76: found with the real transcriber) ----------------

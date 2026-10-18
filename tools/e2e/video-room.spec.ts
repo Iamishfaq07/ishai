@@ -86,3 +86,34 @@ test("Saba's voice visualizer shows her state, in words too", async ({ page, con
   await expect(page.getByRole("status").filter({ hasText: "Your mic is paused" })).toBeAttached();
   await context.request.post(`${API}/v1/sessions/${id}/end`);
 });
+
+// The whole control bar stays on screen, clear of the camera tile and of her captions: a tall phone, and a phone on
+// its side, where the camera tile used to stand over End and her caption ran over the controls (D76, 2026-10-18).
+test("the video interview's controls stay whole on a tall phone and on its side", async ({ page, context }) => {
+  test.setTimeout(90_000);
+  await quietVoice(context);
+  for (const [width, height] of [[390, 844], [844, 390]] as const) {
+    const id = await videoSession(context);
+    await page.setViewportSize({ width, height });
+    await page.goto(`/live/${id}`);
+    await expect(page.getByRole("button", { name: "End interview" })).toBeVisible({ timeout: 30_000 });
+    // Past the small talk (the server's scripted speech-to-text): a question out, "I'm done answering" in the dock.
+    await page.waitForFunction(() => typeof (window as unknown as { __orbitDevSimulate?: unknown }).__orbitDevSimulate === "function");
+    await page.evaluate(() => (window as unknown as { __orbitDevSimulate: (f: string, s?: number) => void }).__orbitDevSimulate("saba_smalltalk", 4));
+    await expect(page.getByRole("button", { name: /I'm done answering/ })).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(800); // settled: the caption has risen in
+    const camera = (await page.locator("[data-self-tile]").boundingBox())!;
+    for (const control of await page.locator("footer button").all()) {
+      const box = (await control.boundingBox())!;
+      const name = (await control.getAttribute("aria-label")) ?? (await control.textContent());
+      expect(box.y + box.height, `${name} is cut off at ${width}x${height}`).toBeLessThanOrEqual(height);
+      expect(box.x >= 0 && box.x + box.width <= width, `${name} is off the side at ${width}x${height}`).toBe(true);
+      const under = box.x < camera.x + camera.width && box.x + box.width > camera.x && box.y < camera.y + camera.height && box.y + box.height > camera.y;
+      expect(under, `${name} is under the camera tile at ${width}x${height}`).toBe(false);
+    }
+    const dock = (await page.locator("footer").boundingBox())!;
+    const caption = await page.locator("[data-caption]").boundingBox();
+    if (caption) expect(caption.y + caption.height, `the caption runs over the controls at ${width}x${height}`).toBeLessThanOrEqual(dock.y + 1);
+    await context.request.post(`${API}/v1/sessions/${id}/end`);
+  }
+});

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { MockVoiceEvent } from "@orbit/types";
 import {
   ACKS,
+  AckWarmer,
   PACE_SPEED,
   cachedAck,
   playClip,
   sayNaturalLine,
   voiceForSpeaker,
-  warmAcks,
   type NaturalVoiceSource,
   type VoicePace,
 } from "./naturalVoice";
@@ -110,6 +110,8 @@ export interface VoiceLine {
   id: string;
   text: string;
   speaker?: string;
+  /** Said the same way every time (her hello): its audio is kept on this device, so next time it costs nothing. */
+  keep?: boolean;
 }
 
 /**
@@ -129,12 +131,15 @@ export function useInterviewerVoice(
     enabled = true,
     natural = null,
     pace = "normal",
+    nextLineComing = false,
     onEvent,
   }: {
     lang?: string;
     enabled?: boolean;
     natural?: NaturalVoiceSource | null;
     pace?: VoicePace;
+    /** The server is writing her next line (mock.thinking): it's on its way, so nothing else is asked for now. */
+    nextLineComing?: boolean;
     /** What happened to each line (mock.voice for the server: started, finished, blocked, stalled…). */
     onEvent?: (event: MockVoiceEvent, lineId: string, detail?: string) => void;
   } = {},
@@ -155,7 +160,7 @@ export function useInterviewerVoice(
   const ackDone = useRef<Promise<void> | null>(null); // an acknowledgement being said: her line waits for it
   const ackStop = useRef<AbortController | null>(null);
   const [acking, setAcking] = useState(false);
-  const warmed = useRef<string | null>(null);
+  const warmer = useRef<AckWarmer | null>(null);
   const events = useRef(onEvent);
   events.current = onEvent;
   const [naturalOff, setNaturalOff] = useState(false);
@@ -166,6 +171,8 @@ export function useInterviewerVoice(
   const speed = PACE_SPEED[pace];
   const phaseRef = useRef<VoicePhase>("idle");
   phaseRef.current = phase;
+  const coming = useRef(nextLineComing);
+  coming.current = nextLineComing;
 
   const report = useCallback((event: MockVoiceEvent, id: string, detail?: string) => {
     if (id) events.current?.(event, id, detail);
@@ -290,7 +297,7 @@ export function useInterviewerVoice(
   }, [synth]);
 
   const say = useCallback(
-    (id: string, text: string, speaker?: string) => {
+    (id: string, text: string, speaker?: string, keep?: boolean) => {
       halt();
       current.current = id;
       setLineId(id);
@@ -307,6 +314,7 @@ export function useInterviewerVoice(
       void sayNaturalLine(text, natural.speak, voiceId, controller, {
         limitMs: PREPARE_LIMIT_MS,
         speed,
+        ...(keep ? { keep } : {}),
         before: () => ackDone.current ?? Promise.resolve(),
         onClip: (audio, clip, part) => tap.attach(audio, clip.blob, part),
         onPlaying: () => {
@@ -354,22 +362,27 @@ export function useInterviewerVoice(
       report("finished", line.id);
       return;
     }
-    say(line.id, line.text, line.speaker);
+    say(line.id, line.text, line.speaker, line.keep);
   }, [line, enabled, say, natural?.pending, naturalOff, tap, report]);
 
   useEffect(() => () => halt(), [halt]);
 
-  // The acknowledgements are fetched once per voice, after her first line (so they never delay it).
+  // A few acknowledgements in her own voice, kept ready (AckWarmer): asked for only while she's listening, after a
+  // line of hers is all said, never while the next one is being written or on its way (D76).
+  const primaryVoice = useNatural ? natural?.voices[0] : undefined;
+  const naturalSpeak = natural?.speak;
   useEffect(() => {
-    if (!useNatural || !natural || phase !== "done") return;
-    const voiceId = natural.voices[0];
-    const key = `${voiceId}:${speed}`;
-    if (!voiceId || warmed.current === key) return;
-    warmed.current = key;
-    void warmAcks(natural.speak, voiceId, speed).then((all) => {
-      if (!all && warmed.current === key) warmed.current = null; // some missing: again after her next line
-    });
-  }, [useNatural, natural, phase, speed]);
+    if (!primaryVoice || !naturalSpeak) return;
+    const w = new AckWarmer(naturalSpeak, primaryVoice, speed, () => phaseRef.current === "done" && !coming.current && !inFlight.current && !ackDone.current);
+    warmer.current = w;
+    return () => {
+      w.stop();
+      if (warmer.current === w) warmer.current = null;
+    };
+  }, [primaryVoice, naturalSpeak, speed]);
+  useEffect(() => {
+    if (phase === "done") void warmer.current?.run();
+  }, [phase, primaryVoice]);
 
   const stopAck = useCallback(() => {
     ackStop.current?.abort();
@@ -391,7 +404,7 @@ export function useInterviewerVoice(
     report("interrupted", id);
   }, [halt, stopAck, tap, report]);
   const repeat = useCallback(() => {
-    if (line) say(line.id, line.text, line.speaker);
+    if (line) say(line.id, line.text, line.speaker, line.keep);
   }, [line, say]);
   const unlock = useCallback(() => resume.current?.(), []);
   const ack = useCallback(() => {
@@ -405,6 +418,7 @@ export function useInterviewerVoice(
         const found = await cachedAck(voiceId, speed, lastAck.current);
         if (!found || controller.signal.aborted || phaseRef.current === "speaking") return;
         lastAck.current = found.text;
+        warmer.current?.used(); // one more kept ready, for the next time (not now: her line is on its way)
         setAcking(true);
         await playClip(found.clip, controller.signal, {
           rate: found.clip.speed === speed ? 1 : speed / found.clip.speed,

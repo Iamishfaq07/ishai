@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { useMicActivity } from "../hooks/useAudioLevel";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { useMotion } from "../hooks/useMotion";
@@ -57,6 +57,24 @@ const MOOD_ANNOUNCED: Record<Mood, string> = {
   thinking: `${INTERVIEWER_NAME} is thinking`,
   paused: "Your mic is paused",
 };
+/**
+ * Before her first line (D76, 2026-10-18): where the call is, as it happens. "Connecting you with Saba…" used to stay
+ * from the moment the room opened until her first line had come, whatever it was waiting on. Now: the connection,
+ * then her joining (the server's side is up, her hello is on its way), then her voice "about to speak…".
+ */
+type Stage = "connecting" | "reconnecting" | "joining";
+const STAGE_TEXT: Record<Stage, string> = {
+  connecting: "Connecting…",
+  reconnecting: "Reconnecting…",
+  joining: `${INTERVIEWER_NAME} is joining…`,
+};
+const STAGE_LABEL: Record<Stage, string> = { connecting: "connecting…", reconnecting: "reconnecting…", joining: MOOD_LABEL.joining };
+const STAGE_ANNOUNCED: Record<Stage, string> = {
+  connecting: "Connecting to the interview",
+  reconnecting: "Reconnecting to the interview",
+  joining: MOOD_ANNOUNCED.joining,
+};
+
 /**
  * She acknowledges what they just said ("Mm-hmm.") when her reply is this slow to start (still being written, or her
  * voice on its way), at most every other time, and only right after they spoke (never before a check-in).
@@ -169,6 +187,7 @@ function SelfTile({
   return (
     <div
       ref={levelRef}
+      data-self-tile=""
       style={{ "--level": "0" } as React.CSSProperties}
       className={cx("relative overflow-hidden rounded-3xl bg-zinc-900 ring-1 ring-white/10", className)}
     >
@@ -235,8 +254,9 @@ const CALL_TONE = {
 } as const;
 
 /**
- * A call control: a round icon button (40 px on a phone, then 48 and 52), named by its label, with a tooltip that
- * adds its keyboard shortcut where there is one. `wide` turns it into a pill with that text from 440 px up (End).
+ * A call control: a round icon button (40 px on a phone, then 48 and 52; `dense`: 48 at most), named by its label,
+ * with a tooltip that adds its keyboard shortcut where there is one. `wide` turns it into a pill with that text from
+ * 440 px up (End).
  */
 function CallButton({
   label,
@@ -246,6 +266,7 @@ function CallButton({
   pressed,
   disabled,
   wide,
+  dense,
   children,
 }: {
   label: string;
@@ -255,6 +276,7 @@ function CallButton({
   pressed?: boolean;
   disabled?: boolean;
   wide?: string;
+  dense?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -277,7 +299,8 @@ function CallButton({
         aria-label={label}
         {...(pressed !== undefined ? { "aria-pressed": pressed } : {})}
         className={cx(
-          "flex h-10 min-w-10 items-center justify-center gap-2 rounded-full transition-[background-color,color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40 min-[440px]:h-12 min-[440px]:min-w-12 sm:h-[52px] sm:min-w-[52px]",
+          "flex h-10 min-w-10 items-center justify-center gap-2 rounded-full transition-[background-color,color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40 min-[440px]:h-12 min-[440px]:min-w-12",
+          !dense && "sm:h-[52px] sm:min-w-[52px]",
           wide && "min-[440px]:px-5",
           CALL_TONE[tone],
           focusRing,
@@ -381,12 +404,18 @@ function LineCaption({ text, shown, activity, dimmed, header }: { text: string; 
   const subscribe = useCallback((listener: () => void) => activity.subscribe(listener), [activity]);
   const current = useSyncExternalStore(subscribe, () => activity.word(), () => null);
   const following = shown !== "all";
+  // Where the caption has less room than her line (a short screen), it keeps up with her: the newest words in view.
+  const box = useRef<HTMLParagraphElement | null>(null);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (el && following && el.scrollHeight > el.clientHeight) el.scrollTop = el.scrollHeight;
+  }, [shown, following]);
   return (
-    <div className="animate-rise">
-      <div className={cx("rounded-2xl bg-black/50 px-4 py-3 transition-opacity duration-page sm:px-5 sm:py-4", dimmed && "opacity-60")}>
-        <p className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-indigo-200">{header}</p>
+    <div className="flex min-h-0 flex-col animate-rise">
+      <div className={cx("flex min-h-0 flex-col rounded-2xl bg-black/50 px-4 py-3 transition-opacity duration-page sm:px-5 sm:py-4", dimmed && "opacity-60")}>
+        <p className="mb-1 flex shrink-0 items-center gap-2 text-[11px] font-semibold text-indigo-200">{header}</p>
         <p className="sr-only">{text}</p>
-        <p aria-hidden="true" data-caption="" className={cx("max-h-48 min-h-[1.75em] overflow-y-auto font-medium leading-relaxed text-white", text.length > 220 ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
+        <p ref={box} aria-hidden="true" data-caption="" className={cx("max-h-48 min-h-[1.75em] overflow-y-auto font-medium leading-relaxed text-white", text.length > 220 ? "text-sm sm:text-base" : "text-base sm:text-lg")}>
           {following && shown === 0 ? <span className="caption-soon mood-dot-busy">…</span> : null}
           {tokens.map((t, i) =>
             "space" in t ? (
@@ -525,6 +554,12 @@ export function VideoInterviewRoom({
   const motion = useMotion();
   const osReduce = useMediaQuery("(prefers-reduced-motion: reduce)");
   const short = useMediaQuery("(max-height: 560px)");
+  // A phone on its side (D76, 2026-10-18): too short for the call stacked over its controls, wide enough to lay them
+  // out in a row. The transcript goes beside the call, your camera into her tile's corner, the controls into one
+  // line, so the controls never fall off the bottom (or under your camera tile, as they did).
+  const sideways = useMediaQuery("(orientation: landscape) and (max-height: 560px) and (min-width: 640px)");
+  const side = wide || sideways; // the transcript beside the call, not a drawer under it
+  const twoUp = useMediaQuery("(min-width: 768px)") && !sideways; // your camera in a tile of its own
   const still = motion === "off" || osReduce;
   const elapsed = live.startedAt ? (now - live.startedAt) / 1000 : 0;
   const done = ended || live.mockCompleted;
@@ -534,11 +569,14 @@ export function VideoInterviewRoom({
   const talking = useMicActivity(analyser, { enabled: !paused && !voice.speaking && !done, levelRef: selfTile, every: still ? 160 : undefined });
   // Her current line (a question, or small talk, a repeat, a check-in…): D76.
   const line = live.mockLine;
+  // Her line is here but her voice hasn't taken it up yet (still asking the server which voice she has): it's on its
+  // way, so "about to speak…", not "listening" (unless her voice is off: then it's shown, and that's as said).
+  const lineWaiting = Boolean(line) && !muted && voice.lineId !== line?.id;
   const mood: Mood = !line
     ? "joining"
     : voice.phase === "speaking"
       ? "speaking"
-      : voice.phase === "preparing"
+      : voice.phase === "preparing" || lineWaiting
         ? "preparing"
         : live.mockThinking || (q && waitingAfter === q.questionId)
           ? "thinking"
@@ -552,13 +590,15 @@ export function VideoInterviewRoom({
   const everything = muted || still || voice.phase === "blocked" || voice.phase === "unavailable";
   const shown = useLineShown(voice.activity, line?.id ?? null, everything);
   const lines = useRevealedTranscript(useRoomTranscript(live), line?.text ?? null, shown);
-  const transcriptShown = wide ? sideOpen : drawerOpen;
+  const transcriptShown = side ? sideOpen : drawerOpen;
   const setSide = (open: boolean) => {
     setSideOpen(open);
     safeLocal.setItem(TRANSCRIPT_KEY, open ? "open" : "closed");
   };
   const shortcut = (combo: string | undefined) => (combo ? formatHotkey(combo) : undefined);
-  const intro = !introDone || !line;
+  // The join moment holds for INTRO_MS, but never once she can be heard (her hello kept from last time plays at once).
+  const intro = !line || (!introDone && voice.phase !== "speaking");
+  const stage: Stage = line || live.connection === "open" ? "joining" : live.connection === "reconnecting" ? "reconnecting" : "connecting";
   const { unlock } = voice;
   // The browser won't play her voice until a tap: any tap or key press anywhere plays it (and the button says so).
   useEffect(() => {
@@ -607,7 +647,7 @@ export function VideoInterviewRoom({
 
   return (
     <div className="video-room dark relative flex h-full min-h-0 flex-col overflow-hidden bg-zinc-950 text-zinc-100">
-      <header className="relative flex shrink-0 items-center gap-3 px-4 py-3 sm:px-6">
+      <header className={cx("relative flex shrink-0 items-center gap-3 px-4 sm:px-6", short ? "py-2" : "py-3")}>
         <LiveBadge done={done} />
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-sm font-medium text-zinc-100">{title || "AI video interview"}</h1>
@@ -617,7 +657,7 @@ export function VideoInterviewRoom({
         <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-300" aria-label="Time in the interview">
           {clock(elapsed)}
         </span>
-        {wide && !done && !sideOpen && (
+        {side && !done && !sideOpen && (
           <Tooltip content="Show the transcript">
             <button
               type="button"
@@ -678,7 +718,8 @@ export function VideoInterviewRoom({
         </div>
       ) : (
         <main className="relative flex min-h-0 flex-1 gap-3 px-3 pb-2 sm:px-6">
-          <div className="relative grid min-h-0 min-w-0 flex-1 gap-3 md:grid-cols-2">
+          {/* One row, as tall as the room leaves (minmax): a tile taller than that used to spill over the controls. */}
+          <div className={cx("relative grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(0,1fr)] gap-3", twoUp && "grid-cols-2")}>
             <section
               aria-label={`${INTERVIEWER_NAME}, AI interviewer`}
               className={cx(
@@ -694,18 +735,20 @@ export function VideoInterviewRoom({
                     (mood === "thinking" || mood === "joining" || mood === "preparing") && "mood-dot-busy",
                   )}
                 />
-                <span key={mood} className="animate-fade-in">
-                  {INTERVIEWER_NAME} · {MOOD_LABEL[mood]}
+                <span key={intro ? stage : mood} className="animate-fade-in">
+                  {INTERVIEWER_NAME} · {intro ? STAGE_LABEL[stage] : MOOD_LABEL[mood]}
                 </span>
               </span>
               <span className="sr-only" role="status" aria-live="polite">
-                {MOOD_ANNOUNCED[mood]}
+                {intro ? STAGE_ANNOUNCED[stage] : MOOD_ANNOUNCED[mood]}
               </span>
-              <div className="flex flex-1 items-center justify-center pt-8">
+              <div className={cx("flex flex-1 items-center justify-center pt-8", sideways && "pr-32")}>
                 {intro ? (
                   <div className="flex flex-col items-center gap-2 px-6 text-center animate-scale-in">
                     <JoiningArt className="w-40 sm:w-52" />
-                    <p className="text-sm font-medium text-zinc-100">Connecting you with {INTERVIEWER_NAME}…</p>
+                    <p key={stage} className="text-sm font-medium text-zinc-100 animate-fade-in" data-room-stage={stage}>
+                      {STAGE_TEXT[stage]}
+                    </p>
                     <p className="text-xs text-zinc-400">Your camera stays on this device.</p>
                   </div>
                 ) : (
@@ -714,7 +757,7 @@ export function VideoInterviewRoom({
                       mood={mood}
                       voice={voice.activity}
                       mic={analyser}
-                      size={short || (!wide && drawerOpen) ? "sm" : "lg"}
+                      size={short || (!side && drawerOpen) ? "sm" : "lg"}
                       className="animate-scale-in"
                     />
                     {voice.phase === "blocked" && (
@@ -745,9 +788,10 @@ export function VideoInterviewRoom({
                   </div>
                 )}
               </div>
-              {captions && line && !(!wide && drawerOpen) && (
-                // The line is announced once: by the transcript when it's showing, by the caption when it isn't.
-                <div className="px-3 pb-3 sm:px-5 sm:pb-5" aria-live={transcriptShown ? "off" : "polite"}>
+              {captions && line && !(!side && drawerOpen) && (
+                // The line is announced once: by the transcript when it's showing, by the caption when it isn't. It
+                // gives way to the room (min-h-0) and scrolls, rather than running out of her tile.
+                <div className="flex min-h-0 flex-col px-3 pb-3 sm:px-5 sm:pb-5" aria-live={transcriptShown ? "off" : "polite"}>
                   <LineCaption
                     key={line.id}
                     text={line.text}
@@ -770,67 +814,85 @@ export function VideoInterviewRoom({
               )}
             </section>
 
-            <div className="pointer-events-none absolute right-2 top-2 z-20 w-28 sm:w-36 md:pointer-events-auto md:static md:w-auto">
-              <div className="pointer-events-auto relative flex h-full flex-col">
+            {/* Your camera: a tile of its own beside hers from 768 px, else in her tile's corner (a landscape one on a
+                phone on its side). In the corner it's never taller than the call (max-h): with the transcript open on a
+                small screen it shrinks away rather than covering it. */}
+            <div
+              className={cx(
+                "z-20",
+                twoUp ? "relative min-h-0" : cx("pointer-events-none absolute right-2 top-2 flex max-h-[calc(100%-1rem)] flex-col", sideways ? "w-32" : "w-28 sm:w-36"),
+              )}
+            >
+              <div className="pointer-events-auto relative flex h-full min-h-0 flex-col">
                 <SelfTile
                   on={cameraOn}
                   coaching={coaching}
                   onCoachFailed={onCoachFailed}
                   micOn={!paused}
                   levelRef={selfTile}
-                  className="aspect-[3/4] shadow-dialog md:aspect-auto md:h-full md:shadow-none"
+                  className={twoUp ? "h-full" : cx("min-h-0 shadow-dialog", sideways ? "aspect-[4/3]" : "aspect-[3/4]")}
                   {...(cameraCoach ? { coach: cameraCoach } : {})}
                 />
                 {captions && candidateText && !transcriptShown && (
-                  <p className="absolute inset-x-3 bottom-12 hidden rounded-xl bg-black/60 px-3 py-2 text-sm text-zinc-100 animate-fade-in md:line-clamp-2">
+                  <p className={cx("absolute inset-x-3 bottom-12 rounded-xl bg-black/60 px-3 py-2 text-sm text-zinc-100 animate-fade-in", twoUp ? "line-clamp-2" : "hidden")}>
                     {candidateText}
                   </p>
                 )}
               </div>
             </div>
           </div>
-          {wide && sideOpen && (
+          {side && sideOpen && (
             <VideoRoomTranscript
               lines={lines}
               interviewer={INTERVIEWER_NAME}
               variant="side"
               open
               onOpenChange={setSide}
-              className="w-[22rem] shrink-0 xl:w-[24rem]"
+              className={cx("shrink-0", sideways && !wide ? "w-[min(20rem,42%)]" : "w-[22rem] xl:w-[24rem]")}
             />
           )}
         </main>
       )}
 
-      {!done && !wide && (
-        <div className="relative shrink-0 px-3 pb-1 sm:px-6">
+      {!done && !side && (
+        // The opened transcript gives way before the controls do, on a screen too short for both (it scrolls).
+        <div className="relative flex min-h-0 shrink flex-col px-3 pb-1 sm:px-6">
           <VideoRoomTranscript lines={lines} interviewer={INTERVIEWER_NAME} variant="drawer" open={drawerOpen} onOpenChange={setDrawerOpen} />
         </div>
       )}
 
       {!done && (
-        <footer className="relative flex shrink-0 flex-col items-center gap-2 px-3 pb-3 pt-2 sm:pb-4">
+        // Clear of the home indicator (env(): 0 elsewhere), and in one row on a phone on its side.
+        <footer
+          className={cx(
+            "relative flex shrink-0 items-center px-3",
+            sideways
+              ? "flex-row flex-wrap justify-center gap-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1"
+              : "flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:pb-[max(1rem,env(safe-area-inset-bottom))]",
+          )}
+        >
           {q && (
             <Tooltip content={hotkeys?.answer ? <span className="flex items-center gap-2">I'm done answering<Kbd>{formatHotkey(hotkeys.answer)}</Kbd></span> : "I'm done answering"}>
-              <Button onClick={finishAnswer} disabled={mood === "thinking"} className="!rounded-full px-5">
+              <Button onClick={finishAnswer} disabled={mood === "thinking"} className="!rounded-full px-5" {...(sideways ? { "aria-label": mood === "thinking" ? `${INTERVIEWER_NAME} is thinking…` : "I'm done answering" } : {})}>
                 <Check className="h-4 w-4" aria-hidden />
-                {mood === "thinking" ? `${INTERVIEWER_NAME} is thinking…` : "I'm done answering"}
+                {mood === "thinking" ? (sideways ? "Thinking…" : `${INTERVIEWER_NAME} is thinking…`) : sideways ? "I'm done" : "I'm done answering"}
               </Button>
             </Tooltip>
           )}
           {/* Six round buttons (seven with the camera coach): 40 px below 440 px, so End stays on screen on a 360 px phone;
               End is a pill with its name from 440 px up. */}
-          <div className="flex items-center gap-1 rounded-full bg-white/[0.04] p-1.5 ring-1 ring-white/10 min-[440px]:gap-2 min-[440px]:p-2 sm:gap-2.5">
-            <CallButton label={paused ? "Unmute mic" : "Mute mic"} shortcut={shortcut(hotkeys?.toggleListening)} onClick={actions.togglePause} tone={paused ? "off" : "default"} pressed={paused}>
+          <div className={cx("flex items-center gap-1 rounded-full bg-white/[0.04] p-1.5 ring-1 ring-white/10 min-[440px]:gap-2 min-[440px]:p-2", !sideways && "sm:gap-2.5")}>
+            <CallButton dense={sideways} label={paused ? "Unmute mic" : "Mute mic"} shortcut={shortcut(hotkeys?.toggleListening)} onClick={actions.togglePause} tone={paused ? "off" : "default"} pressed={paused}>
               {paused ? <MicOff className="h-5 w-5" aria-hidden /> : <Mic className="h-5 w-5" aria-hidden />}
             </CallButton>
-            <CallButton label={cameraOn ? "Turn camera off" : "Turn camera on"} onClick={() => setCameraOn(!cameraOn)} tone={cameraOn ? "default" : "off"} pressed={!cameraOn}>
+            <CallButton dense={sideways} label={cameraOn ? "Turn camera off" : "Turn camera on"} onClick={() => setCameraOn(!cameraOn)} tone={cameraOn ? "default" : "off"} pressed={!cameraOn}>
               {cameraOn ? <Video className="h-5 w-5" aria-hidden /> : <VideoOff className="h-5 w-5" aria-hidden />}
             </CallButton>
-            <CallButton label={captions ? "Hide captions" : "Show captions"} onClick={() => setCaptions(!captions)} pressed={captions}>
+            <CallButton dense={sideways} label={captions ? "Hide captions" : "Show captions"} onClick={() => setCaptions(!captions)} pressed={captions}>
               {captions ? <Captions className="h-5 w-5" aria-hidden /> : <CaptionsOff className="h-5 w-5" aria-hidden />}
             </CallButton>
             <CallButton
+              dense={sideways}
               label={muted ? `Unmute ${INTERVIEWER_NAME}` : `Mute ${INTERVIEWER_NAME}`}
               onClick={() => {
                 if (!muted) voice.stop();
@@ -842,21 +904,23 @@ export function VideoInterviewRoom({
               {muted ? <VolumeX className="h-5 w-5" aria-hidden /> : <Volume2 className="h-5 w-5" aria-hidden />}
             </CallButton>
             {q && (
-              <CallButton label={voice.speaking ? "Skip" : "Repeat the question"} onClick={voice.speaking ? voice.stop : voice.repeat} disabled={!voice.supported || muted}>
+              <CallButton dense={sideways} label={voice.speaking ? "Skip" : "Repeat the question"} onClick={voice.speaking ? voice.stop : voice.repeat} disabled={!voice.supported || muted}>
                 <RotateCcw className="h-5 w-5" aria-hidden />
               </CallButton>
             )}
             {cameraCoach && (
-              <CallButton label={coaching ? "Camera coach on (this device)" : "Camera coach (this device)"} onClick={() => setCoaching(!coaching)} tone={coaching ? "active" : "default"} pressed={coaching}>
+              <CallButton dense={sideways} label={coaching ? "Camera coach on (this device)" : "Camera coach (this device)"} onClick={() => setCoaching(!coaching)} tone={coaching ? "active" : "default"} pressed={coaching}>
                 <ScanFace className="h-5 w-5" aria-hidden />
               </CallButton>
             )}
             <span className="mx-0.5 h-8 w-px bg-white/10" aria-hidden="true" />
-            <CallButton label="End interview" onClick={onEnd} tone="danger" wide="End">
+            <CallButton dense={sideways} label="End interview" onClick={onEnd} tone="danger" wide="End">
               <PhoneOff className="h-5 w-5" aria-hidden />
             </CallButton>
           </div>
-          <p className="text-center text-[11px] text-zinc-400">Your camera is never recorded or sent. Practice only: use it where AI practice is allowed.</p>
+          {/* A short screen (a phone on its side) keeps every line for the call: the note is still there to be read
+              out, and the setup page said it first. */}
+          <p className={cx("text-center text-[11px] text-zinc-400", short && "sr-only")}>Your camera is never recorded or sent. Practice only: use it where AI practice is allowed.</p>
         </footer>
       )}
     </div>

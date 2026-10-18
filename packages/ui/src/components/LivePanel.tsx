@@ -195,9 +195,15 @@ export function LivePanel(props: LivePanelProps) {
   const answer = selectDisplayedAnswer(live);
   const question = selectDisplayedQuestion(live);
   // The line the interviewer says now: a question, or (the video interview, D76) small talk, a repeat, a check-in…
+  // Her hello (the small talk's only line) is said the same way every time: its audio is kept for next time.
   const mockQuestion = useMemo(
     () => (live.mockLine && !live.mockCompleted
-      ? { id: live.mockLine.id, text: live.mockLine.text, ...(live.mockLine.speaker ? { speaker: live.mockLine.speaker } : {}) }
+      ? {
+          id: live.mockLine.id,
+          text: live.mockLine.text,
+          ...(live.mockLine.speaker ? { speaker: live.mockLine.speaker } : {}),
+          ...(live.mockLine.kind === "smalltalk" ? { keep: true } : {}),
+        }
       : null),
     [live.mockLine, live.mockCompleted],
   );
@@ -218,6 +224,7 @@ export function LivePanel(props: LivePanelProps) {
     natural: props.naturalVoice ?? null,
     lang: voiceLanguage(props.practiceLanguage),
     pace: props.naturalVoice?.pace ?? "normal", // the admin's to pick (D76)
+    nextLineComing: live.mockThinking,
     onEvent: voiceEvent,
   });
   const { onInterviewerSpeaking, onBargeIn } = props;

@@ -442,27 +442,74 @@ async function keepClip(key: string, clip: VoiceClip): Promise<void> {
   }
 }
 
-/** Short acknowledgements she can say while she thinks of her next line (one at a time, never the same twice). */
+/**
+ * Short acknowledgements she can say while she thinks of her next line (one at a time, never the same twice), the
+ * most natural first: the first WARM_ACKS are made ahead, the rest only as she uses them (AckWarmer).
+ */
 export const ACKS = ["Mm-hmm.", "Okay.", "Right.", "Got it.", "I see."] as const;
+export const WARM_ACKS = 2;
+/** Requests that failed in one session before the warmer stops asking (they're optional; her lines aren't). */
+const WARM_MISSES = 3;
+
+/** True when `voice` already has this acknowledgement kept (from this session, or one before it on this device). */
+export async function hasAck(voice: string, speed: number, text: string): Promise<boolean> {
+  return Boolean(await cachedClip(clipKey(voice, speed, speakable(text))));
+}
 
 /**
- * Makes sure the acknowledgements are cached for `voice` (in the background, one at a time). True when they all
- * are; a miss is skipped (a real run's first one failed and none were ever said), and two give up until next time.
+ * Keeps a few acknowledgements ready for her own voice (D76, 2026-10-18): asking for all five after her first line
+ * was five more speak requests (and characters) an interview, at most one said every other answer, and they could
+ * cross her next line's requests under the per-user rate limit. Now: WARM_ACKS at first, one more each time she uses
+ * one (so the choice grows only as it's needed), one request per quiet moment (right after a line of hers is all
+ * said, when the candidate is about to talk for a while), and only while `idle()` says she's listening (never while
+ * a line of hers is being written, on its way or playing). Clips kept by an earlier session on this device
+ * (Cache Storage) cost nothing. A failed request waits for her next idle moment; WARM_MISSES of them (or one that
+ * won't pass: naturalVoiceGone), the session.
  */
-export async function warmAcks(speak: SpeakFn, voice: string, speed: number): Promise<boolean> {
-  const controller = new AbortController();
-  let misses = 0;
-  for (const ack of ACKS) {
-    const said = speakable(ack);
-    if (await cachedClip(clipKey(voice, speed, said))) continue;
+export class AckWarmer {
+  private want = WARM_ACKS;
+  private running = false;
+  private misses = 0;
+  private readonly stopped = new AbortController();
+
+  constructor(
+    private readonly speak: SpeakFn,
+    private readonly voice: string,
+    private readonly speed: number,
+    private readonly idle: () => boolean,
+  ) {}
+
+  /** She said one: keep one more ready (the next one in ACKS), for variety, by her next idle moment. */
+  used(): void {
+    this.want = Math.min(ACKS.length, this.want + 1);
+  }
+
+  /** Call when she goes quiet: asks for the next one missing (one request), if she's still idle. */
+  async run(): Promise<void> {
+    if (this.running) return;
+    this.running = true;
     try {
-      await fetchClip(speak, ack, voice, controller.signal, speed, true);
-    } catch {
-      misses += 1; // not now (the allowance, the network): they're optional
-      if (misses >= 2) return false;
+      for (const ack of ACKS.slice(0, this.want)) {
+        if (this.stopped.signal.aborted || this.misses >= WARM_MISSES) return;
+        if (await hasAck(this.voice, this.speed, ack)) continue;
+        if (!this.idle()) return; // her line came first: the next quiet moment
+        try {
+          await fetchClip(this.speak, ack, this.voice, this.stopped.signal, this.speed, true);
+          return; // one a quiet moment: the next waits for the next one (spread out under the rate limit)
+        } catch (err) {
+          // Not now (the rate limit, the network): optional. Today's allowance used, or off: not this session.
+          this.misses = naturalVoiceGone(err) ? WARM_MISSES : this.misses + 1;
+          return;
+        }
+      }
+    } finally {
+      this.running = false;
     }
   }
-  return misses === 0;
+
+  stop(): void {
+    this.stopped.abort();
+  }
 }
 
 /**
