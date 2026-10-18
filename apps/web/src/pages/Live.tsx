@@ -198,7 +198,7 @@ function LiveRoom({ session, launch }: { session: OrbitSession; launch: LiveLaun
           : `Microphone unavailable: ${errorText(err)}`,
       );
     }
-  }, [client, launch.micDeviceId, sources, micGate]);
+  }, [launch.micDeviceId, sources, micGate]);
 
   useEffect(() => {
     void startMic();

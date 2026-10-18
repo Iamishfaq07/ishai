@@ -183,6 +183,35 @@ _NUMBER = re.compile(
 _FIGURE = re.compile(r"\d[\d,]*(?:\.\d+)?")
 
 
+# Spelled out ("about four years", "a team of twelve", "twenty-five services"): checked like figures. "one" is left
+# alone (it's mostly not a count: "one of the", "one example").
+_NUMBER_WORDS = {
+    "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+    "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
+    "eighteen": 18, "nineteen": 19, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+    "eighty": 80, "ninety": 90, "hundred": 100, "thousand": 1000, "dozen": 12,
+}
+_UNITS = r"(?:one|two|three|four|five|six|seven|eight|nine)"
+_SPELLED = re.compile(
+    r"(?<![\w\[-])(?:" + "|".join(sorted(_NUMBER_WORDS, key=len, reverse=True)) + r")(?:[\s-]+(?:"
+    + "|".join(sorted(_NUMBER_WORDS, key=len, reverse=True)) + r"|" + _UNITS + r"|and)\b)*\b(?![\]-])",
+    re.IGNORECASE)
+
+
+def _spelled_value(phrase: str) -> int:
+    """"twenty-five" → 25, "two hundred" → 200, "three thousand" → 3000 (good enough to compare with a figure)."""
+    total, part = 0, 0
+    for word in re.split(r"[\s-]+", phrase.lower()):
+        n = _NUMBER_WORDS.get(word) or {"one": 1, "five": 5, "nine": 9}.get(word, 0)
+        if word in ("hundred", "thousand"):
+            part = max(part, 1) * n
+            if word == "thousand":
+                total, part = total + part, 0
+        elif word != "and":
+            part += n
+    return total + part
+
+
 def _figure(raw: str) -> str:
     """A figure as compared: commas out, a trailing ".0" off ("1,200.0" and "1200" are the same number)."""
     plain = raw.replace(",", "")
@@ -207,7 +236,15 @@ def ground_numbers(text: str, allowed: str) -> str:
             return "[the year]"
         return "[the number]"
 
-    return _NUMBER.sub(swap, text)
+    said_words = set(re.findall(r"[a-z]+", allowed.lower()))
+
+    def swap_spelled(m: re.Match[str]) -> str:
+        words = [w for w in re.split(r"[\s-]+", m.group().lower()) if w != "and"]
+        if all(w in said_words for w in words) or str(_spelled_value(m.group())) in known:
+            return m.group()
+        return "[the number]"
+
+    return _SPELLED.sub(swap_spelled, _NUMBER.sub(swap, text))
 
 
 def _rubric(v: Any, answer: str) -> dict[str, dict[str, Any]]:

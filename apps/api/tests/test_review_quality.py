@@ -197,3 +197,16 @@ def test_the_output_budget_fits_a_full_review_of_each_answer() -> None:
     rich, budget = report.review_budget(20)
     assert 0 < rich < 20 and budget <= 8_000
     assert report.review_budget(7, factor=2.5)[0] < 7  # Hindi takes more tokens: fewer full reviews fit
+
+
+def test_a_stronger_answer_checks_spelled_out_numbers_too() -> None:
+    # The real call: main's review wrote "about four years of experience" for a candidate who never said how long.
+    said = "I lead application security. We agreed on a threshold after two weeks of data. Our team has 12 people."
+    assert ground_numbers("I have about four years of experience.", said) == (
+        "I have about [the number] years of experience.")
+    assert ground_numbers("Twenty-five services, two hundred builds a day.", said) == (
+        "[the number] services, [the number] builds a day.")
+    kept = "After two weeks of data, a team of twelve."
+    assert ground_numbers(kept, said) == kept
+    assert ground_numbers("One of the checks failed, in three-quarters of the time.", said) == (
+        "One of the checks failed, in three-quarters of the time.")
