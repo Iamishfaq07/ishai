@@ -70,11 +70,21 @@ def line_count(data: ResumeData) -> int:
     return len(_bullets(data))
 
 
+# Past forms spelled like a present: the same word ("Cut", "Set", "Read", "Forecast") or another verb's present
+# ("Found": find, found; to found is "founded"). On a role you've left they're the past, so the "+ed" reading
+# ("found" -> "founded") mustn't call them present.
+_PAST_LOOKALIKES = frozenset("""
+found bound wound ground forecast broadcast set put cut read split spread shut hit let cast cost quit bid hurt beat
+upset
+""".split())
+
+
 def _present_opener(word: str) -> bool:
     from orbit_api.resumes.ats import ACTION_VERBS, is_action_verb
 
     w = word.lower().strip(".,;:")
-    return bool(w) and is_action_verb(w) and w not in ACTION_VERBS and not w.endswith(("ed", "ing"))
+    return (bool(w) and is_action_verb(w) and w not in ACTION_VERBS and w not in _PAST_LOOKALIKES
+            and not w.endswith(("ed", "ing")))
 
 
 def _norm(text: str) -> str:

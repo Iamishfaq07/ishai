@@ -15,16 +15,18 @@ from pydantic import BaseModel
 
 from orbit_api.live.keyterms import shaped_terms
 from orbit_api.resumes.ats import (
+    _AMBIGUOUS,
     _MONTH_NUM,
     _MONTHS,
     ACTION_VERBS,
     SKILL_VOCAB,
     AtsReport,
-    _term_pattern,
+    _norm,
     date_style,
     is_action_verb,
     is_quantified,
     pretty_term,
+    skill_mentions,
 )
 from orbit_api.resumes.claims import _GENERIC
 from orbit_api.resumes.schema import ResumeData, new_id
@@ -33,8 +35,10 @@ MIN_SKILLS = 8
 JOB_CONFIRM = "These come from the job post. Add only the ones you've really used."
 TYPICAL_CONFIRM = "Common for your kind of role, not taken from your resume. Add only what you really use."
 
-# Vocabulary words that read as a topic rather than a skill when they turn up in a sentence ("cut cloud costs").
-_VAGUE = frozenset({"cloud", "writing", "research", "training", "audit", "brand", "operations", "editing", "lean"})
+# Vocabulary words that read as a topic rather than a skill when they turn up in a sentence ("cut cloud costs", "grew
+# sales 30%", "with the sales team").
+_VAGUE = frozenset({"cloud", "writing", "research", "training", "audit", "brand", "operations", "editing", "lean",
+                    "sales"})
 
 Kind = Literal["rewrite", "add_skill", "add_bullet", "set"]
 
@@ -84,11 +88,13 @@ def evidence_skills(data: ResumeData) -> list[str]:
     body = "\n".join(t for t in texts if t.strip())
     found: Counter[str] = Counter()
     shown: dict[str, str] = {}
+    norm = _norm(body)
     for term in SKILL_VOCAB:
-        n = len(_term_pattern(term).findall(body.lower()))
+        # "the rest of the team", "40% of mobile bookings": an everyday-word skill counts only as the skill.
+        n = skill_mentions(term, body, norm)
         if n and term not in own and term not in _VAGUE:
             found[term] += n
-            shown[term] = _pretty(term, body)
+            shown[term] = _AMBIGUOUS.get(term) or _pretty(term, body)
     for text in texts:
         words = re.findall(r"[A-Za-z]+", text)
         first = words[0].lower() if words else ""

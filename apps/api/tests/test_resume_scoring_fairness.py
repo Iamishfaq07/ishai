@@ -39,6 +39,57 @@ def test_an_ambiguous_skill_counts_when_the_post_means_the_product() -> None:
     assert all(k.lower() != "go" for k in extract_keywords("Go above and beyond. Ready to go live fast."))
 
 
+# The launch film's bullet: "mobile" here is where the bookings came from, not a skill.
+BOOKINGS = "Found the three steps where 40% of mobile bookings dropped off, and worked with design on the fixes."
+
+
+def _role(*bullets: str, skills: list[str] | None = None) -> ResumeData:
+    return ResumeData(experience=[Experience(title="Product Analyst", company="Fernway Travel", start="2019",
+                                             end="2022", bullets=list(bullets))],
+                      skills=[SkillGroup(name="Skills", items=skills)] if skills else [])
+
+
+@pytest.mark.parametrize("text", [
+    BOOKINGS, "On mobile, bookings rose 30%", "Bookings on web, mobile, and kiosk rose 30%.", "Grew mobile users 3x",
+    "Cut mobile load time on iOS by 30%", "We build for web and mobile.", "Embedded with the sales team for a quarter",
+])
+def test_a_topic_word_in_a_sentence_isnt_the_skill(text: str) -> None:
+    term = "embedded" if "mbedded" in text else "mobile"
+    assert ats.skill_mentions(term, text) == 0
+    assert all(k.lower() != term for k in extract_keywords(f"{text} {text} {text} You'll own SQL dashboards."))
+
+
+@pytest.mark.parametrize("text", [
+    "Built the mobile app for 2M riders", "Led mobile development for the checkout", "Senior Mobile Engineer",
+    "Shipped iOS and Android mobile clients", "Owned mobile (iOS/Android) releases", "a mobile-first checkout",
+    "Built mobile and web apps", "Skills: Mobile, Product Design", "Swift, Kotlin, mobile", "• Mobile",
+    "Wrote embedded C for 3 boards", "Embedded systems engineer",
+])
+def test_a_topic_word_counts_where_it_reads_as_the_skill(text: str) -> None:
+    assert ats.skill_mentions("embedded" if "mbedded" in text else "mobile", text) == 1
+
+
+def test_mobile_bookings_dont_make_mobile_a_skill_the_resume_shows() -> None:
+    post = "Our mobile bookings rose 30% last year and mobile traffic doubled. You'll own the SQL dashboards in Looker."
+    assert not {"mobile", "Mobile"} & set(extract_keywords(post))
+    assert "Mobile" in extract_keywords("Senior Mobile Engineer. You'll build our mobile apps in Swift and Kotlin.")
+    data = _role(BOOKINGS, "Took over the rest of the backlog and led the go-live, with a swift turnaround")
+    assert ats.match_keywords(["Mobile", "Go", "REST", "Swift"], data).missing == ["Mobile", "Go", "REST", "Swift"]
+    from orbit_api.resumes.fixes import evidence_skills
+
+    assert evidence_skills(data) == []
+    # Listed in Skills, or used as the skill in a bullet, it counts.
+    assert ats.match_keywords(["Mobile"], _role(BOOKINGS, skills=["Mobile", "Product design"])).matched == ["Mobile"]
+    built = _role("Built the mobile app in React Native and Go, with REST APIs, for 2M riders")
+    assert ats.match_keywords(["Mobile", "Go", "REST", "React"], built).matched == ["Mobile", "Go", "REST", "React"]
+    assert {"Mobile", "Go", "REST", "React"} <= set(evidence_skills(built))
+
+
+def test_java_isnt_read_inside_javascript() -> None:
+    assert "Java" not in extract_keywords("Senior JavaScript developer: you know JavaScript, TypeScript and Node.js.")
+    assert ats.match_keywords(["Java"], _role("Rewrote the checkout in JavaScript")).missing == ["Java"]
+
+
 @pytest.mark.parametrize("word", ["Led", "Lead", "Leads", "Manage", "Manages", "Build", "Builds", "Built", "Owned",
                                   "Co-founded", "Hired", "Exceeded", "Sold", "Onboarded", "Ship", "Plan", "Tests",
                                   "Steered", "Shaped", "Trimmed"])

@@ -57,7 +57,7 @@ from orbit_api.job_portal.profile import (
 )
 from orbit_api.job_portal.rounds import LastRound, RoundType, as_round_type, last_rounds
 from orbit_api.job_portal.search_parse import parse_search
-from orbit_api.job_portal.skills import SkillMatcher
+from orbit_api.job_portal.skills import resume_matcher
 from orbit_api.job_portal.sources import enabled_sources, source_named
 from orbit_api.job_portal.timeline import TimelineEvent, timeline
 from orbit_api.models import (
@@ -77,7 +77,6 @@ from orbit_api.providers.llm.base import LLMError, LLMRequest, LLMResponse
 from orbit_api.providers.llm.pricing import estimate_cost
 from orbit_api.ratelimit import limit, limit_user
 from orbit_api.region import market_country
-from orbit_api.resumes.ats import resume_text
 from orbit_api.resumes.routes import MAX_JOB_TEXT, MAX_RESUMES
 from orbit_api.resumes.schema import ResumeData
 
@@ -491,7 +490,7 @@ async def _matches(db: AsyncSession, user: User, search: ranking.Search, data: R
     if hit is not None:
         return hit
     rows = await _rows(db, search.days, search.country)
-    matcher = SkillMatcher(resume_text(data.visible()) if data is not None else "", search.skills)
+    matcher = resume_matcher(data.visible() if data is not None else None, search.skills)
     # Scoring a few thousand cached posts is CPU work: off the event loop.
     out = await asyncio.to_thread(ranking.rank, rows, search, matcher, sort=sort)
     ranking.remember(key, out)
@@ -635,7 +634,7 @@ def _match_for(row: JobListing, prefs: JobPrefs, data: ResumeData | None) -> ran
     search = replace(_search(prefs, "")[0], days=3650, sources_off=[], exclude=[], locations=[], any_country=True,
                      workplace=["remote", "hybrid", "onsite"],
                      job_types=["full_time", "part_time", "contract", "internship"])
-    matcher = SkillMatcher(resume_text(data.visible()) if data is not None else "", prefs.skills)
+    matcher = resume_matcher(data.visible() if data is not None else None, prefs.skills)
     found = ranking.rank([ranking.row_of(row)], search, matcher, now=datetime.now(UTC))
     if found:
         return found[0]

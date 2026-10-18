@@ -105,11 +105,13 @@ greenlit illustrated informed inventoried issued lectured matched modified notic
 photographed picked prepped printed programmed protected qualified rated reached recognized rectified rewrote
 scanned screened shared simulated sketched spoke sponsored strategized studied summarized supplied tailored
 transcribed transitioned uncovered unveiled visualized weighed
+found forecast
 """.split())
 # Present-tense forms whose past isn't the word + "ed"/"d" (a current role is written in the present: "Lead a team").
 _IRREGULAR_PRESENT = {
     "lead": "led", "build": "built", "run": "ran", "drive": "drove", "grow": "grew", "write": "wrote", "win": "won",
     "cut": "cut", "oversee": "oversaw", "teach": "taught", "sell": "sold", "troubleshoot": "troubleshot",
+    "find": "found", "speak": "spoke", "rebuild": "rebuilt", "rewrite": "rewrote",
 }
 
 
@@ -318,6 +320,7 @@ SKILL_VOCAB: tuple[str, ...] = tuple(sorted({
     "team leadership", "mentoring", "communication", "presentation", "cross-functional", "customer service",
     "process improvement", "lean", "six sigma", "quality assurance", "research", "writing", "editing",
 }, key=lambda t: (-len(t.split()), t)))
+SKILL_VOCAB_SET = frozenset(SKILL_VOCAB)
 
 _STOP = frozenset("""
 a about above after again all also am an and any are as at be because been before being below between both but
@@ -405,6 +408,75 @@ def _as_product(job_text: str, written: str) -> int:
     return n
 
 
+# Skills that are also topic words in a sentence ("40% of mobile bookings", "embedded with the sales team"): counted
+# only where a word beside them makes them the skill ("mobile apps", "iOS and Android", "embedded systems"), or as an
+# item of their own in a list of skills ("Swift, Kotlin, mobile"). Each has what may follow it, and what may come
+# just before it. A Skills section lists them as they are (`names_skill`).
+_IN_CONTEXT: dict[str, tuple[re.Pattern[str], re.Pattern[str] | None]] = {
+    "mobile": (
+        re.compile(r"(?:\s*(?:and|&|/)\s*web)?[\s-]+(?:apps?|applications?|development|developers?|dev|engineers?|"
+                   r"engineering|platforms?|sdks?|ui|ux|testing|games?|first|frontend|front-end)(?![a-z0-9])"
+                   r"|\s*[(:/–-]\s*(?:ios|android)(?![a-z0-9])"),
+        re.compile(r"(?<![a-z0-9])(?:ios|android|cross-platform|react native|flutter)"
+                   r"(?:\s*(?:and|&|/|or)\s*(?:ios|android))?[\s-]*$")),
+    "embedded": (
+        re.compile(r"[\s-]+(?:systems?|software|firmware|c|c\+\+|linux|devices?|hardware|engineers?|engineering|"
+                   r"development|developers?|programming|controllers?|rtos)(?![a-z0-9])"),
+        None),
+}
+# Skills a sentence can use as ordinary words: `skill_mentions` reads them more carefully than the rest.
+_PROSE_WORDS = frozenset(_AMBIGUOUS) | frozenset(_IN_CONTEXT)
+_LIST_SEP = re.compile(r"[,;|/•·()]|:\s|\s(?:and|or|&)\s")
+_SKILLS_LINE = re.compile(r"^\W*(?:(?:key|core|technical|tech)\s+)?(?:skills|tools|technologies|tech stack|stack|"
+                          r"platforms|requirements|must[- ]haves?|nice[- ]to[- ]haves?)\s*:")
+
+
+def _listed(text: str, start: int, end: int) -> bool:
+    """`text[start:end]` (lowercased) is an item of its own on its line: in a skills line ("Tools: mobile, Figma"),
+    beside another known skill ("Swift, Kotlin, mobile"), or alone ("• Mobile", a skills group of one)."""
+    line_start = text.rfind("\n", 0, start) + 1
+    line_end = text.find("\n", end)
+    before = _LIST_SEP.split(text[line_start:start])
+    after = _LIST_SEP.split(text[end:] if line_end < 0 else text[end:line_end])
+    if before[-1].strip(" \t-*•") or after[0].strip(" \t.!"):
+        return False  # part of a phrase: "mobile bookings", "on mobile"
+    if _SKILLS_LINE.match(text[line_start:start]):
+        return True
+    prev = [i for i in (x.strip(" \t-*•.:") for x in before[:-1]) if i]
+    nxt = [i for i in (x.strip(" \t-*•.:!") for x in after[1:]) if i]
+    near = prev[-1:] + nxt[:1]
+    return not near or any(i in SKILL_VOCAB_SET or i in _SYNONYM_OF for i in near)
+
+
+def skill_mentions(term: str, text: str, norm: str | None = None) -> int:
+    """How often prose (a job post, a resume's bullets) names the vocabulary skill `term`: an everyday word only as the
+    product ("Go", "Excel"), a topic word only where it's the skill ("mobile apps"), any other skill anywhere. `norm`
+    is `_norm(text)`, when the caller has it already."""
+    if term in _AMBIGUOUS:
+        return _as_product(text, _AMBIGUOUS[term])
+    if term in _IN_CONTEXT:
+        after, before = _IN_CONTEXT[term]
+        low = text.lower()  # not _norm: that joins the lines, and a list is read line by line
+
+        def as_skill(m: re.Match[str]) -> bool:
+            return bool(after.match(low, m.end())
+                        or (before and before.search(low, max(0, m.start() - 40), m.start()))
+                        or _listed(low, m.start(), m.end()))
+
+        return sum(1 for m in _term_pattern(term).finditer(low) if as_skill(m))
+    return len(_term_pattern(term).findall(_norm(text) if norm is None else norm))
+
+
+def names_skill(form: str, text: str, norm: str, listed: str) -> bool:
+    """Whether a resume or profile names the skill `form`: `text` is all of it (`norm` the same through `_norm`),
+    `listed` its Skills section through `_norm`. A listed skill counts as written; elsewhere an everyday-word skill has
+    to read as the skill (`skill_mentions`): "mobile bookings" doesn't make someone a mobile developer."""
+    key = form.lower()
+    if key in _PROSE_WORDS:
+        return bool(_term_pattern(key).search(listed)) or skill_mentions(key, text, norm) > 0
+    return bool(_term_pattern(form).search(norm))
+
+
 def pretty_term(term: str, *texts: str) -> str:
     """The way the term is written in the first text that has it (with a capital), else a sensible casing."""
     for text in texts:
@@ -453,7 +525,7 @@ def _extract_keywords(job_text: str, limit: int) -> tuple[str, ...]:
     display: dict[str, str] = {}
     covered: list[str] = []
     for term in SKILL_VOCAB:
-        n = _as_product(job_text, _AMBIGUOUS[term]) if term in _AMBIGUOUS else len(_term_pattern(term).findall(norm))
+        n = skill_mentions(term, job_text, norm)
         if n and not any(term in bigger for bigger in covered):  # "learning" inside "machine learning"
             scores[term] += 3 * n + 10
             # "AWS", "PostgreSQL": the chip is added to the resume as shown.
@@ -470,13 +542,14 @@ def _extract_keywords(job_text: str, limit: int) -> tuple[str, ...]:
         if plain and before not in _LIST_LEAD:
             continue
         key = _norm(word)
-        if (key in _STOP or key.rstrip("s") in _STOP or key in _BOILERPLATE or key in scores or key in _AMBIGUOUS
+        if (key in _STOP or key.rstrip("s") in _STOP or key in _BOILERPLATE or key in scores or key in _PROSE_WORDS
                 or key in places or _part_of(key, covered)):
             continue
         scores[key] += 4
         display.setdefault(key, word)
+    # (Nor is a skill that's also an everyday word one by being said often: "mobile" three times isn't "mobile apps".)
     counts = Counter(w for w in re.findall(r"[a-z][a-z+#-]{3,}", norm)
-                     if w not in _STOP and w not in _AMBIGUOUS and w not in places)
+                     if w not in _STOP and w not in _PROSE_WORDS and w not in places)
     # The most repeated few only: each is another pass over the post, and a post of a thousand words said three
     # times each would otherwise cost a thousand passes.
     for word, n in counts.most_common(60):
@@ -509,12 +582,14 @@ _SYNONYM_OF = {term: group for group in SYNONYMS for term in group}
 
 
 def match_keywords(keywords: list[str], data: ResumeData) -> AtsKeywords:
-    text = _norm(resume_text(data))
+    raw = resume_text(data)
+    text = _norm(raw)
+    listed = _norm("\n".join(i for s in data.skills for i in s.items))
     matched: list[str] = []
     missing: list[str] = []
     for kw in keywords:
         forms = _SYNONYM_OF.get(kw.lower(), frozenset({kw}))
-        found = any(_term_pattern(f).search(text) for f in forms | {kw})
+        found = any(names_skill(f, raw, text, listed) for f in forms | {kw})
         (matched if found else missing).append(kw)
     return AtsKeywords(matched=matched, missing=missing)
 

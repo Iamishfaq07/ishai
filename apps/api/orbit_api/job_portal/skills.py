@@ -8,12 +8,21 @@ the resume and the skills the user listed in their job profile.
 
 import re
 
-from orbit_api.resumes.ats import SKILL_VOCAB, SYNONYMS, _norm, _term_pattern, extract_keywords
+from orbit_api.resumes.ats import (
+    SKILL_VOCAB,
+    SYNONYMS,
+    _norm,
+    _term_pattern,
+    extract_keywords,
+    names_skill,
+    resume_text,
+)
+from orbit_api.resumes.schema import ResumeData
 
 MAX_KEYWORDS = 20
 # Part of every listing's text hash (postings.text_hash): bumping it re-reads every cached post's skills on its next
 # refresh, after a change to how skills are read.
-KEYWORDS_VERSION = 3
+KEYWORDS_VERSION = 4  # 4: "mobile" and "embedded" only as the skill ("mobile apps", not "mobile bookings")
 _VOCAB = frozenset(SKILL_VOCAB)
 # The ATS matcher's synonyms, plus ones job posts write that resumes don't (or the other way round).
 _JOB_SYNONYMS: tuple[frozenset[str], ...] = tuple(frozenset(g) for g in (
@@ -160,6 +169,9 @@ class SkillMatcher:
     def __init__(self, resume_text: str, profile_skills: list[str]) -> None:
         self._raw = resume_text + "\n" + "\n".join(profile_skills)
         self._text = _norm(self._raw)
+        # Skills listed as skills (the profile's, and the resume's Skills section: `resume_matcher`) count as written;
+        # the resume's sentences have to use an everyday-word skill as the skill ("mobile apps", not "mobile bookings").
+        self._listed = _norm("\n".join(profile_skills))
         # Nothing to compare with (no resume, no skills in the profile): every post would look like a total miss.
         self.empty = not self._text.strip()
         self._seen: dict[str, bool] = {}
@@ -174,6 +186,13 @@ class SkillMatcher:
                 hit = bool(re.search(r"(?<![A-Za-z0-9])(?:Go|GO|Golang|golang)(?![A-Za-z0-9])", self._raw))
                 self._seen[key] = hit
                 return hit
-            hit = any(_term_pattern(f).search(self._text) for f in forms)
+            hit = any(names_skill(f, self._raw, self._text, self._listed) for f in forms)
             self._seen[key] = hit
         return hit
+
+
+def resume_matcher(data: ResumeData | None, profile_skills: list[str]) -> SkillMatcher:
+    """A matcher for a resume, its Skills section counted as listed skills, and the skills typed into a profile."""
+    if data is None:
+        return SkillMatcher("", profile_skills)
+    return SkillMatcher(resume_text(data), [*profile_skills, *(i for g in data.skills for i in g.items if i.strip())])

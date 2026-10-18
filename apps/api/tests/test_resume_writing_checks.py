@@ -3,9 +3,11 @@
 
 import json
 
+import pytest
+
 from orbit_api.providers.llm.base import LLMResponse, Usage
 from orbit_api.resumes import ai, fixes
-from orbit_api.resumes.ats import is_quantified, match_keywords, score_resume
+from orbit_api.resumes.ats import is_action_verb, is_quantified, match_keywords, score_resume
 from orbit_api.resumes.lint import fix_casing, line_issues
 from orbit_api.resumes.schema import Basics, Experience, ResumeData
 from tests.test_resumes import strong_resume
@@ -37,6 +39,41 @@ def test_each_line_is_flagged_where_it_is() -> None:
     # A current role may use the present tense; strong bullets get nothing.
     assert not {k for p, k in by_line if p.startswith(f"experience.{new}")}
     assert line_issues(strong_resume()) == []
+
+
+def _tense_flags(*bullets: str, current: bool = False) -> list[str]:
+    role = Experience(title="Analyst", company="Fernway Travel", start="2019", end="" if current else "2022",
+                      current=current, bullets=list(bullets))
+    return [i.message for i in line_issues(ResumeData(experience=[role])) if i.kind == "tense"]
+
+
+# Irregular past forms that read like a present: the same spelling ("Cut", "Set", "Read") or another verb's present
+# ("Found": to found, "founded"; "Wound", "Bound").
+_IRREGULAR_PAST = ["Led", "Built", "Ran", "Won", "Set", "Cut", "Read", "Wrote", "Grew", "Drove", "Began", "Shot",
+                   "Spoke", "Taught", "Sold", "Held", "Kept", "Met", "Brought", "Thought", "Sought", "Bought", "Fought",
+                   "Found", "Bound", "Wound", "Spun", "Split", "Put", "Shut", "Spread", "Upheld", "Oversaw",
+                   "Undertook", "Forecast", "Broadcast", "Rebuilt", "Rewrote", "Troubleshot"]
+
+
+@pytest.mark.parametrize("verb", _IRREGULAR_PAST)
+def test_an_irregular_past_on_a_role_youve_left_isnt_called_present(verb: str) -> None:
+    assert _tense_flags(f"{verb} the three steps where 40% of bookings dropped off") == []
+
+
+def test_found_is_the_past_of_find_and_still_an_action_verb() -> None:
+    # The launch film's bullet: "Found" was flagged as the present of "to found".
+    assert _tense_flags("Found the three steps where 40% of mobile bookings dropped off, and worked with design on "
+                        "the fixes.") == []
+    assert is_action_verb("Found") and is_action_verb("Co-founded")
+
+
+@pytest.mark.parametrize("verb", ["Find", "Finds", "Lead", "Build", "Manage", "Manages", "Sell", "Teach", "Write",
+                                  "Oversee", "Speak", "Rebuild", "Run", "Drive"])
+def test_the_present_on_a_role_youve_left_is_still_flagged(verb: str) -> None:
+    flags = _tense_flags(f"{verb} the release process for 4 teams")
+    assert len(flags) == 1 and f"(\"{verb}…\")" in flags[0]
+    # The same bullet on the current role is fine.
+    assert _tense_flags(f"{verb} the release process for 4 teams", current=True) == []
 
 
 def test_the_checks_feed_the_score_and_point_at_the_first_line() -> None:
