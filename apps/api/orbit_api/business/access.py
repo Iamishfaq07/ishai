@@ -12,14 +12,26 @@ from dataclasses import dataclass
 from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
-from sqlalchemy import event, select
+from sqlalchemy import delete, event, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from orbit_api.auth.security import current_user
 from orbit_api.business.rules import Permission, can
 from orbit_api.db import get_db
-from orbit_api.models import BizApplication, BizAudit, BizCompany, BizEvent, BizJob, BizMember, User
+from orbit_api.models import (
+    BizApplication,
+    BizAudit,
+    BizCompany,
+    BizEvent,
+    BizInterview,
+    BizJob,
+    BizMember,
+    BizNote,
+    BizNotification,
+    BizScorecard,
+    User,
+)
 
 NOT_FOUND = "Not found."
 
@@ -110,6 +122,17 @@ async def application_for(db: AsyncSession, ctx: Ctx, application_id: str) -> tu
     return app, job
 
 
+async def lock_company(db: AsyncSession, company_id: str) -> None:
+    """The company's row locked until the transaction ends, so a plan limit is counted and used under it and two
+    requests can't both take the last job or seat: SELECT ... FOR UPDATE on Postgres. SQLite has no row locks and
+    ignores FOR UPDATE; there a no-op UPDATE of the row takes the database's write lock, which does the same."""
+    if db.get_bind().dialect.name == "sqlite":
+        await db.execute(update(BizCompany).where(BizCompany.id == company_id).values(id=BizCompany.id)
+                         .execution_options(synchronize_session=False))
+        return
+    await db.execute(select(BizCompany.id).where(BizCompany.id == company_id).with_for_update())
+
+
 # ---- the audit log and the timeline --------------------------------------------------------------------------------
 
 
@@ -124,6 +147,13 @@ def timeline(db: AsyncSession, app: BizApplication, kind: str, actor: User | Non
     db.add(BizEvent(company_id=app.company_id, job_id=app.job_id, application_id=app.id, kind=kind, data=data,
                     actor_id=actor.id if actor else None,
                     actor_name=display_name(actor) if actor else None))
+
+
+async def delete_application_rows(db: AsyncSession, app_id: str) -> None:
+    """Everything about one applicant (the timeline, notes, scorecards, interviews, mentions go with it)."""
+    for model in (BizNotification, BizNote, BizScorecard, BizEvent, BizInterview):
+        await db.execute(delete(model).where(model.application_id == app_id))
+    await db.execute(delete(BizApplication).where(BizApplication.id == app_id))
 
 
 class AuditImmutable(RuntimeError):

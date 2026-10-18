@@ -1328,7 +1328,13 @@ class BizApplication(TimestampMixin, Base):
     # {"notice_version", "accepted_at", "text_sha256"}: what they were told and when they agreed.
     consent: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     email_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The status page's link token: random per application, looked up by its SHA-256; the raw token is kept only
+    # sealed (rules.new_status_token), so later emails can carry the same link.
     status_token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    status_token_sealed: Mapped[str | None] = mapped_column(Text)
+    # The company's retention when this person applied (the notice they agreed to said it): a later change of the
+    # company's setting applies only to later applications.
+    retention_months: Mapped[int] = mapped_column(Integer, default=12, server_default="12")
     stage_id: Mapped[str] = mapped_column(String(16))
     status: Mapped[str] = mapped_column(String(10), default="active")  # active | rejected | hired
     stage_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -1342,6 +1348,8 @@ class BizApplication(TimestampMixin, Base):
     ranking_model: Mapped[str | None] = mapped_column(String(120))
     tracker_id: Mapped[str | None] = mapped_column(String(36))  # the candidate's JobApplication row, not an FK
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Reminders sent to the company before a requested deletion is carried out by the sweep (0, 1 = 7 days, 2 = 1 day).
+    deletion_reminders: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

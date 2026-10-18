@@ -31,6 +31,7 @@ from typing import Any
 
 import httpx
 from sqlalchemy import func, select
+from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auto_apply import bank, direct, letters, rules
@@ -362,15 +363,27 @@ async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = 
             target, apply_row = await resolve(db, row)
             if apply_row.id != row.id and (apply_row.id in seen_ids or apply_row.id in applied_ids):
                 continue
+            user_id, row_id = user.id, row.id  # read before a rollback can expire them
             try:
                 await prepare(db, user, setup, apply_row, target, m, master, resume.title, now=now, generate=generate,
                               transport=transport)
             except Exception:
-                log.exception("orbit apply: preparing %s failed; it's tried again next run", row.id)
+                log.exception("orbit apply: preparing %s failed; it's tried again next run", row_id)
                 await db.rollback()
-                setup = await db.get(AutoApplySetup, user.id)
+                setup = await db.get(AutoApplySetup, user_id)
                 if setup is None:
                     return report
+                # The rollback expired every object in the session (prepare's AI calls commit, so a savepoint can't
+                # hold it). Reload what the rest of the run reads, or the next attribute access is an async lazy load
+                # (MissingGreenlet, a 500 for the plan route).
+                await db.refresh(user)
+                if resume is not None:
+                    await db.refresh(resume)
+                for rid, r in list(rows.items()):
+                    try:
+                        await db.refresh(r)
+                    except InvalidRequestError:  # deleted meanwhile
+                        rows.pop(rid, None)
                 continue
             seen_ids |= {row.id, apply_row.id}
             seen_keys.add(row.dedupe_key)

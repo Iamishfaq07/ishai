@@ -7,6 +7,7 @@ Interface
     async def parse_applicant_resume(text: str) -> ParsedResume
     async def rank_applicant(job: JobSpec, resume: ParsedResume, answers: list[ScreeningAnswer]) -> Ranking
     def redact_for_ranking(resume, answers, job=None) -> RedactedProfile   # what the ranking is allowed to read
+    async def fill_job(request: JobFillRequest) -> JobFill   # the job assistant (D85, job_fill.py)
 
 None of the three raises because the model is down, slow or answering badly: each has a deterministic path
 (the JD writer a template from the brief, `JobDraft.source == "template"`; the parser its regex extraction; the
@@ -47,6 +48,7 @@ Fairness rules
 """
 
 from orbit_api.business_ai.jd import write_job_description
+from orbit_api.business_ai.job_fill import CompanyContext, JobFields, JobFill, JobFillRequest, fill_job
 from orbit_api.business_ai.ranking import rank_applicant, score
 from orbit_api.business_ai.redact import RedactedProfile, redact_for_ranking
 from orbit_api.business_ai.resume import parse_applicant_resume
@@ -64,10 +66,14 @@ from orbit_api.business_ai.schemas import (
 )
 
 __all__ = [
+    "CompanyContext",
     "Education",
     "Experience",
     "JobBrief",
     "JobDraft",
+    "JobFields",
+    "JobFill",
+    "JobFillRequest",
     "JobSpec",
     "ParsedResume",
     "Ranking",
@@ -75,6 +81,7 @@ __all__ = [
     "RequirementMatch",
     "ScreeningAnswer",
     "ScreeningQuestion",
+    "fill_job",
     "parse_applicant_resume",
     "rank_applicant",
     "redact_for_ranking",

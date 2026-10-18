@@ -1,12 +1,15 @@
 // Orbit for Business (D82): the company's jobs, and the job editor (description, place, pay, screening questions with
-// knock-outs, stages, hiring team, the AI writer). Publishing needs a verified company and a free job slot.
-import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+// knock-outs, stages, hiring team) with the Orbit assistant beside it (D85: a few words fill every field, short
+// instructions refine them, each AI-filled field marked with its own undo). Publishing needs a verified company and a
+// free job slot.
+import { Suspense, lazy, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type {
+  BizAssistField,
   BizEmploymentType,
   BizExperience,
   BizJob,
-  BizJobBrief,
+  BizJobAssist,
   BizJobInput,
   BizJobListItem,
   BizMember,
@@ -24,7 +27,6 @@ import {
   Callout,
   Checkbox,
   Dialog,
-  DialogActions,
   EmptyState,
   ExternalLink,
   Field,
@@ -44,6 +46,8 @@ import {
   cx,
   focusRing,
   toast,
+  safeLocal,
+  useMediaQuery,
   Briefcase,
 } from "@orbit/ui";
 import { biz } from "./api";
@@ -56,14 +60,12 @@ import {
   ROLE_LABEL,
   STAGE_KIND_LABEL,
   WORKPLACE_LABEL,
-  commaList,
   companyPath,
   describeKnockout,
   emptyJob,
   jobPath,
   knockoutForm,
   knockoutRule,
-  lines,
   moveItem,
   newId,
   newQuestion,
@@ -72,7 +74,24 @@ import {
   stageProblems,
   type KnockoutForm,
 } from "./model";
-import { markdownToHtml, sanitizeHtml } from "./richText";
+import { sanitizeHtml } from "./richText";
+import {
+  FIELD_LABEL,
+  applyAssist,
+  collect,
+  current,
+  editorState,
+  emptyPanel,
+  fieldOf,
+  touch,
+  undoAll,
+  undoField,
+  type EditorState,
+  type Marks,
+  type PanelState,
+} from "./assist";
+
+const JobAssistant = lazy(async () => ({ default: (await import("./JobAssistant")).JobAssistant }));
 import { JobStatusBadge, Loading, LoadError, Panel, errorCode, errorText } from "./ui";
 
 // ---- the list -----------------------------------------------------------------------------------------------------
@@ -390,113 +409,6 @@ function StagesEditor({ stages, onChange }: { stages: BizStage[]; onChange: (s: 
   );
 }
 
-// ---- the AI writer ------------------------------------------------------------------------------------------------
-
-function AiWriter({ open, onClose, initialTitle, about, onDraft }: { open: boolean; onClose: () => void; initialTitle: string; about: string; onDraft: (d: Partial<BizJobInput>, questions: BizQuestion[]) => void }) {
-  const id = useId();
-  const { company } = useCompany();
-  const [brief, setBrief] = useState<BizJobBrief>({ title: initialTitle, seniority: "Mid level", location: "", employment_type: "Full-time", must_haves: [], nice_to_haves: [], about_company: about, notes: "", language: "en" });
-  const [must, setMust] = useState("");
-  const [nice, setNice] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // After a draft: what the recruiter should know about it (the writer was unreachable, or wording it changed).
-  const [result, setResult] = useState<{ template: boolean; notes: string[] } | null>(null);
-  useEffect(() => {
-    if (open) setBrief((b) => ({ ...b, title: b.title || initialTitle }));
-    if (open) setResult(null);
-  }, [open, initialTitle]);
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!brief.title.trim()) return setError("Add the job title.");
-    setBusy(true);
-    setError(null);
-    try {
-      const d = await biz.draftJob(company.id, { ...brief, must_haves: lines(must), nice_to_haves: lines(nice) });
-      onDraft(
-        { title: d.title, description_html: d.description_html || markdownToHtml(d.description_markdown), must_haves: d.must_haves, nice_to_haves: d.nice_to_haves },
-        d.suggested_screening_questions.map((q) => ({ id: newId("q"), text: q.text, kind: q.kind, required: true, knockout: null, ...(q.kind === "choice" ? { choices: q.choices ?? [] } : {}) })),
-      );
-      const template = d.source === "template";
-      const notes = d.inclusive_language_notes ?? [];
-      if (template || notes.length) {
-        setResult({ template, notes });
-      } else {
-        toast({ message: "Draft written. Read it through and change anything that isn't right.", tone: "success" });
-        onClose();
-      }
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Dialog open={open} onClose={onClose} title="Write the job with AI" size="lg">
-      <form onSubmit={submit} className="space-y-4">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">A short brief is enough. Orbit drafts the description, the must-haves and a few screening questions; you edit before anything is published.</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Job title" htmlFor={`${id}-t`} required>
-            <Input id={`${id}-t`} value={brief.title} maxLength={160} onChange={(e) => setBrief({ ...brief, title: e.target.value })} />
-          </Field>
-          <Field label="Seniority" htmlFor={`${id}-s`}>
-            <Input id={`${id}-s`} value={brief.seniority} maxLength={60} onChange={(e) => setBrief({ ...brief, seniority: e.target.value })} />
-          </Field>
-          <Field label="Location" htmlFor={`${id}-l`}>
-            <Input id={`${id}-l`} value={brief.location} placeholder="Bengaluru, hybrid" maxLength={120} onChange={(e) => setBrief({ ...brief, location: e.target.value })} />
-          </Field>
-          <Field label="Employment type" htmlFor={`${id}-e`}>
-            <Input id={`${id}-e`} value={brief.employment_type} maxLength={40} onChange={(e) => setBrief({ ...brief, employment_type: e.target.value })} />
-          </Field>
-        </div>
-        <Field label="Must-haves" htmlFor={`${id}-m`} hint="One per line.">
-          <Textarea id={`${id}-m`} rows={3} value={must} onChange={(e) => setMust(e.target.value)} />
-        </Field>
-        <Field label="Nice to have" htmlFor={`${id}-n`} hint="One per line.">
-          <Textarea id={`${id}-n`} rows={2} value={nice} onChange={(e) => setNice(e.target.value)} />
-        </Field>
-        <Field label="Notes for the writer" htmlFor={`${id}-x`} hint="Team, product, anything specific.">
-          <Textarea id={`${id}-x`} rows={2} maxLength={1500} value={brief.notes} onChange={(e) => setBrief({ ...brief, notes: e.target.value })} />
-        </Field>
-        {error && <Callout tone="error">{error}</Callout>}
-        {result && (
-          <div role="status" className="space-y-2">
-            {result.template && (
-              <Callout tone="warning">We couldn't reach the AI writer, so this is your brief laid out. It's in the editor: fill in the rest there.</Callout>
-            )}
-            {result.notes.length > 0 && (
-              <Callout tone="info">
-                <p className="font-medium">Wording changed to be more inclusive:</p>
-                <ul className="mt-1 list-disc pl-5">
-                  {result.notes.map((n) => (
-                    <li key={n}>{n}</li>
-                  ))}
-                </ul>
-              </Callout>
-            )}
-          </div>
-        )}
-        {result ? (
-          <DialogActions>
-            <Button type="button" onClick={onClose}>
-              Go to the editor
-            </Button>
-          </DialogActions>
-        ) : (
-        <DialogActions>
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={busy} loadingText="Writing">
-            <Sparkles className="h-4 w-4" aria-hidden /> Write the draft
-          </Button>
-        </DialogActions>
-        )}
-      </form>
-    </Dialog>
-  );
-}
-
 // ---- the editor ---------------------------------------------------------------------------------------------------
 
 const toInput = (j: BizJob): BizJobInput => ({
@@ -522,6 +434,25 @@ const toInput = (j: BizJob): BizJobInput => ({
 });
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "AUD", "CAD"];
+const ASSISTANT_KEY = "orbit.biz.assistant";
+
+/** A field the assistant filled: a quiet indigo ring and an "AI · Undo" mark until the person edits it. */
+function AiMark({ field, marks, onUndo, children, className }: { field: BizAssistField; marks: Marks; onUndo: (f: BizAssistField) => void; children: ReactNode; className?: string }) {
+  const on = field in marks;
+  return (
+    <div className={cx("relative rounded-lg transition-shadow", on && "-mx-2 bg-indigo-50/60 px-2 py-1.5 ring-1 ring-indigo-200 dark:bg-indigo-500/10 dark:ring-indigo-400/30", className)} data-ai-field={on ? field : undefined}>
+      {children}
+      {on && (
+        <span className="absolute -top-3 right-0 z-[1] inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white py-0.5 pl-2 pr-0.5 text-xs font-medium text-indigo-700 dark:border-indigo-400/30 dark:bg-zinc-900 dark:text-indigo-300">
+          <Sparkles className="h-3 w-3" aria-hidden /> AI
+          <button type="button" onClick={() => onUndo(field)} aria-label={`Undo the AI's ${FIELD_LABEL[field]}`} className={cx("rounded-full px-1.5 hover:bg-zinc-100 dark:hover:bg-white/10", focusRing)}>
+            Undo
+          </button>
+        </span>
+      )}
+    </div>
+  );
+}
 
 export function JobEditor() {
   const { company } = useCompany();
@@ -529,17 +460,22 @@ export function JobEditor() {
   const navigate = useNavigate();
   const id = useId();
   const [job, setJob] = useState<BizJob | null>(null);
-  const [form, setForm] = useState<BizJobInput>(emptyJob);
-  const [locText, setLocText] = useState("");
-  const [countriesText, setCountriesText] = useState("");
-  const [mustText, setMustText] = useState("");
-  const [niceText, setNiceText] = useState("");
+  const [ed, setEd] = useState<EditorState>(() => editorState(emptyJob()));
+  const [marks, setMarks] = useState<Marks>({});
+  const [panel, setPanel] = useState<PanelState>(emptyPanel);
+  const wide = useMediaQuery("(min-width: 1024px)");
+  const [docked, setDocked] = useState(() => safeLocal.getItem(ASSISTANT_KEY) !== "closed");
+  const [sheet, setSheet] = useState(false);
   const [members, setMembers] = useState<BizMember[]>([]);
   const [loadError, setLoadError] = useState<Error | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [ai, setAi] = useState(false);
   const [problems, setProblems] = useState<string[]>([]);
+  // The panel answers after a network round trip: it reads and writes the latest editor state, not a stale render's.
+  const edRef = useRef(ed);
+  edRef.current = ed;
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
 
   useEffect(() => {
     biz.members(company.id).then((m) => setMembers(m.members)).catch(() => undefined);
@@ -548,12 +484,8 @@ export function JobEditor() {
       .job(company.id, jid)
       .then((j) => {
         setJob(j);
-        const f = toInput(j);
-        setForm(f);
-        setLocText(f.locations.join("\n"));
-        setCountriesText(f.allowed_countries.join(", "));
-        setMustText(f.must_haves.join("\n"));
-        setNiceText(f.nice_to_haves.join("\n"));
+        setEd(editorState(toInput(j)));
+        setMarks({});
       })
       .catch((e: unknown) => setLoadError(e instanceof Error ? e : new Error(String(e))));
   }, [company.id, jid]);
@@ -561,15 +493,39 @@ export function JobEditor() {
   if (loadError) return <LoadError error={loadError} />;
   if (jid && !job) return <Loading />;
   const canEdit = company.permissions.manage_jobs && company.status === "active";
-  const set = <K extends keyof BizJobInput>(k: K, v: BizJobInput[K]) => setForm((f) => ({ ...f, [k]: v }));
-
-  const collect = (): BizJobInput => ({
-    ...form,
-    locations: lines(locText),
-    allowed_countries: commaList(countriesText, true),
-    must_haves: lines(mustText),
-    nice_to_haves: lines(niceText),
-  });
+  const form = ed.form;
+  const set = <K extends keyof BizJobInput>(k: K, v: BizJobInput[K]) => {
+    setEd((s) => ({ ...s, form: { ...s.form, [k]: v } }));
+    const f = fieldOf(k);
+    if (f) setMarks((m) => touch(m, f));
+  };
+  const setText = (key: "locText" | "countriesText" | "mustText" | "niceText", f: BizAssistField) => (v: string) => {
+    setEd((s) => ({ ...s, [key]: v }));
+    setMarks((m) => touch(m, f));
+  };
+  const undo = (f: BizAssistField) => {
+    const r = undoField(edRef.current, marksRef.current, f);
+    setEd(r.state);
+    setMarks(r.marks);
+  };
+  const onAnswer = (a: BizJobAssist, kind: "fill" | "refine") => {
+    const r = applyAssist(edRef.current, a, marksRef.current, kind);
+    edRef.current = r.state;
+    marksRef.current = r.marks;
+    setEd(r.state);
+    setMarks(r.marks);
+    return r;
+  };
+  const undoEverything = () => {
+    const r = undoAll(edRef.current, marksRef.current);
+    setEd(r.state);
+    setMarks(r.marks);
+    toast({ message: "Undone: the form is back to what it was before Orbit filled it.", tone: "success" });
+  };
+  const dock = (open: boolean) => {
+    setDocked(open);
+    safeLocal.setItem(ASSISTANT_KEY, open ? "open" : "closed");
+  };
 
   const check = (input: BizJobInput): string[] => {
     const out: string[] = [];
@@ -580,7 +536,7 @@ export function JobEditor() {
   };
 
   const save = async (then?: "publish"): Promise<BizJob | null> => {
-    const input = collect();
+    const input = collect(ed);
     const p = check(input);
     setProblems(p);
     if (p.length) return null;
@@ -590,6 +546,7 @@ export function JobEditor() {
       let saved = job ? await biz.updateJob(company.id, job.id, input) : await biz.createJob(company.id, input);
       if (then === "publish") saved = await biz.jobAction(company.id, saved.id, "publish");
       setJob(saved);
+      setMarks({});
       toast({ message: then === "publish" ? "Published. It's on your careers page now." : "Saved", tone: "success" });
       if (!jid) navigate(jobPath(company.id, saved.id, "edit"), { replace: true });
       return saved;
@@ -617,233 +574,278 @@ export function JobEditor() {
     }
   };
 
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        void save();
-      }}
-      noValidate
-      className="space-y-5"
-    >
-      <PageTitle
-        title={job ? `Edit: ${job.title}` : "New job"}
-        subtitle={job ? <span className="inline-flex items-center gap-2">
-          <JobStatusBadge status={job.status} />
-          {job.status === "open" && (
-            <a href={job.public_url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 underline">
-              See it live <ExternalLink className="h-3 w-3" aria-hidden />
-            </a>
-          )}
-        </span> : "Saved as a draft until you publish it."}
-        actions={
-          <>
-            {job && (
-              <Link to={jobPath(company.id, job.id)} className={buttonClass("secondary")}>
-                Applicants
-              </Link>
-            )}
-            {canEdit && (
-              <Button type="button" variant="secondary" onClick={() => setAi(true)}>
-                <Sparkles className="h-4 w-4" aria-hidden /> Write with AI
-              </Button>
-            )}
-          </>
-        }
+  const showDocked = canEdit && wide && docked;
+  const assistant = (onClose: () => void, closeLabel: string, inSheet = false) => (
+    <Suspense fallback={<Loading />}>
+      <JobAssistant
+        companyId={company.id}
+        panel={panel}
+        setPanel={setPanel}
+        getCurrent={() => current(edRef.current)}
+        onAnswer={onAnswer}
+        marked={Object.keys(marks).length}
+        onUndoAll={undoEverything}
+        salaryMissing={form.salary_min == null && form.salary_max == null}
+        disabled={!canEdit}
+        onClose={onClose}
+        closeLabel={closeLabel}
+        inSheet={inSheet}
       />
-      {job?.taken_down_reason && <Callout tone="error" title="The Orbit team took this job down">{job.taken_down_reason}</Callout>}
-      {!canEdit && <Callout tone="info">You can read this job; only owners, admins and recruiters can change it.</Callout>}
+    </Suspense>
+  );
+  const mark = { marks, onUndo: undo };
 
-      <fieldset disabled={!canEdit} className="space-y-5">
-        <Panel title="The job">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Job title" htmlFor={`${id}-title`} required>
-              <Input id={`${id}-title`} value={form.title} maxLength={160} onChange={(e) => set("title", e.target.value)} />
-            </Field>
-            <Field label="Department (optional)" htmlFor={`${id}-dep`}>
-              <Input id={`${id}-dep`} value={form.department ?? ""} maxLength={80} onChange={(e) => set("department", e.target.value)} />
-            </Field>
-          </div>
-          <div className="mt-4 space-y-1.5">
-            <p id={`${id}-desc`} className="text-sm font-medium">
-              Description
-            </p>
-            <RichText labelId={`${id}-desc`} value={form.description_html} onChange={(html) => set("description_html", html)} />
-          </div>
-        </Panel>
-
-        <Panel title="Where and how">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Workplace" htmlFor={`${id}-wp`}>
-              <Select id={`${id}-wp`} value={form.workplace} onChange={(e) => set("workplace", e.target.value as BizWorkplace)}>
-                {(Object.keys(WORKPLACE_LABEL) as BizWorkplace[]).map((w) => (
-                  <option key={w} value={w}>
-                    {WORKPLACE_LABEL[w]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Employment type" htmlFor={`${id}-et`}>
-              <Select id={`${id}-et`} value={form.employment_type} onChange={(e) => set("employment_type", e.target.value as BizEmploymentType)}>
-                {(Object.keys(EMPLOYMENT_LABEL) as BizEmploymentType[]).map((w) => (
-                  <option key={w} value={w}>
-                    {EMPLOYMENT_LABEL[w]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Experience" htmlFor={`${id}-ex`}>
-              <Select id={`${id}-ex`} value={form.experience} onChange={(e) => set("experience", e.target.value as BizExperience)}>
-                {(Object.keys(EXPERIENCE_LABEL) as BizExperience[]).map((w) => (
-                  <option key={w} value={w}>
-                    {EXPERIENCE_LABEL[w]}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <Field label="Locations" htmlFor={`${id}-loc`} hint="One per line: city, country.">
-              <Textarea id={`${id}-loc`} rows={2} value={locText} onChange={(e) => setLocText(e.target.value)} />
-            </Field>
-            {form.workplace === "remote" && (
-              <Field label="Remote: who can apply" htmlFor={`${id}-ac`} hint="Country codes, comma-separated (IN, US). Empty: anywhere.">
-                <Input id={`${id}-ac`} value={countriesText} onChange={(e) => setCountriesText(e.target.value)} />
-              </Field>
+  return (
+    <div className={cx(showDocked && "lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_25rem]")}>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+        noValidate
+        className="min-w-0 space-y-5"
+      >
+        <PageTitle
+          title={job ? `Edit: ${job.title}` : "New job"}
+          subtitle={job ? <span className="inline-flex items-center gap-2">
+            <JobStatusBadge status={job.status} />
+            {job.status === "open" && (
+              <a href={job.public_url} target="_blank" rel="noopener" className="inline-flex items-center gap-1 underline">
+                See it live <ExternalLink className="h-3 w-3" aria-hidden />
+              </a>
             )}
-          </div>
-        </Panel>
+          </span> : "Saved as a draft until you publish it."}
+          actions={
+            <>
+              {job && (
+                <Link to={jobPath(company.id, job.id)} className={buttonClass("secondary")}>
+                  Applicants
+                </Link>
+              )}
+              {canEdit && !showDocked && (
+                <Button type="button" variant="secondary" onClick={() => (wide ? dock(true) : setSheet(true))}>
+                  <Sparkles className="h-4 w-4" aria-hidden /> {wide ? "Show assistant" : "Fill with AI"}
+                </Button>
+              )}
+            </>
+          }
+        />
+        {job?.taken_down_reason && <Callout tone="error" title="The Orbit team took this job down">{job.taken_down_reason}</Callout>}
+        {!canEdit && <Callout tone="info">You can read this job; only owners, admins and recruiters can change it.</Callout>}
 
-        <Panel title="Pay" hint="A range helps people decide, and Google for Jobs shows it.">
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Field label="From" htmlFor={`${id}-smin`}>
-              <Input id={`${id}-smin`} type="number" min={0} value={form.salary_min ?? ""} onChange={(e) => set("salary_min", e.target.value === "" ? null : Number(e.target.value))} />
-            </Field>
-            <Field label="To" htmlFor={`${id}-smax`}>
-              <Input id={`${id}-smax`} type="number" min={0} value={form.salary_max ?? ""} onChange={(e) => set("salary_max", e.target.value === "" ? null : Number(e.target.value))} />
-            </Field>
-            <Field label="Currency" htmlFor={`${id}-cur`}>
-              <Select id={`${id}-cur`} value={form.salary_currency ?? "INR"} onChange={(e) => set("salary_currency", e.target.value)}>
-                {CURRENCIES.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Per" htmlFor={`${id}-per`}>
-              <Select id={`${id}-per`} value={form.salary_period ?? "year"} onChange={(e) => set("salary_period", e.target.value as BizSalaryPeriod)}>
-                {(Object.keys(PERIOD_LABEL) as BizSalaryPeriod[]).map((p) => (
-                  <option key={p} value={p}>
-                    {PERIOD_LABEL[p].replace("per ", "")}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <Checkbox className="mt-3" label="Show the pay on the job page" checked={form.show_salary} onChange={(e) => set("show_salary", e.target.checked)} />
-        </Panel>
+        <fieldset disabled={!canEdit} className="space-y-5">
+          <Panel title="The job">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AiMark field="title" {...mark}>
+                <Field label="Job title" htmlFor={`${id}-title`} required>
+                  <Input id={`${id}-title`} value={form.title} maxLength={160} onChange={(e) => set("title", e.target.value)} />
+                </Field>
+              </AiMark>
+              <AiMark field="department" {...mark}>
+                <Field label="Department (optional)" htmlFor={`${id}-dep`}>
+                  <Input id={`${id}-dep`} value={form.department ?? ""} maxLength={80} onChange={(e) => set("department", e.target.value)} />
+                </Field>
+              </AiMark>
+            </div>
+            <AiMark field="description" {...mark} className="mt-5 space-y-1.5">
+              <p id={`${id}-desc`} className="text-sm font-medium">
+                Description
+              </p>
+              <RichText labelId={`${id}-desc`} value={form.description_html} onChange={(html) => set("description_html", html)} />
+            </AiMark>
+          </Panel>
 
-        <Panel title="What you're looking for" hint="Orbit's ranking checks each applicant against these and shows its evidence. It only sorts; your team decides.">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Must-haves" htmlFor={`${id}-must`} hint="One per line.">
-              <Textarea id={`${id}-must`} rows={5} value={mustText} onChange={(e) => setMustText(e.target.value)} />
-            </Field>
-            <Field label="Nice to have" htmlFor={`${id}-nice`} hint="One per line.">
-              <Textarea id={`${id}-nice`} rows={5} value={niceText} onChange={(e) => setNiceText(e.target.value)} />
-            </Field>
-          </div>
-        </Panel>
+          <Panel title="Where and how">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <AiMark field="workplace" {...mark}>
+                <Field label="Workplace" htmlFor={`${id}-wp`}>
+                  <Select id={`${id}-wp`} value={form.workplace} onChange={(e) => set("workplace", e.target.value as BizWorkplace)}>
+                    {(Object.keys(WORKPLACE_LABEL) as BizWorkplace[]).map((w) => (
+                      <option key={w} value={w}>
+                        {WORKPLACE_LABEL[w]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </AiMark>
+              <AiMark field="employment_type" {...mark}>
+                <Field label="Employment type" htmlFor={`${id}-et`}>
+                  <Select id={`${id}-et`} value={form.employment_type} onChange={(e) => set("employment_type", e.target.value as BizEmploymentType)}>
+                    {(Object.keys(EMPLOYMENT_LABEL) as BizEmploymentType[]).map((w) => (
+                      <option key={w} value={w}>
+                        {EMPLOYMENT_LABEL[w]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </AiMark>
+              <AiMark field="experience" {...mark}>
+                <Field label="Experience" htmlFor={`${id}-ex`}>
+                  <Select id={`${id}-ex`} value={form.experience} onChange={(e) => set("experience", e.target.value as BizExperience)}>
+                    {(Object.keys(EXPERIENCE_LABEL) as BizExperience[]).map((w) => (
+                      <option key={w} value={w}>
+                        {EXPERIENCE_LABEL[w]}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </AiMark>
+            </div>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <AiMark field="locations" {...mark}>
+                <Field label="Locations" htmlFor={`${id}-loc`} hint="One per line: city, country.">
+                  <Textarea id={`${id}-loc`} rows={2} value={ed.locText} onChange={(e) => setText("locText", "locations")(e.target.value)} />
+                </Field>
+              </AiMark>
+              {form.workplace === "remote" && (
+                <AiMark field="allowed_countries" {...mark}>
+                  <Field label="Remote: who can apply" htmlFor={`${id}-ac`} hint="Country codes, comma-separated (IN, US). Empty: anywhere.">
+                    <Input id={`${id}-ac`} value={ed.countriesText} onChange={(e) => setText("countriesText", "allowed_countries")(e.target.value)} />
+                  </Field>
+                </AiMark>
+              )}
+            </div>
+          </Panel>
 
-        <Panel title="Screening questions" hint="Asked when someone applies. Knock-out answers are flagged, never rejected automatically.">
-          <div className="space-y-3">
-            {form.questions.map((q, i) => (
-              <QuestionEditor
-                key={q.id}
-                q={q}
-                index={i}
-                count={form.questions.length}
-                onChange={(next) => set("questions", form.questions.map((x) => (x.id === q.id ? next : x)))}
-                onRemove={() => set("questions", form.questions.filter((x) => x.id !== q.id))}
-                onMove={(dir) => set("questions", moveItem(form.questions, i, i + dir))}
-              />
-            ))}
-            <Button type="button" variant="secondary" size="sm" disabled={form.questions.length >= 15} onClick={() => set("questions", [...form.questions, newQuestion()])}>
-              <Plus className="h-4 w-4" aria-hidden /> Add a question
-            </Button>
-          </div>
-        </Panel>
+          <Panel title="Pay" hint="A range helps people decide, and Google for Jobs shows it.">
+            <AiMark field="salary" {...mark}>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <Field label="From" htmlFor={`${id}-smin`}>
+                  <Input id={`${id}-smin`} type="number" min={0} value={form.salary_min ?? ""} onChange={(e) => set("salary_min", e.target.value === "" ? null : Number(e.target.value))} />
+                </Field>
+                <Field label="To" htmlFor={`${id}-smax`}>
+                  <Input id={`${id}-smax`} type="number" min={0} value={form.salary_max ?? ""} onChange={(e) => set("salary_max", e.target.value === "" ? null : Number(e.target.value))} />
+                </Field>
+                <Field label="Currency" htmlFor={`${id}-cur`}>
+                  <Select id={`${id}-cur`} value={form.salary_currency ?? "INR"} onChange={(e) => set("salary_currency", e.target.value)}>
+                    {CURRENCIES.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label="Per" htmlFor={`${id}-per`}>
+                  <Select id={`${id}-per`} value={form.salary_period ?? "year"} onChange={(e) => set("salary_period", e.target.value as BizSalaryPeriod)}>
+                    {(Object.keys(PERIOD_LABEL) as BizSalaryPeriod[]).map((p) => (
+                      <option key={p} value={p}>
+                        {PERIOD_LABEL[p].replace("per ", "")}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+              <Checkbox className="mt-3" label="Show the pay on the job page" checked={form.show_salary} onChange={(e) => set("show_salary", e.target.checked)} />
+            </AiMark>
+          </Panel>
 
-        <Panel title="Stages" hint="The steps an applicant moves through for this job.">
-          <StagesEditor stages={form.stages ?? []} onChange={(s) => set("stages", s)} />
-        </Panel>
+          <Panel title="What you're looking for" hint="Orbit's ranking checks each applicant against these and shows its evidence. It only sorts; your team decides.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <AiMark field="must_haves" {...mark}>
+                <Field label="Must-haves" htmlFor={`${id}-must`} hint="One per line.">
+                  <Textarea id={`${id}-must`} rows={5} value={ed.mustText} onChange={(e) => setText("mustText", "must_haves")(e.target.value)} />
+                </Field>
+              </AiMark>
+              <AiMark field="nice_to_haves" {...mark}>
+                <Field label="Nice to have" htmlFor={`${id}-nice`} hint="One per line.">
+                  <Textarea id={`${id}-nice`} rows={5} value={ed.niceText} onChange={(e) => setText("niceText", "nice_to_haves")(e.target.value)} />
+                </Field>
+              </AiMark>
+            </div>
+          </Panel>
 
-        <Panel title="Hiring team" hint="Hiring managers see only the jobs they're on.">
-          {members.length === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">Invite teammates in Team first.</p>
-          ) : (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {members.map((m) => (
-                <Checkbox
-                  key={m.user_id}
-                  label={`${m.name || m.email}${m.you ? " (you)" : ""}`}
-                  description={ROLE_LABEL[m.role]}
-                  checked={(form.hiring_team ?? []).includes(m.user_id)}
-                  onChange={(e) => set("hiring_team", e.target.checked ? [...(form.hiring_team ?? []), m.user_id] : (form.hiring_team ?? []).filter((x) => x !== m.user_id))}
+          <Panel title="Screening questions" hint="Asked when someone applies. Knock-out answers are flagged, never rejected automatically.">
+            <AiMark field="questions" {...mark} className="space-y-3">
+              {form.questions.map((q, i) => (
+                <QuestionEditor
+                  key={q.id}
+                  q={q}
+                  index={i}
+                  count={form.questions.length}
+                  onChange={(next) => set("questions", form.questions.map((x) => (x.id === q.id ? next : x)))}
+                  onRemove={() => set("questions", form.questions.filter((x) => x.id !== q.id))}
+                  onMove={(dir) => set("questions", moveItem(form.questions, i, i + dir))}
                 />
               ))}
-            </div>
-          )}
-        </Panel>
-      </fieldset>
+              <Button type="button" variant="secondary" size="sm" disabled={form.questions.length >= 15} onClick={() => set("questions", [...form.questions, newQuestion()])}>
+                <Plus className="h-4 w-4" aria-hidden /> Add a question
+              </Button>
+            </AiMark>
+          </Panel>
 
-      {problems.length > 0 && (
-        <Callout tone="error" title="Fix these to save">
-          <ul className="list-disc pl-4">
-            {problems.map((p) => (
-              <li key={p}>{p}</li>
-            ))}
-          </ul>
-        </Callout>
-      )}
-      {error && <Callout tone="error">{error}</Callout>}
+          <Panel title="Stages" hint="The steps an applicant moves through for this job.">
+            <AiMark field="stages" {...mark}>
+              <StagesEditor stages={form.stages ?? []} onChange={(s) => set("stages", s)} />
+            </AiMark>
+          </Panel>
 
-      {canEdit && (
-        <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-2 border-t border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95 sm:-mx-6 sm:px-6">
-          <Button type="submit" loading={busy === "save"}>
-            {job ? "Save" : "Save draft"}
-          </Button>
-          {(!job || job.status === "draft") && (
-            <Button type="button" variant="secondary" loading={busy === "publish"} disabled={!company.verified} disabledReason="Verify your company to publish jobs." onClick={() => void save("publish")}>
-              Save and publish
+          <Panel title="Hiring team" hint="Hiring managers see only the jobs they're on.">
+            {members.length === 0 ? (
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">Invite teammates in Team first.</p>
+            ) : (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {members.map((m) => (
+                  <Checkbox
+                    key={m.user_id}
+                    label={`${m.name || m.email}${m.you ? " (you)" : ""}`}
+                    description={ROLE_LABEL[m.role]}
+                    checked={(form.hiring_team ?? []).includes(m.user_id)}
+                    onChange={(e) => set("hiring_team", e.target.checked ? [...(form.hiring_team ?? []), m.user_id] : (form.hiring_team ?? []).filter((x) => x !== m.user_id))}
+                  />
+                ))}
+              </div>
+            )}
+          </Panel>
+        </fieldset>
+
+        {problems.length > 0 && (
+          <Callout tone="error" title="Fix these to save">
+            <ul className="list-disc pl-4">
+              {problems.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+          </Callout>
+        )}
+        {error && <Callout tone="error">{error}</Callout>}
+
+        {canEdit && (
+          <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-2 border-t border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95 sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-b-xl lg:px-4">
+            <Button type="submit" loading={busy === "save"}>
+              {job ? "Save" : "Save draft"}
             </Button>
-          )}
-          {job?.status === "open" && (
-            <Button type="button" variant="secondary" loading={busy === "pause"} onClick={() => void act("pause")}>
-              Pause
-            </Button>
-          )}
-          {job && (job.status === "paused" || job.status === "closed") && (
-            <Button type="button" variant="secondary" loading={busy === "reopen"} disabled={!company.verified} onClick={() => void act("reopen")}>
-              Reopen
-            </Button>
-          )}
-          {job && job.status !== "closed" && job.status !== "draft" && (
-            <Button type="button" variant="ghost" loading={busy === "close"} onClick={() => void act("close")}>
-              Close job
-            </Button>
-          )}
-        </div>
+            {(!job || job.status === "draft") && (
+              <Button type="button" variant="secondary" loading={busy === "publish"} disabled={!company.verified} disabledReason="Verify your company to publish jobs." onClick={() => void save("publish")}>
+                Save and publish
+              </Button>
+            )}
+            {job?.status === "open" && (
+              <Button type="button" variant="secondary" loading={busy === "pause"} onClick={() => void act("pause")}>
+                Pause
+              </Button>
+            )}
+            {job && (job.status === "paused" || job.status === "closed") && (
+              <Button type="button" variant="secondary" loading={busy === "reopen"} disabled={!company.verified} onClick={() => void act("reopen")}>
+                Reopen
+              </Button>
+            )}
+            {job && job.status !== "closed" && job.status !== "draft" && (
+              <Button type="button" variant="ghost" loading={busy === "close"} onClick={() => void act("close")}>
+                Close job
+              </Button>
+            )}
+            {Object.keys(marks).length > 0 && <span className="text-xs text-indigo-700 dark:text-indigo-300">{Object.keys(marks).length} AI-filled field{Object.keys(marks).length === 1 ? "" : "s"} to review</span>}
+          </div>
+        )}
+      </form>
+      {showDocked && (
+        <aside aria-label="Orbit assistant" className="sticky top-[4.5rem] mt-0 max-h-[calc(100vh-5.5rem)] overflow-y-auto overscroll-contain">
+          {assistant(() => dock(false), "Hide")}
+        </aside>
       )}
-      <AiWriter
-        open={ai}
-        onClose={() => setAi(false)}
-        initialTitle={form.title}
-        about={company.about}
-        onDraft={(d, questions) => {
-          setForm((f) => ({ ...f, ...d, questions: f.questions.length ? f.questions : questions }));
-          if (d.must_haves) setMustText(d.must_haves.join("\n"));
-          if (d.nice_to_haves) setNiceText(d.nice_to_haves.join("\n"));
-        }}
-      />
-    </form>
+      {canEdit && !wide && (
+        <Dialog open={sheet} onClose={() => setSheet(false)} title="Orbit assistant" size="lg">
+          {assistant(() => setSheet(false), "Back to the form", true)}
+        </Dialog>
+      )}
+    </div>
   );
 }

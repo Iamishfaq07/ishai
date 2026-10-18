@@ -9,6 +9,7 @@ import type {
   BizApplyPreview,
   BizApplyResult,
   BizAuditEntry,
+  BizBulkResult,
   BizCompany,
   BizCompanyAnalytics,
   BizCompanyCreate,
@@ -16,6 +17,8 @@ import type {
   BizInviteLookup,
   BizJob,
   BizJobAnalytics,
+  BizJobAssist,
+  BizJobAssistInput,
   BizJobBrief,
   BizJobDraft,
   BizJobInput,
@@ -102,13 +105,15 @@ export const biz = {
   jobAction: (cid: string, jid: string, action: "publish" | "pause" | "close" | "reopen") =>
     api.call<BizJob>(`${c(cid)}/jobs/${e(jid)}/${action}`, post()),
   draftJob: (cid: string, brief: BizJobBrief) => api.call<BizJobDraft>(`${c(cid)}/jobs/draft`, { ...post(brief), timeoutMs: 90_000 }),
+  /** The job assistant (D85): a fill from a few words, or a refine of the form as it is. Nothing is saved. */
+  assistJob: (cid: string, input: BizJobAssistInput) => api.call<BizJobAssist>(`${c(cid)}/jobs/assist`, { ...post(input), timeoutMs: 90_000 }),
 
   applications: (cid: string, jid: string, q: ApplicationQuery = {}) =>
     api.call<BizApplicationList>(`${c(cid)}/jobs/${e(jid)}/applications${qs({ ...q, reveal: q.reveal || undefined })}`),
   application: (cid: string, aid: string, reveal = false) =>
     api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}${qs({ reveal: reveal || undefined })}`),
-  move: (cid: string, req: BizMoveRequest) => api.call<{ moved: number }>(`${c(cid)}/applications/move`, post(req)),
-  reject: (cid: string, req: BizRejectRequest) => api.call<{ rejected: number }>(`${c(cid)}/applications/reject`, post(req)),
+  move: (cid: string, req: BizMoveRequest) => api.call<BizBulkResult>(`${c(cid)}/applications/move`, post(req)),
+  reject: (cid: string, req: BizRejectRequest) => api.call<BizBulkResult>(`${c(cid)}/applications/reject`, post(req)),
   unreject: (cid: string, aid: string) => api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}/unreject`, post()),
   updateApplication: (cid: string, aid: string, input: { tags?: string[]; interviewers?: string[] }) =>
     api.call<BizApplicationDetail>(`${c(cid)}/applications/${e(aid)}`, patch(input)),

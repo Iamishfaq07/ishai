@@ -725,3 +725,24 @@ def test_the_lever_fixture_job_id_matches(app: TestClient) -> None:
     from tests.autoapply_helpers import lever_page
 
     assert LEVER_ID and "cards[" in lever_page()
+
+
+def test_a_failed_packet_doesnt_break_the_rest_of_the_run(app: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """One packet's failure rolls back the session (prepare's AI calls commit, so no savepoint): the planner reloads
+    what it still reads and carries on, never a MissingGreenlet 500 (the Postgres verification of #400/#403)."""
+    from orbit_api.auto_apply import planner
+
+    original = planner.prepare
+    calls = {"n": 0}
+
+    async def flaky(*args: Any, **kwargs: Any) -> Any:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("the employer's form changed")
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(planner, "prepare", flaky)
+    h, _ = account(app)
+    jobs(app)
+    report = plan(app, h)
+    assert calls["n"] == 3 and report["created"] == 2, report

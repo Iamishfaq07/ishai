@@ -27,6 +27,7 @@ from tests.business_helpers import (
     applications,
     apply_signed_out,
     auth,
+    confirm_applicant,
     db_call,
     grant,
     mail_to,
@@ -170,9 +171,12 @@ def test_signed_out_apply_records_consent_and_dedupes(client: TestClient) -> Non
     assert txt.status_code == 422  # PDF or DOCX only
     ok = apply_signed_out(client, job["id"], email)
     assert ok.status_code == 200 and ok.json()["status"] == "applied"
+    first = _one(client, owner, company["id"], job["id"])
     again = apply_signed_out(client, job["id"], email.upper())
     assert again.status_code == 200 and again.json()["status"] == "applied"  # never says the address applied
     item = _one(client, owner, company["id"], job["id"])
+    # The first was never confirmed, so it proved nothing: the new one replaced it (finding 12).
+    assert item["id"] != first["id"]
     assert item["email"] == email.lower() and item["email_confirmed"] is False and item["source"] == "careers"
     assert item["knockout_failed"] is False and item["via_orbit"] is False
 
@@ -182,16 +186,26 @@ def test_signed_out_apply_records_consent_and_dedupes(client: TestClient) -> Non
 
     c = db_call(client, consent)
     assert c["notice_version"] == rules.NOTICE_VERSION and c["accepted_at"] and len(c["text_sha256"]) == 64
+    assert c["retention_months"] == 12
     mails = mail_to(email.lower())
-    assert any("already applied" in m.subject for m in mails)
-    received = next(m for m in mails if "received your application" in m.subject)
-    assert received.footer and company["name"] in received.footer and "/application/" in received.text
-    # The status page, from the email's link; opening it with confirm confirms the address.
+    assert not any("already applied" in m.subject for m in mails)
+    received = [m for m in mails if m.subject.startswith("Confirm your application")]
+    assert len(received) == 2 and received[-1].footer and company["name"] in received[-1].footer
+    assert "/application/" in received[-1].text
+    # The status page, from the latest email's link (the replaced application's link is dead); opening it with
+    # confirm confirms the address.
     token = _status_token(email.lower())
+    old_token = re.search(r"/application/([\w-]+)", received[0].text).group(1)  # type: ignore[union-attr]
+    assert client.get(f"/v1/public/business/applications/{old_token}").status_code == 404
     st = client.get(f"/v1/public/business/applications/{token}").json()
     assert st["stage_label"] == "Received" and st["job_title"] == job["title"] and st["email_confirmed"] is False
     assert client.post(f"/v1/public/business/applications/{token}/confirm").json()["email_confirmed"] is True
     assert client.get("/v1/public/business/applications/not-a-token").status_code == 404
+    # Confirmed, it's held: a third application from the address changes nothing and says so by email.
+    third = apply_signed_out(client, job["id"], email)
+    assert third.status_code == 200 and third.json()["status"] == "applied"
+    assert _one(client, owner, company["id"], job["id"])["id"] == item["id"]
+    assert any("already applied" in m.subject for m in mail_to(email.lower()))
 
 
 def test_honeypot_pretends_and_keeps_nothing(client: TestClient) -> None:
@@ -368,10 +382,11 @@ def test_reject_with_email_from_the_recruiter_and_bulk_moves(client: TestClient)
     emails = [f"c{i}-{tag()}@example.com" for i in range(3)]
     for e in emails:
         apply_signed_out(client, job["id"], e).raise_for_status()
+        confirm_applicant(client, e)
     ids = [i["id"] for i in applications(client, owner, cid, job["id"])["items"]]
     m = client.post(f"/v1/business/companies/{cid}/applications/move", headers=auth(owner),
                     json={"ids": ids[:2], "stage_id": "screen", "notify": True})
-    assert m.status_code == 200 and m.json()["moved"] == 2
+    assert m.status_code == 200 and m.json()["moved"] == 2 and m.json()["emails_waiting"] == 0
     bad = client.post(f"/v1/business/companies/{cid}/applications/move", headers=auth(owner),
                       json={"ids": ids[:1], "stage_id": "nope"})
     assert bad.status_code == 422
@@ -398,6 +413,7 @@ def test_scorecards_tags_and_interview_booking_with_a_calendar_file(client: Test
     job = new_job(client, owner, cid)
     email = f"booker-{tag()}@example.com"
     apply_signed_out(client, job["id"], email).raise_for_status()
+    confirm_applicant(client, email)
     item = _one(client, owner, cid, job["id"])
     base = f"/v1/business/companies/{cid}/applications/{item['id']}"
     t = client.patch(base, headers=auth(owner), json={"tags": ["strong", "referral", "strong"]})
@@ -567,7 +583,16 @@ def test_templates_are_editable_and_resettable(client: TestClient) -> None:
     job = new_job(client, owner, cid)
     email = f"tpl-{tag()}@example.com"
     apply_signed_out(client, job["id"], email).raise_for_status()
-    assert any(m.subject == "Thanks, Priya" for m in mail_to(email))
+    # Signed out (the address isn't confirmed): Orbit's own confirmation, never the company's words (finding 4).
+    assert [m.subject for m in mail_to(email)] == [f"Confirm your application for {job['title']}"]
+    assert "We got it" not in mail_to(email)[0].text
+    cand = register(client, f"tpl-in-{tag()}@example.com", "Kiran Rao")
+    client.post(f"/v1/business/apply/{job['id']}", headers=auth(cand), json={
+        "resume_id": _orbit_resume(client, cand), "answers": GOOD_ANSWERS, "consent": True,
+        "notice_version": rules.NOTICE_VERSION}).raise_for_status()
+    from tests.business_helpers import outbox
+    assert any(m.subject == "Thanks, Kiran" and "We got it" in m.text for m in outbox().sent
+               if m.to.startswith("tpl-in-"))
     reset = client.delete(f"/v1/business/companies/{cid}/templates/received", headers=auth(owner)).json()
     assert reset["is_default"] is True
 

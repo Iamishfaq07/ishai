@@ -121,8 +121,11 @@ const logo = (url, name, size = "h-14 w-14") =>
     ? `<img src="${esc(url)}" alt="${esc(name)} logo" width="56" height="56" class="${size} shrink-0 rounded-xl border border-zinc-200 bg-white object-contain dark:border-white/10" />`
     : `<span aria-hidden="true" class="${size} flex shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-xl font-semibold text-zinc-600 dark:bg-white/5 dark:text-zinc-300">${esc((name || "?").slice(0, 1).toUpperCase())}</span>`;
 
-const verifiedBadge = (on) =>
-  on ? `<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-200">Verified company</span>` : "";
+// "Verified: acme.com": the badge names the domain the company proved, so a look-alike name can't borrow it.
+const verifiedBadge = (on, domain) =>
+  on
+    ? `<span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-800 ring-1 ring-inset ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-200">${domain ? `Verified: ${esc(domain)}` : "Verified company"}</span>`
+    : "";
 
 const shell = (inner) => `<main id="main" class="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">${inner}
       <p class="mt-12 border-t border-zinc-200 pt-6 text-xs text-zinc-500 dark:border-white/10 dark:text-zinc-400">Hiring with <a href="/business" class="underline">Orbit for Business</a>.</p>
@@ -144,7 +147,7 @@ export function companyBody(company) {
   return shell(`
       <header class="flex items-center gap-4">${logo(company.logo_url, company.name)}
         <div class="min-w-0"><h1 class="font-display text-3xl font-semibold tracking-tight">Jobs at ${esc(company.name)}</h1>
-          <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">${company.website ? `<a href="${esc(safeUrl(company.website))}" rel="nofollow noopener" class="underline">${esc(hostOf(company.website))}</a>` : ""} ${verifiedBadge(company.verified)}</p></div>
+          <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">${company.website ? `<a href="${esc(safeUrl(company.website))}" rel="nofollow noopener" class="underline">${esc(hostOf(company.website))}</a>` : ""} ${verifiedBadge(company.verified, company.verified_domain)}</p></div>
       </header>
       ${company.about ? `<p class="mt-6 max-w-2xl whitespace-pre-line text-[0.9375rem] leading-relaxed text-zinc-700 dark:text-zinc-300">${esc(company.about)}</p>` : ""}
       <h2 class="mt-10 text-lg font-semibold">Open jobs (${jobs.length})</h2>${items}`);
@@ -165,7 +168,7 @@ export function jobBody(job) {
       <nav aria-label="Breadcrumb" class="text-sm text-zinc-600 dark:text-zinc-400"><a href="/company/${esc(co.slug)}" class="underline">Jobs at ${esc(co.name)}</a></nav>
       <header class="mt-4 flex items-start gap-4">${logo(co.logo_url, co.name)}
         <div class="min-w-0"><h1 class="font-display text-3xl font-semibold tracking-tight">${esc(job.title)}</h1>
-          <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400"><span>${esc(co.name)}</span> ${verifiedBadge(co.verified)}</p></div>
+          <p class="mt-1 flex flex-wrap items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400"><span>${esc(co.name)}</span> ${verifiedBadge(co.verified, co.verified_domain)}</p></div>
       </header>
       <ul class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-700 dark:text-zinc-300">${facts.map((f) => `<li>${esc(f)}</li>`).join("")}${posted ? `<li>Posted ${esc(posted)}</li>` : ""}</ul>
       ${state}

@@ -30,7 +30,7 @@ from orbit_api import ratelimit
 from orbit_api.auth.captcha import require_captcha
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.business import emails, rules
-from orbit_api.business.access import audit, timeline
+from orbit_api.business.access import audit, delete_application_rows, timeline
 from orbit_api.business.companies import logo_url
 from orbit_api.business.jobs import json_ld, location_line, public_url
 from orbit_api.config import get_settings
@@ -111,6 +111,8 @@ class PublicCompanyRef(BaseModel):
     logo_url: str | None
     website: str
     verified: bool
+    # The domain the company proved ("Verified: acme.com" on the badge); None while unverified.
+    verified_domain: str | None = None
 
 
 class Notice(BaseModel):
@@ -160,6 +162,7 @@ class PublicCompany(BaseModel):
     about: str
     country: str
     verified: bool
+    verified_domain: str | None = None
     jobs: list[PublicJobSummary]
 
 
@@ -172,6 +175,10 @@ async def _public_company(db: AsyncSession, slug: str) -> BizCompany:
     if c is None or c.status != "active":
         raise HTTPException(404, "Not found.")
     return c
+
+
+def verified_domain(company: BizCompany) -> str | None:
+    return company.domain if company.verified_at is not None else None
 
 
 def notice(company: BizCompany) -> Notice:
@@ -193,7 +200,8 @@ def public_job(company: BizCompany, job: BizJob) -> PublicJob:
                                   required=bool(q.get("required", True))) for q in job.questions or []]
         if open_ else [],
         company=PublicCompanyRef(slug=company.slug, name=company.name, logo_url=logo_url(company),
-                                 website=company.website, verified=company.verified_at is not None),
+                                 website=company.website, verified=company.verified_at is not None,
+                                 verified_domain=verified_domain(company)),
         url=public_url(company, job), notice=notice(company), json_ld=json_ld(company, job) if open_ else None)
 
 
@@ -204,7 +212,7 @@ async def get_public_company(slug: str, db: Annotated[AsyncSession, Depends(get_
                                                   BizJob.taken_down_reason.is_(None))
                              .order_by(BizJob.published_at.desc()))).all()
     out = PublicCompany(slug=c.slug, name=c.name, website=c.website, logo_url=logo_url(c), about=c.about or "",
-                        country=c.country, verified=c.verified_at is not None,
+                        country=c.country, verified=c.verified_at is not None, verified_domain=verified_domain(c),
                         jobs=[PublicJobSummary(id=j.id, slug=j.slug, title=j.title, department=j.department,
                                                location_line=location_line(j), employment_type=j.employment_type,
                                                published_at=_aware(j.published_at) or now(),
@@ -331,31 +339,46 @@ def _check_consent(consent: bool, version: str) -> None:
 async def _create(db: AsyncSession, *, job: BizJob, company: BizCompany, name: str, email: str, phone: str | None,
                   resume_text: str, filename: str | None, resume_source: str, answers: list[AnswerIn], source: str,
                   user: User | None) -> tuple[BizApplication | None, str]:
-    """The application, or (None, "") when this email already applied to this job."""
+    """The application, or (None, "") when this email already applied to this job.
+
+    An earlier signed-out application from the same address that was never confirmed proves nothing (anyone can type
+    someone else's address): a new one replaces it, so a stranger can't hold a person's place for a job. A confirmed or
+    one-click application is never replaced."""
     email = email.strip().lower()
-    if await db.scalar(select(BizApplication.id).where(BizApplication.job_id == job.id,
-                                                       BizApplication.email == email)) is not None:
-        return None, ""
     checked, fails = _check_answers(job, answers)
+    existing = await db.scalar(select(BizApplication).where(BizApplication.job_id == job.id,
+                                                            BizApplication.email == email))
+    if existing is not None:
+        if existing.user_id is not None or existing.email_confirmed_at is not None:
+            return None, ""
+        ref = existing.reference
+        await delete_application_rows(db, existing.id)
+        audit(db, company.id, None, "application.replaced", ref, job_id=job.id,
+              by="orbit_account" if user is not None else "new_application")
+        await db.flush()
     app_id = str(uuid.uuid4())
-    raw = rules.status_token(app_id)
+    raw, token_hash, sealed = rules.new_status_token()
     text = rules.notice_text(company.name, company.retention_months)
     app = BizApplication(
         id=app_id, reference=rules.reference(), company_id=company.id, job_id=job.id, user_id=user.id if user else None,
-        name=name.strip()[:160], email=email, phone=(phone or "").strip()[:40] or None,
+        name=rules.one_line(name)[:160], email=email, phone=(phone or "").strip()[:40] or None,
         resume_text=resume_text[:MAX_RESUME_CHARS], resume_filename=filename, resume_source=resume_source,
         answers=checked, knockout_failed=bool(fails), knockout_reasons=fails,
         source=source if source in SOURCES else "other",
         consent={"notice_version": rules.NOTICE_VERSION, "accepted_at": now().isoformat(),
-                 "text_sha256": rules.notice_digest(text)},
+                 "text_sha256": rules.notice_digest(text), "retention_months": company.retention_months},
+        retention_months=company.retention_months,
         email_confirmed_at=now() if user is not None and user.email_verified else None,
-        status_token_hash=rules.digest(raw), stage_id=rules.first_stage(job.stages, "applied") or "applied",
+        status_token_hash=token_hash, status_token_sealed=sealed,
+        stage_id=rules.first_stage(job.stages, "applied") or "applied",
         status="active", ranking_status="pending")
-    db.add(app)
     try:
-        await db.flush()
-    except IntegrityError:  # the same email, at the same moment
-        await db.rollback()
+        # A savepoint: when the same email applies at the same moment, only this insert is undone. A full rollback
+        # would expire the job, company and user the caller still reads (an async lazy load is a MissingGreenlet).
+        async with db.begin_nested():
+            db.add(app)
+            await db.flush()
+    except IntegrityError:
         return None, ""
     timeline(db, app, "applied", None, source=app.source, via_orbit=user is not None)
     await job_queue.enqueue(db, RANK_KIND, {"application_id": app.id}, dedupe_key=f"{RANK_KIND}:{app.id}")
@@ -363,10 +386,14 @@ async def _create(db: AsyncSession, *, job: BizJob, company: BizCompany, name: s
 
 
 async def _confirmation(company: BizCompany, job: BizJob, app: BizApplication, raw: str) -> None:
-    subject, body, _ = await _template(company.id, "received")
     values = emails.values(company, job, app, token=raw)
-    if app.email_confirmed_at is None:  # opening the link confirms the address (the status page posts confirm)
+    if app.email_confirmed_at is None:
+        # Not confirmed yet: Orbit's fixed words, never the company's template (D82: the address might not be the
+        # applicant's). Opening the link confirms the address (the status page posts confirm).
+        subject, body = emails.CONFIRMATION
         values["status_link"] += "?confirm=1"
+    else:
+        subject, body, _ = await _template(company.id, "received")
     await emails.send_to_applicant(company, app, emails.render(subject, values), emails.render(body, values), None)
 
 
@@ -432,8 +459,9 @@ async def apply_signed_out(
         parsed_answers = _answers.validate_json(answers or "[]")
     except (ValidationError, ValueError) as e:
         raise HTTPException(422, "Check your email address and answers.") from e
-    ratelimit.check(_apply_email, f"biz-apply-email:{address}", "Too many applications from this email today.")
+    # The bot check first: a failed one must not use up the address's own daily allowance.
     await require_captcha(captcha_token, ratelimit.client_ip(request))
+    ratelimit.check(_apply_email, f"biz-apply-email:{address}", "Too many applications from this email today.")
     _check_consent(consent, notice_version)
     job, company = await _open_job(db, job_id)
     max_bytes = get_settings().max_upload_bytes
@@ -524,10 +552,12 @@ async def preview(job_id: str, user: Annotated[User, Depends(require_verified_em
     title, text, phone, name = "", "", None, user.name or ""
     if resume_id or document_id:
         title, text, phone, name, _ = await _shared(db, user, resume_id, document_id)
-    applied = await db.scalar(select(BizApplication.id).where(BizApplication.job_id == job.id,
-                                                              BizApplication.email == user.email.lower()))
+    applied = await db.scalar(select(BizApplication).where(BizApplication.job_id == job.id,
+                                                           BizApplication.email == user.email.lower()))
+    # An unconfirmed signed-out application from this address doesn't count: applying replaces it.
+    held = applied is not None and (applied.user_id is not None or applied.email_confirmed_at is not None)
     return PreviewOut(name=name or user.email.split("@")[0], email=user.email, phone=phone, resume_title=title,
-                      resume_text=text[:MAX_RESUME_CHARS], resumes=resumes, already_applied=applied is not None)
+                      resume_text=text[:MAX_RESUME_CHARS], resumes=resumes, already_applied=held)
 
 
 class OneClickIn(BaseModel):
@@ -697,6 +727,8 @@ async def delete_request(token: str, request: Request,
                 to=to, subject=f"{rules.candidate_label(app.reference)} asked for their application to be deleted",
                 text=f"An applicant for {job.title} asked for their data to be deleted. Delete it from the "
                      f"application in Orbit for Business: {get_settings().web_url.rstrip('/')}/business/app/"
-                     f"{company.id}/applications/{app.id}\n\nPlease do this within 30 days.",
+                     f"{company.id}/applications/{app.id}\n\nIf it isn't deleted before then, Orbit deletes it "
+                     f"automatically {rules.DELETION_DAYS} days after the request, with a reminder to you a week "
+                     "and a day before.",
                 footer="Sent by Orbit for Business."))
     return await _status(db, app, job, company)

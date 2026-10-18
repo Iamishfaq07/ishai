@@ -377,6 +377,10 @@ def _mock_business(request_type: str, body: str) -> str:
     deterministic parse stands), and a ranking that quotes the profile line sharing a word with each requirement."""
     m = re.search(r"<reference_data[^>]*>\s*(.*?)\s*</reference_data>", body, re.S)
     ref = m.group(1) if m else ""
+    if request_type == "business_fill":
+        from orbit_api.business_ai.job_fill import mock_answer  # the assistant's own reading, laid out (D85)
+
+        return mock_answer(body)
     if request_type == "business_jd":
         try:
             brief = json.loads(ref)

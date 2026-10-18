@@ -40,7 +40,7 @@ import {
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { SourceTable, hours } from "./Dashboard";
-import { applicationPath, applyMove, downloadBlob, groupByStage, jobPath, matchLabel, neighbourStage, relTime, scoreTone, sortApplications, toggleId, type SortKey } from "./model";
+import { applicationPath, applyMove, downloadBlob, groupByStage, jobPath, matchLabel, neighbourStage, rejectedMessage, relTime, scoreTone, sortApplications, toggleId, type SortKey } from "./model";
 import { JobStatusBadge, Loading, LoadError, Panel, errorText } from "./ui";
 
 type View = "board" | "list";
@@ -359,7 +359,7 @@ export function Pipeline() {
   const reject = async (ids: string[], sendEmail: boolean, subject?: string, body?: string) => {
     try {
       const r = await biz.reject(company.id, { ids, send_email: sendEmail, ...(subject ? { subject } : {}), ...(body ? { body } : {}) });
-      toast({ message: `Rejected ${r.rejected}${sendEmail ? ", emailed" : ""}`, tone: "success" });
+      toast({ message: rejectedMessage(r.moved, sendEmail, r.emails_waiting), tone: "success" });
       setSelected([]);
       reload();
     } catch (e) {
