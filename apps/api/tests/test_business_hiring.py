@@ -323,7 +323,7 @@ def test_ranking_runs_in_the_background_with_reasons_and_no_protected_inputs(cli
     log = client.get(f"/v1/business/companies/{company['id']}/audit", headers=auth(owner)).json()
     ranked = next(e for e in log if e["action"] == "ranking.completed")
     assert ai_port.FAKE_MODEL_VERSION not in json.dumps(detail)  # members see "basic match", never the version
-    assert ranked["detail"]["model_version"] == ai_port.FAKE_MODEL_VERSION and ranked["target"] == detail["reference"]
+    assert "model_version" not in ranked["detail"] and ranked["target"] == detail["reference"]  # admins only (D82)
 
 
 def test_failed_ranking_is_marked_and_can_be_rerun(client: TestClient) -> None:

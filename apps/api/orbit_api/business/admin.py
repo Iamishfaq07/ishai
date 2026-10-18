@@ -252,7 +252,7 @@ async def restore(job_id: str, admin: Admin, db: DB) -> AdminCompanyDetail:
 @router.get("/companies/{company_id}/audit", response_model=list[AuditOut])
 async def company_audit(company_id: str, _: Admin, db: DB) -> list[AuditOut]:
     """The company's own audit log, for the Orbit team: who moved or rejected whom, and each ranking's model version
-    (which company members never see outside this log)."""
+    (which company members never see, not even in this log)."""
     c = await _get(db, company_id)
     rows = (await db.scalars(select(BizAudit).where(BizAudit.company_id == c.id)
                              .order_by(BizAudit.created_at.desc()).limit(300))).all()

@@ -50,7 +50,7 @@ def upgrade() -> None:
     sa.Column('plan_request', sa.String(length=16), nullable=True),
     sa.Column('plan_request_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('retention_months', sa.Integer(), server_default='12', nullable=False),
-    sa.Column('blind_review', sa.Boolean(), server_default=sa.text('0'), nullable=False),
+    sa.Column('blind_review', sa.Boolean(), server_default=sa.false(), nullable=False),
     sa.Column('created_by', sa.String(length=36), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),

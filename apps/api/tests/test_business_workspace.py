@@ -156,6 +156,41 @@ def test_changing_the_website_domain_drops_verification(client: TestClient) -> N
     assert r.status_code == 200 and r.json()["verified"] is False and r.json()["domain"] == "another-domain.com"
 
 
+@pytest.mark.parametrize("target", ["https://google.com", "https://victim-brand.com"])
+def test_a_code_sent_for_one_domain_never_verifies_another(client: TestClient, target: str) -> None:
+    h = register(client, f"founder-{tag()}@example.com")
+    domain = f"attacker-{tag()}.com"
+    c = client.post("/v1/business/companies", headers=auth(h), json={
+        "name": "Google", "website": domain, "size": "1-10", "country": "US"}).json()
+    base = f"/v1/business/companies/{c['id']}/verification"
+    assert client.post(f"{base}/email", headers=auth(h), json={"email": f"x@{domain}"}).status_code == 200
+    [mail] = mail_to(f"x@{domain}")
+    code = re.search(r"Code: (\d{6})", mail.text).group(1)  # type: ignore[union-attr]
+    moved = client.patch(f"/v1/business/companies/{c['id']}", headers=auth(h), json={"website": target})
+    assert moved.status_code == 200 and moved.json()["verified"] is False
+    r = client.post(f"{base}/email/confirm", headers=auth(h), json={"code": code})
+    assert r.status_code in (400, 422)
+    v = client.get(base, headers=auth(h)).json()
+    assert v["verified"] is False and v["pending_email"] is None
+
+
+def test_the_domain_cant_change_under_open_jobs(client: TestClient) -> None:
+    owner, company, domain = new_company(client)
+    job = new_job(client, owner, company["id"])
+    assert job["status"] == "open"
+    r = client.patch(f"/v1/business/companies/{company['id']}", headers=auth(owner),
+                     json={"website": "https://another-domain.com"})
+    assert r.status_code == 409
+    me = client.get(f"/v1/business/companies/{company['id']}", headers=auth(owner)).json()
+    assert me["verified"] is True and me["domain"] == domain
+
+
+def test_the_customer_audit_log_never_names_the_ai_model() -> None:
+    detail = {"score": 80, "model_version": "rank-v1+score-v1+some-model", "ranking_model": "x", "stage": "Screen"}
+    assert companies_mod.customer_detail(detail) == {"score": 80, "stage": "Screen"}
+    assert companies_mod.customer_detail(None) == {}
+
+
 def test_logo_upload_is_validated_and_public(client: TestClient) -> None:
     import io
 
