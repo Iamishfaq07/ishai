@@ -815,7 +815,7 @@ the front page and footer, Home until dismissed, and in context only for people 
 promo strip and the line saying KashSec teaches AI went. The alternatives were a banner on every page (noisy, and it
 would teach people to ignore it) and a sidebar item (KashSec isn't a tool inside Orbit, and it opens another site).
 
-**D71 — LinkedIn AI fixes a part at a time like Resume AI, keeps its suggestions on the profile's row, and scores only
+**D75 — LinkedIn AI fixes a part at a time like Resume AI, keeps its suggestions on the profile's row, and scores only
 what LinkedIn's PDF lets it see.** The owner asked for LinkedIn AI to "give fixes through AI like in Resume AI, score
 the profile, and give suggestions one can copy and do the same to their LinkedIn profile". Orbit can never write to
 LinkedIn (no scraping, no LinkedIn API: the user uploads their own "Save to PDF" or pastes the page), so a fix is a

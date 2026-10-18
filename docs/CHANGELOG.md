@@ -2,7 +2,7 @@
 
 ## LinkedIn AI fixes it like Resume AI (2026-10-18)
 
-- **A score by section** (DECISIONS D71): headline, About, each of the latest three roles, skills, search keywords,
+- **A score by section** (DECISIONS D75): headline, About, each of the latest three roles, skills, search keywords,
   education and certifications, the custom URL, out of 100 from LinkedIn's PDF; Featured, photo and banner,
   recommendations and activity count once Orbit can see them (a pasted page, or the photo checklist applied). Bars
   grow in; "What would raise it" lists each fix with the points it adds, biggest first.
