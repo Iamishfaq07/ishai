@@ -1,0 +1,81 @@
+/* The film page: a fixed stage the size of the video, nothing else. */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  overflow: hidden;
+}
+#film.stage {
+  position: relative;
+  overflow: hidden;
+  font-family: "IBM Plex Sans Variable", "IBM Plex Sans", "Nirmala UI", "Yu Gothic UI", system-ui, sans-serif;
+  font-feature-settings: "kern", "liga", "calt";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  color: #0b0d14;
+}
+#film .layer {
+  position: absolute;
+  inset: 0;
+}
+#film .scene {
+  position: absolute;
+  inset: 0;
+}
+#film .app-frame {
+  background: #fff;
+  will-change: auto;
+}
+#film .app-frame iframe {
+  pointer-events: none;
+}
+#film .app-bar {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: #f3f4f7;
+  border-bottom: 1px solid #e3e5ec;
+  color: #5b6072;
+  font: 500 13px/1 "IBM Plex Sans Variable", system-ui, sans-serif;
+}
+#film .app-bar.dark {
+  background: #121826;
+  border-bottom-color: #232c3b;
+  color: #9aa3b8;
+}
+#film .app-bar .dots {
+  display: flex;
+  gap: 7px;
+}
+#film .app-bar .dots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d5d8e0;
+  display: block;
+}
+#film .app-bar.dark .dots i {
+  background: #2c3547;
+}
+#film .app-bar .addr {
+  margin: 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 7px;
+  background: #fff;
+  border: 1px solid #e3e5ec;
+  min-width: 260px;
+  justify-content: center;
+}
+#film .app-bar.dark .addr {
+  background: #0b0f17;
+  border-color: #232c3b;
+}
+#film .abs {
+  position: absolute;
+}

@@ -1,0 +1,6 @@
+# Built pages and renders are made again by the scripts (README.md); the finished videos go to
+# C:\Users\Ishfaq\Videos\Orbit Launch\, outside the repository.
+dist*/
+out/
+audio/*.wav
+__pycache__/

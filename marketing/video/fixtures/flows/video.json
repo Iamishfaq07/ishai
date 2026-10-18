@@ -1,0 +1,375 @@
+{
+ "__meta": {
+  "flow": "video",
+  "recordedAt": 1792332134169
+ },
+ "__sessions": {
+  "video": "630064d6-43b5-4c7d-b884-4c66329da04b"
+ },
+ "GET /v1/auth/me": [
+  {
+   "status": 200,
+   "body": {
+    "id": "91be8e9c-da7d-42a3-b21f-2a330e8189d6",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "wJ0N2Xo1g2knfCYRep98bqHDgFClQWNBjK0uAtlRv6Q",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "91be8e9c-da7d-42a3-b21f-2a330e8189d6",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "wJ0N2Xo1g2knfCYRep98bqHDgFClQWNBjK0uAtlRv6Q",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/sessions/630064d6-43b5-4c7d-b884-4c66329da04b": [
+  {
+   "status": 200,
+   "body": {
+    "session": {
+     "id": "630064d6-43b5-4c7d-b884-4c66329da04b",
+     "title": "Video interview: Product Analyst",
+     "type": "mock",
+     "role": "Product Analyst",
+     "company": null,
+     "interview_stage": null,
+     "tech_stack": [],
+     "key_requirements": [],
+     "language": "en",
+     "answer_language": null,
+     "length": "standard",
+     "style": "natural",
+     "auto_answer": false,
+     "status": "created",
+     "created_at": "2026-10-18T14:02:14.180588",
+     "started_at": null,
+     "ended_at": null,
+     "duration_seconds": 0,
+     "question_count": 0,
+     "document_ids": [
+      "6721c1cc-9c86-48da-9d4d-562c83709d2d"
+     ],
+     "report_status": null,
+     "workspace_id": null,
+     "instructions": null,
+     "negotiation": false,
+     "video": true,
+     "application_id": null
+    },
+    "turns": [],
+    "questions": [],
+    "answers": [],
+    "summary": null,
+    "camera": null
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "session": {
+     "id": "630064d6-43b5-4c7d-b884-4c66329da04b",
+     "title": "Video interview: Product Analyst",
+     "type": "mock",
+     "role": "Product Analyst",
+     "company": null,
+     "interview_stage": null,
+     "tech_stack": [],
+     "key_requirements": [],
+     "language": "en",
+     "answer_language": null,
+     "length": "standard",
+     "style": "natural",
+     "auto_answer": false,
+     "status": "created",
+     "created_at": "2026-10-18T14:02:14.180588",
+     "started_at": null,
+     "ended_at": null,
+     "duration_seconds": 0,
+     "question_count": 0,
+     "document_ids": [
+      "6721c1cc-9c86-48da-9d4d-562c83709d2d"
+     ],
+     "report_status": null,
+     "workspace_id": null,
+     "instructions": null,
+     "negotiation": false,
+     "video": true,
+     "application_id": null
+    },
+    "turns": [],
+    "questions": [],
+    "answers": [],
+    "summary": null,
+    "camera": null
+   },
+   "epoch": 0
+  }
+ ],
+ "POST /v1/sessions/630064d6-43b5-4c7d-b884-4c66329da04b/live-ticket": [
+  {
+   "status": 200,
+   "body": {
+    "ticket": "DdjpJPVmgqlIB2NRiAi7yHPQtdl2YVsuaHd4kXs5Mkk",
+    "expires_in": 60
+   },
+   "epoch": 0,
+   "sent": null
+  },
+  {
+   "status": 200,
+   "body": {
+    "ticket": "kPZrl9cK-u9rFjBMaOF1sbbi8WxnXransHfyQSZNFcI",
+    "expires_in": 60
+   },
+   "epoch": 1,
+   "sent": null
+  }
+ ],
+ "GET /v1/voice": [
+  {
+   "status": 200,
+   "body": {
+    "available": false,
+    "voices": [],
+    "default_voice": "vesta",
+    "chars_left": 0
+   },
+   "epoch": 2
+  }
+ ],
+ "__ws": [
+  {
+   "kind": "video",
+   "at": 1792332139027,
+   "frame": {
+    "v": 1,
+    "type": "session.started",
+    "seq": 1,
+    "ts": 1792332139025,
+    "data": {
+     "state": "listening",
+     "settings": {
+      "auto_answer": false,
+      "length": "standard",
+      "style": "natural",
+      "answer_language": null,
+      "response_timing": "balanced",
+      "thinking": "off",
+      "coding_language": null,
+      "experience": "auto"
+     }
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332139056,
+   "frame": {
+    "v": 1,
+    "type": "provider.status",
+    "seq": 2,
+    "ts": 1792332139025,
+    "data": {
+     "provider": "stt",
+     "name": "mock",
+     "state": "mock"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332139056,
+   "frame": {
+    "v": 1,
+    "type": "provider.status",
+    "seq": 3,
+    "ts": 1792332139025,
+    "data": {
+     "provider": "llm",
+     "name": "mock",
+     "state": "mock"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332139056,
+   "frame": {
+    "v": 1,
+    "type": "state.changed",
+    "seq": 4,
+    "ts": 1792332139025,
+    "data": {
+     "state": "listening"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332139056,
+   "frame": {
+    "v": 1,
+    "type": "audio.mic_status",
+    "seq": 5,
+    "ts": 1792332139025,
+    "data": {
+     "state": "connected"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332139059,
+   "frame": {
+    "v": 1,
+    "type": "audio.system_status",
+    "seq": 6,
+    "ts": 1792332139025,
+    "data": {
+     "state": "connected"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332139059,
+   "frame": {
+    "v": 1,
+    "type": "mock.say",
+    "seq": 7,
+    "ts": 1792332139025,
+    "data": {
+     "say_id": "f56628be-3e2c-4f47-9201-bb7c7ca0e309",
+     "text": "Hi Aditi, I'm Saba. How's your day going?",
+     "kind": "smalltalk"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332140105,
+   "frame": {
+    "v": 1,
+    "type": "audio.mic_status",
+    "seq": 8,
+    "ts": 1792332140096,
+    "data": {
+     "state": "connected",
+     "detail": "receiving"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332143189,
+   "frame": {
+    "v": 1,
+    "type": "transcript.final",
+    "seq": 9,
+    "ts": 1792332143160,
+    "data": {
+     "turn_id": "ddfb7d91-d130-4072-8a98-97b320c9114d",
+     "speaker": "interviewer",
+     "text": "Hi Aditi, I'm Saba. How's your day going?",
+     "start_ms": 0,
+     "end_ms": 0
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332152548,
+   "frame": {
+    "v": 1,
+    "type": "state.changed",
+    "seq": 10,
+    "ts": 1792332152543,
+    "data": {
+     "state": "ended"
+    }
+   }
+  },
+  {
+   "kind": "video",
+   "at": 1792332152549,
+   "frame": {
+    "v": 1,
+    "type": "session.ended",
+    "seq": 11,
+    "ts": 1792332152544,
+    "data": {
+     "state": "ended",
+     "settings": {
+      "auto_answer": false,
+      "length": "standard",
+      "style": "natural",
+      "answer_language": null,
+      "response_timing": "balanced",
+      "thinking": "off",
+      "coding_language": null,
+      "experience": "auto"
+     }
+    }
+   }
+  }
+ ]
+}

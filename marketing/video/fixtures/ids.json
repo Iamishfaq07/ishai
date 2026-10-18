@@ -1,0 +1,19 @@
+{
+ "resume": "5ac88d21-01e4-4bf6-9584-fd6ac2dc0159",
+ "draft": "5cc515a2-84a5-4ba9-bfcd-f55110d64727",
+ "document": "d80a5d93-23f9-483d-8232-7bfa8db43c69",
+ "mockReview": "7fa1203e-3739-4ef0-9fd5-e48383984aa1",
+ "interviewReview": "f6acc97d-9802-4dcd-8644-391edc47fe14",
+ "offer": "dbf2c867-1c12-4b28-b970-0a3f62fb39d5",
+ "tracker": {
+  "Kestrel Pay": "29aea56a-a2ae-4003-9095-63197b3d33af",
+  "Lumen Analytics": "8779ec41-c8f4-4ecc-af60-816d43b3186e",
+  "Brightline Health": "995bbb73-d55e-4b8a-9340-b73897f7397c",
+  "Northwind Labs": "1439d7c3-4e29-4c98-9a96-5a88703101d6",
+  "Tessellate": "1e84be48-0987-4142-ba27-f73ebd05c166",
+  "Cobalt Commerce": "5a7d391f-246f-4136-a8af-dbe69cc1d8d2",
+  "Quillbook": "2351b5aa-0813-4e98-86fb-4bdb1df89580"
+ },
+ "liveInterview": "2dd9ceab-69fe-4004-806b-1c9314dbf249",
+ "liveMock": "3c347d96-2c2d-4e6e-be0a-bb036585a9d0"
+}

@@ -1,0 +1,464 @@
+{
+ "__meta": {
+  "flow": "offer",
+  "recordedAt": 1792324350127
+ },
+ "GET /v1/auth/me": [
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": "a4529932-f91e-4078-9448-4cb2b01c84d2",
+    "email": "aditi.demo@example.com",
+    "name": "Aditi Rao",
+    "email_verified": false,
+    "has_password": true,
+    "approval_pending": false,
+    "store_transcripts": true,
+    "country": "IN",
+    "store_screenshots": false,
+    "csrf_token": "IGm444qOZGWmFvTfzBQDpEQuRUXph5uMjBhLHLBWDp0",
+    "evidence_vault": false,
+    "practice_languages": [
+     "en"
+    ],
+    "live_languages": [
+     "en",
+     "auto",
+     "hi",
+     "hinglish",
+     "es",
+     "fr",
+     "de",
+     "pt",
+     "it",
+     "nl",
+     "ja",
+     "ru"
+    ],
+    "video_mock": false,
+    "referrals": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/announcement": [
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "id": null,
+    "text": null,
+    "tone": "info"
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/auth/config": [
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "captcha": null,
+    "email_verification": "off",
+    "google": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/status": [
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  },
+  {
+   "status": 200,
+   "body": {
+    "is_admin": true
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/inbox?status=new&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "items": [],
+    "total": 0,
+    "offset": 0,
+    "has_more": false,
+    "counts": {
+     "new": 0,
+     "open": 0,
+     "done": 0,
+     "spam": 0,
+     "todo": 0,
+     "all": 0
+    }
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/users?only=pending&limit=1": [
+  {
+   "status": 200,
+   "body": {
+    "approval_required": false,
+    "users": [],
+    "totals": {
+     "users": 1,
+     "signups_7d": 1,
+     "interview_minutes_this_month": 0,
+     "resume_credits_used_this_month": 0,
+     "paid_inr_total": 0,
+     "paid_inr_this_month": 0,
+     "payments_waiting": 0
+    },
+    "total": 0,
+    "offset": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/admin/payments?only=submitted": [
+  {
+   "status": 200,
+   "body": {
+    "upi_configured": false,
+    "waiting": 0,
+    "payments": [],
+    "processing": 0,
+    "events_to_review": 0,
+    "unlinked_refunds": 0,
+    "has_more": false
+   },
+   "epoch": 0
+  }
+ ],
+ "GET /v1/offers": [
+  {
+   "status": 200,
+   "body": [
+    {
+     "company": "Cobalt Commerce",
+     "role": "Analytics Engineer",
+     "city": "Bengaluru",
+     "currency": "INR",
+     "fixed": 2200000,
+     "variable": 200000,
+     "joining_bonus": 150000,
+     "equity_per_year": 0,
+     "other": 0,
+     "pf": "capped",
+     "employer_costs_in_ctc": false,
+     "deadline": null,
+     "status": "considering",
+     "notes": "Offer letter came on Friday. Joining bonus is paid back if I leave within a year.",
+     "id": "dbf2c867-1c12-4b28-b970-0a3f62fb39d5",
+     "first_year": 2550000,
+     "yearly": 2400000,
+     "take_home": {
+      "monthly": 161283,
+      "yearly_tax": 240500,
+      "employee_pf": 21600,
+      "employer_costs": 0,
+      "professional_tax": 2500,
+      "variable_after_tax": 148000,
+      "assumptions": [
+       "New tax regime, FY 2026-27, with the ₹75,000 standard deduction",
+       "Basic pay is half of the fixed pay",
+       "PF on ₹15,000 a month (₹1,800 each from you and the employer)",
+       "The CTC doesn't include the employer's PF and gratuity",
+       "Professional tax of ₹2,500 a year (it varies by state)"
+      ]
+     },
+     "market": {
+      "currency": "INR",
+      "count": 6,
+      "p25": 2425000,
+      "median": 2550000,
+      "p75": 2787500,
+      "low": 1800000,
+      "high": 3400000,
+      "scope": "Analytics Engineer in Bengaluru",
+      "samples": [
+       {
+        "listing_id": "j0ec02616f20e6d84b352f799406b86f385a",
+        "title": "Analytics Engineer",
+        "company": "Bluefin Health",
+        "salary": "₹24L – ₹34L a year",
+        "city": "Bengaluru"
+       },
+       {
+        "listing_id": "j7f938876bb1f0474efbb75b355ede267123",
+        "title": "Analytics Engineer",
+        "company": "Copperline",
+        "salary": "₹25L – ₹32L a year",
+        "city": "Bengaluru"
+       },
+       {
+        "listing_id": "jc117501e5b3d85dfd5bcf06755e723d9a08",
+        "title": "Analytics Engineer",
+        "company": "Saltpan Labs",
+        "salary": "₹22L – ₹30L a year",
+        "city": "Bengaluru"
+       },
+       {
+        "listing_id": "jc50f43f230101d368a98178ff846dd5d310",
+        "title": "Analytics Engineer",
+        "company": "Orchard Mobility",
+        "salary": "₹21L – ₹29L a year",
+        "city": "Bengaluru"
+       },
+       {
+        "listing_id": "j6e8ab565e7a056b771b5cc4ed16e723a1f1",
+        "title": "Analytics Engineer",
+        "company": "Meridian Freight",
+        "salary": "₹20L – ₹28L a year",
+        "city": "Bengaluru"
+       },
+       {
+        "listing_id": "jfc48cb001c340f9e7341b7aa37b464f65af",
+        "title": "Analytics Engineer",
+        "company": "Lattice Grocers",
+        "salary": "₹18L – ₹26L a year",
+        "city": "Bengaluru"
+       }
+      ]
+     },
+     "position": "below",
+     "plan": null,
+     "plan_stale": false,
+     "created_at": "2026-10-18T11:52:29.144765",
+     "updated_at": "2026-10-18T11:52:29.144765"
+    }
+   ],
+   "epoch": 0
+  }
+ ],
+ "POST /v1/offers/dbf2c867-1c12-4b28-b970-0a3f62fb39d5/scenario": [
+  {
+   "status": 200,
+   "body": {
+    "offer": {
+     "fixed": 2200000,
+     "variable": 200000,
+     "joining_bonus": 150000,
+     "equity_per_year": 0,
+     "first_year": 2550000,
+     "yearly": 2400000,
+     "monthly_in_hand": 161283,
+     "yearly_tax": 240500,
+     "variable_after_tax": 148000
+    },
+    "scenario": {
+     "fixed": 2200000,
+     "variable": 200000,
+     "joining_bonus": 150000,
+     "equity_per_year": 0,
+     "first_year": 2550000,
+     "yearly": 2400000,
+     "monthly_in_hand": 161283,
+     "yearly_tax": 240500,
+     "variable_after_tax": 148000
+    },
+    "assumptions": [
+     "What-if figures only: nothing is saved, and the offer itself doesn't change.",
+     "Equity is valued as you set it; real value depends on vesting and the company.",
+     "New tax regime, FY 2026-27, with the ₹75,000 standard deduction",
+     "Basic pay is half of the fixed pay",
+     "PF on ₹15,000 a month (₹1,800 each from you and the employer)",
+     "The CTC doesn't include the employer's PF and gratuity",
+     "Professional tax of ₹2,500 a year (it varies by state)"
+    ]
+   },
+   "epoch": 0,
+   "sent": {
+    "fixed_change_pct": 0,
+    "variable_payout_pct": 100,
+    "equity_value_pct": 100,
+    "joining_bonus": 150000
+   }
+  }
+ ],
+ "POST /v1/offers/dbf2c867-1c12-4b28-b970-0a3f62fb39d5/plan": [
+  {
+   "status": 200,
+   "body": {
+    "company": "Cobalt Commerce",
+    "role": "Analytics Engineer",
+    "city": "Bengaluru",
+    "currency": "INR",
+    "fixed": 2200000,
+    "variable": 200000,
+    "joining_bonus": 150000,
+    "equity_per_year": 0,
+    "other": 0,
+    "pf": "capped",
+    "employer_costs_in_ctc": false,
+    "deadline": null,
+    "status": "considering",
+    "notes": "Offer letter came on Friday. Joining bonus is paid back if I leave within a year.",
+    "id": "dbf2c867-1c12-4b28-b970-0a3f62fb39d5",
+    "first_year": 2550000,
+    "yearly": 2400000,
+    "take_home": {
+     "monthly": 161283,
+     "yearly_tax": 240500,
+     "employee_pf": 21600,
+     "employer_costs": 0,
+     "professional_tax": 2500,
+     "variable_after_tax": 148000,
+     "assumptions": [
+      "New tax regime, FY 2026-27, with the ₹75,000 standard deduction",
+      "Basic pay is half of the fixed pay",
+      "PF on ₹15,000 a month (₹1,800 each from you and the employer)",
+      "The CTC doesn't include the employer's PF and gratuity",
+      "Professional tax of ₹2,500 a year (it varies by state)"
+     ]
+    },
+    "market": {
+     "currency": "INR",
+     "count": 6,
+     "p25": 2425000,
+     "median": 2550000,
+     "p75": 2787500,
+     "low": 1800000,
+     "high": 3400000,
+     "scope": "Analytics Engineer in Bengaluru",
+     "samples": [
+      {
+       "listing_id": "j0ec02616f20e6d84b352f799406b86f385a",
+       "title": "Analytics Engineer",
+       "company": "Bluefin Health",
+       "salary": "₹24L – ₹34L a year",
+       "city": "Bengaluru"
+      },
+      {
+       "listing_id": "j7f938876bb1f0474efbb75b355ede267123",
+       "title": "Analytics Engineer",
+       "company": "Copperline",
+       "salary": "₹25L – ₹32L a year",
+       "city": "Bengaluru"
+      },
+      {
+       "listing_id": "jc117501e5b3d85dfd5bcf06755e723d9a08",
+       "title": "Analytics Engineer",
+       "company": "Saltpan Labs",
+       "salary": "₹22L – ₹30L a year",
+       "city": "Bengaluru"
+      },
+      {
+       "listing_id": "jc50f43f230101d368a98178ff846dd5d310",
+       "title": "Analytics Engineer",
+       "company": "Orchard Mobility",
+       "salary": "₹21L – ₹29L a year",
+       "city": "Bengaluru"
+      },
+      {
+       "listing_id": "j6e8ab565e7a056b771b5cc4ed16e723a1f1",
+       "title": "Analytics Engineer",
+       "company": "Meridian Freight",
+       "salary": "₹20L – ₹28L a year",
+       "city": "Bengaluru"
+      },
+      {
+       "listing_id": "jfc48cb001c340f9e7341b7aa37b464f65af",
+       "title": "Analytics Engineer",
+       "company": "Lattice Grocers",
+       "salary": "₹18L – ₹26L a year",
+       "city": "Bengaluru"
+      }
+     ]
+    },
+    "position": "below",
+    "plan": {
+     "ask": 2500000,
+     "ask_why": "It sits in the upper half of what recent posts for this role in Bengaluru pay, and your experiment work is what the role asks for.",
+     "reasons": [
+      "You've designed and analysed 14 A/B tests on a booking flow, and the role is built around experiments.",
+      "Your Looker dashboard replaced 9 weekly reports for 60+ managers: the reporting this team wants to automate.",
+      "The fixed pay offered is below the middle of the market range Orbit read for the role."
+     ],
+     "call_script": [
+      "Thank you, I'm really excited about the role and the team.",
+      "Having looked at the market for analytics engineers in Bengaluru, I was hoping for a fixed pay closer to the number I sent.",
+      "My experiment work at Juniper is very close to what you described for the first six months.",
+      "If the fixed pay can't move, could we look at a joining bonus, or a review at six months?"
+     ],
+     "email": {
+      "subject": "Re: your offer for the Analytics Engineer role",
+      "body": "Hi [Recruiter name],\n\nThank you for the offer. I'm excited about the team and the work on your data models.\n\nHaving looked at the market for this role in Bengaluru, and given my experience designing and analysing experiments at Juniper Logistics, I'd like to ask for a fixed pay closer to the figure we discussed. If that's hard, a joining bonus or a review at six months would also work for me.\n\nThank you again,\n[Your name]"
+     },
+     "questions": [
+      "How is the variable pay decided, and what did people in this role get last year?",
+      "When is the first salary review?"
+     ],
+     "watch_outs": [
+      "The joining bonus is paid back if you leave within a year: check the letter."
+     ]
+    },
+    "plan_stale": false,
+    "created_at": "2026-10-18T11:52:29.144765",
+    "updated_at": "2026-10-18T11:52:32.834751"
+   },
+   "epoch": 1,
+   "sent": null
+  }
+ ]
+}
