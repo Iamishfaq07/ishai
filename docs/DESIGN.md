@@ -294,7 +294,9 @@ every screen but the live overlay (`windowing.ts`); breakpoints are `sm` and `md
   view (see "Scenes"). LinkedIn AI uses the same set: its section bars fill from the left (`.chart-fill`, then move
   with a transform when the score changes), its score ring counts on from the old score with the change beside it,
   the section a fix lands in wears `.moved-flash`, and an applied suggestion's card gets one solid accent band
-  sweeping across it (`.li-sweep` in `apps/web/src/index.css`; a tint that fades at Gentle, nothing at Off).
+  sweeping across it (`.li-sweep` in `apps/web/src/index.css`; a tint that fades at Gentle, nothing at Off). The
+  bars sit two to a row from sm up with no empty cell: Experience with its roles under it, and a bar that would be
+  alone on its row, take the whole row (`wideBars` in `pages/linkedin/model.ts`).
 - **A mock of someone else's screen** (LinkedIn AI's recruiter-search preview) is drawn in Orbit's own style:
   initials, ink and the accent, a line saying it's Orbit's preview, and never the other site's logo, colours or
   wording.
@@ -629,7 +631,7 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
   plainly, the honest line where the product needs it, and the product itself on the right), `FactsBand`,
   `StepsWithUI` (three steps, each with a small render of the product), the page's own middle (the templates'
   `Carousel`, the rounds, where the jobs come from, the search preview), `ToolkitGrid` (cards that are working pieces
-  of the product), `ComparisonBlock` where a fair one exists, `PricingSection` where the product is bought with
+  of the product; a wide card takes two columns from md up, so no row is left with an empty cell), `ComparisonBlock` where a fair one exists, `PricingSection` where the product is bought with
   credits, `FaqBlock`, `CrossSell` (the products that pick up where this one stops) and `FinalCta`. One h1, the
   hero's.
 - **The headline is two-tone**: ink, then the accent, as solid colours (no gradient). The closing panel's title does
@@ -637,7 +639,9 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
 - **Facts, never claims**: a facts band shows only what the code or the server stands behind (a score out of 100,
   `TEMPLATES.length`, the guides counted from their own files, the languages from `LIVE_LANGUAGES`, the median of real
   sessions from the server, the job counts once there are enough). No ratings, reviews, user counts, invented
-  results, testimonials or "trusted by" rows, ever. A number that comes from the server is left out until it answers.
+  results, testimonials or "trusted by" rows, ever. A number that comes from the server is left out until it answers;
+  a line above the fold that waits for one keeps the room it will need from the first paint (`SameBox`), so nothing
+  under it moves when it does.
 - **Pictures are the product, playing**: each render is the real component where it draws without data
   (`ResumePreview`, the score ring and section bars of LinkedIn AI, its `SearchPreview`, `CodeBlock`, `StagePill`,
   `LiveAnswerDemo`), or a faithful composition of the screen in its own classes where the real one fetches its own
@@ -658,7 +662,9 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
   `dist/_prerender/*.html`; a heavy render (a whole resume page) draws a light placeholder there and in the app until
   it's near the screen (`useNear`, the carousel's `render(i, near)`), or, above the fold, until just after the first
   paint (`useAfterPaint`: the templates behind the hero). A render loads no font beyond Plex: resume renders use Arial
-  where a template asks for Inter, languages are named in English, and code waits for the screen.
+  where a template asks for Inter, languages are named in English, and code waits for the screen. The built page
+  paints from its HTML, the stylesheet and Plex (preloaded) alone; the app's code starts once it has painted
+  (`public/app-start.js`), so nothing a page shows may need the app to look right at its first paint.
 - **The FAQ** comes from `worker/faqs/<page>.js`, which the page shows and its FAQPage structured data states, word
   for word (D67): plain text, the same for every visitor, no links inside an answer.
 - **The carousel** scrolls natively (snap points; a swipe, a trackpad or the arrow keys, the row takes focus) and has

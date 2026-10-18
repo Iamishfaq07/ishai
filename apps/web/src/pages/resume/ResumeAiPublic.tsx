@@ -9,8 +9,9 @@ import { Carousel, ComparisonBlock, CrossSell, FactsBand, FaqBlock, FinalCta, He
 import { PricingSection } from "../../marketing/PricingSection";
 import { PublicLayout } from "../../marketing/PublicLayout";
 import { Container, SectionIntro } from "../../marketing/primitives";
+import { SameBox } from "../../marketing/SameBox";
 import { StickyCta } from "../../marketing/StickyCta";
-import type { WelcomeGrant } from "../../lib/welcome";
+import { WELCOME_LIKE, type WelcomeGrant } from "../../lib/welcome";
 import { TEMPLATES } from "./model";
 import { RESUME_AI_HOME } from "./paths";
 import {
@@ -32,8 +33,14 @@ import {
 /** Sign-up and sign-in from here come back to Resume AI. */
 const BACK_HERE = { from: RESUME_AI_HOME };
 
+type Pack = Pick<CreditPack, "resume_credits" | "price_inr" | "currency" | "price_text">;
+
+/** The cheapest pack of AI credits as the server sells it today (₹499 for 25 on 18 Oct 2026), in the longer of its
+ *  two forms (dollars outside India), only to size the hero's line until it answers (SameBox): never shown. */
+const PACK_LIKE: Pack = { resume_credits: 25, price_inr: 499, currency: "USD", price_text: "$7.99" };
+
 /** What a new account gets, said plainly: the free AI credit (from the server), what never costs one, and packs. */
-function FreeNote({ welcome, packs }: { welcome: WelcomeGrant | null; packs: CreditPack[] | null }) {
+function freeNote(welcome: WelcomeGrant | null, packs: Pack[] | null) {
   const pack = packs?.filter((p) => p.resume_credits > 0).sort((a, b) => a.price_inr - b.price_inr)[0] ?? null;
   const credits = welcome?.resume_credits ?? 0;
   return (
@@ -98,7 +105,7 @@ export function ResumeAiPublicPage() {
             </a>
           </>
         }
-        note={<FreeNote welcome={data.welcome} packs={data.packs} />}
+        note={<SameBox like={freeNote(data.welcome ?? WELCOME_LIKE, data.packs ?? [PACK_LIKE])} answered={[data.welcome, data.packs?.length]}>{freeNote(data.welcome, data.packs)}</SameBox>}
         visual={<ResumeHeroArt />}
       />
 

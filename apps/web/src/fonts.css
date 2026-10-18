@@ -1,7 +1,9 @@
 /* Latin web fonts (the app's own words are English): 2 files per family, fetched only when the page uses them,
    instead of the packages' 7 subsets. Latin-ext covers accented names in resumes and Spanish, French, German…
-   answers. Deliberately not preloaded: on a slow phone connection a preload competes with the app's own code
-   (measured: sign-in usable ~0.3 s later); font-display: swap shows text in the system font until they arrive. */
+   answers. Deliberately not preloaded by the app: on a slow phone connection a preload competes with the app's own
+   code (measured: sign-in usable ~0.3 s later); font-display: swap shows text in the system font until they arrive.
+   The pages built as HTML do preload Plex's latin file (src/prerender/document.ts): their first paint needs no code,
+   and drawn in Plex from the start, their text isn't swapped (and re-measured) after it. */
 /* IBM Plex Sans: the face of the whole product (tailwind.preset.ts `sans`), and the app's headings too. Its
    Cyrillic file is fetched only when Russian text is on screen (live answers); Devanagari and Japanese use the
    system's faces (the preset's script fallbacks). */

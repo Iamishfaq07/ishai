@@ -1062,6 +1062,27 @@ its words, pictures, colours or layout were taken. The choices:
   the hero now draw just after the first paint, the carousel's only when they're near the screen, and the public
   renders use Arial (one of the editor's own fonts), so Resume AI went from 85 to 92 on Lighthouse.
 
+**2026-10-18: the built pages paint first, then start the app.** Four product pages and the front page stayed just
+over 2.5 s for LCP on Lighthouse's phone. The bigger HTML wasn't what held them: a built page asked for the app's
+code (the entry and its modulepreloads, ~175 kB gzipped) with the page, so the first paint shared a slow connection
+with it, and on a fast machine the code ran before the paint, so Lighthouse counted all of it. The built pages now
+list those scripts (`#orbit-app`, src/prerender/document.ts), `public/app-start.js` (inline in index.html, allowed by
+its hash like the theme script) loads them once the first contentful paint is reported (at once in a background tab,
+after 3 s at most), and they preload Plex's latin file beside the stylesheet, so the text is drawn in it from the
+first paint rather than swapped in (a second, larger paint). LCP went from 2.55-2.82 s to 1.51-1.81 s and the score
+to 99 on every product page; inlining critical CSS wasn't needed. The cost: the menus, Play again and the search
+preview's switch answer one paint after the page shows (links work from the start). The app's own pages load as
+before (fonts.css: a preload there competes with sign-in's code). Measuring it also showed that the builds measured
+before had a broken API address (Git Bash turned `/api` into a Windows path), so their CLS of 0 had no server
+answers in it: with the API answering, the hero's free line grows by a line when the welcome grant (or Jobs AI's
+numbers, Resume AI's pack price) arrives, CLS 0.02-0.07 on four pages before and after alike, and 0.006 on the front
+page now that its app starts after the paint. The words stay as they are; the line keeps its room instead: `SameBox`
+(marketing/SameBox.tsx) lays out the answered form with today's values invisibly in the same grid cell, its words
+as aria-hidden CSS generated content (so the built HTML still says only what's true without the server, and nothing
+is read twice), and draws the answer afresh in that box. CLS 0 on every product page and the front page, LCP
+1.65-1.80 s (docs/PERFORMANCE.md). The same day LinkedIn AI's section bars and the toolkits stopped leaving an empty cell: Experience with its roles, and
+a bar alone on its row, take the whole row (`wideBars`), and a wide toolkit card spans from md up.
+
 **D76 — Saba is heard (or says why not), her words come as she says them, a turn ends when you stop, and she talks
 like an interviewer on a call.** The owner: "Saba doesn't talk sometimes, it only gives the transcript", "it gives
 the full transcript first, then starts talking", "it's not very interactive, it must be like a human". Production's

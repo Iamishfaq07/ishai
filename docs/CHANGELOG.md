@@ -1,5 +1,32 @@
 # Implementation log
 
+## The product pages paint in 1.5-1.8 s on a phone with nothing moving, and LinkedIn AI's score grid has no gaps (2026-10-18)
+
+- **The built pages paint first, then start the app** (DECISIONS D79, dated note; docs/PERFORMANCE.md): a page built
+  as HTML lists the app's scripts in `#orbit-app` instead of loading them with the page, and `public/app-start.js`
+  (inline in index.html like the theme script, so the CSP hashes it) loads them once the first contentful paint is
+  reported; a background tab starts at once, and 3 s is the most it waits. The built pages also preload IBM Plex
+  Sans's latin file beside the stylesheet, so their text is drawn in it from the first paint. Lighthouse mobile
+  (simulated, median of 3), LCP before → after: Resume AI 2.79 → 1.66 s, the copilot 2.55 → 1.51 s, Jobs AI 2.63 →
+  1.65 s, Practice 2.70 → 1.81 s, LinkedIn AI 2.55 → 1.67 s, the front page 2.82 → 1.73 s; scores 91-94 → 99,
+  accessibility 100, TBT 0-70 ms. The inline scripts no longer carry their files' comments.
+- **CLS 0, measured with the API answering**: the earlier measuring builds had `/api` mangled by Git Bash (now noted
+  in PERFORMANCE.md "How to measure"), which hid that the hero's free line grows by a line when the server answers
+  and pushes the picture under it down (CLS 0.02-0.07 on Resume AI, Jobs AI, the copilot and Practice; 0.006 on the
+  front page once its app started after the paint). The line's words are unchanged; `SameBox`
+  (marketing/SameBox.tsx) keeps its answered height from the first paint by laying out the answered form with
+  today's values (`WELCOME_LIKE`, the jobs page's daily checks, the cheapest pack in dollars) invisibly in the same
+  grid cell, its words as aria-hidden CSS generated content, so screen readers and the built HTML's text get only
+  the line as it stands; the answer is then drawn afresh in that box. Lighthouse with the API answering: CLS 0 and
+  no layout shift on every product page and the front page, LCP 1.65-1.80 s, scores 99-100. After the answer every
+  hero is pixel-for-pixel as before. A unit test covers SameBox and the prerender test checks the five heroes.
+  SameBox is a 0.5 kB chunk of its own; the front page's budget goes from 206 to 207 kB for it (206.2 measured).
+- **LinkedIn AI's section bars** sit two to a row with no empty cell: Experience with its roles, and a bar that would
+  be alone on its row (the public page's seventh, Custom URL), take the whole row (`wideBars`, pages/linkedin). The
+  product pages' toolkits (five cards, one wide) left an empty cell from 768 to 1023 px; the wide card spans from md
+  up now. A unit test covers `wideBars`, and the prerender test checks every toolkit at two and three columns and the
+  LinkedIn hero's bars. Before and after shots: `C:\Users\Ishfaq\tools\orbit-drive\linkedin-grid\`.
+
 ## Saba's room: fewer voice requests, a join that says where it is, controls that always fit (2026-10-18)
 
 DECISIONS D76 (2026-10-18 note).

@@ -30,7 +30,7 @@ even when SQLite hides it.
 
   | entry (every page) | CSS | Home | front page | Sessions | Setup | Mock | Live | Resume AI | resume editor | Jobs AI |
   |---|---|---|---|---|---|---|---|---|---|---|
-  | 170 kB | 32 kB | 211 | 206 | 185 | 200 | 206 | 246 | 205 | 255 | 280 |
+  | 170 kB | 32 kB | 211 | 207 | 185 | 200 | 206 | 246 | 205 | 255 | 280 |
 
   The public product pages (D79), signed out: Resume AI 226, Jobs AI 209, the copilot 212, Practice 207, LinkedIn AI
   207 kB (measured 215.0, 198.3, 201.1, 196.7 and 196.6 kB when they were built on the section kit; they were 194.0,
@@ -51,6 +51,10 @@ even when SQLite hides it.
   with D79): D80 put the API client's direct route (the cookie-domain handshake, the fallback) in the entry, which
   every page loads, and D76's addendum added Saba's retry, `sayNaturalLine` and `voiceSetup` to Live. Both are
   behaviour that has to be there before the first call or the first line, not code a page could load later.
+
+  The front page went up 1 kB later that day (205.7 → 206.2 kB, budget 207): `SameBox`, 0.5 kB, keeps its hero's
+  free line in the room it will need once the server answers, so nothing moves (CLS 0, below). The product pages
+  carry it too, within their budgets; it's its own chunk, so the pages without it pay only its name in the preload map.
 
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
@@ -199,6 +203,60 @@ LCP sit just over 2.5 s (observed on this machine: 0.3 to 0.5 s, or about 1.3 s 
 arrived before the first paint, which the front page and the old pages showed too). Inlining the critical CSS
 (below) is the next step for all of them.
 
+### Web — the built pages paint first, then start the app (18 Oct 2026, D79; Lighthouse 13.5 mobile, simulated)
+The same method, median of 3, on a build whose `/api` really reaches the local API (see "How to measure"). The
+before column is main as of this change; a second round of three runs gave the last column's LCP.
+
+| page | before: score / FCP / LCP / TBT / CLS | after | after, again: LCP |
+|---|---|---|---|
+| Resume AI | 91 / 2,605 / 2,791 ms / 58 ms / 0.056 | 99 / 1,505 / 1,655 ms / 70 ms / 0.056 | 1,734 ms |
+| interview copilot | 93 / 2,479 / 2,554 ms / 0 ms / 0.062 | 99 / 1,210 / 1,510 ms / 5 ms / 0.062 | 1,657 ms |
+| Jobs AI | 93 / 2,479 / 2,627 ms / 13 ms / 0.066 | 99 / 1,354 / 1,654 ms / 0 ms / 0.066 | 1,656 ms |
+| Practice | 92 / 2,628 / 2,703 ms / 0 ms / 0.018 | 99 / 1,508 / 1,808 ms / 11 ms / 0.018 | 1,805 ms |
+| LinkedIn AI | 94 / 2,479 / 2,554 ms / 0 ms / 0 | 99 / 1,366 / 1,666 ms / 5 ms / 0 | 1,594 ms |
+| front page | 92 / 2,591 / 2,816 ms / 14 ms / 0 | 99 / 1,505 / 1,728 ms / 14 ms / 0.006 | 1,728 ms |
+
+Accessibility 100, best practices and SEO unchanged on every page. What held the first paint wasn't the HTML's size:
+the built pages asked for the app's code with the page (the entry and its modulepreloads, ~175 kB gzipped), and on
+a fast machine that code arrived and ran before the first paint, so Lighthouse's phone simulation counted all of it,
+and the font after the stylesheet, before the first paint. Now a built page lists those scripts instead
+(`#orbit-app`, `src/prerender/document.ts`), `public/app-start.js` (inline, allowed by its hash) loads them once the
+first contentful paint is reported, and the page preloads Plex's latin file beside the stylesheet. The first paint
+needs the HTML, the stylesheet and the font only; without the preload the text was drawn in the fallback first and
+again in Plex a moment later, a larger paint that counted as the LCP (Jobs AI stayed at 2.79 s that way). Inlining
+the critical CSS wasn't needed. In 35 of the 36 runs LCP was 1.5 to 1.8 s; one LinkedIn AI run counted the app's
+copy (at 0.64 s observed) and measured 2.68 s. The app now answers clicks about one paint later than the page shows
+(locally 5 to 10 ms after the first paint; on a slow phone one round trip more); links work from the start.
+
+The CLS column is new: the builds measured before (above) had `VITE_API_URL=/api` turned into
+`C:/Program Files/Git/api` by Git Bash, so every API call failed and nothing the server says reached the page. With
+the API answering, the hero's free line (what a new account gets, from `/v1/plans`; Jobs AI's from `/v1/jobs/stats`;
+Resume AI's pack price) grows by a line when it arrives and pushes the picture under it down on a phone: CLS 0.02 to
+0.07 on four pages, before and after this change alike. The front page had the same line, but there the app used to
+answer before the first paint on this machine; now that it starts after the paint, it shows (0.006). On a phone the
+server answers after the first paint either way.
+
+### Web — the hero's free line keeps its room (18 Oct 2026, D79; the same method, API answering)
+| page | score / FCP / LCP / TBT / CLS |
+|---|---|
+| Resume AI | 99 / 1,502 / 1,652 ms / 9 ms / 0 |
+| interview copilot | 100 / 1,355 / 1,655 ms / 11 ms / 0 |
+| Jobs AI | 100 / 1,354 / 1,654 ms / 5 ms / 0 |
+| Practice | 99 / 1,504 / 1,804 ms / 10 ms / 0 |
+| LinkedIn AI | 100 / 1,352 / 1,652 ms / 0 ms / 0 |
+| front page | 100 / 1,353 / 1,652 ms / 6 ms / 0 |
+
+No layout shift at all in these 18 runs, nor in the round before them; accessibility 100, best practices and SEO as
+before. The line's words are unchanged: `SameBox` (`marketing/SameBox.tsx`) lays the line out as it will read once the server answers (with
+today's values: 20 interview minutes and 1 AI credit, 15 fit checks and 5 resume reads a day, the cheapest pack in
+its longer, dollar form) in the same grid cell, invisibly and aria-hidden, its words as CSS generated content, so
+the cell has the answered height from the first paint and the built HTML's text is still only what's true without
+the server. When the answer comes the line is drawn afresh in that box (its later words replaced where they stand,
+not pushed along), and the box then follows the real answer. Headless at 360, 390, 412, 768 and 1350 px every
+remaining shift was under 0.003 (a glyph from the latin-ext font arriving); after the answer each hero is
+pixel-for-pixel what it was. Before the answer the line has a line's room to spare under it (empty). A value with
+more digits than today's could still move it by a line; a pack in rupees fits the room of its dollar form.
+
 ### Mobile access (headless, iPhone UA + touch; 25 signed-in pages at 360, 390, 414 and 768 px)
 | | before | after |
 |---|---|---|
@@ -242,6 +300,9 @@ any other URL):
   with `VITE_API_URL` **and** `VITE_LIVE_URL` set to the local API (`.env.production` points live sockets at
   production); `web/serve.mjs` refuses a build that talks to production.
 - `web/lh.sh`: Lighthouse on the public pages; `mobile/audit.mjs`: the mobile checks.
+- Building from Git Bash, set `MSYS_NO_PATHCONV=1`: without it `VITE_API_URL=/api` reaches Vite as
+  `C:/Program Files/Git/api`, the built app's API calls all fail, and a page measures without anything the server
+  says (that hid the hero's CLS until 18 Oct 2026). `grep -l "Program Files" dist/assets/*.js` should find nothing.
 
 ## Left to do (expected gains)
 - **Live page animations**: pause the idle orb after a few seconds of listening, or draw it at 30 fps, and make
@@ -250,8 +311,10 @@ any other URL):
   client's re-parse per chunk; it's a protocol change for the web and desktop clients together.
 - **Sessions, stories, answers lists** (4,500-4,700 elements at 80-200 items): the same batched drawing as the tracker
   would bring their tap latency (40-190 ms at 4x CPU) under 100 ms.
-- **The public pages' first paint**: inline the critical CSS and the theme script in the prerendered HTML (~450 ms
-  render-blocking on a cold mobile visit, Lighthouse's estimate); the front page and the Worker belong to the brand
-  and search work.
+- **The hero's free line moving the picture under it**: done on 18 Oct 2026, its room is kept from the first paint
+  (SameBox, above); CLS 0 on every product page and the front page.
+- **The public pages' first paint** is now the HTML, the stylesheet and Plex (the app starts after it): inlining the
+  critical CSS would save the stylesheet's round trip (~30 kB), and the Worker could send the stylesheet and font as
+  103 Early Hints; neither is needed for the 2.5 s budget now (1.5 to 1.8 s).
 - **The admin cost report** (357 ms): aggregate in SQL instead of reading every call of the month into Python.
 - **Desktop**: lazy-load its heavier screens (main chunk 533 kB parsed at every start).

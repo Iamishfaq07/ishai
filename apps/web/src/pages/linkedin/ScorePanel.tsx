@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import type { LinkedInSectionScore } from "@orbit/types";
 import { cx, useCountUp, useInView } from "@orbit/ui";
-import { scoreWord } from "./model";
+import { scoreWord, wideBars } from "./model";
 
 // A score's ring: the fill says how it went; the track is a pale step of the same colour, so the whole ring reads.
 const RING_TONE = {
@@ -64,17 +64,19 @@ export function ScoreWord({ score }: { score: number }) {
 /**
  * Each section's points as a bar, the latest roles under Experience. The bars grow in from the left the first time
  * they're in view (Full; a fade at Gentle; there at once at Off), and a bar whose section a fix just changed wears a
- * fading accent ring. Sections LinkedIn's PDF doesn't carry say so instead of showing an empty bar.
+ * fading accent ring. Sections LinkedIn's PDF doesn't carry say so instead of showing an empty bar. From sm up the bars
+ * sit in two columns with no empty cell (wideBars): Experience with its roles, and a bar left alone, take the row.
  */
 export function SectionBars({ sections, flash }: { sections: LinkedInSectionScore[]; flash: { id: string; at: number } | null }) {
   const [ref, seen] = useInView<HTMLUListElement>();
   const known = sections.filter((s) => s.known);
   const unknown = sections.filter((s) => !s.known);
+  const wide = wideBars(known);
   return (
     <div>
       <ul ref={ref} data-shown={seen ? "" : undefined} className="chart grid gap-x-6 gap-y-2 sm:grid-cols-2" aria-label="Your score by section">
         {known.map((s, i) => (
-          <li key={`${s.id}-${flash?.id === s.id ? flash.at : 0}`} className={cx("-mx-1.5 rounded-lg px-1.5 py-1 text-sm", flash?.id === s.id && "moved-flash")}>
+          <li key={`${s.id}-${flash?.id === s.id ? flash.at : 0}`} className={cx("-mx-1.5 rounded-lg px-1.5 py-1 text-sm", wide[i] && "sm:col-span-2", flash?.id === s.id && "moved-flash")}>
             <Bar label={s.label} points={s.points} max={s.max} delay={i * 60} />
             {s.roles.length > 0 && (
               <ul className="mt-1.5 space-y-1 border-l border-zinc-200 pl-3 dark:border-white/10" aria-label="Each of your latest roles">
