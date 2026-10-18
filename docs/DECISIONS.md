@@ -1067,9 +1067,17 @@ voice).
   session gives its earliest questions a short review.
 - **Read aloud** (the copilot) stays on the device's voice: only the interviewer's own lines go to Deepgram (the
   privacy promise), and the copilot's answers are the user's.
-Measured on a real call (end of the candidate's answer to her reply being heard): before, 6.4 s median with her text
-on screen 3.9 s before her voice; after the first round of changes, 4.2 s with her words 0.05 s behind her voice; the
-fixes from that call (her turn from their voice, the cached acknowledgement) are checked by tests that replay what the
-call did. Rejected: streaming her voice over Deepgram's WebSocket or pushing it from the server (a bigger change, for
+- **A line is kept once she's heard.** In the video room her lines go into the transcript, the report and what the
+  model reads when the client says it started saying them (or shows them in full); one cut off before a word was
+  heard (they were still talking) is taken back, the question before it current again with their words as its answer.
+  A short answer so far gets longer to go on (1.4 s under 15 words, 1.15 s under 40): a 0.9 s pause after a first
+  sentence had ended the turn. A request waits until they've stopped ("Sure." after her check-in began an answer),
+  her check-in counts from her latest line (it cut off her own repeat), and their questions at the end aren't graded.
+Measured on real calls (end of the candidate's answer to her reply being heard): before, 6.4 s median with her text
+on screen 3.9 s before her voice; after the first round, 4.2 s with her words 0.05 s behind her voice. A second call
+(approved) confirmed the mic goes to the server the whole time they talk (their last words land), no talk-over, the
+small talk waiting for a late reply, the repeat, a cached "Mm-hmm." about 1-2 s after they stop, and the review
+completing; it found the items in the bullet above. Her voice's own time (1.8-4 s from her line arriving to her first
+word, from here) is now most of the wait. Rejected: streaming her voice over Deepgram's WebSocket or pushing it from the server (a bigger change, for
 the second round), a face or avatar (Saba is a voice, D69), and turning her down instead of stopping her when talked
 over (speech synthesis can't be, and stopping is what a person does).

@@ -12,9 +12,10 @@ the real speech-to-text, voice and AI model and a synthetic candidate.
 - **In sync**: her line appears word by word as she says it, in the caption and the transcript ("about to speak…"
   while her voice is on its way); in full when her voice is off or Motion is Off; screen readers hear it once.
 - **Turns**: a turn ends when the candidate's voice stops (the server hears it in the mic audio), not on the
-  transcriber's bursts; talking over her stops her within about 0.4 s, and what they said meanwhile is
-  kept; the mic isn't held back while her voice is on its way; her reply comes in growing pieces with a cached
-  "Mm-hmm." when it's slow.
+  transcriber's bursts, and a short answer gets longer to go on; talking over her stops her within about half a
+  second, and what they said meanwhile is kept; the mic isn't held back while her voice is on its way; a line cut off
+  before a word was heard is taken back (and never in the transcript); her reply comes in growing pieces with a
+  cached "Mm-hmm." when it's slow.
 - **Conversation**: hello with their first name and small talk, the plan, a specific reaction before each question,
   repeat, rephrase or a moment when asked, a check-in after a long silence, a hint after "I don't know", "Do you have
   any questions for me?" answered honestly, and a goodbye.
