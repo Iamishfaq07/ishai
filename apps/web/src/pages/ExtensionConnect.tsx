@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, PlugZap, cx, focusRing } from "@orbit/ui";
+import { Check, PlugZap, buttonClass, cx, focusRing } from "@orbit/ui";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { errorText } from "../lib/format";
 
 type State = "looking" | "found" | "missing" | "connecting" | "connected";
+
+/** The extension's store listing, once it's published (set at build time); until then the page says it isn't. */
+const EXTENSION_URL = (import.meta.env.VITE_EXTENSION_URL ?? "").trim();
 
 /**
  * Connect the Orbit browser extension (apps/extension): makes a sign-in that only works for the extension (clip a
@@ -15,6 +18,11 @@ type State = "looking" | "found" | "missing" | "connecting" | "connected";
 export function ExtensionConnectPage() {
   const [state, setState] = useState<State>("looking");
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0); // "Look again": the extension was installed or enabled after we looked
+  const lookAgain = () => {
+    setState("looking");
+    setAttempt((n) => n + 1);
+  };
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
@@ -38,7 +46,7 @@ export function ExtensionConnectPage() {
       window.clearInterval(again);
       window.clearTimeout(t);
     };
-  }, []);
+  }, [attempt]);
 
   const connect = async () => {
     setError(null);
@@ -73,10 +81,31 @@ export function ExtensionConnectPage() {
               <Check className="h-4 w-4" aria-hidden /> Connected. Click the Orbit icon in your browser's toolbar on any job page.
             </p>
           ) : state === "missing" ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              The extension isn't on this browser yet, or this page wasn't opened from it. Install it, then press its{" "}
-              <strong>Connect to Orbit</strong> button.
-            </p>
+            <div className="space-y-3">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                The extension isn't on this browser yet, or this page wasn't opened from it.{" "}
+                {EXTENSION_URL ? (
+                  <>
+                    Install it, then press its <strong>Connect to Orbit</strong> button.
+                  </>
+                ) : (
+                  <>
+                    It isn't in the browser stores yet. Once it's installed, press its <strong>Connect to Orbit</strong>{" "}
+                    button.
+                  </>
+                )}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {EXTENSION_URL && (
+                  <a href={EXTENSION_URL} target="_blank" rel="noopener noreferrer" className={buttonClass("primary", "md")}>
+                    Get the extension
+                  </a>
+                )}
+                <Button variant="secondary" onClick={lookAgain}>
+                  Look again
+                </Button>
+              </div>
+            </div>
           ) : (
             <Button onClick={() => void connect()} disabled={state === "connecting" || state === "looking"}>
               {state === "connecting" ? "Connecting…" : state === "looking" ? "Looking for the extension…" : "Connect the extension"}

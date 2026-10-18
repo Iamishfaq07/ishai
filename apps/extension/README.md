@@ -36,3 +36,6 @@ Load `apps/extension/dist` in `chrome://extensions` (Developer mode → Load unp
    nothing is sold or used for ads. Link to `privacy.html`.
 3. Edge Add-ons (Partner Center, free): the same zip.
 4. Store listings need screenshots and a 128 px icon (`icons/icon-128.png`).
+5. Set `VITE_EXTENSION_URL` to the store listing in the web build's environment (Cloudflare build variables): the
+   Connect page then offers "Get the extension" to anyone who opens it without the extension (until then it says the
+   extension isn't in the stores yet).
