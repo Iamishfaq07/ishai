@@ -277,6 +277,13 @@ export { WorkingState } from "./components/WorkingState";
 export { spotlightMove } from "./components/useSpotlight";
 export { ConceptDepthRadar, aggregateDepth } from "./components/ConceptDepthRadar";
 export { buttonClass, type ButtonSize, type ButtonVariant } from "./components/ui";
+// Interaction (DESIGN.md "Interaction", D74): a button's states, copy and success feedback, lists that move, exits.
+export { ButtonSpinner, ButtonTick, MorphLabel, SelectCheck } from "./components/ui";
+export { CopyButton } from "./components/CopyButton";
+export { CONFIRM_MS, announce, haptic, hapticsOk, useCopy, useFlash, type CopyState } from "./hooks/useFeedback";
+export { useFlip } from "./hooks/useFlip";
+export { usePresence } from "./hooks/usePresence";
+export { useIndicator } from "./hooks/useIndicator";
 export { Dialog, DialogActions, Sheet, type SheetSize } from "./components/Sheet";
 export { ToastHost, dismissToast, toast, type ToastOptions, type ToastTone } from "./components/Toast";
 export {

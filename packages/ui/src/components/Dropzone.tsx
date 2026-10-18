@@ -48,7 +48,7 @@ export function ProgressRing({ progress, size = 28, className }: { progress?: nu
         strokeDasharray={length}
         strokeDashoffset={length * (1 - filled)}
         transform="rotate(-90 12 12)"
-        style={{ transition: "stroke-dashoffset 200ms ease-out" }}
+        style={{ transition: "stroke-dashoffset var(--dur-quick) var(--ease-standard)" }}
       />
     </svg>
   );

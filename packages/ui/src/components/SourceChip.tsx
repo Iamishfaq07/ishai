@@ -85,7 +85,7 @@ export function SourceChip({ tracker, channel, on, paused = false, icon: Icon, l
           {bars.map((b, i) => (
             <span
               key={b}
-              className={cx("w-[3px] rounded-full bg-current transition-opacity duration-150 motion-reduce:transition-none", snap.level >= b ? "opacity-100" : "opacity-25")}
+              className={cx("w-[3px] rounded-full bg-current transition-opacity duration-quick motion-reduce:transition-none", snap.level >= b ? "opacity-100" : "opacity-25")}
               style={{ height: `${(i + 1) * 4}px` }}
             />
           ))}

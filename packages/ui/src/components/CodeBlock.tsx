@@ -3,6 +3,7 @@ import type { CodingLanguage, LiveAnswerCode } from "@orbit/types";
 import { CODING_LANGUAGES } from "../live/preferences";
 import { cx, focusRing } from "./cx";
 import { normalizeLanguage, tokenize, type TokenKind } from "./highlight";
+import { MorphLabel } from "./ui";
 import { safeLocal } from "../storage";
 
 const TOKEN_CLASS: Record<TokenKind, string> = {
@@ -79,7 +80,7 @@ export function CodeBlock({ code, onLanguage }: { code: LiveAnswerCode; onLangua
           {wrap ? "No wrap" : "Wrap"}
         </button>
         <button type="button" onClick={() => void copy()} className={btn}>
-          {copied ? "Copied" : "Copy"}
+          <MorphLabel show={copied ? "copied" : "idle"} states={{ idle: "Copy", copied: "Copied" }} />
         </button>
       </div>
       <pre className="max-h-96 overflow-auto py-2 text-[0.8125rem] leading-relaxed">

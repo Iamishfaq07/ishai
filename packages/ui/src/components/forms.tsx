@@ -1,12 +1,14 @@
-import { useId, useLayoutEffect, useRef, useState, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useRef, type InputHTMLAttributes, type KeyboardEvent, type ReactNode } from "react";
+import { useIndicator } from "../hooks/useIndicator";
 import { Search } from "../icons";
 import { cx, focusRing } from "./cx";
 import { Input } from "./ui";
 
 /**
  * The form controls beyond a text field (DESIGN.md, "Forms"). Native inputs underneath (a checkbox is an
- * <input type="checkbox">), drawn in the accent with `accent-color`, so the keyboard, the screen reader and the
- * browser's own behaviour come for free. Every one has a visible label and a 24 px target at least.
+ * <input type="checkbox">), so the keyboard, the screen reader and the browser's own behaviour come for free; base.css
+ * draws checkboxes and radios in the accent so the tick can pop in. Every one has a visible label and a 24 px target
+ * at least.
  */
 
 /** A checkbox with its label (and an optional line under it). The whole row is the target. */
@@ -21,7 +23,7 @@ export function Checkbox({
       <input
         type="checkbox"
         {...rest}
-        className={cx("mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-zinc-300 accent-indigo-600 dark:accent-indigo-400", focusRing)}
+        className={cx("mt-0.5 h-4 w-4 shrink-0", focusRing)}
       />
       <span>
         <span className="block font-medium text-zinc-800 dark:text-zinc-200">{label}</span>
@@ -61,7 +63,7 @@ export function RadioGroup<T extends string>({
             checked={value === o.value}
             disabled={o.disabled}
             onChange={() => onChange(o.value)}
-            className={cx("mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-indigo-600 dark:accent-indigo-400", focusRing)}
+            className={cx("mt-0.5 h-4 w-4 shrink-0", focusRing)}
           />
           <span>
             <span className="block font-medium text-zinc-800 dark:text-zinc-200">{o.label}</span>
@@ -130,11 +132,7 @@ export function SegmentedControl<T extends string>({
   className?: string;
 }) {
   const list = useRef<HTMLDivElement>(null);
-  const [mark, setMark] = useState<{ left: number; width: number } | null>(null);
-  useLayoutEffect(() => {
-    const el = list.current?.querySelector<HTMLElement>('[aria-checked="true"]');
-    if (el) setMark({ left: el.offsetLeft, width: el.offsetWidth });
-  }, [value, options.length]);
+  const mark = useIndicator(list, '[aria-checked="true"]', `${value}:${options.length}`);
   const enabled = options.filter((o) => !o.disabled);
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const i = enabled.findIndex((o) => o.value === value);

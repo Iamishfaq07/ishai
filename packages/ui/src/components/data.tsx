@@ -1,15 +1,15 @@
 import {
-  useLayoutEffect,
   useRef,
-  useState,
   type HTMLAttributes,
   type KeyboardEvent,
   type ReactNode,
   type TdHTMLAttributes,
   type ThHTMLAttributes,
 } from "react";
+import { useIndicator } from "../hooks/useIndicator";
 import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, ChevronsUpDown } from "../icons";
 import { cx, focusRing } from "./cx";
+import { buttonClass } from "./ui";
 
 /**
  * Data display (DESIGN.md, "Data"): tables, stat tiles, avatars, progress, steps, pagination, breadcrumbs and tabs.
@@ -250,21 +250,23 @@ export function ProgressBar({
         aria-valuetext={valueText}
         className="h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10"
       >
+        {/* A full-width fill slid in from the left (a transform, so a new value glides without re-laying anything out). */}
         <div
           className={cx(
-            "h-full rounded-full transition-[width] duration-page ease-standard",
+            "h-full w-full rounded-full transition-transform duration-page ease-standard",
             tone === "accent" && "bg-indigo-600 dark:bg-indigo-400",
             tone === "success" && "bg-emerald-600 dark:bg-emerald-400",
             tone === "warning" && "bg-amber-500",
           )}
-          style={{ width: `${pct}%` }}
+          style={{ transform: `translateX(${pct - 100}%)` }}
         />
       </div>
     </div>
   );
 }
 
-/** Steps in order: done ones ticked, the current one in the accent, the rest quiet. */
+/** Steps in order: done ones ticked, the current one in the accent, the rest quiet. Moving on animates (a step's
+ *  colour eases, its tick pops in over the number, the line after it fills); the first render doesn't. */
 export function Stepper({ steps, current, label = "Progress", className }: { steps: string[]; current: number; label?: string; className?: string }) {
   return (
     <ol aria-label={label} className={cx("flex flex-wrap items-center gap-x-2 gap-y-2 text-sm", className)}>
@@ -276,19 +278,24 @@ export function Stepper({ steps, current, label = "Progress", className }: { ste
             <span
               aria-hidden="true"
               className={cx(
-                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
-                done && "bg-emerald-600 text-white",
-                now && "bg-indigo-600 text-white",
-                !done && !now && "bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10",
+                "relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums ring-1 ring-inset transition-colors duration-quick ease-standard",
+                done && "bg-emerald-600 text-white ring-transparent",
+                now && "bg-indigo-600 text-white ring-transparent",
+                !done && !now && "bg-zinc-100 text-zinc-600 ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10",
               )}
             >
-              {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
+              <span className={cx("transition-opacity duration-press", done && "opacity-0")}>{i + 1}</span>
+              <Check data-on={done} className="select-check absolute h-3.5 w-3.5" />
             </span>
             <span className={cx(now ? "font-medium text-zinc-900 dark:text-white" : "text-zinc-600 dark:text-zinc-400")}>
               {s}
               {done && <span className="sr-only"> (done)</span>}
             </span>
-            {i < steps.length - 1 && <span aria-hidden="true" className="mx-1 h-px w-6 bg-zinc-300 dark:bg-white/15" />}
+            {i < steps.length - 1 && (
+              <span aria-hidden="true" className="relative mx-1 h-px w-6 overflow-hidden bg-zinc-300 dark:bg-white/15">
+                <span className={cx("absolute inset-0 origin-left bg-emerald-600 transition-transform duration-panel ease-standard dark:bg-emerald-400", done ? "scale-x-100" : "scale-x-0")} />
+              </span>
+            )}
           </li>
         );
       })}
@@ -313,10 +320,7 @@ export function Pagination({
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
-  const btn = cx(
-    "inline-flex h-[30px] items-center gap-1 rounded-lg border border-zinc-300 bg-white px-2.5 text-xs font-medium text-zinc-800 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-white/[0.08]",
-    focusRing,
-  );
+  const btn = buttonClass("secondary", "sm", "gap-1");
   return (
     <nav aria-label="Pages" className={cx("flex items-center justify-between gap-3 text-xs text-zinc-600 dark:text-zinc-400", className)}>
       <span className="tabular-nums">
@@ -385,11 +389,7 @@ export function Tabs<T extends string>({
   className?: string;
 }) {
   const list = useRef<HTMLDivElement>(null);
-  const [mark, setMark] = useState<{ left: number; width: number } | null>(null);
-  useLayoutEffect(() => {
-    const el = list.current?.querySelector<HTMLElement>('[aria-selected="true"]');
-    if (el) setMark({ left: el.offsetLeft, width: el.offsetWidth });
-  }, [value, tabs.length]);
+  const mark = useIndicator(list, '[aria-selected="true"]', `${value}:${tabs.length}`);
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const i = tabs.findIndex((t) => t.value === value);
     const to =

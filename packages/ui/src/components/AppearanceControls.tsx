@@ -60,6 +60,8 @@ export function AppearanceControls({ prefs, onChange }: AppearanceControlsProps)
                   "h-7 w-7 rounded-full ring-offset-2 ring-offset-white transition-transform motion-ok:hover:scale-110 dark:ring-offset-zinc-900",
                   selected ? "scale-110 ring-2 ring-zinc-900 dark:ring-white" : "ring-0",
                   focusRing,
+                  // The focus outline sits outside the chosen swatch's ring rather than on top of it.
+                  "focus-visible:outline-offset-4",
                 )}
                 style={{ background: `linear-gradient(135deg, rgb(${ACCENTS[name].palette[3]}), rgb(${ACCENTS[name].palette[6]}))` }}
               >

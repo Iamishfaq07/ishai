@@ -1,6 +1,4 @@
 import {
-  cloneElement,
-  isValidElement,
   useCallback,
   useEffect,
   useId,
@@ -8,7 +6,6 @@ import {
   useState,
   type ComponentType,
   type KeyboardEvent,
-  type ReactElement,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -135,8 +132,8 @@ export function menuItemClass(danger = false): string {
   return cx(
     "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm outline-none transition-colors aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
     danger
-      ? "text-rose-700 hover:bg-rose-50 focus-visible:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:focus-visible:bg-rose-500/10"
-      : "text-zinc-700 hover:bg-zinc-900/5 focus-visible:bg-zinc-900/5 dark:text-zinc-200 dark:hover:bg-white/5 dark:focus-visible:bg-white/[0.07]",
+      ? "text-rose-700 hover:bg-rose-50 focus-visible:bg-rose-50 active:bg-rose-100 dark:text-rose-300 dark:hover:bg-rose-500/10 dark:focus-visible:bg-rose-500/10 dark:active:bg-rose-500/20"
+      : "text-zinc-700 hover:bg-zinc-900/5 focus-visible:bg-zinc-900/5 active:bg-zinc-900/10 dark:text-zinc-200 dark:hover:bg-white/5 dark:focus-visible:bg-white/[0.07] dark:active:bg-white/10",
   );
 }
 
@@ -299,49 +296,5 @@ export function SplitButton({
   );
 }
 
-/**
- * A short label shown on hover (after a moment) and on keyboard focus (at once), tied to its element with
- * aria-describedby. It only repeats or adds to what's on screen: never put information people need only there
- * (phones can't hover). Escape hides it.
- */
-export function Tooltip({ content, children, side = "top" }: { content: ReactNode; children: ReactElement<Record<string, unknown>>; side?: "top" | "bottom" }) {
-  const [open, setOpen] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const id = useId();
-  useEffect(() => () => clearTimeout(timer.current), []);
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: globalThis.KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
-  const show = (delay: number) => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setOpen(true), delay);
-  };
-  const hide = () => {
-    clearTimeout(timer.current);
-    setOpen(false);
-  };
-  if (!isValidElement(children)) return children;
-  const child = cloneElement(children, {
-    "aria-describedby": cx(children.props["aria-describedby"] as string | undefined, id) || undefined,
-  });
-  return (
-    <span className="relative inline-flex" onPointerEnter={() => show(400)} onPointerLeave={hide} onFocus={() => show(0)} onBlur={hide}>
-      {child}
-      <span
-        id={id}
-        role="tooltip"
-        className={cx(
-          "pointer-events-none absolute left-1/2 z-popover w-max max-w-[min(18rem,calc(100vw-1rem))] -translate-x-1/2 rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-popover transition-opacity duration-quick dark:bg-zinc-100 dark:text-zinc-900",
-          side === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5",
-          open ? "opacity-100" : "invisible opacity-0",
-        )}
-      >
-        {content}
-      </span>
-    </span>
-  );
-}
-
+/** Tooltips live in Tooltip.tsx (kept exported from here for the old import path). */
+export { Tooltip } from "./Tooltip";

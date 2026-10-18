@@ -59,7 +59,8 @@ function loadSettingsOpen(): boolean {
 // tap-y: on a touch screen each takes taps over 44 px of height (design/base.css); with a mouse, as it looks.
 const btn =
   "tap-y inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40";
-const ghost = "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5";
+// Each a step darker when pressed (the press itself comes from base.css), as the system's buttons are.
+const ghost = "text-zinc-700 hover:bg-zinc-100 active:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-white/5 dark:active:bg-white/10";
 const pressed = "bg-indigo-500/10 text-indigo-700 ring-1 ring-indigo-500/25 dark:text-indigo-200";
 const selectCls =
   "appearance-none rounded-lg border border-zinc-200 bg-white py-1 pl-2 pr-6 text-xs font-medium coarse:py-2 text-zinc-800 hover:border-zinc-300 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:border-white/20";
@@ -97,7 +98,7 @@ export function ControlBar(props: ControlBarProps) {
           title={`Answer now (${formatHotkey(hotkeys.answer)})`}
           className={cx(
             btn,
-            "bg-indigo-600 px-3 text-white hover:bg-indigo-700",
+            "bg-indigo-600 px-3 text-white hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-indigo-600",
             focusRing,
           )}
         >
@@ -174,7 +175,7 @@ export function ControlBar(props: ControlBarProps) {
                 onClick={props.onEnd}
                 disabled={ended}
                 title="End the session"
-                className={cx(btn, "text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10", focusRing)}
+                className={cx(btn, "text-rose-600 hover:bg-rose-50 active:bg-rose-100 dark:text-rose-400 dark:hover:bg-rose-500/10 dark:active:bg-rose-500/20", focusRing)}
               >
                 <Square className="h-3.5 w-3.5" />
                 {/* Icon only on phones, like the buttons beside it (it asks before ending). */}

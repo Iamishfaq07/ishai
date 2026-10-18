@@ -1,14 +1,19 @@
 import {
   cloneElement,
   isValidElement,
+  useEffect,
+  useId,
+  useRef,
   type ComponentProps,
   type ComponentType,
   type ReactNode,
 } from "react";
+import { announce, haptic } from "../hooks/useFeedback";
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from "../icons";
 import { cx, focusRing } from "./cx";
 import { Orb, type OrbState } from "./Orb";
 import { SPARK, SpotIllustration } from "./Illustrations";
+import { Tooltip } from "./Tooltip";
 
 /**
  * The one button system (DESIGN.md, "Buttons"):
@@ -20,20 +25,25 @@ import { SPARK, SpotIllustration } from "./Illustrations";
  * - `link`: an inline text action in the accent, no box.
  * Sizes: `sm` 30 px (dense rows and cards), `md` 38 px (the default, the same height as a field), `lg` 46 px. Every
  * variant carries a 1 px border (transparent unless bordered), so mixed buttons line up. No gradients, glows, sheens
- * or shadows: a button says what it does, it doesn't perform. Only the press moves, at Full motion.
+ * or shadows: a button says what it does, it doesn't perform.
+ * Feel (DESIGN.md "Interaction", base.css .btn): hover is one tint step (where there is a hover), a press one step
+ * darker and 97% at Full motion (80 ms in, 140 ms out), keyboard focus an accent outline. Nothing else moves, ever.
  */
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "destructive" | "link";
 export type ButtonSize = "sm" | "md" | "lg";
 
+// Rest, hover (one step), press (one step more); a disabled button keeps its rest colours (no hover tint).
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: "border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 aria-pressed:bg-indigo-800",
+  primary:
+    "border border-transparent bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 aria-pressed:bg-indigo-800 disabled:bg-indigo-600",
   secondary:
-    "border border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50 aria-pressed:border-zinc-400 aria-pressed:bg-zinc-100 dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-white/[0.08] dark:aria-pressed:border-white/30 dark:aria-pressed:bg-white/[0.12]",
+    "border border-zinc-300 bg-white text-zinc-900 hover:border-zinc-400 hover:bg-zinc-50 active:bg-zinc-100 aria-pressed:border-zinc-400 aria-pressed:bg-zinc-100 disabled:border-zinc-300 disabled:bg-white dark:border-white/15 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:border-white/25 dark:hover:bg-white/[0.08] dark:active:bg-white/[0.12] dark:aria-pressed:border-white/30 dark:aria-pressed:bg-white/[0.12] dark:disabled:border-white/15 dark:disabled:bg-white/[0.04]",
   ghost:
-    "border border-transparent text-zinc-700 hover:bg-zinc-900/5 aria-pressed:bg-zinc-900/[0.08] aria-pressed:text-zinc-900 dark:text-zinc-300 dark:hover:bg-white/5 dark:aria-pressed:bg-white/10 dark:aria-pressed:text-white",
-  danger: "border border-transparent text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10",
-  destructive: "border border-transparent bg-rose-600 text-white hover:bg-rose-700",
-  link: "border border-transparent text-indigo-700 underline-offset-4 hover:underline dark:text-indigo-300",
+    "border border-transparent text-zinc-700 hover:bg-zinc-900/5 active:bg-zinc-900/10 aria-pressed:bg-zinc-900/[0.08] aria-pressed:text-zinc-900 disabled:bg-transparent dark:text-zinc-300 dark:hover:bg-white/5 dark:active:bg-white/10 dark:aria-pressed:bg-white/10 dark:aria-pressed:text-white dark:disabled:bg-transparent",
+  danger:
+    "border border-transparent text-rose-700 hover:bg-rose-50 active:bg-rose-100 disabled:bg-transparent dark:text-rose-400 dark:hover:bg-rose-500/10 dark:active:bg-rose-500/20 dark:disabled:bg-transparent",
+  destructive: "border border-transparent bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 disabled:bg-rose-600",
+  link: "border border-transparent text-indigo-700 underline-offset-4 hover:underline active:text-indigo-900 disabled:no-underline dark:text-indigo-300 dark:active:text-indigo-100",
 };
 
 const SIZE: Record<ButtonSize, string> = {
@@ -55,8 +65,8 @@ const SQUARE: Record<ButtonSize, string> = {
  */
 export function buttonClass(variant: ButtonVariant = "primary", size: ButtonSize = "md", className?: string): string {
   return cx(
-    // Pressed feedback on touch and click, at Full motion only (buttons get theirs from base.css).
-    "inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium transition-[color,background-color,border-color,box-shadow,transform] duration-quick ease-standard motion-ok:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed",
+    // .btn (base.css): the colour easing and the press (Full motion only), for a <button> and a link alike.
+    "btn inline-flex select-none items-center justify-center gap-2 rounded-xl font-medium disabled:cursor-not-allowed disabled:opacity-50 aria-disabled:cursor-not-allowed",
     variant === "link" ? (size === "sm" ? "text-xs" : size === "lg" ? "text-base" : "text-sm") : SIZE[size],
     // On a touch screen the smaller sizes (and text links) take taps over at least 44 px of height (base.css .tap-y).
     size !== "lg" && "tap-y",
@@ -72,37 +82,160 @@ type ButtonProps = ComponentProps<"button"> & {
   /** Busy: a spinner takes the label's place at the same width (nothing shifts), presses are ignored and screen
    *  readers hear it's busy (aria-busy). Unlike `disabled` it keeps keyboard focus where it was. */
   loading?: boolean;
+  /** Words beside the spinner while busy ("Saving…", "Sending…"). The button is always as wide as its widest state,
+   *  so the change never moves it. */
+  loadingText?: ReactNode;
+  /** It worked: for a moment (`useFlash`), a tick draws in beside `doneText` ("Saved"), then the label comes back.
+   *  Read out politely; a short buzz on Android phones at Full motion. For actions that save, not for every press. */
+  done?: boolean;
+  doneText?: ReactNode;
+  /** Why it's disabled, when the code knows ("Type DELETE to confirm"): a tooltip on hover and keyboard focus, and
+   *  the button's description. It stays focusable (aria-disabled) so a keyboard can reach the reason. */
+  disabledReason?: string;
+  /** A short tooltip (hover after a moment, keyboard focus at once). IconButton's is its label. */
+  tip?: ReactNode;
   /** Full width on a phone, its own width from `sm` up (a form's or a sheet's main action, in thumb reach). */
   block?: boolean;
 };
 
-export function Button({ variant = "primary", size = "md", loading = false, block = false, className, children, onClick, ...rest }: ButtonProps) {
-  // The spinner sits over the label, so the button needs a position (unless the caller already placed it).
-  const positioned = /(^|\s)(absolute|fixed|sticky)(\s|$)/.test(className ?? "");
+/** A button's spinner: a ring with a gap, in the text's colour (base.css .btn-spinner: it turns at Full, breathes at
+ *  Gentle, holds still at Off). */
+export function ButtonSpinner({ className }: { className?: string }) {
   return (
-    <button
-      type="button"
-      {...rest}
-      aria-busy={loading || undefined}
-      aria-disabled={loading || rest["aria-disabled"] || undefined}
-      // preventDefault also stops a busy submit button from sending its form again.
-      onClick={loading ? (e) => e.preventDefault() : onClick}
-      className={buttonClass(variant, size, cx(block && "w-full sm:w-auto", loading && "cursor-progress", loading && !positioned && "relative", className))}
-    >
-      {/* `contents`: the label lays out exactly as if unwrapped; while loading it's hidden but keeps its width. */}
-      <span className={cx("contents", loading && "invisible")}>{children}</span>
-      {loading && (
-        <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
-          <Orb size={20} theme={variant === "primary" || variant === "destructive" ? "dark" : "auto"} className={size === "sm" ? "scale-75" : undefined} />
-        </span>
-      )}
-    </button>
+    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" className={cx("btn-spinner h-4 w-4 shrink-0", className)}>
+      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
+      <path d="M8 2a6 6 0 0 1 6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** A tick that draws itself once its state is in (base.css .btn-tick). */
+export function ButtonTick({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false" className={cx("h-4 w-4 shrink-0", className)}>
+      <path className="btn-tick" pathLength={1} d="M3.5 8.5 6.5 11.5 12.5 4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
 /**
- * An icon-only button: a square of its size, named for screen readers by `label` (also its hover title). The icon is
- * decorative. Default `ghost` (toolbars, rows, a dialog's close).
+ * Words that take turns in one place (a button's idle, busy and done states): all laid out in one cell, so the widest
+ * sets the width and a change never moves anything; the one showing fades in as the last fades out (base.css
+ * .btn-stack). Only the one showing is read by screen readers.
+ */
+export function MorphLabel<K extends string>({ show, states, className }: { show: K; states: Record<K, ReactNode>; className?: string }) {
+  return (
+    <span className={cx("btn-stack", className)}>
+      {(Object.keys(states) as K[]).map((k) => (
+        <span key={k} className="btn-layer" data-on={k === show} aria-hidden={k === show ? undefined : true}>
+          {states[k]}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function Button({
+  variant = "primary",
+  size = "md",
+  loading = false,
+  loadingText,
+  done,
+  doneText = "Saved",
+  disabledReason,
+  tip,
+  block = false,
+  className,
+  children,
+  onClick,
+  disabled,
+  ...rest
+}: ButtonProps) {
+  // The spinner and the states sit over the label, so the button needs a position (unless the caller placed it).
+  const positioned = /(^|\s)(absolute|fixed|sticky)(\s|$)/.test(className ?? "");
+  const explained = Boolean(disabled && disabledReason);
+  const inert = loading || explained;
+  const stacked = loadingText !== undefined || done !== undefined;
+  const state = loading ? "loading" : done ? "done" : "idle";
+  const reasonId = useId();
+  const wasDone = useRef(done);
+  useEffect(() => {
+    if (done && !wasDone.current) {
+      haptic("confirm");
+      if (typeof doneText === "string") announce(doneText);
+    }
+    wasDone.current = done;
+  }, [done, doneText]);
+  const small = size === "sm" ? "h-3.5 w-3.5" : undefined;
+  const button = (
+    <button
+      type="button"
+      {...rest}
+      disabled={explained ? undefined : disabled}
+      data-state={stacked || loading ? state : undefined}
+      aria-busy={loading || undefined}
+      aria-disabled={inert || rest["aria-disabled"] || undefined}
+      aria-describedby={explained ? cx(rest["aria-describedby"], reasonId) : rest["aria-describedby"]}
+      // preventDefault also stops a busy (or explained-disabled) submit button from sending its form.
+      onClick={inert ? (e) => e.preventDefault() : onClick}
+      className={buttonClass(
+        variant,
+        size,
+        cx(block && "w-full sm:w-auto", loading && "cursor-progress", explained && "opacity-50", !positioned && "relative", className),
+      )}
+    >
+      {stacked ? (
+        <MorphLabel
+          show={state}
+          states={{
+            idle: children,
+            loading: (
+              <>
+                <ButtonSpinner className={small} />
+                {loadingText}
+              </>
+            ),
+            done: (
+              <>
+                <ButtonTick className={small} />
+                {doneText}
+              </>
+            ),
+          }}
+        />
+      ) : (
+        <>
+          {/* `contents`: the label lays out exactly as if unwrapped; while loading it's hidden but keeps its width. */}
+          <span className={cx("contents", loading && "invisible")}>{children}</span>
+          {loading && (
+            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+              <ButtonSpinner className={small} />
+            </span>
+          )}
+        </>
+      )}
+      {explained && (
+        <span id={reasonId} hidden>
+          {disabledReason}
+        </span>
+      )}
+    </button>
+  );
+  const shown = explained ? disabledReason : tip;
+  return shown ? (
+    <Tooltip content={shown} describe={false}>
+      {button}
+    </Tooltip>
+  ) : (
+    button
+  );
+}
+
+/**
+ * An icon-only button: a square of its size, named for screen readers by `label`, which is also its tooltip (the
+ * styled one: after a moment on hover, at once on keyboard focus; `title` replaces the words). The icon is
+ * decorative. Its target is at least 40 px (44 on touch) however small it's drawn (.hit-area). Default `ghost`
+ * (toolbars, rows, a dialog's close).
  */
 export function IconButton({
   label,
@@ -110,12 +243,32 @@ export function IconButton({
   variant = "ghost",
   size = "md",
   className,
+  title,
   ...rest
 }: Omit<ButtonProps, "children" | "block"> & { label: string; icon: ComponentType<{ className?: string }> }) {
   return (
-    <Button {...rest} variant={variant} size={size} aria-label={label} title={rest.title ?? label} className={cx(SQUARE[size], "!p-0", className)}>
+    <Button {...rest} tip={rest.tip ?? title ?? label} variant={variant} size={size} aria-label={label} className={cx(SQUARE[size], "hit-area !p-0", className)}>
       <Icon className={size === "sm" ? "h-4 w-4" : size === "lg" ? "h-5 w-5" : "h-[18px] w-[18px]"} aria-hidden />
     </Button>
+  );
+}
+
+/**
+ * The tick on a selectable card that's chosen (a template, a preset): it pops in on the chosen card and shrinks away
+ * from the one that isn't (base.css .select-check). Decorative: the card's aria-pressed / aria-checked says it. Place
+ * it in a `relative` card; it sits at the top-right corner unless `className` moves it.
+ */
+export function SelectCheck({ on, className }: { on: boolean; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-on={on}
+      className={cx("select-check absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm", className)}
+    >
+      <svg viewBox="0 0 16 16" className="h-3 w-3" focusable="false">
+        <path d="M3.5 8.5 6.5 11.5 12.5 4.5" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
   );
 }
 
@@ -317,25 +470,23 @@ export function Toggle({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={cx("flex w-full items-start justify-between gap-4 rounded-lg text-left disabled:opacity-50", focusRing)}
+      className={cx("group/switch flex w-full items-start justify-between gap-4 rounded-lg text-left disabled:opacity-50", focusRing)}
     >
       <span>
         <span className="block text-sm font-medium">{label}</span>
         {description && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{description}</span>}
       </span>
+      {/* The track fills as the thumb glides across (base.css .switch-thumb); hover and a press deepen the track a step. */}
       <span
         aria-hidden="true"
         className={cx(
-          "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors",
-          checked ? "bg-indigo-600" : "bg-zinc-300 dark:bg-zinc-700",
+          "relative mt-0.5 h-6 w-11 shrink-0 rounded-full transition-colors duration-quick ease-standard",
+          checked
+            ? "bg-indigo-600 group-hover/switch:bg-indigo-700 group-active/switch:bg-indigo-800"
+            : "bg-zinc-300 group-hover/switch:bg-zinc-400 group-active/switch:bg-zinc-400 dark:bg-zinc-700 dark:group-hover/switch:bg-zinc-600 dark:group-active/switch:bg-zinc-600",
         )}
       >
-        <span
-          className={cx(
-            "absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-press ease-standard",
-            checked ? "translate-x-6" : "translate-x-1",
-          )}
-        />
+        <span className={cx("switch-thumb absolute left-0 top-1 h-4 w-4 rounded-full bg-white shadow", checked ? "translate-x-6" : "translate-x-1")} />
       </span>
     </button>
   );

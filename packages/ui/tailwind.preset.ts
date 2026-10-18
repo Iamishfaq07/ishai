@@ -18,6 +18,9 @@ const SCRIPT_FALLBACKS = ["Nirmala UI", "Kohinoor Devanagari", "Noto Sans Devana
 
 export default {
   content: [],
+  // `hover:` styles apply only where there is a real hover (a mouse or trackpad): a tap on a phone never leaves a
+  // button stuck in its hover tint. Presses (`active:`) still show everywhere.
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {
@@ -52,17 +55,20 @@ export default {
       },
       // The stacking order, low to high: sticky bars, the sidebar, menus and popovers, a dialog, a confirm over it,
       // toasts over everything (feedback must stay visible).
-      zIndex: { bar: "20", sidebar: "30", menu: "40", popover: "40", dialog: "50", confirm: "60", toast: "70" },
-      // press 100 ms (press, toggle) · quick 160 (hover, small fades) · panel 240 (popover, toast) · page 280 (route
-      // change, card expand) · moment 700 (one-off celebrations only). Exits use ease-exit and run shorter.
+      zIndex: { bar: "20", sidebar: "30", menu: "40", popover: "40", dialog: "50", confirm: "60", toast: "70", tooltip: "80" },
+      // press-in 80 ms / press-out 140 (a button going down and coming back) · press 100 (toggle, check) · quick 160
+      // (hover, small fades) · panel 240 (popover, toast) · page 280 (route change, card expand) · moment 700 (one-off
+      // celebrations only). Exits use ease-exit and run shorter. DESIGN.md "Interaction" has the rules.
       transitionDuration: {
+        "press-in": "var(--dur-press-in)",
+        "press-out": "var(--dur-press-out)",
         press: "var(--dur-press)",
         quick: "var(--dur-quick)",
         panel: "var(--dur-panel)",
         page: "var(--dur-page)",
         moment: "var(--dur-moment)",
       },
-      transitionTimingFunction: { standard: "var(--ease-standard)", enter: "var(--ease-enter)", exit: "var(--ease-exit)" },
+      transitionTimingFunction: { standard: "var(--ease-standard)", enter: "var(--ease-enter)", exit: "var(--ease-exit)", pop: "var(--ease-pop)" },
       keyframes: {
         "fade-in": { from: { opacity: "0" }, to: { opacity: "1" } },
         "fade-out": { to: { opacity: "0" } },
@@ -94,6 +100,14 @@ export default {
         "sheet-up": { from: { transform: "translateY(16%)", opacity: "0" }, to: { transform: "none", opacity: "1" } },
         "menu-in": { from: { opacity: "0", transform: "translateY(-4px) scale(0.98)" }, to: { opacity: "1", transform: "none" } },
         "panel-in": { from: { opacity: "0", transform: "translateX(24px)" }, to: { opacity: "1", transform: "none" } },
+        // …and their exits, shorter and on ease-exit: a dialog settles back a touch as it fades, a sheet drops away.
+        "dialog-out": { to: { opacity: "0", transform: "scale(0.98)" } },
+        "sheet-down": { to: { opacity: "0", transform: "translateY(12%)" } },
+        "panel-out": { to: { opacity: "0", transform: "translateX(24px)" } },
+        // A page arriving: a fade with a 4 px rise. A toast: up from below, a touch smaller; it leaves the same way.
+        "page-in": { from: { opacity: "0", transform: "translateY(4px)" }, to: { opacity: "1", transform: "none" } },
+        "toast-in": { from: { opacity: "0", transform: "translateY(10px) scale(0.98)" }, to: { opacity: "1", transform: "none" } },
+        "toast-out": { to: { opacity: "0", transform: "translateY(4px) scale(0.98)" } },
       },
       animation: {
         // Entrances. Under Gentle motion base.css turns each into a plain fade.
@@ -128,6 +142,12 @@ export default {
         "sheet-up": "sheet-up var(--dur-page) var(--ease-enter) both",
         "menu-in": "menu-in var(--dur-quick) var(--ease-enter) both",
         "panel-in": "panel-in var(--dur-page) var(--ease-enter) both",
+        "dialog-out": "dialog-out var(--dur-quick) var(--ease-exit) both",
+        "sheet-down": "sheet-down var(--dur-quick) var(--ease-exit) both",
+        "panel-out": "panel-out var(--dur-quick) var(--ease-exit) both",
+        "page-in": "page-in var(--dur-panel) var(--ease-enter) both",
+        "toast-in": "toast-in var(--dur-panel) var(--ease-enter) both",
+        "toast-out": "toast-out var(--dur-quick) var(--ease-exit) both",
       },
     },
   },

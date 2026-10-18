@@ -257,10 +257,11 @@ function AnswerTimer({ live, q }: { live: LiveViewState; q: NonNullable<LiveView
         <span className="absolute inset-y-0 bg-emerald-500/25" style={{ left: pct(band.min), width: `calc(${pct(band.max)} - ${pct(band.min)})` }} />
         <span
           className={cx(
-            "absolute inset-y-0 left-0 rounded-full transition-[width] duration-1000 ease-linear motion-reduce:transition-none",
+            // The answer clock: a full-width fill slid along (transform), a second at a time, linear like a clock.
+            "absolute inset-0 rounded-full transition-transform duration-1000 ease-linear motion-reduce:transition-none",
             state === "good" ? "bg-emerald-500" : state === "long" ? "bg-amber-500" : "bg-indigo-500",
           )}
-          style={{ width: pct(elapsed) }}
+          style={{ transform: `translateX(calc(${pct(elapsed)} - 100%))` }}
         />
       </div>
     </div>
@@ -395,8 +396,8 @@ function OneWayClock({ think, answer, onTimeUp }: { think: number; answer: numbe
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-zinc-500/15" aria-hidden="true">
         <span
-          className={cx("block h-full rounded-full transition-[width] duration-300 ease-linear motion-reduce:transition-none", thinking ? "bg-sky-500" : "bg-rose-500")}
-          style={{ width: `${(1 - p.progress) * 100}%` }}
+          className={cx("block h-full w-full rounded-full transition-transform duration-300 ease-linear motion-reduce:transition-none", thinking ? "bg-sky-500" : "bg-rose-500")}
+          style={{ transform: `translateX(${-p.progress * 100}%)` }}
         />
       </div>
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
