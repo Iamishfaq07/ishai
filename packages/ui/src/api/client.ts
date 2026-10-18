@@ -94,7 +94,9 @@ import type {
   JobOfferRecord,
   OfferScenario,
   OfferScenarioInput,
+  LinkedInFixInput,
   LinkedInState,
+  LinkedInSuggestionPatch,
   OfferInput,
   OfferMarket,
   JobAlertFrequency,
@@ -628,6 +630,19 @@ export function createApiClient(options: ApiClientOptions) {
     readLinkedInText: (text: string) => json<LinkedInState>("/v1/linkedin/read", { method: "POST", body: body({ text }) }),
     setLinkedInTarget: (role: string) => json<LinkedInState>("/v1/linkedin/target", { method: "PUT", body: body({ target_role: role }) }),
     deleteLinkedIn: () => json<void>("/v1/linkedin", { method: "DELETE" }),
+    /** One part written as a suggestion: the AI's parts are a single resume fix (a fraction of a credit), the rest free. */
+    linkedinFix: (input: LinkedInFixInput) =>
+      json<LinkedInState & { suggestion_id: string }>("/v1/linkedin/fix", { method: "POST", body: body(input), timeoutMs: LONG_TIMEOUT_MS }),
+    /** "Rewrite everything" from a resume: headline, About and skills (one resume credit). */
+    linkedinRewrite: (resumeId: string) =>
+      json<LinkedInState>("/v1/linkedin/rewrite", { method: "POST", body: body({ resume_id: resumeId }), timeoutMs: LONG_TIMEOUT_MS }),
+    /** Into Orbit's copy of the profile (re-scores), or back as LinkedIn has it. */
+    applyLinkedInSuggestion: (id: string, apply = true) =>
+      json<LinkedInState>(`/v1/linkedin/suggestions/${encodeURIComponent(id)}/${apply ? "apply" : "unapply"}`, { method: "POST" }),
+    patchLinkedInSuggestion: (id: string, patch: LinkedInSuggestionPatch) =>
+      json<LinkedInState>(`/v1/linkedin/suggestions/${encodeURIComponent(id)}`, { method: "PATCH", body: body(patch) }),
+    deleteLinkedInSuggestion: (id: string) =>
+      json<LinkedInState>(`/v1/linkedin/suggestions/${encodeURIComponent(id)}`, { method: "DELETE" }),
     offers: () => json<JobOfferRecord[]>("/v1/offers"),
     /** What-if figures for an offer (nothing saved). */
     offerScenario: (id: string, input: OfferScenarioInput) =>

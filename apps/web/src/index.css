@@ -35,6 +35,58 @@
 /* Reduced motion (the OS setting and Settings → Appearance) is handled in base.css through html[data-motion]: the OS
    setting makes Full play as Gentle, which still fades but never moves. */
 
+/* LinkedIn AI: a suggestion just applied to Orbit's copy gets one accent band sweeping across it (Full); at Gentle it
+   only tints and fades; at Off base.css stops it before it shows. Solid colour, no gradient (DESIGN.md). */
+.li-sweep {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  pointer-events: none;
+}
+.li-sweep::after {
+  content: "";
+  position: absolute;
+  inset: -10% auto -10% 0;
+  width: 35%;
+  background: rgb(var(--accent-500) / 0.12);
+  transform: translateX(-120%) skewX(-12deg);
+  animation: li-sweep 900ms var(--ease-standard) forwards;
+}
+@keyframes li-sweep {
+  0% {
+    transform: translateX(-120%) skewX(-12deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(320%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+:root[data-motion="reduced"] .li-sweep::after {
+  inset: 0;
+  width: auto;
+  transform: none;
+  background: rgb(var(--accent-500) / 0.08);
+  animation: li-tint 1200ms var(--ease-standard) forwards;
+}
+:root[data-motion="off"] .li-sweep::after {
+  display: none;
+}
+@keyframes li-tint {
+  to {
+    opacity: 0;
+  }
+}
+@media print {
+  .li-sweep {
+    display: none;
+  }
+}
+
 /* Resume maker: "Download PDF" prints only the resume (a copy portalled next to #root), at real size. */
 .resume-print {
   display: none;

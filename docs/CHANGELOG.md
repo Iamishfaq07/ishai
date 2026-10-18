@@ -1,5 +1,26 @@
 # Implementation log
 
+## LinkedIn AI fixes it like Resume AI (2026-10-18)
+
+- **A score by section** (DECISIONS D75): headline, About, each of the latest three roles, skills, search keywords,
+  education and certifications, the custom URL, out of 100 from LinkedIn's PDF; Featured, photo and banner,
+  recommendations and activity count once Orbit can see them (a pasted page, or the photo checklist applied). Bars
+  grow in; "What would raise it" lists each fix with the points it adds, biggest first.
+- **How a recruiter's search shows you**: an Orbit-drawn search result (name, headline cut where search cuts it,
+  place, current role) and the About before "see more", for Orbit's copy or as read.
+- **Fix with AI, a part at a time** (`POST /v1/linkedin/fix`): three headlines in different styles, the About (an
+  opening that fits before "see more", then the rest), one role's bullets (figures only where the profile or resume
+  states them, [X%] placeholders otherwise), Featured ideas, a recommendation request to a past manager; free, with no
+  AI: skills in the order employers search for them, a custom URL, the photo checklist, Open to work settings. Written
+  from your LinkedIn, your resume or both. An AI fix is a single Resume AI fix (1/5 of a credit), said before it's
+  spent, refunded if it fails; "Rewrite everything" stays at one credit. Out of credits opens the usual dialog.
+- **Suggestions you paste**: each card has before → after with the changed words marked, the character count against
+  LinkedIn's limit, Copy, Apply to my Orbit copy (the score moves, the card sweeps once), Put it back, Edit, "Done on
+  LinkedIn" (kept with the profile) and the steps to paste it on LinkedIn, checked against LinkedIn's Help Center. A
+  progress bar, the score as read → now → with every fix, and Copy all for the headline, About and skills.
+- Stored as JSON on the profile's existing row: no migration. Reading the profile again keeps the suggestions and
+  ticks the ones LinkedIn now has.
+
 ## Spot graphics for every section, and KashSec Academy promoted (2026-10-18)
 
 - **Spot graphics** (DECISIONS D70; DESIGN.md "Scenes"): `Spot`, a section's own 40 px picture in the scenes' hand,

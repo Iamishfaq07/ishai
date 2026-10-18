@@ -215,7 +215,13 @@ sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav do
   `.chart-bar`, `.chart-fill`; a fade at Gentle); a score ring draws round as its number counts; the sidebar's "you
   are here" bar grows in on arrival (`.nav-mark`); a tracker card that changes stage wears a fading accent ring where
   it lands (`.moved-flash`, opacity only, so Gentle keeps it); a scene plays its one touch the first time it's in
-  view (see "Scenes").
+  view (see "Scenes"). LinkedIn AI uses the same set: its section bars fill from the left (`.chart-fill`, then move
+  with a transform when the score changes), its score ring counts on from the old score with the change beside it,
+  the section a fix lands in wears `.moved-flash`, and an applied suggestion's card gets one solid accent band
+  sweeping across it (`.li-sweep` in `apps/web/src/index.css`; a tint that fades at Gentle, nothing at Off).
+- **A mock of someone else's screen** (LinkedIn AI's recruiter-search preview) is drawn in Orbit's own style:
+  initials, ink and the accent, a line saying it's Orbit's preview, and never the other site's logo, colours or
+  wording.
 - **Bars stay solid:** the sticky header and the phone tab bar are opaque (no see-through, no backdrop blur: page
   text under the labels made them hard to read, and blur over the animated sky costs too much on a phone).
 - `scroll-padding` keeps a focused field clear of the sticky header and the phone tab bar.

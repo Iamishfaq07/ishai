@@ -2442,16 +2442,71 @@ export interface LinkedInRead {
   education: Array<{ school: string; degree: string }>;
   skills: string[];
   certifications: string[];
+  projects?: string[];
+  /** What LinkedIn's PDF doesn't carry: null until Orbit knows it (a pasted profile, or the user's say-so). */
+  featured?: string[] | null;
+  recommendations?: number | null;
+  activity?: boolean | null;
+  photo?: boolean | null;
+  banner?: boolean | null;
 }
+
+export type LinkedInSection =
+  | "headline"
+  | "about"
+  | "experience"
+  | "skills"
+  | "keywords"
+  | "education"
+  | "url"
+  | "featured"
+  | "photo"
+  | "recommendations"
+  | "activity";
+
+/** A part of the profile one fix writes. */
+export type LinkedInPart = "headline" | "about" | "experience" | "skills" | "url" | "featured" | "photo" | "recommendation" | "open_to_work";
+
+/** How a check gets fixed: the AI writes it (a single resume fix), it's worked out without AI (free), or only you can. */
+export type LinkedInFixKind = "ai" | "auto" | "you";
 
 export interface LinkedInCheck {
   id: string;
-  section: "headline" | "about" | "experience" | "skills" | "keywords" | "extras";
+  section: LinkedInSection;
   ok: boolean;
   points: number;
   max: number;
   title: string;
   tip: string;
+  /** The fix that raises it; null: only you can (add a degree, a current role). */
+  part?: LinkedInPart | null;
+  kind?: LinkedInFixKind;
+  /** Experience: which role (0 = the latest). */
+  role?: number | null;
+  /** False: not in LinkedIn's PDF, so not scored. */
+  known?: boolean;
+  /** Points the overall score gains when this passes. */
+  gain?: number;
+}
+
+export interface LinkedInSectionScore {
+  id: LinkedInSection;
+  label: string;
+  points: number;
+  max: number;
+  known: boolean;
+  /** Experience: each of the latest roles. */
+  roles: Array<{ index: number; label: string; points: number; max: number }>;
+}
+
+/** One fix and what it adds to the overall score. */
+export interface LinkedInRaise {
+  part: LinkedInPart | null;
+  role: number | null;
+  label: string;
+  gain: number;
+  kind: LinkedInFixKind;
+  checks: string[];
 }
 
 export interface LinkedInAudit {
@@ -2465,15 +2520,74 @@ export interface LinkedInAudit {
   mismatches: string[];
   /** How many job posts the keywords came from. */
   posts: number;
+  sections?: LinkedInSectionScore[];
+  /** What would raise the score, biggest gain first. */
+  raise_it?: LinkedInRaise[];
+}
+
+/** Something to paste on LinkedIn, kept with the profile. */
+export interface LinkedInSuggestion {
+  id: string;
+  part: LinkedInPart;
+  /** A role's description or a recommendation request: "title|company". */
+  role_key: string;
+  label: string;
+  before: string;
+  /** The text to paste (a headline: the option picked). */
+  after: string;
+  options: Array<{ label: string; text: string }>;
+  choice: number;
+  /** Skills in order, Featured ideas, or a checklist's steps. */
+  items: string[];
+  checked: number[];
+  /** LinkedIn's character limit; 0: none. */
+  limit: number;
+  /** Characters LinkedIn shows before cutting it off; 0: all. */
+  shown: number;
+  /** Where to paste it on LinkedIn, step by step. */
+  where: string[];
+  help_url: string;
+  note: string;
+  /** [X%]-style gaps for the user's own figures. */
+  placeholders: number;
+  source: "profile" | "resume" | "both";
+  ai: boolean;
+  done: boolean;
+  created_at: string;
+  /** It can be applied to Orbit's copy (a message or a settings list can't). */
+  applies: boolean;
+  applied: boolean;
 }
 
 export interface LinkedInState {
+  /** Orbit's copy of the profile, with what's been applied. */
   profile: LinkedInRead | null;
+  /** As last read from LinkedIn. */
+  read?: LinkedInRead | null;
   target_role: string;
   audit: LinkedInAudit | null;
   read_at: string | null;
   /** AI reads left today; null = no cap. */
   reads_left: number | null;
+  /** As read, now (Orbit's copy), and with every suggestion applied. */
+  scores?: { read: number; now: number; projected: number } | null;
+  suggestions?: LinkedInSuggestion[];
+  progress?: { done: number; total: number };
+}
+
+export interface LinkedInFixInput {
+  part: LinkedInPart;
+  role?: number | null;
+  source?: "profile" | "resume" | "both";
+  resume_id?: string | null;
+  recipient?: string;
+}
+
+export interface LinkedInSuggestionPatch {
+  done?: boolean;
+  choice?: number;
+  checked?: number[];
+  after?: string;
 }
 
 // ---- Code AI (orbit_api/code) -------------------------------------------------------------------------------------

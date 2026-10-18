@@ -3,6 +3,10 @@
 The AI only sorts the text into sections, copying it: the headline, About and each role's description must be in the
 source word for word (spacing and bullets aside), else they're left empty rather than trusted. The audit (audit.py)
 then measures what's actually on the profile.
+
+LinkedIn's PDF carries no photo, banner, Featured section, recommendations or activity. A profile copied from the page
+may show some of them; each is read only when the text has its section, and left unknown (None) otherwise, so the
+audit scores only what it can see.
 """
 
 from __future__ import annotations
@@ -47,6 +51,14 @@ class Profile(BaseModel):
     education: list[School] = Field(default_factory=list, max_length=10)
     skills: list[str] = Field(default_factory=list, max_length=100)
     certifications: list[str] = Field(default_factory=list, max_length=30)
+    projects: list[str] = Field(default_factory=list, max_length=30)
+    # Unknown (None) unless the text shows it: LinkedIn's PDF never does.
+    featured: list[str] | None = Field(None, max_length=20)
+    recommendations: int | None = Field(None, ge=0, le=10_000)  # received
+    activity: bool | None = None  # their own posts or comments show under Activity
+    # Never in the text: set only when the user says so (the photo checklist, applied to Orbit's copy).
+    photo: bool | None = None
+    banner: bool | None = None
 
 
 SYSTEM = """You sort the text of a LinkedIn profile (LinkedIn's "Save to PDF", or the profile copied) into its
@@ -61,7 +73,13 @@ Return ONLY a JSON object:
                  "current": true if it runs to Present, "description": "the role's text, exactly, or empty"}],
  "education": [{"school": "", "degree": ""}],
  "skills": ["every skill listed (Top Skills and any Skills section)"],
- "certifications": ["..."]}
+ "certifications": ["..."],
+ "projects": ["the name of each entry in a Projects section"],
+ "featured": ["the title of each item in a Featured section"], or null when there is no Featured section,
+ "recommendations_received": how many recommendations they've received when a Recommendations section shows it,
+                             else null,
+ "activity": true when an Activity section shows their own posts or comments, false when it says they haven't
+             posted, null when there is no Activity section}
 Most recent role first. Empty string or [] for anything not there."""
 
 
@@ -122,10 +140,20 @@ def parse_read(text: str, source: str) -> Profile:
         return [x for x in out if _norm(x) in src][:limit]
 
     url = _short(raw.get("url"), 300)
+    low = source.lower()
+    # The sections the PDF never has: trusted only when the source has the section at all.
+    featured = names("featured", 20) if isinstance(raw.get("featured"), list) and "featured" in low else None
+    recs = raw.get("recommendations_received")
+    recommendations = (max(0, min(int(recs), 10_000)) if isinstance(recs, int | float) and not isinstance(recs, bool)
+                       and "recommendation" in low else None)
+    act = raw.get("activity")
+    activity = act if isinstance(act, bool) and "activity" in low else None
     profile = Profile(name=_short(raw.get("name"), 120), headline=_copied(raw.get("headline"), src, HEADLINE_MAX),
                       location=_short(raw.get("location"), 120), about=_copied(raw.get("about"), src, ABOUT_MAX),
                       url=url if "linkedin.com/in/" in url.lower() else "", experience=roles, education=schools,
-                      skills=names("skills", 100), certifications=names("certifications", 30))
+                      skills=names("skills", 100), certifications=names("certifications", 30),
+                      projects=names("projects", 30), featured=featured, recommendations=recommendations,
+                      activity=activity)
     if not (profile.name or profile.headline or profile.experience):
         raise ValueError("nothing read")
     return profile

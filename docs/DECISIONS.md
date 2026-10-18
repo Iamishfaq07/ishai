@@ -814,3 +814,36 @@ the front page and footer, Home until dismissed, and in context only for people 
 (matched from role names, a tracked job's title and the role guide's aliases), never more than one in a view. The old
 promo strip and the line saying KashSec teaches AI went. The alternatives were a banner on every page (noisy, and it
 would teach people to ignore it) and a sidebar item (KashSec isn't a tool inside Orbit, and it opens another site).
+
+**D75 — LinkedIn AI fixes a part at a time like Resume AI, keeps its suggestions on the profile's row, and scores only
+what LinkedIn's PDF lets it see.** The owner asked for LinkedIn AI to "give fixes through AI like in Resume AI, score
+the profile, and give suggestions one can copy and do the same to their LinkedIn profile". Orbit can never write to
+LinkedIn (no scraping, no LinkedIn API: the user uploads their own "Save to PDF" or pastes the page), so a fix is a
+suggestion to paste, and Orbit keeps a copy of the profile the suggestions are applied to: applying one re-scores at
+once, as if it were on LinkedIn, and "Done on LinkedIn" is the user's own checklist. Choices: (1) Storage is JSON on the
+existing `linkedin_profiles` row, no migration: Orbit's copy stays the row's top level (old rows read as they are) and
+an `orbit` key holds the profile as last read and the suggestions. Whether a suggestion is applied is worked out from
+the copy every time, never stored, so it can't drift; a new read keeps the suggestions, refreshes each "before" to
+what LinkedIn now says, ticks done the ones LinkedIn now has, and drops those for roles that are gone. One suggestion
+per part (and per role): writing it again replaces it, except that "Rewrite everything" adds its headline as another
+option so the one picked, perhaps applied, stays. (2) The score: the PDF's sections (headline 20, About 20,
+experience 25 with each of the latest three roles scored on its own, skills 15, keywords 10, education and
+certifications 7, the custom URL 3) are 100; Featured, the photo and banner, recommendations and activity aren't in the
+PDF, so they count only once known (a pasted page shows some; the photo checklist, applied, says the photo and banner
+are up), and the score is the share of known points; keyword checks with no job posts to compare are unknown too.
+Something Orbit can't see neither costs nor earns. Each failing check names its fix, how (AI, free, only you) and the
+points it adds, worked out by re-scoring with it passed; "with every fix applied" applies the suggestions greedily, so a
+newer version that scores below the one applied can't pull the projection under the score now. LinkedIn publishes
+neither the headline's cut in search results nor About's "see more" point; Orbit keeps the 60 and 265 characters the
+outreach kit already used. (3) Pricing is Resume AI's: the AI parts (headline in three styles, About, one role's
+bullets, Featured ideas, a recommendation request) are each a single fix (`Allowance.as_fix`, 1/5 of a credit), the
+whole rewrite one credit, claimed just before the model call and refunded on failure, an unusable answer or
+cancellation; the parts worked out without the model (skills in market order, a custom URL, the photo checklist, Open
+to work settings) are free, as Resume AI's mechanical fixes are, and count against a light rate limit of their own
+rather than Resume AI's AI budget. (4) Honesty is Resume AI's grounding plus one rule from the brief: a role's bullets
+keep only the figures the profile or resume state for that role, and every other figure becomes a [X%]-style
+placeholder (marked amber, counted, and not scored as a figure until the user puts their real number in), where the
+headline and About drop an unsupported figure with its words. The "Where to paste it" steps were checked against
+LinkedIn's Help Center on 2026-10-18 and name things as LinkedIn does (the pencil in your intro, Add profile section),
+each with a link to its help page. The recruiter-search preview is an Orbit-styled mock (initials, ink and the accent),
+not a copy of LinkedIn's page or logo.
