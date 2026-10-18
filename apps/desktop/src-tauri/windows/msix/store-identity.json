@@ -1,7 +1,8 @@
 {
-  "_comment": "Copy these three values from Partner Center > your app > Product identity (not secrets). displayName must be the reserved Store name.",
-  "identityName": "",
-  "publisher": "",
-  "publisherDisplayName": "",
-  "displayName": "Orbit"
+  "_comment": "From Partner Center > Orbit AI Career Assistant > Product management > Product identity (Package/Identity/Name, Package/Identity/Publisher, Package/Properties/PublisherDisplayName), copied exactly: they're case-sensitive. Not secrets. displayName is the reserved Store name; shortName is what tiles show. See docs/MICROSOFT_STORE.md.",
+  "identityName": "Orbitanswer.OrbitAICareerAssistant",
+  "publisher": "CN=52D50CE5-FB8B-4CF0-B5AC-A243A000EA67",
+  "publisherDisplayName": "Orbitanswer",
+  "displayName": "Orbit AI Career Assistant",
+  "shortName": "Orbit"
 }

@@ -36,7 +36,7 @@ import { api } from "../lib/api";
 import { displayAudioHelp, isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { useCountry } from "../lib/country";
-import { DESKTOP_BETA, DESKTOP_BETA_NOTE, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { DESKTOP_BETA, DESKTOP_BETA_NOTE, DESKTOP_DOWNLOAD_URL, MS_STORE_LIVE } from "../lib/desktop";
 import { errorText, formatDate, sessionKindLine } from "../lib/format";
 import { checklist, loadAnswers, nextSteps, type ChecklistItem, type HomeFacts, type Step } from "../lib/onboarding";
 import { openSupport } from "../lib/shell";
@@ -45,6 +45,7 @@ import { useAsync, type AsyncState } from "../lib/useAsync";
 import { UsageSummary } from "./UsageSummary";
 import { DueToday } from "./DueToday";
 import { KashSecHomeCard } from "../components/KashSec";
+import { StoreBadge } from "../components/StoreBadge";
 import { greetingFor, summaryLine } from "./home/dashboard";
 // Rare (a change to the sign-in in the last fortnight) and below the first paint: its own small download.
 const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
@@ -612,7 +613,7 @@ function DesktopPromo() {
           <div>
             <h2 className="font-display text-xl font-semibold">
               Get Orbit for Windows
-              {DESKTOP_BETA && <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 align-middle text-xs font-semibold">Beta</span>}
+              {DESKTOP_BETA && !MS_STORE_LIVE && <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 align-middle text-xs font-semibold">Beta</span>}
             </h2>
             <p className="mt-1 text-sm text-indigo-100">
               You’re on the browser version. The desktop app hears far more: whole-system audio (any call app, not just
@@ -621,16 +622,21 @@ function DesktopPromo() {
             {DESKTOP_BETA && <p className="mt-2 text-xs text-indigo-100">{DESKTOP_BETA_NOTE}</p>}
           </div>
         </div>
-        <a
-          href={DESKTOP_DOWNLOAD_URL}
-          className={cx(
-            "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50",
-            focusRing,
-          )}
-        >
-          <Download className="h-4 w-4" aria-hidden />
-          Download for Windows
-        </a>
+        {/* The Microsoft Store copy first once its listing is public (VITE_MS_STORE_LIVE); the installer stays beside it. */}
+        {MS_STORE_LIVE ? (
+          <StoreBadge onDark className="shrink-0 text-indigo-100" />
+        ) : (
+          <a
+            href={DESKTOP_DOWNLOAD_URL}
+            className={cx(
+              "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50",
+              focusRing,
+            )}
+          >
+            <Download className="h-4 w-4" aria-hidden />
+            Download for Windows
+          </a>
+        )}
       </div>
     </section>
   );

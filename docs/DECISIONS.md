@@ -945,3 +945,33 @@ the admin) at three widths, light and dark, with axe; the fixes are in the chang
   own window out of "Capture diagram" (Rust capture, needs a run on Windows); a user-facing "What's new" (the
   changelog is written for developers; it needs its own copy) and a notifications centre (the security activity and
   the support chat's dot are the events there are).
+
+**D78 — Windows gets a signed, free copy through the Microsoft Store: the same exe as MSIX, Microsoft's signature,
+the Store's updates, and a listing that says plainly what Orbit is for.** The owner wanted a signed app without
+buying a certificate. Microsoft re-signs MSIX packages at no cost and individual registration is free (EXE/MSI
+submissions would need our own certificate), so the owner registered, reserved "Orbit AI Career Assistant" (Store ID
+9NJ1ZXGTCZKL) and sent the identity values. The choices (owner guide: docs/MICROSOFT_STORE.md):
+- **One exe, two channels.** The Store package wraps the same release build as the NSIS download
+  (`scripts/package-msix.ps1`, the same sign-in storage guard as `release-desktop.ps1`, plus checks that the build
+  has production addresses). The NSIS installer stays as the alternative download; the packaged copy turns its own
+  updater off and the Store updates it.
+- **Package version (X+1).Y.Z.0.** The Store refuses a first part of 0 and owns the fourth; adding one to the first
+  part keeps each release above the last (1.0.0 becomes 2.0.0.0) without renumbering the app.
+- **Only the capabilities Orbit uses, each justified**: runFullTrust (WASAPI capture including per-app loopback,
+  global shortcuts, Credential Manager, the always-on-top window), microphone (its own privacy switch from install),
+  internetClient (not needed by a full-trust app, declared so the listing says Orbit uses the internet). No
+  broadFileSystemAccess, local network or graphics capture.
+- **WebView2 isn't bundled or declared.** Windows 11 has it and Microsoft installed it on eligible Windows 10 PCs; a
+  Store install can't declare it, and Tauri's release build already tells a user without it where to get it.
+- **The App Certification Kit isn't run on the owner's PC**: it needs admin rights and installs and launches the
+  package, and Microsoft now calls it deprecated. `scripts/check-msix.ps1` runs its static checks without
+  installing; Partner Center runs the kit itself.
+- **The listing is the suite, honestly placed**: practice and live help where AI help is allowed in the app; Resume
+  AI, Jobs AI, LinkedIn AI and Saba named as website tools the app opens. No "Copilot" in the name (Microsoft's
+  trademark), no "undetectable", AI disclosed (policy 11.16), prices and the outside payment named (10.8).
+- **Window privacy stays, by the owner's decision.** The opt-in shield (38493684) sits uneasily with D8 and could
+  draw a 10.1.1 or Code of Conduct objection. The certification notes describe it as what it is (an opt-in setting
+  that keeps the window out of screenshots, recordings and Recall, screen sharing included), and the one-line Store
+  build switch-off is written down for a fast answer if certification flags it.
+- **The website's Microsoft Store badge waits for certification**: built behind `VITE_MS_STORE_LIVE` (off),
+  Microsoft's own artwork, the installer kept beside it.

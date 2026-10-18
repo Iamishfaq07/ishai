@@ -1,0 +1,43 @@
+Orbit AI Career Assistant helps you prepare for job interviews, and keeps short notes in front of you during calls where AI help is allowed. It works from your own resume, so your practice, your live notes and your applications all start from the same facts.
+
+PRACTISE OUT LOUD
+• Mock interviews in the app: an AI interviewer asks questions for the role you pick, listens to your spoken answers and follows up on what you actually said.
+• A review after each round, in the app's History: what went well, what to improve and what to practise next.
+• Rounds for screening calls, technical and behavioural questions, coding, system design and salary talks.
+• Video interviews with Saba, an AI interviewer you see and hear, with captions and a transcript. They open in your browser with the same account.
+
+LIVE HELP, WHERE IT'S ALLOWED
+• You choose what Orbit listens to: your microphone, and one meeting app or your speakers. The two are kept apart, so Orbit knows who is speaking.
+• Orbit transcribes the conversation as it happens, spots the question and shows short answer notes drawn from your resume, the job post and your own stories. You read them and answer in your own words. Orbit never speaks for you.
+• Each answer lists the resume lines it used and marks details that aren't in your documents, so you can check them before you say them.
+• Stuck on something on your screen, like a coding problem or a diagram? Select that area and ask about it.
+• A small window that stays on top of your call, with keyboard shortcuts you can change.
+• Interview in English, Hindi, Hinglish, Spanish, French, German, Portuguese, Italian, Dutch, Japanese or Russian, and get the notes in the language you choose.
+• Upcoming interviews: start a session from a job you're tracking, with its post and the resume you sent.
+
+THE REST OF YOUR JOB SEARCH, SAME ACCOUNT
+These open in your browser from the app, with the same sign-in:
+• Resume AI scores your resume out of 100 for the job you want, shows what's missing and helps you fix it, working from your real numbers rather than inventing new ones.
+• Jobs AI finds new jobs on companies' own careers pages that fit your resume, and keeps a tracker for every application.
+• LinkedIn AI scores your profile and suggests better wording, one part at a time.
+
+HONEST ABOUT WHERE IT'S FOR
+Practising is always fine. In a real interview, call or test, some employers, colleges and exams don't allow notes or AI help, and breaking their rules can cost you the job. Check the rules first. Orbit doesn't claim to be undetectable. Where the law requires it, tell the people you're talking to before you transcribe a call.
+
+AI-GENERATED CONTENT
+Orbit's answer notes, interview questions and reviews are written live by generative AI. They can be wrong or incomplete, so check them before you rely on them. Rate an answer with thumbs up or down in the app, and report anything wrong or inappropriate through the Contact page on Orbit's website.
+
+YOUR DATA AND PRIVACY
+• Audio is streamed for live transcription and never stored.
+• Screenshots are taken only when you select an area, and are discarded once answered.
+• Your documents and session history stay in your account. Delete a session, a transcript, a document or your whole account at any time, or download everything as one file.
+• Windows controls microphone access: you can turn it off for Orbit in Settings > Privacy & security > Microphone.
+• Window privacy (optional, off until you turn it on): asks Windows to keep Orbit's window out of screenshots, screen recordings and Windows Recall on this PC. Not every capture tool honours it, and it doesn't hide Orbit from Task Manager or from anyone who can see your screen.
+
+PRICE
+Orbit is free to download, and new accounts start with free interview minutes. More interview time and AI credits are sold on Orbit's website as one-time credit packs and 7-, 30- or 365-day plans, from ₹499 or US$7.99 up to ₹26,499 or US$531.99. Nothing renews automatically, and credits don't expire. Payments are made on the website through Razorpay (India) or PayPal (elsewhere), not through Microsoft.
+
+WHAT YOU NEED
+• Windows 10 version 2004 or later, or Windows 11, on a 64-bit PC
+• A microphone and an internet connection
+• A free Orbit account (the app's Create account button opens the sign-up page on Orbit's website)
