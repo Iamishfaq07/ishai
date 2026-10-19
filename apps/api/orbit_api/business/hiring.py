@@ -37,6 +37,12 @@ def plan_payload(row: BizHiringPlan | None, job: BizJob) -> dict[str, Any]:
             "updated_at": aware(row.updated_at).isoformat() if row else None}
 
 
+def design_evidence(job: BizJob, row: BizHiringPlan | None) -> str:
+    return json.dumps({"title": job.title, "requirements": job.must_haves,
+        "description": job.description_html[:16000], "stages": job.stages,
+        "current_plan": plan_payload(row, job)["plan"]}, sort_keys=True)
+
+
 def blind_text(ctx: Ctx, app: BizApplication, text: str) -> str:
     return rules.blind_text(text, app.name, app.email, app.phone) if ctx.company.blind_review else text
 

@@ -1,4 +1,5 @@
 """Hiring Studio: structured interviews, private drafts, evidence debriefs and two-part work samples."""
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
@@ -65,13 +66,17 @@ async def save_plan(job_id: str, body: PlanIn, ctx: CompanyCtx,
     job = await job_for(db, ctx, job_id)
     if not ctx.can("manage_jobs") and ctx.role != "hiring_manager":
         ctx.require("manage_jobs")
-    valid_stages = {s["id"] for s in job.stages if s["kind"] not in ("hired", "rejected")}
-    if any(c.stage_id not in valid_stages for c in body.plan.criteria):
-        raise HTTPException(422, "Each criterion must use an active stage in this job.")
     await lock_company(db, ctx.company.id)
+    await db.refresh(job)
     row = await db.get(BizHiringPlan, job.id, populate_existing=True)
     if (row.revision if row else 0) != body.base_revision:
         raise _conflict()
+    if body.source_version and body.source_version != hashlib.sha256(
+            hiring.design_evidence(job, row).encode()).hexdigest():
+        raise HTTPException(409, "The job changed after this AI preview. Reload and review a fresh draft.")
+    valid_stages = {s["id"] for s in job.stages if s["kind"] not in ("hired", "rejected")}
+    if any(c.stage_id not in valid_stages for c in body.plan.criteria):
+        raise HTTPException(422, "Each criterion must use an active stage in this job.")
     if row is None:
         row = BizHiringPlan(job_id=job.id, company_id=ctx.company.id, revision=0, content={})
         db.add(row)

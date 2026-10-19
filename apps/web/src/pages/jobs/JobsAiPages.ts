@@ -1,5 +1,6 @@
 // Jobs AI's signed-in pages, in one chunk: moving between its tabs never waits for a download (routes.ts).
 export { JobsAiSection } from "./JobsAi";
+export { JobActionDeskPage } from "./ActionDesk";
 export { JobsAiHomePage } from "./Overview";
 export { JobMatchesPage } from "./Matches";
 export { JobDetailPage } from "./JobDetail";

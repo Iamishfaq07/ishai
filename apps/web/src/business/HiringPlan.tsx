@@ -6,6 +6,7 @@ import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { hiringApi } from "./hiringApi";
 import { HiringLoopGraphic } from "./HiringGraphics";
+import { PlanAssist } from "./PlanAssist";
 import { clonePlan, SAMPLE_TEMPLATES } from "./hiringModel";
 import { jobPath } from "./model";
 import { errorText, LoadError, Loading, Panel } from "./ui";
@@ -19,10 +20,11 @@ export function HiringPlanPage() {
   const [error, setError] = useState<Error | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [aiSource, setAiSource] = useState<string | null>(null);
   const [load, setLoad] = useState(0);
   useEffect(() => {
     let live = true;
-    setRecord(null); setPlan(null); setError(null);
+    setRecord(null); setPlan(null); setError(null); setAiSource(null);
     Promise.all([hiringApi.plan(company.id, jid), biz.job(company.id, jid)]).then(([p, j]) => {
       if (live) { setRecord(p); setPlan(clonePlan(p.plan)); setJob(j); }
     }).catch((e: unknown) => { if (live) setError(e instanceof Error ? e : new Error(String(e))); });
@@ -44,7 +46,8 @@ export function HiringPlanPage() {
   const save = async (e: FormEvent) => {
     e.preventDefault(); setBusy(true); setNotice(null);
     try {
-      const saved = await hiringApi.savePlan(company.id, jid, plan, record.revision);
+      const saved = await hiringApi.savePlan(company.id, jid, plan, record.revision, aiSource);
+      setAiSource(null);
       setRecord(saved); setPlan(clonePlan(saved.plan));
       toast({ message: "Interview plan saved", tone: "success" });
     } catch (err) { setNotice(errorText(err)); }
@@ -60,6 +63,8 @@ export function HiringPlanPage() {
         <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Define what matters before you meet candidates. Interviewers save their own observations, then compare evidence together.</p></div>
       <HiringLoopGraphic />
     </div>
+    {canEdit && <PlanAssist key={`${company.id}:${jid}`} cid={company.id} jid={jid} revision={record.revision} plan={plan}
+      disabled={busy} onApply={(draft, sourceVersion) => { setPlan(draft); setAiSource(sourceVersion); }} />}
     <form onSubmit={(e) => void save(e)} className="space-y-6">
       <fieldset disabled={busy || !canEdit} className="space-y-6">
         <Panel title="What you will assess" hint="Use job-related criteria, consistent questions and concrete rating anchors. No score is inferred from appearance or personality."
