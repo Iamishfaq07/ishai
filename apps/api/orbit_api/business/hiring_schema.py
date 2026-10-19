@@ -1,17 +1,24 @@
 """A human-readable, bounded contract shared by plans, interviews, evidence and candidate tasks."""
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from orbit_api.business_ai.fairness import asks_protected, discriminatory
 from orbit_api.documents.uploads import sanitize_text
 
 Id = Annotated[str, Field(min_length=1, max_length=40, pattern=r"^[a-z0-9_-]+$")]
 Line = Annotated[str, Field(min_length=1, max_length=600)]
+RequestId = Annotated[str, Field(min_length=36, max_length=36,
+    pattern=r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
 
 
 class Contract(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def visible_text(cls, value: Any) -> Any:
+        return sanitize_text(value) if isinstance(value, str) else value
 
 
 class Criterion(Contract):
@@ -103,3 +110,17 @@ class DecisionIn(Contract):
 
 class ClarificationIn(Contract):
     message: str = Field(min_length=10, max_length=2000)
+    request_id: RequestId | None = None
+
+
+class ReplyIn(Contract):
+    message: str = Field(min_length=10, max_length=4000)
+    request_id: RequestId
+    notify: bool = True
+
+
+class AddendumIn(Contract):
+    reason: str = Field(min_length=12, max_length=400)
+    message: str = Field(min_length=30, max_length=3000)
+    base_addendum_count: int = Field(ge=0)
+    request_id: RequestId

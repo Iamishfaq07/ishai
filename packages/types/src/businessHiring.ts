@@ -25,6 +25,18 @@ export interface BizInterviewFeedback {
   id: string; stage_id: string; author_id: string; author: string; mine: boolean;
   revision: number; plan_revision: number; plan_snapshot: BizHiringPlan;
   content: BizFeedbackContent; submitted_at: string | null; updated_at: string;
+  addenda: BizFeedbackAddendum[];
+}
+export interface BizFeedbackAddendum {
+  id: string; reason: string; message: string; author: string | null; created_at: string;
+}
+export interface BizCandidateQuestion {
+  id: string; message: string; created_at: string;
+  reply: { id: string; message: string; author: string | null; created_at: string } | null;
+}
+export interface BizConversation {
+  threads: BizCandidateQuestion[]; next_before: string | null; accepting: boolean;
+  activity: Array<{ id: string; label: string; created_at: string }>;
 }
 export interface BizSampleSubmission {
   response: string; explanation: string; assistance: "none" | "documentation" | "ai" | "collaboration";
@@ -53,7 +65,7 @@ export interface BizHiringRoom {
   stages: Array<{ id: string; name: string }>;
   feedback: BizInterviewFeedback[]; feedback_locked: boolean; pending_reviewers: number; expected_reviewers: number;
   coverage: BizEvidenceCoverage[]; gaps: string[]; evidence_version: string; work_sample: BizWorkSample | null;
-  decisions: BizHiringDecision[]; candidate_questions: Array<{ id: string; message: string; created_at: string }>;
+  decisions: BizHiringDecision[]; candidate_questions: BizCandidateQuestion[]; decision_outdated: boolean;
 }
 export interface BizInterviewBrief {
   intro: string; areas: string[]; stages: Array<{ name: string; minutes: number }>;

@@ -105,7 +105,7 @@ and candidates; this release does not claim predictive validity or fairness cert
 - Desk queues scan at most 2,000 active applications and display capped lists; feedback due covers the last seven
   days. The UI states those bounds. Large-company pagination should be the next scale improvement.
 - Private drafts are explicitly saved. Sealed feedback and candidate submissions cannot be overwritten.
-  Formal correction/addendum workflows are a useful future extension.
+  [Business hiring operations](BUSINESS-HIRING-OPERATIONS.md) adds dated feedback addenda and candidate replies.
 
 ## Data and rollout
 

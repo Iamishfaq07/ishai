@@ -4,8 +4,10 @@ import type { BizEvidenceRating, BizFeedbackContent, BizHiringDecision, BizHirin
 import { ArrowLeft, Button, Callout, Field, Select, Textarea, buttonClass, confirmDialog, cx, focusRing, toast } from "@orbit/ui";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { hiringApi } from "./hiringApi";
+import { FeedbackAddenda } from "./FeedbackAddenda";
+import { CompanyConversation } from "./HiringConversation";
 import { EvidenceOrbit } from "./HiringGraphics";
-import { COVERAGE_WORDS, coverageCount, planPath } from "./hiringModel";
+import { COVERAGE_WORDS, coverageCount, feedbackStages, planPath } from "./hiringModel";
 import { applicationPath } from "./model";
 import { errorText, LoadError, Loading, Panel } from "./ui";
 
@@ -115,6 +117,7 @@ function FeedbackEditor({ room, stage, onSaved }: { room: BizHiringRoom; stage: 
         </div>
       </Panel>
     </fieldset>
+    {own?.submitted_at && <FeedbackAddenda feedback={own} cid={company.id} aid={room.application_id} editable={company.status === "active"} onSaved={onSaved} />}
     {error && <Callout tone="error">{error} Your text is still here. Copy it before reloading if another tab changed this draft.</Callout>}
     {!locked && <div className="sticky bottom-3 flex flex-wrap items-center gap-2 rounded-xl border border-zinc-200 bg-white p-3 dark:border-white/10 dark:bg-zinc-950">
       <Button variant="secondary" loading={busy} onClick={() => void save(false)}>Save private draft</Button>
@@ -139,6 +142,7 @@ function Debrief({ room, onSaved }: { room: BizHiringRoom; onSaved: (room: BizHi
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
   return <div className="space-y-4">
+    {room.decision_outdated && <Callout tone="warning" title="Revisit the decision record">The current evidence snapshot differs from the latest decision. Review submitted feedback, dated addenda and any changed plan before relying on that record.</Callout>}
     <Panel title="Evidence coverage" hint="Observations by criterion. A blank area means unassessed; scores are not averaged into an automatic verdict.">
       <div className="space-y-4">{room.coverage.map((c) => <div key={c.criterion_id} className="border-b border-zinc-200 pb-4 last:border-0 dark:border-white/10">
         <h3 className="font-medium">{c.name} {c.spread >= 2 && <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">Discuss disagreement</span>}</h3>
@@ -148,7 +152,7 @@ function Debrief({ room, onSaved }: { room: BizHiringRoom; onSaved: (room: BizHi
         </li>)}</ul>}
       </div>)}</div>
     </Panel>
-    <Panel title="Submitted summaries">{room.feedback.filter((f) => f.submitted_at).map((f) => <article key={f.id} className="mb-3 text-sm"><h3 className="font-medium">{f.author} · {f.content.recommendation.replaceAll("_", " ")}</h3><p className="whitespace-pre-wrap">{f.content.summary || "No summary added."}</p></article>)}</Panel>
+    <Panel title="Submitted summaries">{room.feedback.filter((f) => f.submitted_at).map((f) => <article key={f.id} className="mb-3 text-sm"><h3 className="font-medium">{f.author} · {f.content.recommendation.replaceAll("_", " ")}</h3><p className="whitespace-pre-wrap">{f.content.summary || "No summary added."}</p><FeedbackAddenda feedback={f} cid={company.id} aid={room.application_id} /></article>)}</Panel>
     {room.gaps.length > 0 && <Callout tone="warning" title="Resolve or explicitly acknowledge these gaps"><ul className="list-disc space-y-1 pl-4">{room.gaps.map((g) => <li key={g}>{g}</li>)}</ul></Callout>}
     {company.permissions.move_applicants && room.status === "active" && company.status === "active" && <Panel title="Record a human decision" hint="Records the evidence you reviewed. Move stages or send a candidate update from their application.">
       <form onSubmit={(e) => { e.preventDefault(); void save(); }} className="space-y-3">
@@ -200,20 +204,21 @@ export function HiringRoomPage() {
     </div>
     {!room.plan.revision && <Callout tone="warning" title="Save the interview plan first">The suggested questions are editable starting points. Your team needs to save a job plan before collecting structured feedback.</Callout>}
     <nav aria-label="Interview workspace" className="flex gap-1 overflow-x-auto border-b border-zinc-200 dark:border-white/10">
-      {[["prepare", "Prepare"], ["interview", "Interview"], ["challenge", "Practical challenge"], ["debrief", "Team debrief"]].map(([key, label]) => <button key={key} type="button" aria-current={tab === key ? "page" : undefined} onClick={() => setTab(key!)} className={cx("whitespace-nowrap border-b-2 px-4 py-3 text-sm", focusRing, tab === key ? "border-indigo-600 font-semibold" : "border-transparent text-zinc-500")}>{label}</button>)}
+      {[["prepare", "Prepare"], ["interview", "Interview"], ["challenge", "Practical challenge"], ["debrief", "Team debrief"], ["inbox", "Candidate inbox"]].map(([key, label]) => <button key={key} type="button" aria-current={tab === key ? "page" : undefined} onClick={() => setTab(key!)} className={cx("whitespace-nowrap border-b-2 px-4 py-3 text-sm", focusRing, tab === key ? "border-indigo-600 font-semibold" : "border-transparent text-zinc-500")}>{label}</button>)}
     </nav>
     {tab === "prepare" && <div className="grid gap-4 lg:grid-cols-3">
       <Panel className="lg:col-span-2" title="Resume evidence and follow-up questions" hint="Only quotes found in the shared resume appear. A reference is a starting point to verify, not a skill verdict."><div className="space-y-5">{room.evidence.map((e) => <article key={e.criterion_id}><h3 className="font-medium">{e.name}</h3>{e.quote ? <blockquote className="my-2 whitespace-pre-wrap border-l-2 border-indigo-400 pl-3 text-sm">{e.quote}</blockquote> : <p className="my-2 text-sm text-zinc-500">No verified resume excerpt linked. Ask for a concrete example.</p>}<p className="text-sm">{e.question}</p><p className="mt-1 text-sm text-zinc-500">{e.probe}</p></article>)}</div></Panel>
       <div className="space-y-4"><Panel title="What the candidate sees"><p className="whitespace-pre-wrap text-sm">{room.plan.plan.candidate_intro}</p><p className="mt-3 text-xs text-zinc-500">Their application page shows assessment areas and time guidance. Private anchors and panel feedback stay with your team.</p></Panel>
-        <Panel title="Candidate questions">{room.candidate_questions.length ? <ul className="space-y-3">{room.candidate_questions.map((q) => <li key={q.id} className="whitespace-pre-wrap text-sm">{q.message}<span className="mt-1 block text-xs text-zinc-500">{new Date(q.created_at).toLocaleString()}</span></li>)}</ul> : <p className="text-sm text-zinc-500">No clarification requested.</p>}<Link to={applicationPath(company.id, aid)} className="mt-3 inline-block text-sm underline">Reply by email from the application</Link></Panel>
+        <Panel title="Candidate questions"><p className="text-sm text-zinc-500">{room.candidate_questions.filter((q) => !q.reply).length} unanswered in the latest question page. Read and reply in the candidate inbox.</p><Button variant="secondary" size="sm" className="mt-3" onClick={() => setTab("inbox")}>Open candidate inbox</Button></Panel>
       </div>
     </div>}
     <div hidden={tab !== "interview"} className="space-y-4"><InterviewTimer />
       <Field label="Interview stage" htmlFor="feedback-stage"><Select id="feedback-stage" value={stage} onChange={async (e) => { const next = e.target.value; if (await confirmDialog({ title: "Switch interview stage?", body: "Save any private draft before switching. Unsaved text in this stage will be discarded.", confirmLabel: "Switch stage" })) setStage(next); }}>
-        {[...new Set(room.plan.plan.criteria.map((c) => c.stage_id))].map((s) => <option key={s} value={s}>{room.stages.find((item) => item.id === s)?.name ?? s}</option>)}
+        {feedbackStages(room).map((stage) => <option key={stage.id} value={stage.id}>{stage.label}</option>)}
       </Select></Field>
       {room.plan.revision > 0 && <FeedbackEditor key={`${stage}-${own?.revision ?? 0}`} room={room} stage={stage} onSaved={setRoom} />}
     </div>
+    <div hidden={tab !== "inbox"}><CompanyConversation cid={company.id} aid={aid} canReply={company.permissions.move_applicants && company.status === "active"} /></div>
     {tab === "challenge" && <div className="space-y-4"><Panel title={sample?.brief.title ?? room.plan.plan.work_sample?.title ?? "Practical challenge"} hint="A small task, then a changed constraint. Discuss the candidate's reasoning; no automated grading or tool-use detection.">
       {sample ? <div className="space-y-4"><p className="whitespace-pre-wrap text-sm">{sample.brief.brief}</p><p className="text-xs text-zinc-500">About {sample.brief.time_box_min} minutes · Frozen from plan v{sample.plan_revision}</p>
         {sample.answer ? <SampleResponse title="Initial solution" answer={sample.answer} /> : <Callout tone="info">Waiting for the candidate's initial solution.</Callout>}

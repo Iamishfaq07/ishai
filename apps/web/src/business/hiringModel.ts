@@ -1,4 +1,4 @@
-import type { BizEvidenceCoverage, BizHiringPlan, BizSampleSubmission, BizWorkSampleSpec } from "@orbit/types";
+import type { BizEvidenceCoverage, BizHiringPlan, BizHiringRoom, BizInterviewFeedback, BizSampleSubmission, BizWorkSampleSpec } from "@orbit/types";
 
 export const roomPath = (cid: string, aid: string) => `/business/app/${encodeURIComponent(cid)}/applications/${encodeURIComponent(aid)}/interview`;
 export const planPath = (cid: string, jid: string) => `/business/app/${encodeURIComponent(cid)}/jobs/${encodeURIComponent(jid)}/interview-plan`;
@@ -6,6 +6,14 @@ export const COVERAGE_WORDS = ["Not observed", "Needs support", "Developing", "M
 export function coverageCount(rows: BizEvidenceCoverage[]) {
   return { assessed: rows.filter((row) => row.assessed).length, total: rows.length,
     disagreements: rows.filter((row) => row.spread >= 2).length };
+}
+export function feedbackStages(room: Pick<BizHiringRoom, "plan" | "stages"> & {
+  feedback: Array<Pick<BizInterviewFeedback, "mine" | "stage_id">>;
+}) {
+  const current = new Set(room.plan.plan.criteria.map((c) => c.stage_id));
+  const all = new Set([...current, ...room.feedback.filter((f) => f.mine).map((f) => f.stage_id)]);
+  return [...all].map((id) => ({ id, label: (room.stages.find((s) => s.id === id)?.name ?? id)
+    + (current.has(id) ? "" : " · earlier plan") }));
 }
 export function validateSample(input: BizSampleSubmission): string | null {
   if (input.response.trim().length < 40) return "Describe your solution in at least 40 characters.";

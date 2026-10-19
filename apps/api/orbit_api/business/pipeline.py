@@ -295,6 +295,8 @@ _EVENT_TEXT = {
     "interview_slots": "Offered interview times", "interview_booked": "Booked an interview time",
     "ranked": "Ranked by Orbit's AI ({score}/100)", "tags": "Tags: {tags}",
     "deletion_requested": "Asked for their data to be deleted",
+    "candidate_question": "Asked the hiring team a question", "candidate_reply": "Replied to a candidate question",
+    "feedback_submitted": "Submitted interview feedback", "feedback_addendum": "Added context to interview feedback",
 }
 
 
@@ -327,7 +329,8 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
                                .order_by(BizEvent.created_at))).all()
     if visible is not None:
         # The timeline must not reveal a peer's recommendation before their card can be read.
-        events = [e for e in events if e.kind not in ("scorecard", "hiring_decision", "ranked")
+        events = [e for e in events if e.kind not in (
+            "scorecard", "hiring_decision", "ranked", "feedback_submitted", "feedback_addendum")
                   or e.actor_id == ctx.user.id]
     iv = await latest_interview(db, app.id)
     stage_names = {s["id"]: s["name"] for s in job.stages}

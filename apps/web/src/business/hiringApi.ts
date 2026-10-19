@@ -15,6 +15,15 @@ export const hiringApi = {
   room: (cid: string, aid: string) => api.call<H.BizHiringRoom>(`${a(cid, aid)}/hiring-room`),
   feedback: (cid: string, aid: string, content: H.BizFeedbackContent, stageId: string, baseRevision: number, planRevision: number, submit: boolean) =>
     api.call<H.BizHiringRoom>(`${a(cid, aid)}/interview-feedback`, put({ ...content, stage_id: stageId, base_revision: baseRevision, plan_revision: planRevision, submit })),
+  addendum: (cid: string, aid: string, fid: string, reason: string, message: string, count: number, requestId: string) =>
+    api.call<H.BizHiringRoom>(`${a(cid, aid)}/feedback/${e(fid)}/addenda`, post({ reason, message, base_addendum_count: count, request_id: requestId })),
+  conversation: (cid: string, aid: string, before?: string) => api.call<H.BizConversation>(
+    `${a(cid, aid)}/conversation${before ? `?before=${e(before)}` : ""}`),
+  candidateConversation: (token: string, before?: string) => api.call<H.BizConversation>(
+    `${p(token)}/conversation${before ? `?before=${e(before)}` : ""}`),
+  reply: (cid: string, aid: string, qid: string, message: string, requestId: string, notify: boolean) =>
+    api.call<{ question_id: string; reply: NonNullable<H.BizCandidateQuestion["reply"]> }>(
+      `${a(cid, aid)}/questions/${e(qid)}/reply`, post({ message, request_id: requestId, notify })),
   assignSample: (cid: string, aid: string) => api.call<H.BizHiringRoom>(`${a(cid, aid)}/work-sample`, post()),
   decision: (cid: string, aid: string, outcome: H.BizHiringDecision["outcome"], rationale: string, evidenceVersion: string, acknowledgeGaps: boolean) =>
     api.call<H.BizHiringRoom>(`${a(cid, aid)}/hiring-decision`, post({ outcome, rationale, base_evidence_version: evidenceVersion, acknowledge_gaps: acknowledgeGaps })),
@@ -24,7 +33,7 @@ export const hiringApi = {
   sample: (token: string) => api.call<H.BizCandidateSample>(`${p(token)}/work-sample`),
   submitSample: (token: string, answer: H.BizSampleSubmission, baseRevision: number, followUp: boolean) =>
     api.call<H.BizCandidateSample>(`${p(token)}/work-sample?follow_up=${followUp}`, post({ ...answer, base_revision: baseRevision })),
-  clarify: (token: string, message: string) => api.call<{ status: string; message: string }>(`${p(token)}/clarification`, post({ message })),
+  clarify: (token: string, message: string, requestId?: string) => api.call<{ status: string; message: string }>(`${p(token)}/clarification`, post({ message, request_id: requestId })),
   calendar: (token: string) => `${API_URL}${p(token)}/calendar.ics`,
   cancelInterview: (cid: string, aid: string) => api.call<H.BizApplicationDetail>(`${a(cid, aid)}/interview/cancel`, post()),
 };

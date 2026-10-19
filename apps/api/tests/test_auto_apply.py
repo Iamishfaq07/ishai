@@ -528,7 +528,9 @@ def test_daily_limit_quiet_hours_and_pause(app: TestClient) -> None:
     h, _ = account(app, daily_limit=1)
     uid = user_id(app, h)
     _ready_packets(app, uid, 3, ["a", "b", "c"])
-    t0 = datetime.now(UTC)
+    # Keep the 30-minute advance on one quota day, even when run near UTC midnight.
+    t0 = datetime.now(UTC).replace(hour=12, minute=0, second=0, microsecond=0)
+    edit_packets(app, uid, not_before=t0 - timedelta(hours=1), expires_at=t0 + timedelta(days=2))
     p = _due(app, uid, t0).packet
     assert p is not None
     _result(app, p.id, "submitted", None, t0)

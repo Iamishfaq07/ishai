@@ -474,6 +474,7 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/public/business/applications/{token}/work-sample"),
     ("POST", "/v1/public/business/applications/{token}/clarification"),
     ("GET", "/v1/public/business/applications/{token}/calendar.ics"),
+    ("GET", "/v1/public/business/applications/{token}/conversation"),
 })
 
 
