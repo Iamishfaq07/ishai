@@ -25,6 +25,8 @@ export const cycleApi = {
     method: "POST", body: JSON.stringify(body),
   }),
   offer: (base: string) => api.call<{ offer: OfferSummary | null }>(`${base}/offer`),
+  offerHistory: (base: string, before?: number) => api.call<{ versions: OfferSummary[]; next_before_revision: number | null }>(
+    `${base}/offer/history${before ? `?before_revision=${before}` : ""}`),
   offerAction: (base: string, action: string, body: object) => api.call<{ offer: OfferSummary | null }>(
     `${base}/offer${action ? `/${action}` : ""}`, { method: "POST", body: JSON.stringify(body) }),
 };

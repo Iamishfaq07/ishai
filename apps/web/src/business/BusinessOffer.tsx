@@ -1,7 +1,10 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { Button, Callout, Field, Input, Textarea, confirmDialog } from "@orbit/ui";
 import { candidateBase, cycleApi, staffBase, type OfferSummary } from "./sabaApi";
 import { errorText, Panel } from "./ui";
+import { requestKey, type PendingRequests } from "./requestKey";
+
+const OfferHistory = lazy(async () => ({ default: (await import("./OfferHistory")).OfferHistory }));
 
 export function CandidateOffer({ token, readOnly = false }: { token: string; readOnly?: boolean }) {
   return <Offer key={token} base={candidateBase(token)} candidate readOnly={readOnly} />;
@@ -18,7 +21,7 @@ function Offer({ base, candidate, readOnly }: { base: string; candidate: boolean
   const [notice, setNotice] = useState("");
   const [agree, setAgree] = useState(false);
   const [draft, setDraft] = useState({ role: "", compensation: "", start_date: "", terms: "", expires_days: 7 });
-  const requests = useRef<Record<string, string>>({});
+  const requests = useRef<PendingRequests>({});
   useEffect(() => {
     let live = true;
     cycleApi.offer(base).then((s) => { if (live) { setOffer(s.offer); setLoaded(true); } })
@@ -35,9 +38,8 @@ function Offer({ base, candidate, readOnly }: { base: string; candidate: boolean
     if (readOnly) { setError("This offer is available for reading only."); return; }
     if (!(await confirmDialog({ title: action === "respond" ? "Save your offer response?" : action === "withdraw" ? "Withdraw this offer summary?" : "Publish this offer summary?", body: action === "respond" ? "Your response is saved against this exact version of the displayed terms. Contact the team for the formal agreement and next steps." : "The candidate can read this update on their private application page. Published versions and responses remain in the record.", confirmLabel: action === "respond" ? "Save response" : action === "withdraw" ? "Withdraw summary" : "Publish summary" }))) return;
     setBusy(true); setError(""); setNotice("");
-    requests.current[action] ??= crypto.randomUUID();
     try {
-      const result = await cycleApi.offerAction(base, action, { ...body, request_id: requests.current[action] });
+      const result = await cycleApi.offerAction(base, action, { ...body, request_id: requestKey(requests.current, action, body) });
       setOffer(result.offer); delete requests.current[action]; setAgree(false);
       if (!action) setDraft({ role: "", compensation: "", start_date: "", terms: "", expires_days: 7 });
       setNotice("Saved to the offer record. The hiring team arranges the next steps.");
@@ -73,6 +75,7 @@ function Offer({ base, candidate, readOnly }: { base: string; candidate: boolean
       </form>
     </details>}
     {notice && <p role="status" className="mt-3 text-sm">{notice}</p>}
+    {offer && <Suspense fallback={<p role="status">Loading offer history…</p>}><OfferHistory key={`${offer.id}/${offer.status}`} base={base} /></Suspense>}
     {error && <Callout tone="error" className="mt-3">{error} Unsent terms remain here; refresh the offer before retrying a conflict.</Callout>}
   </Panel>;
 }

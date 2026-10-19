@@ -42,6 +42,8 @@ from orbit_api.business.apply import public_router as business_apply_public_rout
 from orbit_api.business.apply import router as business_apply_router
 from orbit_api.business.companies import public_router as business_public_router
 from orbit_api.business.companies import router as business_router
+from orbit_api.business.handoff import public_router as business_handoff_public_router
+from orbit_api.business.handoff import router as business_handoff_router
 from orbit_api.business.hiring_routes import public_router as business_hiring_public_router
 from orbit_api.business.hiring_routes import router as business_hiring_router
 from orbit_api.business.job_assist import router as business_job_assist_router
@@ -413,6 +415,8 @@ def create_app() -> FastAPI:
     app.include_router(business_screening_public_router)
     app.include_router(business_offers_router)
     app.include_router(business_offers_public_router)
+    app.include_router(business_handoff_router)
+    app.include_router(business_handoff_public_router)
     app.include_router(business_apply_router)
     app.include_router(business_apply_public_router)
     app.include_router(business_admin_router)

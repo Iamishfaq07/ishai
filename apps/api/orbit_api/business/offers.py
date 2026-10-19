@@ -2,7 +2,7 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,23 +43,40 @@ class Withdraw(Contract):
     request_id: RequestId
 
 
-async def state(db: AsyncSession, app: BizApplication) -> dict[str, Any]:
-    rows = list(await db.scalars(select(BizEvent).where(BizEvent.application_id == app.id,
+async def records(db: AsyncSession, app: BizApplication) -> list[BizEvent]:
+    return list(await db.scalars(select(BizEvent).where(BizEvent.application_id == app.id,
         BizEvent.kind.in_(("offer_published", "offer_response", "offer_withdrawn")))
         .order_by(BizEvent.created_at, BizEvent.id)))
+
+
+def summary(latest: BizEvent, rows: list[BizEvent], *, superseded: bool = False) -> dict[str, Any]:
+    updates = [e for e in rows if e.data.get("offer_id") == latest.id]
+    response = next((e for e in updates if e.kind == "offer_response"), None)
+    withdrawn = any(e.kind == "offer_withdrawn" for e in updates)
+    status = "withdrawn" if withdrawn else response.data["response"] if response else "superseded" if superseded else (
+        "expired" if datetime.fromisoformat(latest.data["expires_at"]) < datetime.now(UTC) else "pending")
+    return {"id": latest.id, **{k: latest.data[k] for k in
+        ("role", "compensation", "start_date", "terms", "expires_at", "revision")}, "status": status,
+        "created_at": conversations.iso(latest.created_at),
+        "responded_at": conversations.iso(response.created_at) if response else None}
+
+
+async def state(db: AsyncSession, app: BizApplication) -> dict[str, Any]:
+    rows = await records(db, app)
     offered = [e for e in rows if e.kind == "offer_published"]
     if not offered:
         return {"offer": None}
     latest = max(offered, key=lambda e: int(e.data["revision"]))
-    updates = [e for e in rows if e.data.get("offer_id") == latest.id]
-    response = next((e for e in updates if e.kind == "offer_response"), None)
-    withdrawn = any(e.kind == "offer_withdrawn" for e in updates)
-    status = "withdrawn" if withdrawn else response.data["response"] if response else (
-        "expired" if datetime.fromisoformat(latest.data["expires_at"]) < datetime.now(UTC) else "pending")
-    return {"offer": {"id": latest.id, **{k: latest.data[k] for k in
-        ("role", "compensation", "start_date", "terms", "expires_at", "revision")}, "status": status,
-        "created_at": conversations.iso(latest.created_at),
-        "responded_at": conversations.iso(response.created_at) if response else None}}
+    return {"offer": summary(latest, rows)}
+
+
+async def history(db: AsyncSession, app: BizApplication, before_revision: int | None) -> dict[str, Any]:
+    rows = await records(db, app)
+    published = sorted((e for e in rows if e.kind == "offer_published"), key=lambda e: -int(e.data["revision"]))
+    current = published[0].id if published else None
+    page = [e for e in published if before_revision is None or e.data["revision"] < before_revision][:21]
+    return {"versions": [summary(e, rows, superseded=e.id != current) for e in page[:20]],
+        "next_before_revision": page[19].data["revision"] if len(page) > 20 else None}
 
 
 def active(app: BizApplication) -> None:
@@ -112,6 +129,19 @@ async def publish(application_id: str, body: OfferIn, ctx: CompanyCtx,
     return await staff_get(application_id, ctx, db)
 
 
+@router.get("/history")
+async def staff_history(application_id: str, ctx: CompanyCtx,
+                        db: Annotated[AsyncSession, Depends(get_db)],
+                        before_revision: Annotated[int | None, Query(ge=1)] = None) -> dict[str, Any]:
+    ctx.require("move_applicants")
+    app, _ = await application_for(db, ctx, application_id)
+    result = await history(db, app, before_revision)
+    for version in result["versions"]:
+        for key in ("role", "compensation", "start_date", "terms"):
+            version[key] = hiring.blind_text(ctx, app, version[key])
+    return result
+
+
 @router.post("/withdraw")
 async def withdraw(application_id: str, body: Withdraw, ctx: CompanyCtx,
                     db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
@@ -160,3 +190,10 @@ async def respond(token: str, body: Respond, request: Request,
     timeline(db, app, "offer_response", offer_id=body.offer_id, response=body.response, request_id=body.request_id)
     await db.commit()
     return await state(db, app)
+
+
+@public_router.get("/history")
+async def candidate_history(token: str, request: Request, db: Annotated[AsyncSession, Depends(get_db)],
+                            before_revision: Annotated[int | None, Query(ge=1)] = None) -> dict[str, Any]:
+    app, _, _ = await _by_token(db, token, request)
+    return await history(db, app, before_revision)

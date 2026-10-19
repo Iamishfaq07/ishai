@@ -61,6 +61,10 @@ async function seed(context: BrowserContext) {
   return { cid, jid, aid, other, token };
 }
 async function a11y(page: Page) {
+  // Audit the foreground page after transient confirmations finish, not halfway through a toast's opacity fade.
+  await page.bringToFront();
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("region", { name: "Notifications", exact: true }).getByRole("listitem")).toHaveCount(0);
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`).join(", ")}`)).toEqual([]);
 }
@@ -242,4 +246,75 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await a11y(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("career-journey-mobile.png"), fullPage: true });
+});
+
+test("Joining plan: offer history, owned tasks and a hired candidate's first-day questions", async ({ page, context, browser }, info) => {
+  test.setTimeout(120_000);
+  await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
+  const { cid, aid, token } = await seed(context);
+  const base = `/v1/business/companies/${cid}/applications/${aid}`;
+  const terms = { role: "Backend Engineer", compensation: "INR 2,400,000 per year", start_date: "November 2",
+    terms: "A fictional offer summary; the team arranges the formal contract and joining details separately.", base_offer_id: null };
+  const original = await context.request.post(`${API}${base}/offer`, { data: { ...terms, request_id: crypto.randomUUID() } });
+  expect(original.ok(), await original.text()).toBe(true);
+  const firstId = (await original.json()).offer.id as string;
+  const revised = await context.request.post(`${API}${base}/offer`, { data: { ...terms, compensation: "INR 2,600,000 per year", base_offer_id: firstId, request_id: crypto.randomUUID() } });
+  expect(revised.ok(), await revised.text()).toBe(true);
+  const offerId = (await revised.json()).offer.id as string;
+  const accepted = await context.request.post(`${API}/v1/public/business/applications/${token}/offer/respond`, { data: { offer_id: offerId, response: "accepted", acknowledge: true, request_id: crypto.randomUUID() } });
+  expect(accepted.ok(), await accepted.text()).toBe(true);
+  await page.goto(`/business/app/${cid}/applications/${aid}/interview`);
+  await page.getByRole("button", { name: "Offer and hire", exact: true }).click();
+  await page.getByText("Offer version history", { exact: true }).click();
+  await expect(page.getByText("Version 1 · superseded · Backend Engineer", { exact: true })).toBeVisible();
+  await page.getByLabel("Joining target date", { exact: true }).fill("2026-11-02");
+  await page.getByRole("button", { name: "Share joining plan", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Share joining plan", exact: true }).click();
+  await expect(page.getByText("0 of 3 tasks reported complete", { exact: true })).toBeVisible();
+  const teamTask = page.getByRole("article").filter({ has: page.getByRole("heading", { name: "Prepare equipment and access", exact: true }) });
+  await teamTask.getByText("Update your task", { exact: true }).click();
+  await teamTask.getByLabel("Task progress", { exact: true }).selectOption("done");
+  await teamTask.getByLabel("Progress note", { exact: true }).fill("Equipment and a first-day contact are ready. Access will be issued through our secure process.");
+  await teamTask.getByRole("button", { name: "Save task progress", exact: true }).click();
+  await expect(page.getByText("1 of 3 tasks reported complete", { exact: true })).toBeVisible();
+  const candidate = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: "dark", reducedMotion: "reduce" });
+  await candidate.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
+  const applicant = await candidate.newPage();
+  await applicant.goto(`/application/${token}`);
+  await expect(applicant.getByRole("heading", { name: "Your joining plan", exact: true })).toBeVisible();
+  const ownTask = () => applicant.getByRole("article").filter({ has: applicant.getByRole("heading", { name: "Review the joining arrangements", exact: true }) });
+  await ownTask().getByText("Update your task", { exact: true }).click();
+  await ownTask().getByLabel("Task progress", { exact: true }).selectOption("blocked");
+  await ownTask().getByLabel("Progress note", { exact: true }).fill("Please clarify where I should meet my team on the first day.");
+  await ownTask().getByRole("button", { name: "Save task progress", exact: true }).click();
+  await expect(applicant.getByText("1 of 3 tasks reported complete · 1 blocked", { exact: true })).toBeVisible();
+  const moved = await context.request.post(`${API}/v1/business/companies/${cid}/applications/move`, { data: { ids: [aid], stage_id: "hired" } });
+  expect(moved.ok(), await moved.text()).toBe(true);
+  await applicant.reload();
+  await ownTask().getByText("Update your task", { exact: true }).click();
+  await ownTask().getByLabel("Task progress", { exact: true }).selectOption("done");
+  await ownTask().getByLabel("Progress note", { exact: true }).fill("The team clarified where to meet. I have reviewed the arrangements.");
+  await ownTask().getByRole("button", { name: "Save task progress", exact: true }).click();
+  await expect(applicant.getByText("2 of 3 tasks reported complete", { exact: true })).toBeVisible();
+  await ownTask().getByText("Progress history (2)", { exact: true }).click();
+  await expect(ownTask().getByText("Please clarify where I should meet my team on the first day.", { exact: true })).toBeVisible();
+  await applicant.getByLabel("Your question", { exact: true }).fill("Could you confirm who I should ask for when I arrive?");
+  await applicant.getByRole("button", { name: "Send question to hiring team", exact: true }).click();
+  await expect(applicant.getByText("Your question is saved.", { exact: false })).toBeVisible();
+  expect(await applicant.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await a11y(applicant);
+  await applicant.getByRole("heading", { name: "Your joining plan", exact: true }).scrollIntoViewIfNeeded();
+  await applicant.screenshot({ path: info.outputPath("joining-plan-candidate-mobile.png"), fullPage: true });
+  await page.getByRole("button", { name: "Refresh joining plan", exact: true }).click();
+  await expect(page.getByText("2 of 3 tasks reported complete", { exact: true })).toBeVisible();
+  await a11y(page);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: info.outputPath("joining-plan-company.png"), fullPage: true });
+  await page.goto(`/business/app/${cid}/hiring-desk`);
+  await expect(page.getByRole("heading", { name: "Joining plans", exact: true })).toBeVisible();
+  await expect(page.getByText("2/3 reported complete", { exact: false })).toBeVisible();
+  await page.getByRole("link", { name: "Open joining plan", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Joining plan", exact: true })).toBeVisible();
+  await expect(page.getByText("2 of 3 tasks reported complete", { exact: true })).toBeVisible();
+  await candidate.close();
 });

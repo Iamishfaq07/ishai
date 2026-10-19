@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useId, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import type { BizEvidenceRating, BizFeedbackContent, BizHiringDecision, BizHiringRoom, BizSampleSubmission } from "@orbit/types";
 import { ArrowLeft, Button, Callout, Field, Select, Textarea, buttonClass, confirmDialog, cx, focusRing, toast } from "@orbit/ui";
 import { PageTitle, useCompany } from "./BusinessApp";
@@ -13,6 +13,7 @@ import { errorText, LoadError, Loading, Panel } from "./ui";
 
 const CompanySaba = lazy(async () => ({ default: (await import("./BusinessSaba")).CompanySaba }));
 const CompanyOffer = lazy(async () => ({ default: (await import("./BusinessOffer")).CompanyOffer }));
+const CompanyHandoff = lazy(async () => ({ default: (await import("./BusinessHandoff")).CompanyHandoff }));
 
 function InterviewTimer() {
   const [seconds, setSeconds] = useState(0);
@@ -175,9 +176,10 @@ function Debrief({ room, onSaved }: { room: BizHiringRoom; onSaved: (room: BizHi
 export function HiringRoomPage() {
   const { company } = useCompany();
   const { aid = "" } = useParams();
+  const [params] = useSearchParams();
   const [room, setRoom] = useState<BizHiringRoom | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [tab, setTab] = useState("prepare");
+  const [tab, setTab] = useState(() => params.get("tab") === "offer" && company.permissions.move_applicants ? "offer" : "prepare");
   const [stage, setStage] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -211,7 +213,7 @@ export function HiringRoomPage() {
     </nav>
     <Suspense fallback={<p role="status">Loading hiring tools…</p>}>
       <div hidden={tab !== "saba"}><CompanySaba cid={company.id} aid={aid} readOnly={!company.permissions.move_applicants || room.status !== "active" || company.status !== "active"} /></div>
-      {company.permissions.move_applicants && <div hidden={tab !== "offer"}><CompanyOffer cid={company.id} aid={aid} readOnly={room.status !== "active" || company.status !== "active"} /></div>}
+      {company.permissions.move_applicants && <div hidden={tab !== "offer"} className="space-y-5"><CompanyOffer cid={company.id} aid={aid} readOnly={room.status !== "active" || company.status !== "active"} /><CompanyHandoff cid={company.id} aid={aid} readOnly={!["active", "hired"].includes(room.status) || company.status !== "active"} /></div>}
     </Suspense>
     {tab === "prepare" && <div className="grid gap-4 lg:grid-cols-3">
       <Panel className="lg:col-span-2" title="Resume evidence and follow-up questions" hint="Only quotes found in the shared resume appear. A reference is a starting point to verify, not a skill verdict."><div className="space-y-5">{room.evidence.map((e) => <article key={e.criterion_id}><h3 className="font-medium">{e.name}</h3>{e.quote ? <blockquote className="my-2 whitespace-pre-wrap border-l-2 border-indigo-400 pl-3 text-sm">{e.quote}</blockquote> : <p className="my-2 text-sm text-zinc-500">No verified resume excerpt linked. Ask for a concrete example.</p>}<p className="text-sm">{e.question}</p><p className="mt-1 text-sm text-zinc-500">{e.probe}</p></article>)}</div></Panel>

@@ -3,6 +3,7 @@ import type { BizConversation } from "@orbit/types";
 import { Button, Callout, Field, Textarea, confirmDialog } from "@orbit/ui";
 import { hiringApi } from "./hiringApi";
 import { errorText, Panel } from "./ui";
+import { requestKey, type PendingRequests } from "./requestKey";
 
 export function CandidateConversation({ token, canAsk }: { token: string; canAsk: boolean }) {
   return <Conversation key={token} token={token} cid="" aid="" canWrite={canAsk} />;
@@ -21,7 +22,7 @@ function Conversation({ token, cid, aid, canWrite }: { token: string; cid: strin
   const [notify, setNotify] = useState<Record<string, boolean>>({});
   const [notice, setNotice] = useState("");
   const [load, setLoad] = useState(0);
-  const requests = useRef<Record<string, string>>({});
+  const requests = useRef<PendingRequests>({});
   const loadPage = useCallback((before?: string) => token
     ? hiringApi.candidateConversation(token, before) : hiringApi.conversation(cid, aid, before), [token, cid, aid]);
   useEffect(() => {
@@ -36,7 +37,6 @@ function Conversation({ token, cid, aid, canWrite }: { token: string; cid: strin
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [question, drafts]);
-  const requestId = (key: string) => requests.current[key] ??= crypto.randomUUID();
   const older = async () => {
     if (!data?.next_before) return;
     setBusy("older"); setError(null);
@@ -49,7 +49,7 @@ function Conversation({ token, cid, aid, canWrite }: { token: string; cid: strin
   const ask = async () => {
     setBusy("ask"); setError(null); setNotice("");
     try {
-      await hiringApi.clarify(token, question, requestId("ask"));
+      await hiringApi.clarify(token, question, requestKey(requests.current, "ask", { question }));
       setQuestion(""); delete requests.current.ask;
       setNotice("Your question is saved. The hiring team can reply here.");
       setLoad((n) => n + 1);
@@ -59,7 +59,8 @@ function Conversation({ token, cid, aid, canWrite }: { token: string; cid: strin
     if (!(await confirmDialog({ title: "Publish this reply to the candidate?", body: "The candidate will see this text on their application page. Published replies cannot be overwritten.", confirmLabel: "Publish reply" }))) return;
     setBusy(qid); setError(null); setNotice("");
     try {
-      const saved = await hiringApi.reply(cid, aid, qid, drafts[qid] ?? "", requestId(qid), notify[qid] ?? true);
+      const saved = await hiringApi.reply(cid, aid, qid, drafts[qid] ?? "", requestKey(requests.current, qid,
+        { message: drafts[qid] ?? "", notify: notify[qid] ?? true }), notify[qid] ?? true);
       setData((current) => current ? { ...current, threads: current.threads.map((t) => t.id === qid ? { ...t, reply: saved.reply } : t) } : current);
       setDrafts((current) => ({ ...current, [qid]: "" }));
       delete requests.current[qid];

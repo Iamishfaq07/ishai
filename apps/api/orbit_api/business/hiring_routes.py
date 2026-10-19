@@ -47,6 +47,11 @@ def _active(app: BizApplication) -> None:
         raise HTTPException(409, "This application is no longer collecting new interview evidence.")
 
 
+def _contactable(app: BizApplication) -> None:
+    if app.status not in ("active", "hired") or app.deletion_requested_at is not None:
+        raise HTTPException(409, "This application is no longer collecting candidate questions.")
+
+
 @router.get("/jobs/{job_id}/hiring-plan")
 async def get_plan(job_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
     job = await job_for(db, ctx, job_id, for_interviewer=True)
@@ -360,6 +365,43 @@ async def hiring_desk(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_d
             "feedback_due": due[:20], "limited": limited}
 
 
+@router.get("/joining-desk")
+async def joining_desk(ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)],
+                       before: Annotated[str | None, Query(max_length=36)] = None) -> dict[str, Any]:
+    from orbit_api.business import handoff
+    from orbit_api.business.access import sees_job
+
+    ctx.require("move_applicants")
+    jobs = {j.id: j for j in await db.scalars(select(BizJob).where(BizJob.company_id == ctx.company.id))
+        if sees_job(ctx, j)}
+    query = select(BizEvent, BizApplication).join(BizApplication, BizApplication.id == BizEvent.application_id).where(
+        BizEvent.company_id == ctx.company.id, BizEvent.kind == "handoff_published",
+        BizApplication.company_id == ctx.company.id, BizApplication.job_id.in_(jobs),
+        BizApplication.status.in_(("active", "hired")))
+    if before:
+        cursor = await db.get(BizEvent, before)
+        if (not cursor or cursor.company_id != ctx.company.id or cursor.job_id not in jobs
+                or cursor.kind != "handoff_published"):
+            raise HTTPException(404, "Joining page not found.")
+        query = query.where(or_(BizEvent.created_at < cursor.created_at,
+            and_(BizEvent.created_at == cursor.created_at, BizEvent.id < cursor.id)))
+    rows = list(await db.execute(query.order_by(BizEvent.created_at.desc(), BizEvent.id.desc()).limit(21)))
+    page = rows[:20]
+    ids = [app.id for _published, app in page]
+    events = list(await db.scalars(select(BizEvent).where(BizEvent.application_id.in_(ids),
+        BizEvent.kind.in_(handoff.KINDS)))) if ids else []
+    items = []
+    for _published, app in page:
+        plan = handoff.render([e for e in events if e.application_id == app.id])
+        if plan:
+            items.append({"application_id": app.id, "name": rules.candidate_label(app.reference)
+                if ctx.company.blind_review else app.name, "reference": app.reference,
+                "job_title": jobs[app.job_id].title, "start_date": plan["start_date"],
+                "completed": plan["completed"], "total": len(plan["tasks"]), "blocked": plan["blocked"],
+                "deletion_requested": app.deletion_requested_at is not None})
+    return {"items": items, "next_before": page[-1][0].id if len(rows) > 20 else None}
+
+
 async def _staff_conversation(db: AsyncSession, ctx: CompanyCtx, app: BizApplication, job: BizJob,
                                before: str | None = None) -> dict[str, Any]:
     return {**await conversations.question_page(db, app, before=before,
@@ -423,7 +465,7 @@ async def candidate_conversation(token: str, request: Request,
                                    before: Annotated[str | None, Query(max_length=36)] = None) -> dict[str, Any]:
     app, job, company = await _by_token(db, token, request)
     return {**await conversations.question_page(db, app, before=before),
-        "activity": await conversations.activity(db, app, job), "accepting": app.status == "active"
+        "activity": await conversations.activity(db, app, job), "accepting": app.status in ("active", "hired")
             and company.status == "active" and app.email_confirmed_at is not None
             and app.deletion_requested_at is None}
 
@@ -485,13 +527,13 @@ async def submit_sample(token: str, body: SampleAnswer, request: Request,
 async def ask_question(token: str, body: ClarificationIn, request: Request,
                          db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
     app, _job, company = await _by_token(db, token, request)
-    _active(app)
+    _contactable(app)
     if company.status == "suspended" or app.email_confirmed_at is None:
         raise HTTPException(403, "Confirm your email before contacting an active hiring team.")
     ratelimit.check(_writes, f"biz-question:{app.status_token_hash}")
     await lock_company(db, app.company_id)
     await db.refresh(app)
-    _active(app)
+    _contactable(app)
     message = sanitize_text(body.message)
     if body.request_id:
         previous = await db.scalar(select(BizEvent).where(BizEvent.application_id == app.id,

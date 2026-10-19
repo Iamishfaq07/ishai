@@ -4,6 +4,7 @@ import { candidateBase, cycleApi, staffBase, type SabaState } from "./sabaApi";
 import { errorText, Panel } from "./ui";
 import { api } from "../lib/api";
 import { useBusinessDictation } from "./useBusinessDictation";
+import { requestKey, type PendingRequests } from "./requestKey";
 
 export function CandidateSaba({ token, readOnly = false }: { token: string; readOnly?: boolean }) {
   return <Saba key={token} base={candidateBase(token)} candidate readOnly={readOnly} />;
@@ -30,7 +31,7 @@ function Saba({ base, candidate, readOnly }: { base: string; candidate: boolean;
   const dictation = useBusinessDictation(message, setMessage, data?.revision);
   useEffect(() => () => { if (clip) URL.revokeObjectURL(clip); }, [clip]);
   useEffect(() => { setClip(null); }, [data?.revision]);
-  const requests = useRef<Record<string, string>>({});
+  const requests = useRef<PendingRequests>({});
   const sequence = useRef(0);
   useEffect(() => {
     let live = true;
@@ -52,9 +53,8 @@ function Saba({ base, candidate, readOnly }: { base: string; candidate: boolean;
     if (action === "answers" && !(await confirmDialog({ title: "Save this interview answer?", body: "Your original answer cannot be overwritten. Review the text before sharing it with the employer.", confirmLabel: "Save answer" }))) return;
     setBusy(true); setError(""); setNotice("");
     const current = ++sequence.current;
-    requests.current[action] ??= crypto.randomUUID();
     try {
-      const next = await cycleApi.action(base, action, { ...body, request_id: requests.current[action] });
+      const next = await cycleApi.action(base, action, { ...body, request_id: requestKey(requests.current, action, body) });
       if (sequence.current !== current) return;
       setData(next); delete requests.current[action];
       if (action === "answers") { setMessage(""); window.speechSynthesis?.cancel(); }

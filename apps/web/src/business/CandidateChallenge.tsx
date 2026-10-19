@@ -7,6 +7,7 @@ import { validateSample } from "./hiringModel";
 import { errorText, Panel } from "./ui";
 
 const CandidateSaba = lazy(async () => ({ default: (await import("./BusinessSaba")).CandidateSaba }));
+const CandidateHandoff = lazy(async () => ({ default: (await import("./BusinessHandoff")).CandidateHandoff }));
 const CandidateOffer = lazy(async () => ({ default: (await import("./BusinessOffer")).CandidateOffer }));
 
 export function CandidateChallenge({ token, confirmed, deletionRequested }: { token: string; confirmed: boolean; deletionRequested: boolean }) {
@@ -73,6 +74,7 @@ export function CandidateChallenge({ token, confirmed, deletionRequested }: { to
         </form> : <Callout tone="info">{!confirmed ? "Confirm your email above to submit." : "This application is no longer collecting new work."}</Callout>}
       </div>
     </Panel>}
+    <Suspense fallback={<p role="status">Loading joining plan…</p>}><CandidateHandoff token={token} readOnly={!confirmed || deletionRequested} /></Suspense>
     <CandidateConversation token={token} canAsk={confirmed && !deletionRequested} />
     {error && <Callout tone="error">{error} {!data && <Button variant="ghost" size="sm" onClick={() => setLoad((n) => n + 1)}>Retry</Button>}</Callout>}
   </div>;
