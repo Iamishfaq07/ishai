@@ -700,6 +700,9 @@ async def book(token: str, body: BookIn, request: Request, db: Annotated[AsyncSe
     ratelimit.check(booking_writes, f"biz-book:{app.status_token_hash}")
     await lock_company(db, company.id)
     await db.refresh(app)
+    await db.refresh(company)
+    if company.status == "suspended":
+        raise HTTPException(403, "This application is not accepting interview bookings.")
     if app.deletion_requested_at is not None:
         raise HTTPException(409, "This application is not accepting interview bookings.")
     iv = await latest_interview(db, app.id)
@@ -715,6 +718,9 @@ async def book(token: str, body: BookIn, request: Request, db: Annotated[AsyncSe
     if when <= now():
         raise HTTPException(422, "That time has passed. Ask the team for new times.")
     first = iv.chosen is None
+    from orbit_api.business.coordination import close_on_booking
+
+    await close_on_booking(db, app, iv)
     iv.chosen = when
     iv.revision += 1
     if app.email_confirmed_at is None:

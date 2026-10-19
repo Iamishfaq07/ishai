@@ -33,7 +33,8 @@ from orbit_api.models import (
 log = logging.getLogger(__name__)
 TITLES = {"stalled": "Review the stalled pipeline stage", "question": "Reply to the candidate's question",
     "feedback": "Collect outstanding interview feedback",
-    "assessment": "Review assessment or alternative interview request"}
+    "assessment": "Review assessment or alternative interview request",
+    "scheduling": "Reply to a candidate's interview time request"}
 
 
 class Recipe(BaseModel):
@@ -43,6 +44,7 @@ class Recipe(BaseModel):
     question_hours: int | None = Field(24, ge=1, le=168)
     feedback_hours: int | None = Field(24, ge=1, le=168)
     assessment_hours: int | None = Field(24, ge=1, le=168)
+    scheduling_hours: int | None = Field(None, ge=1, le=168)
     default_assignee_id: str | None = Field(None, max_length=36)
 
 
@@ -66,7 +68,9 @@ async def signals(db: AsyncSession, job: BizJob, apps: list[BizApplication], rec
     events: dict[str, list[BizEvent]] = {a.id: [] for a in apps}
     for event in await db.scalars(select(BizEvent).where(BizEvent.application_id.in_(ids), BizEvent.kind.in_(
             ("candidate_question", "candidate_reply", "work_sample_completed", "saba_completed",
-             "saba_alternative", "hiring_decision"))).order_by(BizEvent.created_at.desc(), BizEvent.id.desc())):
+             "saba_alternative", "hiring_decision", "interview_change_requested", "interview_change_replied",
+             "interview_change_withdrawn", "interview_change_closed")))
+            .order_by(BizEvent.created_at.desc(), BizEvent.id.desc())):
         events[event.application_id].append(event)
     interviews: dict[str, BizInterview] = {}
     for interview in await db.scalars(select(BizInterview).where(BizInterview.application_id.in_(ids))
@@ -104,6 +108,13 @@ async def signals(db: AsyncSession, job: BizJob, apps: list[BizApplication], rec
                         d >= stamp for d in decisions):
                 add("assessment", event.id, stamp + timedelta(hours=recipe.assessment_hours))
         iv = interviews.get(app.id)
+        if recipe.scheduling_hours is not None and iv:
+            from orbit_api.business.coordination import render
+
+            for change in render(history, iv, iv.chosen is None or aware(iv.chosen) > now):
+                if change["status"] == "waiting":
+                    stamp = datetime.fromisoformat(change["created_at"].replace("Z", "+00:00"))
+                    add("scheduling", change["id"], stamp + timedelta(hours=recipe.scheduling_hours))
         if recipe.feedback_hours is not None and iv and iv.chosen and criteria:
             stage = app.stage_id if any(c["stage_id"] == app.stage_id for c in criteria) else criteria[0]["stage_id"]
             panel = iv.panel_user_ids if iv.panel_user_ids is not None else app.interviewers or (

@@ -49,6 +49,8 @@ import { Loading, LoadError, Panel, errorText } from "./ui";
 
 const CompanyWithdrawal = lazy(async () => ({ default: (await import("./CandidateWithdrawal")).CompanyWithdrawal }));
 const CandidateTask = lazy(async () => ({ default: (await import("./CandidateTask")).CandidateTask }));
+const SlotFinder = lazy(async () => ({ default: (await import("./SlotFinder")).SlotFinder }));
+const InterviewCoordination = lazy(async () => ({ default: (await import("./InterviewCoordination")).InterviewCoordination }));
 
 const MET: Record<BizMet, { label: string; icon: typeof CircleCheck; tone: string }> = {
   yes: { label: "Met", icon: CircleCheck, tone: "text-emerald-700 dark:text-emerald-300" },
@@ -284,6 +286,7 @@ function Scheduling({ a, onSaved }: { a: BizApplicationDetail; onSaved: (d: BizA
           <Input id={`${id}-l`} value={location} maxLength={300} onChange={(e) => setLocation(e.target.value)} />
         </Field>
       </div>
+      <Suspense fallback={<p role="status">Loading slot finder…</p>}><SlotFinder cid={company.id} aid={a.id} duration={duration} onUse={setSlots} /></Suspense>
       <Field label="Message (optional)" htmlFor={`${id}-m`}>
         <Textarea id={`${id}-m`} rows={2} maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} />
       </Field>
@@ -609,6 +612,8 @@ export function Candidate() {
             )}
             <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap rounded-xl bg-zinc-50 p-3 font-sans text-sm leading-relaxed dark:bg-white/[0.03]">{a.resume_text}</pre>
           </Section>
+
+          {company.permissions.move_applicants && <Suspense fallback={<p role="status">Loading coordination…</p>}><InterviewCoordination cid={company.id} aid={a.id} onChanged={() => { void biz.application(company.id, a.id).then(setA).catch((e: unknown) => toast({ message: errorText(e), tone: "error" })); }} /></Suspense>}
 
           <Section title="Timeline" id="timeline">
             <ol className="space-y-2 text-sm">

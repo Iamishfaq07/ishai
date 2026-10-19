@@ -55,6 +55,10 @@ async def question_page(db: AsyncSession, app: BizApplication, *, before: str | 
 
 
 _ACTIVITY = {
+    "interview_change_requested": "You requested different interview times",
+    "interview_change_replied": "Hiring team replied to your time request",
+    "interview_change_withdrawn": "You withdrew your time request",
+    "interview_change_closed": "Your time request was resolved by a booking",
     "applied": "Application received", "email_confirmed": "Email confirmed",
     "rejected": "Application review completed", "unrejected": "Application reopened",
     "hired": "Hiring team updated your application", "interview_slots": "Interview times offered",

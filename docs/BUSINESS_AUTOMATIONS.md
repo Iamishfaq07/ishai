@@ -27,6 +27,9 @@ Choose a specific job to edit its playbook; the all-jobs view aggregates accessi
   The interview plan's current applicable stage follows the same selection used by the hiring desk.
 - **Assessment review:** one task per completed work sample, completed Saba interview or alternative interview
   request that has not been followed by a recorded human hiring decision.
+- **Interview time requests:** opt-in follow-ups for candidates waiting for a scheduling reply. This new recipe
+  defaults off even on previously enabled playbooks. A reply, request withdrawal, replacement booking or
+  superseded invitation clears it. See [interview coordination](BUSINESS_COORDINATION.md).
 
 Rules read workflow state and timestamps. They do not use resume scores, identity signals, nationality, VPN
 information or private feedback text to decide who should be hired. They create internal tasks, not candidate
@@ -57,8 +60,8 @@ audit records task IDs and action metadata, without copying task titles or free-
 ## Runtime and deployment
 
 Run `alembic upgrade head` before deploying the API. Migration `58ca94f2d7e3` adds `biz_automations` and
-`biz_hiring_tasks` after the personal hosted-apply migration `47b9e3d0a6f2` (PR #414). Merge #414 before this stacked
-PR. Enterprise automation itself needs no new service, secret, provider, subscription or dependency.
+`biz_hiring_tasks` after the personal hosted-apply migration `47b9e3d0a6f2`. Enterprise automation itself needs no
+additional runtime service, secret, provider or subscription.
 
 The existing API lifespan starts a new internal loop after 30 seconds, then runs approximately every five minutes.
 It processes all due configured jobs, one company-locked transaction per job, with application scans in keyset

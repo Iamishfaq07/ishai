@@ -469,7 +469,11 @@ export interface BizTimelineEvent {
     | "tags"
     | "deletion_requested"
     | "hiring_task_created"
-    | "hiring_task_updated";
+    | "hiring_task_updated"
+    | "interview_change_requested"
+    | "interview_change_replied"
+    | "interview_change_withdrawn"
+    | "interview_change_closed";
   text: string;
   actor: string | null;
   created_at: string;
@@ -569,7 +573,7 @@ export interface BizNotification {
   id: string;
   company_id: string;
   company_name: string;
-  kind: "mention" | "automation";
+  kind: "mention" | "automation" | "scheduling";
   text: string;
   link: string; // an app path: /business/app/<cid>/applications/<aid>
   read: boolean;

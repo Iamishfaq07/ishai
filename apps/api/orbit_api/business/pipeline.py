@@ -289,6 +289,10 @@ async def list_applications(
 
 
 _EVENT_TEXT = {
+    "interview_change_requested": "Requested different interview times",
+    "interview_change_replied": "Replied to the interview time request",
+    "interview_change_withdrawn": "Withdrew the interview time request",
+    "interview_change_closed": "Resolved the interview time request by booking",
     "hiring_task_created": "Added a hiring follow-up",
     "hiring_task_updated": "Updated hiring follow-up ({action}): {note}",
     "withdrawn": "Withdrew their application", "interview_cancelled": "Interview invitation cancelled",

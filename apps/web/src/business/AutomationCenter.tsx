@@ -12,6 +12,7 @@ const RULES = [
   { key: "question_hours", name: "Candidate questions", help: "Follow up on each question still waiting for a reply.", unit: "hours", max: 168, initial: 24 },
   { key: "feedback_hours", name: "Interview feedback", help: "Collect missing panel feedback after the interview ends.", unit: "hours", max: 168, initial: 24 },
   { key: "assessment_hours", name: "Assessment review", help: "Review completed work samples, Saba interviews or alternative requests.", unit: "hours", max: 168, initial: 24 },
+  { key: "scheduling_hours", name: "Interview time requests", help: "Reply when a candidate needs different interview times. Off until you enable this rule.", unit: "hours", max: 168, initial: 24 },
 ] as const;
 const errorOf = (e: unknown) => e instanceof Error ? e : new Error(String(e));
 

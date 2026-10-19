@@ -27,6 +27,7 @@ dependencies = [
     "pillow>=10.1",
     "webauthn>=2.5",
     "tldextract>=5.1",
+    "tzdata>=2026.5",
 ]
 
 [dependency-groups]

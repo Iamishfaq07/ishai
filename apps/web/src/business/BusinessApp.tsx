@@ -440,7 +440,7 @@ function Notifications() {
     <>
       <Header />
       <Page>
-        <PageTitle title="Notifications" subtitle="Team mentions and assigned hiring follow-ups." />
+        <PageTitle title="Notifications" subtitle="Team mentions, hiring follow-ups and scheduling requests." />
         {error ? (
           <LoadError error={error} />
         ) : !items ? (
