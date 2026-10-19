@@ -54,6 +54,8 @@ from orbit_api.business.pipeline import router as business_pipeline_router
 from orbit_api.business.retention import running_sweeper as running_business_sweeper
 from orbit_api.business.screening import public_router as business_screening_public_router
 from orbit_api.business.screening import router as business_screening_router
+from orbit_api.business.withdrawal import public_router as business_withdrawal_public_router
+from orbit_api.business.withdrawal import router as business_withdrawal_router
 from orbit_api.career.routes import router as career_router
 from orbit_api.code.routes import router as code_router
 from orbit_api.config import get_settings
@@ -417,6 +419,8 @@ def create_app() -> FastAPI:
     app.include_router(business_offers_public_router)
     app.include_router(business_handoff_router)
     app.include_router(business_handoff_public_router)
+    app.include_router(business_withdrawal_public_router)
+    app.include_router(business_withdrawal_router)
     app.include_router(business_apply_router)
     app.include_router(business_apply_public_router)
     app.include_router(business_admin_router)

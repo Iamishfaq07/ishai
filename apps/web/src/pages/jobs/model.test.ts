@@ -35,6 +35,13 @@ it("keeps confirmed hires out of interview and follow-up reminders", () => {
   expect(byStatus([hired]).hired).toEqual([hired]);
 });
 
+it("keeps withdrawn applications out of interview and follow-up reminders", () => {
+  const withdrawn = { ...entry("withdrawn", "withdrawn", ago(H)), next_at: ago(-H), applied_at: ago(240 * H) };
+  expect(nextUp([withdrawn], NOW)).toBeNull();
+  expect(followUps([withdrawn], NOW)).toEqual([]);
+  expect(byStatus([withdrawn]).withdrawn).toEqual([withdrawn]);
+});
+
 function prefs(over: Partial<JobPrefs> = {}): JobPrefs {
   return {
     titles: ["Backend Engineer", "Platform Engineer", "Software Engineer"],

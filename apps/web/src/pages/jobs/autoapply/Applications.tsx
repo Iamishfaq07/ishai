@@ -317,6 +317,7 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
       {(p.confirmation_text || p.final_url || shot) && (
         <section className="space-y-2">
           <h3 className="font-semibold">{p.group === "applied" ? "Proof" : "Where it stopped"}</h3>
+          {p.employer_status_path?.startsWith("/application/") && <p><Link to={p.employer_status_path} className={textLink}>Manage employer application</Link><span className="mt-1 block text-xs text-zinc-500">Read employer updates, interviews and offers, or withdraw this application.</span></p>}
           {p.confirmation_text && (
             <blockquote className="rounded-xl bg-emerald-500/10 p-3 text-sm" data-testid="confirmation-text">
               {p.group === "applied" && <span className="block text-xs font-medium text-emerald-800 dark:text-emerald-300">The site's confirmation</span>}
@@ -335,7 +336,7 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
               )}
             </p>
           )}
-          {!p.screenshot_url && p.group === "applied" && (
+          {!p.screenshot_url && p.group === "applied" && p.ats !== "orbit" && (
             <p className="text-xs text-zinc-500 dark:text-zinc-400">No picture of the page: the browser extension keeps the site's own confirmation and its address as the proof.</p>
           )}
           {shot && <img src={shot} alt={`The page after applying to ${p.company}`} className="max-h-96 rounded-xl border border-zinc-200 dark:border-white/10" />}

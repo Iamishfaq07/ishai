@@ -2,6 +2,7 @@
 carried out, and jobs past their valid-through date close (so Google drops them).
 
 What's deleted (D82, amended):
+- a withdrawn application after its original retention period, measured from withdrawal;
 - a rejected application, its retention (the company's setting *when that person applied*, kept on the application)
   after the rejection;
 - an application still in the pipeline (not hired, not rejected) on a job closed for longer than that retention;
@@ -58,16 +59,20 @@ async def sweep(now: datetime | None = None) -> dict[str, int]:
                 select(BizApplication, BizJob).join(BizJob, BizJob.id == BizApplication.job_id)
                 .where(BizApplication.company_id == c.id,
                        or_(BizApplication.deletion_requested_at.is_not(None),
+                           BizApplication.status == "withdrawn",
                            and_(BizApplication.status == "rejected", BizApplication.rejected_at.is_not(None)),
                            and_(BizApplication.status == "active", BizJob.status == "closed")))
                 .options(load_only(BizApplication.id, BizApplication.reference, BizApplication.status,
                                    BizApplication.rejected_at, BizApplication.retention_months,
+                                   BizApplication.stage_changed_at,
                                    BizApplication.deletion_requested_at, BizApplication.deletion_reminders)))).all()
             by_reason: dict[str, int] = {}
             due: list[tuple[BizApplication, BizJob, int]] = []
             for app, job in apps:
                 keep = (app.retention_months or c.retention_months) * MONTH
                 reason = None
+                if app.status == "withdrawn" and _aware(app.stage_changed_at) + keep < now:
+                    reason = "withdrawn"
                 if app.deletion_requested_at is not None:
                     deadline = _aware(app.deletion_requested_at) + timedelta(days=rules.DELETION_DAYS)
                     if deadline <= now:

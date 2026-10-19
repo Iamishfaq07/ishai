@@ -175,7 +175,8 @@ async def _counts(db: AsyncSession, job: BizJob) -> Counts:
     total = new = 0
     first = rules.first_stage(job.stages, "applied")
     for stage_id, st, n in rows:
-        by_stage[stage_id] = by_stage.get(stage_id, 0) + int(n)
+        if st != "withdrawn":
+            by_stage[stage_id] = by_stage.get(stage_id, 0) + int(n)
         total += int(n)
         if stage_id == first and st == "active":
             new += int(n)

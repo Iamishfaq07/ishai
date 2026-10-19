@@ -131,6 +131,8 @@ def stages_for(f: Facts) -> dict[str, bool]:
 
 def next_step(f: Facts, listing_path: str) -> NextStep | None:
     """The first gap, in the order a job is won, with why in words. None once nothing is left to suggest."""
+    if f.status == "withdrawn":
+        return None
     if f.status == "rejected":
         return NextStep(key="debrief", title="Note what you learned", action="Add a note",
                         why="This one closed. A line on what they asked and what you'd change helps the next one.",

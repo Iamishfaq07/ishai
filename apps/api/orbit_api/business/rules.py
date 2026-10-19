@@ -364,10 +364,11 @@ CANDIDATE_STAGE: dict[str, tuple[str, str]] = {
     "offer": ("Offer", "The team is preparing or has made you an offer."),
     "hired": ("Hired", "Congratulations, you've been hired."),
     "rejected": ("Not moving forward", "The team has decided not to move forward this time."),
+    "withdrawn": ("Withdrawn", "You withdrew this application. The hiring team cannot move it forward."),
 }
 # The candidate's Jobs AI tracker status for each kind of stage (job_portal: saved|applied|interviewing|offer|rejected).
 TRACKER_STATUS: dict[str, str] = {"applied": "applied", "screen": "applied", "interview": "interviewing",
-                                  "offer": "offer", "hired": "hired", "rejected": "rejected"}
+                                  "offer": "offer", "hired": "hired", "rejected": "rejected", "withdrawn": "withdrawn"}
 
 
 def stage_kind(stages: list[dict[str, Any]], stage_id: str) -> str:
@@ -429,6 +430,15 @@ def notice_text(company: str, retention_months: int) -> str:
 
 
 DELETION_DAYS = 30  # a deletion request is carried out by the sweep at the latest this long after it's made
+WITHDRAWAL_NOTICE_VERSION = "2026-10-19.1"
+
+
+def withdrawal_notice(months: int) -> str:
+    return ("Withdrawal ends consideration for this application and cancels outstanding Orbit interview invitations. "
+        f"The saved application, your reason and note remain with the hiring team for up to {months} months after "
+        "withdrawal, using the retention period recorded when you applied. You can request data deletion separately "
+        f"at any time; it is carried out within {DELETION_DAYS} days. Withdrawal does not change saved offer "
+        "responses, any formal agreement, other applications or your automatic-apply settings.")
 
 
 def notice_digest(text: str) -> str:

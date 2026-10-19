@@ -77,11 +77,12 @@ export function Dashboard() {
         <Loading />
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
             <Stat label="Open jobs" value={data.open_jobs} />
             <Stat label="Applicants" value={data.applicants_total} />
             <Stat label="Last 30 days" value={data.applicants_30d} />
             <Stat label="Hired" value={data.hired} />
+              <Stat label="Withdrawn" value={data.withdrawn} />
             <Stat label="Time to first reply" value={hours(data.median_first_response_hours)} detail="Median, from applying to the team's first move" />
           </div>
           <div className="grid gap-5 lg:grid-cols-2">

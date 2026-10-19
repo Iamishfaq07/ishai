@@ -98,7 +98,7 @@ PAGE_SIZE = 20
 MAX_TRACKED = 500
 MAX_FIT_EVIDENCE = 40  # confirmed evidence claims a fit check reads, most recently changed first
 FULL_TEXT_MIN = 700  # shorter than this, a post is likely only a snippet: tailoring fetches the page once
-Status = Literal["saved", "applied", "interviewing", "offer", "hired", "rejected"]
+Status = Literal["saved", "applied", "interviewing", "offer", "hired", "rejected", "withdrawn"]
 Sort = Literal["best", "newest"]
 
 _user_locks: dict[str, asyncio.Lock] = {}
@@ -906,6 +906,8 @@ async def track(body: TrackIn, user: Annotated[User, Depends(current_user)],
 
 
 def _move(entry: JobApplication, to: Status) -> None:
+    if to in ("withdrawn", "hired"):
+        entry.next_at = None
     if entry.status != to:
         entry.status, entry.status_at = to, datetime.now(UTC)
     if to == "applied" and entry.applied_at is None:

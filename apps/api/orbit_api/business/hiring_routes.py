@@ -408,7 +408,7 @@ async def _staff_conversation(db: AsyncSession, ctx: CompanyCtx, app: BizApplica
         mask=lambda text: hiring.blind_text(ctx, app, text), staff=True),
         "activity": await conversations.activity(db, app, job),
         "accepting": ctx.can("move_applicants") and ctx.company.status == "active"
-            and app.email_confirmed_at is not None and app.deletion_requested_at is None}
+            and app.status != "withdrawn" and app.email_confirmed_at is not None and app.deletion_requested_at is None}
 
 
 @router.get("/applications/{application_id}/conversation")
@@ -427,8 +427,8 @@ async def reply_to_candidate(application_id: str, question_id: str, body: ReplyI
     app, job = await application_for(db, ctx, application_id)
     await lock_company(db, ctx.company.id)
     await db.refresh(app)
-    if app.deletion_requested_at is not None or app.email_confirmed_at is None:
-        raise HTTPException(409, "Replies require a confirmed application that is not awaiting deletion.")
+    if app.status == "withdrawn" or app.deletion_requested_at is not None or app.email_confirmed_at is None:
+        raise HTTPException(409, "Replies require a confirmed application that is not withdrawn or awaiting deletion.")
     question = await db.get(BizEvent, question_id)
     if question is None or question.application_id != app.id or question.kind != "candidate_question":
         raise HTTPException(404, "Question not found.")

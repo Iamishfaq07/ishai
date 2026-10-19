@@ -362,7 +362,7 @@ export interface BizJobAssist {
 
 // ─── Applications (company side) ─────────────────────────────────────────────
 
-export type BizApplicationState = "active" | "rejected" | "hired";
+export type BizApplicationState = "active" | "rejected" | "hired" | "withdrawn";
 export type BizSource = "careers" | "widget" | "orbit" | "google" | "linkedin" | "direct" | "other";
 export type BizMet = "yes" | "partly" | "no";
 
@@ -458,6 +458,7 @@ export interface BizTimelineEvent {
     | "stage"
     | "rejected"
     | "unrejected"
+    | "withdrawn"
     | "hired"
     | "note"
     | "scorecard"
@@ -596,6 +597,7 @@ export interface BizJobAnalytics {
 }
 
 export interface BizCompanyAnalytics {
+  withdrawn: number;
   open_jobs: number;
   applicants_total: number;
   applicants_30d: number;
@@ -697,6 +699,12 @@ export interface BizApplyResult {
 
 /** GET /v1/public/business/applications/{token} : the candidate's status page */
 export interface BizApplicationStatus {
+  reference: string;
+  application_state: BizApplicationState;
+  can_withdraw: boolean;
+  withdrawn_at: string | null;
+  withdrawal_notice: string;
+  withdrawal_notice_version: string;
   company: { name: string; logo_url: string | null; slug: string };
   job_title: string;
   job_url: string;

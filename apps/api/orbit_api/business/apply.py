@@ -432,7 +432,7 @@ async def sync_tracker_status(db: AsyncSession, app: BizApplication, kind: str) 
     status_ = rules.TRACKER_STATUS.get(kind, "applied")
     if entry.status != status_:
         entry.status, entry.status_at = status_, now()
-        if status_ == "hired":
+        if status_ in ("hired", "withdrawn"):
             entry.next_at = None
 
 
@@ -614,6 +614,12 @@ class StatusCompany(BaseModel):
 
 
 class StatusOut(BaseModel):
+    reference: str
+    application_state: Literal["active", "rejected", "hired", "withdrawn"]
+    can_withdraw: bool
+    withdrawn_at: datetime | None
+    withdrawal_notice_version: str
+    withdrawal_notice: str
     company: StatusCompany
     job_title: str
     job_url: str
@@ -644,14 +650,19 @@ async def latest_interview(db: AsyncSession, app_id: str) -> BizInterview | None
 
 async def _status(db: AsyncSession, app: BizApplication, job: BizJob, company: BizCompany) -> StatusOut:
     from orbit_api.business.scheduling import available_slots
-    kind = "rejected" if app.status == "rejected" else rules.stage_kind(job.stages, app.stage_id)
+    kind = app.status if app.status in ("rejected", "withdrawn") else rules.stage_kind(job.stages, app.stage_id)
     label, detail = rules.CANDIDATE_STAGE.get(kind, rules.CANDIDATE_STAGE["applied"])
     iv = await latest_interview(db, app.id)
     interview = StatusInterview(slots=await available_slots(db, iv, app.interviewers or []),
                                 duration_min=iv.duration_min, location=iv.location,
                                 chosen=iso(iv.chosen)) \
         if iv is not None and iv.slots and app.status == "active" else None
-    return StatusOut(company=StatusCompany(name=company.name, logo_url=logo_url(company), slug=company.slug),
+    return StatusOut(reference=app.reference, application_state=app.status,
+                     withdrawal_notice_version=rules.WITHDRAWAL_NOTICE_VERSION,
+                     withdrawal_notice=rules.withdrawal_notice(app.retention_months or company.retention_months),
+                     can_withdraw=app.status == "active" and app.email_confirmed_at is not None,
+                     withdrawn_at=_aware(app.stage_changed_at) if app.status == "withdrawn" else None,
+                     company=StatusCompany(name=company.name, logo_url=logo_url(company), slug=company.slug),
                      job_title=job.title, job_url=public_url(company, job), stage_label=label, stage_detail=detail,
                      applied_at=_aware(app.created_at) or now(), email_confirmed=app.email_confirmed_at is not None,
                      interview=interview, deletion_requested=app.deletion_requested_at is not None)

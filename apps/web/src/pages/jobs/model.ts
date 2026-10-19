@@ -15,7 +15,7 @@ import type {
   OutreachKind,
 } from "@orbit/types";
 
-export const STATUSES: JobStatus[] = ["saved", "applied", "interviewing", "offer", "hired", "rejected"];
+export const STATUSES: JobStatus[] = ["saved", "applied", "interviewing", "offer", "hired", "rejected", "withdrawn"];
 
 export const STATUS_LABEL: Record<JobStatus, string> = {
   saved: "Saved",
@@ -23,6 +23,7 @@ export const STATUS_LABEL: Record<JobStatus, string> = {
   interviewing: "Interviewing",
   offer: "Offer",
   hired: "Hired",
+  withdrawn: "Withdrawn",
   rejected: "Not this time",
 };
 
@@ -36,6 +37,7 @@ export const STATUS_MARK: Record<JobStatus, string> = {
   interviewing: "bg-stage-interviewing",
   offer: "bg-stage-offer",
   hired: "bg-stage-offer",
+  withdrawn: "bg-stage-saved",
   rejected: "bg-stage-rejected",
 };
 
@@ -238,7 +240,7 @@ export function byStatus(entries: JobTrackerEntry[]): Record<JobStatus, JobTrack
 export function nextUp(entries: JobTrackerEntry[], now: number = Date.now()): JobTrackerEntry | null {
   const today = new Date(now);
   today.setHours(0, 0, 0, 0);
-  const coming = entries.filter((e) => e.next_at && !["rejected", "hired"].includes(e.status) && new Date(e.next_at).getTime() >= today.getTime());
+  const coming = entries.filter((e) => e.next_at && !["rejected", "hired", "withdrawn"].includes(e.status) && new Date(e.next_at).getTime() >= today.getTime());
   coming.sort((a, b) => a.next_at!.localeCompare(b.next_at!));
   return coming[0] ?? null;
 }
@@ -431,7 +433,7 @@ const FOLLOW_UP_ORDER: Record<FollowUpKind, number> = { overdue: 0, today: 1, to
 export function followUps(entries: JobTrackerEntry[], now: number = Date.now()): FollowUp[] {
   const out: FollowUp[] = [];
   for (const entry of entries) {
-    if (["offer", "hired", "rejected"].includes(entry.status)) continue;
+    if (["offer", "hired", "rejected", "withdrawn"].includes(entry.status)) continue;
     const interview = entry.status === "interviewing";
     if (entry.next_at) {
       const d = daysBetween(now, Date.parse(entry.next_at));
