@@ -41,6 +41,8 @@ from orbit_api.business.admin import router as business_admin_router
 from orbit_api.business.analytics import router as business_analytics_router
 from orbit_api.business.apply import public_router as business_apply_public_router
 from orbit_api.business.apply import router as business_apply_router
+from orbit_api.business.automation import running_sweeper as running_business_automations
+from orbit_api.business.automation_routes import router as business_automation_router
 from orbit_api.business.companies import public_router as business_public_router
 from orbit_api.business.companies import router as business_router
 from orbit_api.business.handoff import public_router as business_handoff_public_router
@@ -147,7 +149,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         logging.getLogger(__name__).exception("replaying failed writes failed; the replayer retries")
     async with (jobs.running_worker(s.job_poll_s), running_sweeper(s.session_sweep_s), running_replayer(),
-                running_job_refresher(), running_business_sweeper()):
+                running_job_refresher(), running_business_sweeper(), running_business_automations()):
         yield
         await drain_teardowns()
         # A last try for writes that failed during an outage: the spool file and memory go with this process.
@@ -414,6 +416,7 @@ def create_app() -> FastAPI:
     app.include_router(business_pipeline_router)
     app.include_router(business_analytics_router)
     app.include_router(business_hiring_router)
+    app.include_router(business_automation_router)
     app.include_router(business_hiring_public_router)
     app.include_router(business_screening_router)
     app.include_router(business_screening_public_router)
