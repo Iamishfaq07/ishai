@@ -1,5 +1,9 @@
 # Deploying Orbit
 
+Business hiring playbooks run inside the API with no additional service or keys. Apply migration
+`58ca94f2d7e3` after `47b9e3d0a6f2`, then keep the API running for background task reconciliation.
+See [enterprise automation operations and rollback](BUSINESS_AUTOMATIONS.md).
+
 The live deployment is: API + WebSocket on **Railway** (Hobby plan, Docker from `apps/api/Dockerfile`, Singapore)
 at **`https://api.orbitanswer.com`**, Postgres on **Neon**, and the web app on **Cloudflare Workers static assets**
 (`wrangler.jsonc` at the repo root). AI keys are shared server secrets; the desktop app talks to the same API. The

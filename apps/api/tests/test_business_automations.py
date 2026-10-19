@@ -345,3 +345,27 @@ def test_blind_manual_titles_and_notes_do_not_reveal_candidate_identity(client: 
         "base_revision": 1, "action": "done", "note": f"Spoke to {name} about their schedule"}).raise_for_status()
     detail = client.get(f"/v1/business/companies/{cid}/applications/{aid}", headers=auth(owner)).json()
     assert name not in str(detail["timeline"])
+    audit_log = client.get(f"/v1/business/companies/{cid}/audit", headers=auth(owner)).json()
+    assert name not in str(audit_log) and "Spoke to" not in str(audit_log)
+
+
+def test_task_notes_respect_independent_feedback_and_notifications_open_queue(client: TestClient) -> None:
+    owner, cid, job, aid, _token = setup(client)
+    save_plan(client, owner, cid, job["id"])
+    peer = register(client, f"private-notes-{tag()}@example.com")
+    async def member(db: Any) -> None:
+        db.add(BizMember(company_id=cid, user_id=uid(peer), role="interviewer"))
+        (await db.get(BizApplication, aid)).interviewers = [uid(peer), uid(owner)]
+    db_call(client, member)
+    task, _body = manual(client, owner, cid, aid)
+    base = f"/v1/business/companies/{cid}"
+    secret = "Private coordinator observation before independent review"
+    client.post(f"{base}/hiring-tasks/{task['id']}", headers=auth(owner), json={"base_revision": 1,
+        "action": "assign", "assignee_id": uid(owner), "note": secret}).raise_for_status()
+    detail = client.get(f"{base}/applications/{aid}", headers=auth(peer)).json()
+    assert secret not in str(detail["timeline"])
+    own_detail = client.get(f"{base}/applications/{aid}", headers=auth(owner)).json()
+    assert secret in str(own_detail["timeline"])
+    alerts = client.get("/v1/business/notifications", headers=auth(owner)).json()
+    task_alert = next(n for n in alerts if n["kind"] == "automation")
+    assert task_alert["link"] == f"/business/app/{cid}/automations"

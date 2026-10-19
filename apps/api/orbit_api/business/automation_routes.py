@@ -7,14 +7,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from orbit_api import ratelimit
 from orbit_api.business import automation, rules
-from orbit_api.business.access import CompanyCtx, application_for, audit, job_for, lock_company, sees_job, timeline
+from orbit_api.business.access import CompanyCtx, Ctx, application_for, audit, job_for, lock_company, sees_job, timeline
 from orbit_api.business.hiring import aware
 from orbit_api.db import get_db
 from orbit_api.documents.uploads import sanitize_text
-from orbit_api.models import BizApplication, BizAutomation, BizHiringTask, BizJob, BizNotification
+from orbit_api.models import BizApplication, BizAutomation, BizHiringTask, BizJob, BizMember, BizNotification
 
 router = APIRouter(prefix="/v1/business/companies/{company_id}", tags=["business automations"])
 _writes = ratelimit.SlidingWindow(rate_per_s=60 / 3600, burst=60)
@@ -65,6 +66,32 @@ async def owner_valid(db: AsyncSession, job: BizJob, user_id: str | None) -> Non
         raise HTTPException(422, "Choose a current coordinator who can access this job.")
 
 
+async def lock_writes(db: AsyncSession, ctx: Ctx) -> None:
+    await lock_company(db, ctx.company.id)
+    await db.refresh(ctx.company)
+    ctx.writable()
+    member = await db.scalar(select(BizMember).where(BizMember.company_id == ctx.company.id,
+        BizMember.user_id == ctx.user.id).execution_options(populate_existing=True))
+    if member is None:
+        raise HTTPException(404, "Not found.")
+    ctx.member = member
+    ctx.require("move_applicants")
+
+
+async def current_job(db: AsyncSession, ctx: Ctx, job_id: str) -> BizJob:
+    if await db.get(BizJob, job_id, populate_existing=True) is None:
+        raise HTTPException(404, "Not found.")
+    return await job_for(db, ctx, job_id)
+
+
+async def current_application(db: AsyncSession, ctx: Ctx, application_id: str) -> tuple[BizApplication, BizJob]:
+    app = await db.get(BizApplication, application_id, populate_existing=True)
+    if app is None:
+        raise HTTPException(404, "Not found.")
+    await current_job(db, ctx, app.job_id)
+    return await application_for(db, ctx, application_id)
+
+
 @router.get("/automations")
 async def settings(ctx: CompanyCtx, db: Db) -> dict[str, Any]:
     ctx.require("move_applicants")
@@ -86,9 +113,8 @@ async def save(job_id: str, body: RecipeIn, ctx: CompanyCtx, db: Db) -> dict[str
     ctx.require("move_applicants")
     ctx.writable()
     job = await job_for(db, ctx, job_id)
-    await lock_company(db, ctx.company.id)
-    await db.refresh(job)
-    await job_for(db, ctx, job_id)
+    await lock_writes(db, ctx)
+    job = await current_job(db, ctx, job_id)
     await owner_valid(db, job, body.recipe.default_assignee_id)
     row = await db.get(BizAutomation, job.id, populate_existing=True)
     if (row.revision if row else 0) != body.base_revision:
@@ -121,7 +147,9 @@ async def preview(job_id: str, ctx: CompanyCtx, db: Db,
     cursor = ""
     while True:
         apps = list(await db.scalars(select(BizApplication).where(BizApplication.job_id == job.id,
-            BizApplication.id > cursor).order_by(BizApplication.id).limit(200)))
+            BizApplication.id > cursor).order_by(BizApplication.id).limit(200).options(load_only(
+                BizApplication.id, BizApplication.status, BizApplication.stage_id, BizApplication.stage_changed_at,
+                BizApplication.deletion_requested_at))))
         if not apps:
             break
         for pending in (await automation.signals(db, job, apps, recipe, datetime.now(UTC))).values():
@@ -137,9 +165,8 @@ async def run(job_id: str, ctx: CompanyCtx, db: Db) -> dict[str, Any]:
     ctx.require("move_applicants")
     ctx.writable()
     job = await job_for(db, ctx, job_id)
-    await lock_company(db, ctx.company.id)
-    await db.refresh(job)
-    await job_for(db, ctx, job_id)
+    await lock_writes(db, ctx)
+    job = await current_job(db, ctx, job_id)
     row = await db.get(BizAutomation, job.id, populate_existing=True)
     ratelimit.check(_writes, f"biz-automation:{ctx.user.id}")
     changes = await automation.reconcile(db, ctx.company, job, row, datetime.now(UTC))
@@ -186,7 +213,9 @@ async def tasks(ctx: CompanyCtx, db: Db, status: Literal["open", "snoozed", "don
             and_(BizHiringTask.due_at == cursor.due_at, BizHiringTask.id > cursor.id)))
     rows = list(await db.scalars(query.order_by(BizHiringTask.due_at, BizHiringTask.id).limit(51)))
     apps = {a.id: a for a in await db.scalars(select(BizApplication).where(
-        BizApplication.id.in_([t.application_id for t in rows[:50]])))}
+        BizApplication.id.in_([t.application_id for t in rows[:50]])).options(load_only(BizApplication.id,
+            BizApplication.name, BizApplication.reference, BizApplication.email, BizApplication.phone,
+            BizApplication.status, BizApplication.deletion_requested_at)))}
     return {"items": [task_payload(t, apps[t.application_id], jobs[t.job_id], ctx.company.blind_review)
         for t in rows[:50]], "next_after": rows[49].id if len(rows) > 50 else None,
         "counts": grouped, "overdue": overdue or 0, "as_of": current.isoformat()}
@@ -197,10 +226,8 @@ async def create_task(application_id: str, body: TaskIn, ctx: CompanyCtx, db: Db
     ctx.require("move_applicants")
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
-    await lock_company(db, ctx.company.id)
-    await db.refresh(app)
-    await db.refresh(job)
-    await application_for(db, ctx, application_id)
+    await lock_writes(db, ctx)
+    app, job = await current_application(db, ctx, application_id)
     key = str(body.request_id)
     title = sanitize_text(body.title).strip()
     if len(title) < 5:
@@ -241,11 +268,11 @@ async def update_task(task_id: str, body: TaskAction, ctx: CompanyCtx, db: Db) -
     if task is None or task.company_id != ctx.company.id:
         raise HTTPException(404, "Not found.")
     app, job = await application_for(db, ctx, task.application_id)
-    await lock_company(db, ctx.company.id)
-    await db.refresh(task)
-    await db.refresh(app)
-    await db.refresh(job)
-    await application_for(db, ctx, app.id)
+    await lock_writes(db, ctx)
+    task = await db.get(BizHiringTask, task_id, populate_existing=True)
+    if task is None:
+        raise HTTPException(404, "Not found.")
+    app, job = await current_application(db, ctx, task.application_id)
     active(app, job)
     if task.revision != body.base_revision:
         raise conflict()
@@ -273,6 +300,6 @@ async def update_task(task_id: str, body: TaskAction, ctx: CompanyCtx, db: Db) -
     timeline(db, app, "hiring_task_updated", ctx.user, task_id=task.id, action=body.action,
         note=note, assignee_id=task.assignee_id)
     audit(db, ctx.company.id, ctx.user, "automation.task_updated", task.id, job_id=job.id,
-        task_action=body.action, note=note, assignee_id=task.assignee_id)
+        task_action=body.action, assignee_id=task.assignee_id)
     await db.commit()
     return task_payload(task, app, job, ctx.company.blind_review)

@@ -51,6 +51,8 @@ Job access applies to every endpoint. Interviewers cannot configure or work the 
 masks candidate identifiers in titles and task notes. Public candidate activity excludes internal task events.
 Private peer task notes follow the independent-feedback visibility gate. Application deletion also removes tasks.
 Configuration, human actions and automatic creation/resolution are recorded in the company audit log.
+Free-text reasons stay in the application's private history and are deleted with it. The long-lived company
+audit records task IDs and action metadata, without copying task titles or free-text candidate information.
 
 ## Runtime and deployment
 
