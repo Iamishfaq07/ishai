@@ -543,21 +543,22 @@ export function trackerCsv(entries: JobTrackerEntry[]): string {
 }
 
 /** Text for an iCalendar property: backslash, semicolon, comma and line breaks escaped (RFC 5545). */
-function icsText(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+export function icsText(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,")
+    // eslint-disable-next-line no-control-regex -- Calendar TEXT must not contain raw control bytes.
+    .replace(/\r\n|\r|\n/g, "\\n").replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "");
 }
 
 /** RFC 5545 lines are at most 75 octets: longer ones continue on the next line after a space. */
-function icsFold(line: string): string {
+export function icsFold(line: string): string {
   const out: string[] = [];
-  let rest = line;
-  while (new TextEncoder().encode(rest).length > 75) {
-    let cut = 74;
-    while (new TextEncoder().encode(rest.slice(0, cut)).length > 74) cut--;
-    out.push(rest.slice(0, cut));
-    rest = " " + rest.slice(cut);
+  let current = "", bytes = 0;
+  for (const char of line) {
+    const size = new TextEncoder().encode(char).length;
+    if (bytes + size > 75) { out.push(current); current = " "; bytes = 1; }
+    current += char; bytes += size;
   }
-  out.push(rest);
+  out.push(current);
   return out.join("\r\n");
 }
 

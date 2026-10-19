@@ -978,6 +978,17 @@ class JobFitCheck(TimestampMixin, Base):
 # ---- Contact (orbit_api/contact, admin/inbox.py) ----------------------------------------------------------------
 
 
+class CareerWeeklyGoal(Base):
+    """Account-owned targets; activity is derived from source records, never manually marked complete."""
+    __tablename__ = "career_weekly_goals"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    applications: Mapped[int] = mapped_column(Integer, default=5)
+    practice: Mapped[int] = mapped_column(Integer, default=2)
+    contacts: Mapped[int] = mapped_column(Integer, default=2)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class JobContact(TimestampMixin, Base):
     """A person in the user's job search: a referrer, a recruiter, an alum, the hiring manager. Who they are, how to
     reach them, notes, when the user last got in touch and when to follow up; optionally linked to a tracked job

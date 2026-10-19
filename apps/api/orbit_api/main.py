@@ -45,6 +45,7 @@ from orbit_api.business.automation import running_sweeper as running_business_au
 from orbit_api.business.automation_routes import router as business_automation_router
 from orbit_api.business.companies import public_router as business_public_router
 from orbit_api.business.companies import router as business_router
+from orbit_api.business.control_room import router as business_control_router
 from orbit_api.business.coordination import public_router as business_coordination_public_router
 from orbit_api.business.coordination import router as business_coordination_router
 from orbit_api.business.handoff import public_router as business_handoff_public_router
@@ -84,6 +85,7 @@ from orbit_api.job_portal.mission import router as job_mission_router
 from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
 from orbit_api.job_portal.routes import router as jobs_router
+from orbit_api.job_portal.weekly import router as job_weekly_router
 from orbit_api.linkedin.routes import router as linkedin_router
 from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
 from orbit_api.offers.routes import router as offers_router
@@ -406,6 +408,8 @@ def create_app() -> FastAPI:
     app.include_router(jobs_router)
     app.include_router(job_contacts_router)
     app.include_router(job_actions_router)
+    app.include_router(job_weekly_router)
+    app.include_router(business_control_router)
     app.include_router(business_plan_assist_router)
     app.include_router(offers_router)
     app.include_router(linkedin_router)

@@ -4,7 +4,7 @@ import type { BizAutomationJob, BizAutomationPreview, BizAutomationRecipe, BizHi
 import { Badge, Button, Callout, Field, Input, Select, buttonClass } from "@orbit/ui";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { automationApi } from "./automationApi";
-import { applicationPath } from "./model";
+import { applicationPath, jobPath } from "./model";
 import { LoadError, Loading, Panel } from "./ui";
 
 const RULES = [
@@ -13,6 +13,7 @@ const RULES = [
   { key: "feedback_hours", name: "Interview feedback", help: "Collect missing panel feedback after the interview ends.", unit: "hours", max: 168, initial: 24 },
   { key: "assessment_hours", name: "Assessment review", help: "Review completed work samples, Saba interviews or alternative requests.", unit: "hours", max: 168, initial: 24 },
   { key: "scheduling_hours", name: "Interview time requests", help: "Reply when a candidate needs different interview times. Off until you enable this rule.", unit: "hours", max: 168, initial: 24 },
+  { key: "prep_hours", name: "Interview preparation", help: "Before a booked interview, flag a missing active panel or saved interview criteria. Off until enabled.", unit: "hours", max: 168, initial: 24 },
 ] as const;
 const errorOf = (e: unknown) => e instanceof Error ? e : new Error(String(e));
 
@@ -49,7 +50,7 @@ function RecipeEditor({ job, cid, onSaved }: { job: BizAutomationJob; cid: strin
         <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={draft[rule.key] !== null} disabled={disabled}
           onChange={(e) => edit({ ...draft, [rule.key]: e.target.checked ? rule.initial : null })} />{rule.name}</label>
         <p className="my-2 text-xs text-zinc-500 dark:text-zinc-400">{rule.help}</p>
-        <Field label={`Follow up after (${rule.unit})`} htmlFor={`${id}-${rule.key}`}>
+        <Field label={`${rule.key === "prep_hours" ? "Prepare before" : "Follow up after"} (${rule.unit})`} htmlFor={`${id}-${rule.key}`}>
           <Input id={`${id}-${rule.key}`} type="number" min={1} max={rule.max} required={draft[rule.key] !== null}
             disabled={disabled || draft[rule.key] === null} value={draft[rule.key] ?? ""}
             onChange={(e) => edit({ ...draft, [rule.key]: e.target.value === "" ? null : Number(e.target.value) })} />
@@ -103,6 +104,8 @@ function TaskCard({ task, job, cid, onSaved }: { task: BizHiringTask; job?: BizA
     {task.snoozed_until && <p className="mt-1 text-sm">Snoozed until {new Date(task.snoozed_until).toLocaleString()}</p>}
     {task.resolution && <p className="mt-1 text-sm text-zinc-500">{task.resolution}</p>}
     <Link className={`mt-3 ${buttonClass("secondary", "sm")}`} to={applicationPath(cid, task.application_id)}>Open application</Link>
+    {task.kind === "prep" && <div className="mt-3 space-y-2"><p className="text-xs text-zinc-600 dark:text-zinc-400">Check the active panel and saved interview criteria. This reminder resolves when the setup is ready or the booking clears.</p>
+      <Link className={buttonClass("secondary", "sm")} to={`${jobPath(cid, task.job_id)}/interview-plan`}>Open interview plan</Link></div>}
     {task.actionable && task.status !== "resolved" && company.status !== "suspended" ? <details className="mt-3 text-sm">
       <summary className="cursor-pointer rounded py-1 font-medium focus-visible:outline focus-visible:outline-2">Update task</summary>
       <form onSubmit={(e) => void submit(e)} className="mt-3 space-y-3">

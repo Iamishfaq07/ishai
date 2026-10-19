@@ -116,6 +116,7 @@ export function jobsAiSections(tracked = 0): ProductSection[] {
     { to: JOBS_MATCHES, label: "Matches", icon: Sparkles, also: /^\/jobs\/listing\// },
     { to: JOBS_TRACKER, label: "Tracker", icon: BookmarkCheck, count: tracked },
     { to: "/jobs/actions", label: "Action desk", icon: Gauge },
+    { to: "/jobs/weekly", label: "Weekly studio", icon: Target },
     // Orbit Apply (D84): its setup counts as this tab too.
     { to: JOBS_APPLICATIONS, label: "Applications", icon: Rocket, also: /^\/jobs\/auto-apply/ },
     { to: JOBS_OUTREACH, label: "Outreach", icon: Send },

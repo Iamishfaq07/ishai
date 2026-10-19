@@ -1,4 +1,8 @@
-// Jobs AI's signed-in pages, in one chunk: moving between its tabs never waits for a download (routes.ts).
+// Core Jobs AI pages share a chunk; larger workspaces load on demand (routes.ts).
+import { createElement, lazy } from "react";
+// The weekly workspace is loaded on demand; public pages do not carry its dependency map.
+const Weekly = lazy(async () => ({ default: (await import("./WeeklyStudio")).WeeklyStudioPage }));
+export function WeeklyStudioPage() { return createElement(Weekly); }
 export { JobsAiSection } from "./JobsAi";
 export { JobActionDeskPage } from "./ActionDesk";
 export { JobsAiHomePage } from "./Overview";

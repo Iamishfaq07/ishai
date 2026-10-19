@@ -14,6 +14,7 @@ from sqlalchemy.orm import load_only
 
 from orbit_api.business.access import audit, lock_company
 from orbit_api.business.hiring import aware
+from orbit_api.business.scheduling import panel as scheduled_panel
 from orbit_api.db import sessionmaker
 from orbit_api.models import (
     BizApplication,
@@ -34,7 +35,7 @@ log = logging.getLogger(__name__)
 TITLES = {"stalled": "Review the stalled pipeline stage", "question": "Reply to the candidate's question",
     "feedback": "Collect outstanding interview feedback",
     "assessment": "Review assessment or alternative interview request",
-    "scheduling": "Reply to a candidate's interview time request"}
+    "scheduling": "Reply to a candidate's interview time request", "prep": "Prepare the interview kit"}
 
 
 class Recipe(BaseModel):
@@ -45,6 +46,7 @@ class Recipe(BaseModel):
     feedback_hours: int | None = Field(24, ge=1, le=168)
     assessment_hours: int | None = Field(24, ge=1, le=168)
     scheduling_hours: int | None = Field(None, ge=1, le=168)
+    prep_hours: int | None = Field(None, ge=1, le=168)
     default_assignee_id: str | None = Field(None, max_length=36)
 
 
@@ -82,6 +84,9 @@ async def signals(db: AsyncSession, job: BizJob, apps: list[BizApplication], rec
                 BizInterviewFeedback.stage_id, BizInterviewFeedback.author_id)))}
     plan = await db.get(BizHiringPlan, job.id)
     criteria = (plan.content if plan else {}).get("criteria", [])
+    active_panel = set(await db.scalars(select(BizMember.user_id).join(User, User.id == BizMember.user_id).where(
+        BizMember.company_id == job.company_id, User.suspended_at.is_(None)))) if (
+            recipe.prep_hours is not None) else set()
     for app in apps:
         if app.status != "active" or app.deletion_requested_at or job.status != "open" or not recipe.enabled:
             continue
@@ -108,6 +113,15 @@ async def signals(db: AsyncSession, job: BizJob, apps: list[BizApplication], rec
                         d >= stamp for d in decisions):
                 add("assessment", event.id, stamp + timedelta(hours=recipe.assessment_hours))
         iv = interviews.get(app.id)
+        if recipe.prep_hours is not None and iv and iv.chosen and now < aware(iv.chosen):
+            prep_panel = scheduled_panel(iv, app.interviewers or [])
+            current_is_interview = any(s["id"] == app.stage_id and s["kind"] == "interview" for s in job.stages)
+            planned_stage = app.stage_id if current_is_interview else next(
+                (s["id"] for s in job.stages if s["kind"] == "interview"), app.stage_id)
+            if not any(member in active_panel for member in prep_panel) or not any(
+                    c["stage_id"] == planned_stage for c in criteria):
+                add("prep", f"{iv.id}:{aware(iv.chosen).isoformat()}",
+                    aware(iv.chosen) - timedelta(hours=recipe.prep_hours))
         if recipe.scheduling_hours is not None and iv:
             from orbit_api.business.coordination import render
 
@@ -137,7 +151,7 @@ async def reconcile(db: AsyncSession, company: BizCompany, job: BizJob, row: Biz
         apps = list(await db.scalars(select(BizApplication).where(BizApplication.job_id == job.id,
             BizApplication.id > cursor).order_by(BizApplication.id).limit(200).options(load_only(
                 BizApplication.id, BizApplication.status, BizApplication.stage_id, BizApplication.stage_changed_at,
-                BizApplication.deletion_requested_at))))
+                BizApplication.deletion_requested_at, BizApplication.interviewers))))
         if not apps:
             break
         ids = [a.id for a in apps]
