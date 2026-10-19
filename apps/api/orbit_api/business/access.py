@@ -24,6 +24,7 @@ from orbit_api.models import (
     BizAudit,
     BizCompany,
     BizEvent,
+    BizHiringTask,
     BizInterview,
     BizInterviewFeedback,
     BizJob,
@@ -153,7 +154,8 @@ def timeline(db: AsyncSession, app: BizApplication, kind: str, actor: User | Non
 
 async def delete_application_rows(db: AsyncSession, app_id: str) -> None:
     """Everything about one applicant (the timeline, notes, scorecards, interviews, mentions go with it)."""
-    for model in (BizNotification, BizNote, BizScorecard, BizInterviewFeedback, BizWorkSample, BizEvent, BizInterview):
+    for model in (BizHiringTask, BizNotification, BizNote, BizScorecard, BizInterviewFeedback,
+                  BizWorkSample, BizEvent, BizInterview):
         await db.execute(delete(model).where(model.application_id == app_id))
     await db.execute(delete(BizApplication).where(BizApplication.id == app_id))
 

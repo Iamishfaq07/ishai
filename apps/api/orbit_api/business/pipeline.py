@@ -289,6 +289,8 @@ async def list_applications(
 
 
 _EVENT_TEXT = {
+    "hiring_task_created": "Added a hiring follow-up",
+    "hiring_task_updated": "Updated hiring follow-up ({action}): {note}",
     "withdrawn": "Withdrew their application", "interview_cancelled": "Interview invitation cancelled",
     "applied": "Applied", "email_confirmed": "Confirmed their email", "stage": "Moved to {to}",
     "rejected": "Rejected", "unrejected": "Moved back into the pipeline", "hired": "Hired", "note": "Added a note",
@@ -303,6 +305,8 @@ _EVENT_TEXT = {
 
 def _event_text(e: BizEvent, stages: dict[str, str], app: BizApplication | None = None, blind: bool = False) -> str:
     data = {**(e.data or {})}
+    if blind and e.kind == "hiring_task_updated" and app is not None:
+        data["note"] = _blind(app, str(data.get("note", "")))
     if blind and e.kind == "email" and app is not None:
         # The subject as the template was written ({{candidate_name}}, not the name), or masked for older events.
         data["subject"] = data.get("subject_template") or _blind(app, str(data.get("subject", "")))
@@ -331,7 +335,8 @@ async def detail_out(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJo
     if visible is not None:
         # The timeline must not reveal a peer's recommendation before their card can be read.
         events = [e for e in events if e.kind not in (
-            "scorecard", "hiring_decision", "ranked", "feedback_submitted", "feedback_addendum")
+            "scorecard", "hiring_decision", "ranked", "feedback_submitted", "feedback_addendum",
+            "hiring_task_created", "hiring_task_updated")
                   or e.actor_id == ctx.user.id]
     iv = await latest_interview(db, app.id)
     stage_names = {s["id"]: s["name"] for s in job.stages}

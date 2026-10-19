@@ -48,6 +48,7 @@ import {
 import { Loading, LoadError, Panel, errorText } from "./ui";
 
 const CompanyWithdrawal = lazy(async () => ({ default: (await import("./CandidateWithdrawal")).CompanyWithdrawal }));
+const CandidateTask = lazy(async () => ({ default: (await import("./CandidateTask")).CandidateTask }));
 
 const MET: Record<BizMet, { label: string; icon: typeof CircleCheck; tone: string }> = {
   yes: { label: "Met", icon: CircleCheck, tone: "text-emerald-700 dark:text-emerald-300" },
@@ -630,6 +631,8 @@ export function Candidate() {
             <Link to={roomPath(company.id, a.id)} className={cx("mt-3", buttonClass("primary"))}>Open interview room</Link>
             {!a.hiring_plan_revision && <Link to={planPath(company.id, a.job_id)} className="mt-3 block text-sm underline">Set up this job's interview plan</Link>}
           </Panel>
+          {company.permissions.move_applicants && a.status === "active" && !a.deletion_requested && company.status !== "suspended" &&
+            <Suspense fallback={<p role="status">Loading follow-ups…</p>}><CandidateTask cid={company.id} aid={a.id} /></Suspense>}
           <Panel title="Scorecards">
             {a.scorecards.length > 0 && (
               <ul className="mb-4 space-y-2">
