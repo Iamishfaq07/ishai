@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { BizHiringDesk, BizHiringDeskInterview } from "@orbit/types";
 import { Button, Callout, buttonClass } from "@orbit/ui";
@@ -8,6 +8,8 @@ import { HiringLoopGraphic } from "./HiringGraphics";
 import { roomPath } from "./hiringModel";
 import { applicationPath, companyPath, dayTime } from "./model";
 import { LoadError, Loading, Panel, Stat } from "./ui";
+
+const JoiningDesk = lazy(async () => ({ default: (await import("./JoiningDesk")).JoiningDesk }));
 
 export function HiringDeskPage() {
   const { company } = useCompany();
@@ -38,6 +40,7 @@ export function HiringDeskPage() {
         </li>)}</ul> : <div className="py-4"><p className="font-medium">No waiting items in this queue</p><p className="mt-1 text-sm text-zinc-500">Candidate questions and time-sensitive follow-ups will appear here.</p><HiringLoopGraphic /></div>}
       </Panel><Panel title="Feedback to finish">{interviews(data.feedback_due, true)}</Panel></div>
       <div className="space-y-5"><Panel title="Upcoming interviews" hint="Times shown in your local time zone. Availability checks cover shared panel members inside this company in Orbit.">{interviews(data.upcoming, false)}</Panel>
+        {company.permissions.move_applicants && <Suspense fallback={<p role="status">Loading joining plans…</p>}><JoiningDesk cid={company.id} revision={load} /></Suspense>}
         <Panel title="Build a consistent hiring loop"><p className="text-sm text-zinc-600 dark:text-zinc-400">Set a role-specific interview plan, collect independent observations, and discuss gaps before recording a human decision. Practical challenges include a changed constraint to explore how someone adapts.</p><Link to={companyPath(company.id, "jobs")} className={`mt-4 ${buttonClass("secondary")}`}>Open your jobs</Link></Panel>
       </div>
     </div>

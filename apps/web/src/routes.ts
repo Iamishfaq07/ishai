@@ -109,6 +109,7 @@ export const OffersPage = page(loaders.offers, (m) => m.OffersPage);
 export const OfferDetailPage = page(loaders.offers, (m) => m.OfferDetailPage);
 export const JobProfilePage = page(loaders.jobs, (m) => m.JobProfilePage);
 export const AutoApplySetupPage = page(loaders.autoApply, (m) => m.AutoApplySetupPage);
+export const CareerJourneyPage = page(loaders.autoApply, (m) => m.CareerJourneyPage);
 export const ApplicationsPage = page(loaders.autoApply, (m) => m.ApplicationsPage);
 export const JobsAiPublicPage = page(loaders.jobsAiPublic, (m) => m.JobsAiPublicPage);
 export const MockPage = page(loaders.mock, (m) => m.MockPage);

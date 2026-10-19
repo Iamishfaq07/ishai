@@ -35,7 +35,7 @@ export function AutoApplySetupPage() {
       <PageHeader
         icon={Rocket}
         title="Set up Orbit Apply"
-        subtitle="Orbit applies to jobs that fit your filters, from your own browser, with answers you approved. It stops and asks you whenever a form needs something you haven't answered."
+        subtitle="Approve your resume, answers and limits once. Orbit can apply directly to Business jobs while your browser is closed; supported external employer forms use your connected browser. Missing answers come back to you."
       />
       <LoadGate loading={loading} variant="card" count={2} label="Getting your Orbit Apply setup">
         {setup.error && !setup.data ? (

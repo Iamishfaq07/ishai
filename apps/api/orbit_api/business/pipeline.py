@@ -448,6 +448,7 @@ class BulkOut(BaseModel):
 async def move(body: MoveIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> BulkOut:
     ctx.require("move_applicants")
     ctx.writable()
+    await lock_company(db, ctx.company.id)
     pairs = await _apps_for(db, ctx, body.ids)
     to_send: list[tuple[BizApplication, BizJob, str]] = []
     for app, job in pairs:
@@ -500,6 +501,7 @@ async def reject(body: RejectIn, ctx: CompanyCtx, db: Annotated[AsyncSession, De
     """A person rejects these applicants (one or many). The only way anyone is rejected in Orbit."""
     ctx.require("move_applicants")
     ctx.writable()
+    await lock_company(db, ctx.company.id)
     pairs = await _apps_for(db, ctx, body.ids)
     done: list[tuple[BizApplication, BizJob]] = []
     for app, job in pairs:

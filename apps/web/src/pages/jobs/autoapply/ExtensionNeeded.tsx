@@ -30,12 +30,12 @@ export function ExtensionNeeded({ seenAt, compact = false }: { seenAt: string | 
       className={cx("rounded-xl border p-4 text-sm", "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100")}
     >
       <p className="font-semibold">
-        {state === "never" ? "Applications are sent by the Orbit browser extension" : "Your Orbit browser extension hasn't checked in for a while"}
+        {state === "never" ? "External employer forms use the Orbit browser extension" : "Your Orbit browser extension hasn't checked in for a while"}
       </p>
       <p className="mt-1">
         {state === "never"
-          ? "Orbit prepares each application here, but only the extension sends it, from your own browser. Install it, connect it to your account, and switch on “Apply for me automatically” in its popup. Until then nothing is sent."
-          : `It last asked for work on ${new Date(seenAt!).toLocaleDateString([], { day: "numeric", month: "short" })}. Applications go out only while that browser is open with “Apply for me automatically” switched on in the extension.`}
+          ? "Direct Orbit Business applications can submit under your approved rules without the extension. For supported external forms, install and connect it, then switch on “Apply for me automatically” in its popup."
+          : `It last asked for work on ${new Date(seenAt!).toLocaleDateString([], { day: "numeric", month: "short" })}. External forms need that browser open with automatic applying switched on. Direct Orbit Business applications do not need an open browser.`}
       </p>
       <Link to={EXTENSION_CONNECT} className={cx(linkButton("secondary", "sm"), "mt-3 inline-flex")}>
         <PlugZap className="h-4 w-4" aria-hidden /> {state === "never" ? "Get and connect the extension" : "Check the extension"}

@@ -1,5 +1,5 @@
-import { useEffect, useId, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import type { BizEvidenceRating, BizFeedbackContent, BizHiringDecision, BizHiringRoom, BizSampleSubmission } from "@orbit/types";
 import { ArrowLeft, Button, Callout, Field, Select, Textarea, buttonClass, confirmDialog, cx, focusRing, toast } from "@orbit/ui";
 import { PageTitle, useCompany } from "./BusinessApp";
@@ -10,6 +10,10 @@ import { EvidenceOrbit } from "./HiringGraphics";
 import { COVERAGE_WORDS, coverageCount, feedbackStages, planPath } from "./hiringModel";
 import { applicationPath } from "./model";
 import { errorText, LoadError, Loading, Panel } from "./ui";
+
+const CompanySaba = lazy(async () => ({ default: (await import("./BusinessSaba")).CompanySaba }));
+const CompanyOffer = lazy(async () => ({ default: (await import("./BusinessOffer")).CompanyOffer }));
+const CompanyHandoff = lazy(async () => ({ default: (await import("./BusinessHandoff")).CompanyHandoff }));
 
 function InterviewTimer() {
   const [seconds, setSeconds] = useState(0);
@@ -98,7 +102,7 @@ function FeedbackEditor({ room, stage, onSaved }: { room: BizHiringRoom; stage: 
               </Field>
               <Field label="Evidence source" htmlFor={`${id}-${c.id}-src`}>
                 <Select id={`${id}-${c.id}-src`} value={rating.source} onChange={(e) => update(c.id, { source: e.target.value as BizEvidenceRating["source"] })}>
-                  <option value="interview">Interview observation</option><option value="resume">Shared resume</option><option value="work_sample">Practical challenge</option>
+                  <option value="interview">Interview observation</option><option value="resume">Shared resume</option><option value="work_sample">Practical challenge</option><option value="saba">Saba transcript</option>
                 </Select>
               </Field>
             </div>
@@ -142,7 +146,7 @@ function Debrief({ room, onSaved }: { room: BizHiringRoom; onSaved: (room: BizHi
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
   return <div className="space-y-4">
-    {room.decision_outdated && <Callout tone="warning" title="Revisit the decision record">The current evidence snapshot differs from the latest decision. Review submitted feedback, dated addenda and any changed plan before relying on that record.</Callout>}
+    {room.decision_outdated && <Callout tone="warning" title="Revisit the decision record">The current evidence snapshot differs from the latest decision. Review submitted feedback, dated addenda, Saba evidence and any changed plan before relying on that record.</Callout>}
     <Panel title="Evidence coverage" hint="Observations by criterion. A blank area means unassessed; scores are not averaged into an automatic verdict.">
       <div className="space-y-4">{room.coverage.map((c) => <div key={c.criterion_id} className="border-b border-zinc-200 pb-4 last:border-0 dark:border-white/10">
         <h3 className="font-medium">{c.name} {c.spread >= 2 && <span className="ml-2 text-xs text-amber-700 dark:text-amber-300">Discuss disagreement</span>}</h3>
@@ -172,9 +176,10 @@ function Debrief({ room, onSaved }: { room: BizHiringRoom; onSaved: (room: BizHi
 export function HiringRoomPage() {
   const { company } = useCompany();
   const { aid = "" } = useParams();
+  const [params] = useSearchParams();
   const [room, setRoom] = useState<BizHiringRoom | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [tab, setTab] = useState("prepare");
+  const [tab, setTab] = useState(() => params.get("tab") === "offer" && company.permissions.move_applicants ? "offer" : "prepare");
   const [stage, setStage] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -204,8 +209,12 @@ export function HiringRoomPage() {
     </div>
     {!room.plan.revision && <Callout tone="warning" title="Save the interview plan first">The suggested questions are editable starting points. Your team needs to save a job plan before collecting structured feedback.</Callout>}
     <nav aria-label="Interview workspace" className="flex gap-1 overflow-x-auto border-b border-zinc-200 dark:border-white/10">
-      {[["prepare", "Prepare"], ["interview", "Interview"], ["challenge", "Practical challenge"], ["debrief", "Team debrief"], ["inbox", "Candidate inbox"]].map(([key, label]) => <button key={key} type="button" aria-current={tab === key ? "page" : undefined} onClick={() => setTab(key!)} className={cx("whitespace-nowrap border-b-2 px-4 py-3 text-sm", focusRing, tab === key ? "border-indigo-600 font-semibold" : "border-transparent text-zinc-500")}>{label}</button>)}
+      {[["prepare", "Prepare"], ["interview", "Interview"], ["challenge", "Practical challenge"], ["debrief", "Team debrief"], ["inbox", "Candidate inbox"], ["saba", "Saba screening"], ...(company.permissions.move_applicants ? [["offer", "Offer and hire"]] : [])].map(([key, label]) => <button key={key} type="button" aria-current={tab === key ? "page" : undefined} onClick={() => setTab(key!)} className={cx("whitespace-nowrap border-b-2 px-4 py-3 text-sm", focusRing, tab === key ? "border-indigo-600 font-semibold" : "border-transparent text-zinc-500")}>{label}</button>)}
     </nav>
+    <Suspense fallback={<p role="status">Loading hiring tools…</p>}>
+      <div hidden={tab !== "saba"}><CompanySaba cid={company.id} aid={aid} readOnly={!company.permissions.move_applicants || room.status !== "active" || company.status !== "active"} /></div>
+      {company.permissions.move_applicants && <div hidden={tab !== "offer"} className="space-y-5"><CompanyOffer cid={company.id} aid={aid} readOnly={room.status !== "active" || company.status !== "active"} /><CompanyHandoff cid={company.id} aid={aid} readOnly={!["active", "hired"].includes(room.status) || company.status !== "active"} /></div>}
+    </Suspense>
     {tab === "prepare" && <div className="grid gap-4 lg:grid-cols-3">
       <Panel className="lg:col-span-2" title="Resume evidence and follow-up questions" hint="Only quotes found in the shared resume appear. A reference is a starting point to verify, not a skill verdict."><div className="space-y-5">{room.evidence.map((e) => <article key={e.criterion_id}><h3 className="font-medium">{e.name}</h3>{e.quote ? <blockquote className="my-2 whitespace-pre-wrap border-l-2 border-indigo-400 pl-3 text-sm">{e.quote}</blockquote> : <p className="my-2 text-sm text-zinc-500">No verified resume excerpt linked. Ask for a concrete example.</p>}<p className="text-sm">{e.question}</p><p className="mt-1 text-sm text-zinc-500">{e.probe}</p></article>)}</div></Panel>
       <div className="space-y-4"><Panel title="What the candidate sees"><p className="whitespace-pre-wrap text-sm">{room.plan.plan.candidate_intro}</p><p className="mt-3 text-xs text-zinc-500">Their application page shows assessment areas and time guidance. Private anchors and panel feedback stay with your team.</p></Panel>

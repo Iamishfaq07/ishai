@@ -103,7 +103,7 @@ async def master_resume(db: AsyncSession, setup: AutoApplySetup) -> tuple[Resume
     """The master resume, its content, and whether it's still the version the candidate approved."""
     if not setup.resume_id:
         return None, None, False
-    resume = await db.get(Resume, setup.resume_id)
+    resume = await db.get(Resume, setup.resume_id, populate_existing=True)
     if resume is None or resume.user_id != setup.user_id:
         return None, None, False
     data = ResumeData.model_validate(resume.data or {})
@@ -200,6 +200,12 @@ async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobL
                        direct=bool(source and source.direct))
     questions: list[FormQuestion] = []
     form_source = "standard"
+    if target.ats == "orbit":
+        from orbit_api.models import BizJob
+        job = await db.get(BizJob, target.job_ref)
+        if job is None:
+            raise ValueError("Business job no longer exists")
+        questions, form_source = direct.questions(job), "fetched"
     if target.ats in rules.ATS_SUPPORTED:
         try:
             async with FormClient(transport or FORM_TRANSPORT) as client:
@@ -241,11 +247,6 @@ async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobL
         tenant_gap_s=_rng.randint(*rules.TENANT_GAP_S), reason=reason)
     db.add(packet)
     await db.flush()
-    if target.ats == "orbit":
-        result = await direct.apply_direct(packet)
-        if result is not None:  # not reachable until Orbit Direct lands (direct.py)
-            packet.status = result.status
-            packet.confirmation_text = result.confirmation_text
     return packet
 
 
@@ -387,8 +388,11 @@ async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = 
                 continue
             seen_ids |= {row.id, apply_row.id}
             seen_keys.add(row.dedupe_key)
+            # Another source in this pass must not prepare the same company/title twice.
+            applied_jobs.append((row.company, row.title.lower()))
             report.created += 1
     await db.commit()
+    await direct.run_ready(db, user)
     return report
 
 
@@ -421,4 +425,5 @@ async def plan_due(now: datetime | None = None) -> int:
                 raise
             except Exception:
                 log.exception("orbit apply: planning for one account failed; it's tried again next pass")
+    await direct.dispatch_due()
     return made

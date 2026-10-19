@@ -27,6 +27,7 @@ from orbit_api.auth.passkeys import router as passkeys_router
 from orbit_api.auth.routes import router as auth_router
 from orbit_api.auth.security import COOKIE_DOMAIN_HEADER, cookie_domain, share_cookie
 from orbit_api.auth.two_factor import router as two_factor_router
+from orbit_api.auto_apply.journey import router as apply_journey_router
 from orbit_api.auto_apply.routes import admin_router as apply_admin_router
 from orbit_api.auto_apply.routes import router as apply_router
 from orbit_api.billing.monthly import monthly_plans as configured_monthly
@@ -41,12 +42,18 @@ from orbit_api.business.apply import public_router as business_apply_public_rout
 from orbit_api.business.apply import router as business_apply_router
 from orbit_api.business.companies import public_router as business_public_router
 from orbit_api.business.companies import router as business_router
+from orbit_api.business.handoff import public_router as business_handoff_public_router
+from orbit_api.business.handoff import router as business_handoff_router
 from orbit_api.business.hiring_routes import public_router as business_hiring_public_router
 from orbit_api.business.hiring_routes import router as business_hiring_router
 from orbit_api.business.job_assist import router as business_job_assist_router
 from orbit_api.business.jobs import router as business_jobs_router
+from orbit_api.business.offers import public_router as business_offers_public_router
+from orbit_api.business.offers import router as business_offers_router
 from orbit_api.business.pipeline import router as business_pipeline_router
 from orbit_api.business.retention import running_sweeper as running_business_sweeper
+from orbit_api.business.screening import public_router as business_screening_public_router
+from orbit_api.business.screening import router as business_screening_router
 from orbit_api.career.routes import router as career_router
 from orbit_api.code.routes import router as code_router
 from orbit_api.config import get_settings
@@ -381,6 +388,7 @@ def create_app() -> FastAPI:
     app.include_router(camera_router)
     app.include_router(extension_router)
     app.include_router(apply_router)
+    app.include_router(apply_journey_router)
     app.include_router(apply_admin_router)
     app.include_router(job_mission_router)
     app.include_router(job_plan_router)
@@ -403,6 +411,12 @@ def create_app() -> FastAPI:
     app.include_router(business_analytics_router)
     app.include_router(business_hiring_router)
     app.include_router(business_hiring_public_router)
+    app.include_router(business_screening_router)
+    app.include_router(business_screening_public_router)
+    app.include_router(business_offers_router)
+    app.include_router(business_offers_public_router)
+    app.include_router(business_handoff_router)
+    app.include_router(business_handoff_public_router)
     app.include_router(business_apply_router)
     app.include_router(business_apply_public_router)
     app.include_router(business_admin_router)

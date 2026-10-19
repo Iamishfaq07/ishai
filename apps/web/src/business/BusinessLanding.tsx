@@ -144,7 +144,7 @@ export function BusinessLandingPage() {
       />
 
       <Section labelledBy="plans-title">
-        <SectionIntro id="plans-title" eyebrow="Plans" title="Start free. Grow when you hire more." lead="Prices per month. Growth is by invitation while we onboard companies one by one. Screening interviews with Saba, Orbit's AI interviewer, are coming soon." />
+        <SectionIntro id="plans-title" eyebrow="Plans" title="Start free. Grow when you hire more." lead="Prices per month. Growth is by invitation while we onboard companies one by one. Saba screening uses your saved interview plan, with transcripts for your hiring team to review." />
         <ul className="mt-12 grid gap-4 md:grid-cols-3">
           {PLANS.map((p) => (
             <li key={p.name} className="rounded-2xl border mk-line mk-surface p-6">

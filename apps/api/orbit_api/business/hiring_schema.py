@@ -80,7 +80,7 @@ class EvidenceRating(Contract):
     criterion_id: Id
     score: Annotated[int, Field(strict=True, ge=1, le=4)] | None = None
     observation: str = Field("", max_length=1800)
-    source: Literal["interview", "resume", "work_sample"] = "interview"
+    source: Literal["interview", "resume", "work_sample", "saba"] = "interview"
     quote: str = Field("", max_length=1200)
 
 

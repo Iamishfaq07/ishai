@@ -63,6 +63,13 @@ _ACTIVITY = {
     "work_sample_completed": "Adaptation saved", "candidate_question": "Your question was saved",
     "candidate_reply": "Hiring team replied to your question", "deletion_requested": "Data deletion requested",
     "stage": "Application status updated",
+    "saba_invited": "Saba interview invitation available", "saba_started": "Saba interview started",
+    "saba_completed": "Saba interview answers saved",
+    "saba_alternative": "Alternative interview requested", "saba_integrity_review": "Interview review update available",
+    "offer_published": "Offer summary available", "offer_response": "Your offer response was saved",
+    "offer_withdrawn": "Offer summary withdrawn",
+    "handoff_published": "Joining plan available", "handoff_task_added": "Joining task added",
+    "handoff_progress": "Joining task progress updated",
 }
 
 
