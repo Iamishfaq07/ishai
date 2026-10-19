@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from "react";
 import type { BizCandidateSample, BizSampleSubmission } from "@orbit/types";
 import { Button, Callout, Field, Select, Textarea, confirmDialog } from "@orbit/ui";
 import { hiringApi } from "./hiringApi";
+import { CandidateConversation } from "./HiringConversation";
 import { validateSample } from "./hiringModel";
 import { errorText, Panel } from "./ui";
 
@@ -11,9 +12,6 @@ export function CandidateChallenge({ token, confirmed, deletionRequested }: { to
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [answer, setAnswer] = useState<BizSampleSubmission>({ response: "", explanation: "", assistance: "none" });
-  const [question, setQuestion] = useState("");
-  const [questionBusy, setQuestionBusy] = useState(false);
-  const [sent, setSent] = useState(false);
   const [load, setLoad] = useState(0);
   useEffect(() => {
     if (!answer.response && !answer.explanation) return;
@@ -42,11 +40,6 @@ export function CandidateChallenge({ token, confirmed, deletionRequested }: { to
       setAnswer({ response: "", explanation: "", assistance: "none" });
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
-  const clarify = async () => {
-    setQuestionBusy(true); setError(null);
-    try { await hiringApi.clarify(token, question); setQuestion(""); setSent(true); }
-    catch (e) { setError(errorText(e)); } finally { setQuestionBusy(false); }
-  };
   return <div className="mt-6 space-y-5">
     {data?.interview_brief && <Panel title="Prepare for the conversation" hint="What this hiring team plans to assess.">
       <p className="whitespace-pre-wrap text-sm">{data.interview_brief.intro}</p>
@@ -73,13 +66,7 @@ export function CandidateChallenge({ token, confirmed, deletionRequested }: { to
         </form> : <Callout tone="info">{!confirmed ? "Confirm your email above to submit." : "This application is no longer collecting new work."}</Callout>}
       </div>
     </Panel>}
-    {accepting && <Panel title="Need clarification?" hint="Your question is saved on the application for the hiring team. They can reply to your confirmed email.">
-      <form onSubmit={(e) => { e.preventDefault(); void clarify(); }} className="space-y-3">
-        <Field label="Your question" htmlFor={`${id}-question`}><Textarea id={`${id}-question`} rows={3} required minLength={10} maxLength={2000} value={question} disabled={questionBusy} onChange={(e) => { setQuestion(e.target.value); setSent(false); }} /></Field>
-        <Button type="submit" variant="secondary" loading={questionBusy}>Send question to hiring team</Button>
-        {sent && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">Your question is saved. The team will see it in their hiring desk.</p>}
-      </form>
-    </Panel>}
+    <CandidateConversation token={token} canAsk={confirmed && !deletionRequested} />
     {error && <Callout tone="error">{error} {!data && <Button variant="ghost" size="sm" onClick={() => setLoad((n) => n + 1)}>Retry</Button>}</Callout>}
   </div>;
 }

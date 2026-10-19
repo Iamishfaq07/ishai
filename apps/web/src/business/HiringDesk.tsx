@@ -41,7 +41,7 @@ export function HiringDeskPage() {
         <Panel title="Build a consistent hiring loop"><p className="text-sm text-zinc-600 dark:text-zinc-400">Set a role-specific interview plan, collect independent observations, and discuss gaps before recording a human decision. Practical challenges include a changed constraint to explore how someone adapts.</p><Link to={companyPath(company.id, "jobs")} className={`mt-4 ${buttonClass("secondary")}`}>Open your jobs</Link></Panel>
       </div>
     </div>
-    {data.limited && <Callout tone="warning">This desk scanned the oldest 2,000 active applications. Open individual job pipelines for the rest.</Callout>}
+    {data.limited && <Callout tone="warning">This desk scanned up to 2,000 active applications, prioritising deletion requests and unanswered questions. Open individual job pipelines for the rest.</Callout>}
     <p className="text-xs text-zinc-500">Updated {new Date(data.as_of).toLocaleString()} · Queues show up to 30 attention items and 20 interviews each.</p>
   </div>;
 }

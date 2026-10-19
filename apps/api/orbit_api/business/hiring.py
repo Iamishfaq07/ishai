@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.business import rules
+from orbit_api.business import conversations, rules
 from orbit_api.business.access import Ctx
 from orbit_api.business.hiring_schema import Criterion, HiringPlan
 from orbit_api.business_ai.fairness import asks_protected, discriminatory
@@ -82,7 +82,8 @@ def sample_payload(sample: BizWorkSample | None) -> dict[str, Any] | None:
         "completed_at": aware(sample.completed_at).isoformat() if sample.completed_at else None}
 
 
-def feedback_payload(row: BizInterviewFeedback, ctx: Ctx, app: BizApplication) -> dict[str, Any]:
+def feedback_payload(row: BizInterviewFeedback, ctx: Ctx, app: BizApplication,
+                     addenda: list[BizEvent]) -> dict[str, Any]:
     content = dict(row.content)
     content["summary"] = blind_text(ctx, app, str(content.get("summary") or ""))
     content["ratings"] = [{**rating,
@@ -93,7 +94,11 @@ def feedback_payload(row: BizInterviewFeedback, ctx: Ctx, app: BizApplication) -
         "revision": row.revision, "plan_revision": row.plan_revision, "plan_snapshot": row.plan_snapshot,
         "content": content, "mine": row.author_id == ctx.user.id,
         "submitted_at": aware(row.submitted_at).isoformat() if row.submitted_at else None,
-        "updated_at": aware(row.updated_at).isoformat()}
+        "updated_at": aware(row.updated_at).isoformat(),
+        "addenda": [{"id": e.id, "author": e.actor_name, "created_at": aware(e.created_at).isoformat(),
+            "reason": blind_text(ctx, app, str(e.data.get("reason", ""))),
+            "message": blind_text(ctx, app, str(e.data.get("message", "")))}
+            for e in addenda if e.data.get("feedback_id") == row.id]}
 
 
 async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: BizJob) -> dict[str, Any]:
@@ -106,6 +111,8 @@ async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: Biz
     shown = [f for f in feedback if f.author_id == ctx.user.id or
              (f.submitted_at is not None and (stages is None or f.stage_id in stages))]
     submitted = [f for f in feedback if f.submitted_at is not None]
+    addenda = list(await db.scalars(select(BizEvent).where(BizEvent.application_id == app.id,
+        BizEvent.kind == "feedback_addendum").order_by(BizEvent.created_at, BizEvent.id)))
     sample = await db.get(BizWorkSample, app.id)
     coverage: list[dict[str, Any]] = []
     for criterion in plan.criteria:
@@ -143,7 +150,9 @@ async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: Biz
     if plan.work_sample and plan.work_sample.required and (sample is None or sample.completed_at is None):
         gaps.append("The required work sample and change request are not both submitted.")
     digest = hashlib.sha256(json.dumps({"plan": row.content if row else None, "revision": revision,
-        "feedback": [(f.id, f.revision, f.submitted_at.isoformat() if f.submitted_at else None) for f in feedback],
+        "feedback": [(f.id, f.revision, aware(f.submitted_at).isoformat())
+                     for f in submitted if f.submitted_at],
+        "addenda": [e.id for e in addenda],
         "sample": sample.revision if sample else None, "stage": app.stage_id, "status": app.status,
         "panel": sorted(expected), "resume": hashlib.sha256(app.resume_text.encode()).hexdigest()},
         sort_keys=True).encode()).hexdigest()
@@ -154,19 +163,18 @@ async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: Biz
         for key in ("answer", "follow_up"):
             if isinstance(sample_data.get(key), dict):
                 sample_data[key] = {k: blind_text(ctx, app, str(v)) for k, v in sample_data[key].items()}
-    questions = list(await db.scalars(select(BizEvent).where(BizEvent.application_id == app.id,
-        BizEvent.kind == "candidate_question").order_by(BizEvent.created_at.desc()).limit(20)))
+    questions = await conversations.question_page(db, app, mask=lambda text: blind_text(ctx, app, text), staff=True)
     return {"application_id": app.id, "reference": app.reference,
         "name": rules.candidate_label(app.reference) if ctx.company.blind_review else app.name,
         "job_id": job.id, "job_title": job.title, "stage_id": app.stage_id, "status": app.status,
         "stages": [{"id": s["id"], "name": s["name"]} for s in job.stages],
         "feedback_stage_id": feedback_stage,
         "plan": plan_payload(row, job), "evidence": evidence_map(ctx, app, plan),
-        "feedback": [feedback_payload(f, ctx, app) for f in shown],
+        "feedback": [feedback_payload(f, ctx, app, addenda) for f in shown],
         "feedback_locked": not can_view, "pending_reviewers": len(missing), "expected_reviewers": len(expected),
         "coverage": coverage, "gaps": gaps, "evidence_version": digest,
         "work_sample": sample_data,
-        "candidate_questions": [{"id": q.id, "message": blind_text(ctx, app, str(q.data.get("message", ""))),
-                                "created_at": aware(q.created_at).isoformat()} for q in questions],
+        "candidate_questions": questions["threads"],
+        "decision_outdated": bool(decisions and decisions[0].data.get("evidence_version") != digest),
         "decisions": [{"id": d.id, "actor": d.actor_name, "created_at": aware(d.created_at).isoformat(),
             **{**d.data, "rationale": blind_text(ctx, app, str(d.data.get("rationale", "")))}} for d in decisions]}

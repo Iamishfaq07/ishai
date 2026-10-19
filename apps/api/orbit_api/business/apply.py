@@ -733,6 +733,10 @@ async def delete_request(token: str, request: Request,
     """The applicant asks for their application to be deleted. It's flagged at the top of the pipeline and the
     company's admins are told; deleting it is the company's click (and is logged)."""
     app, job, company = await _by_token(db, token, request)
+    from orbit_api.business.access import lock_company
+
+    await lock_company(db, company.id)
+    await db.refresh(app)
     if app.deletion_requested_at is None:
         app.deletion_requested_at = now()
         timeline(db, app, "deletion_requested")

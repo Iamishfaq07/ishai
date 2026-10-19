@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BizEvidenceCoverage, BizHiringPlan } from "@orbit/types";
-import { clonePlan, coverageCount, planPath, roomPath, SAMPLE_TEMPLATES, validateSample } from "./hiringModel";
+import { clonePlan, coverageCount, feedbackStages, planPath, roomPath, SAMPLE_TEMPLATES, validateSample } from "./hiringModel";
 
 describe("Hiring Studio evidence and navigation", () => {
   it("counts human observations and disagreement without inventing a winner", () => {
@@ -32,5 +32,17 @@ describe("Hiring Studio evidence and navigation", () => {
     expect(plan.work_sample!.brief).not.toBe("Changed draft");
     expect(roomPath("a/b", "c d")).toBe("/business/app/a%2Fb/applications/c%20d/interview");
     expect(planPath("a/b", "c d")).toBe("/business/app/a%2Fb/jobs/c%20d/interview-plan");
+  });
+  it("keeps an interviewer's archived rounds available for their frozen drafts and addenda", () => {
+    const plan: BizHiringPlan = { criteria: [], independent_feedback: true, candidate_intro: "Intro",
+      work_sample: null, response_target_days: 3 };
+    const options = feedbackStages({ plan: { job_id: "job", revision: 2, plan, updated_at: null },
+      stages: [{ id: "round-one", name: "Technical conversation" }],
+      feedback: [{ mine: true, stage_id: "round-one" }, { mine: true, stage_id: "removed-stage" },
+        { mine: false, stage_id: "private-peer-round" }] });
+    expect(options).toEqual([
+      { id: "round-one", label: "Technical conversation · earlier plan" },
+      { id: "removed-stage", label: "removed-stage · earlier plan" },
+    ]);
   });
 });
