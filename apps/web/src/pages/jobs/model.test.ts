@@ -3,6 +3,7 @@ import type { JobListing, JobPrefs, JobTrackerEntry } from "@orbit/types";
 import {
   addItem,
   byStatus,
+  followUps,
   followUpState,
   dateInput,
   factsLine,
@@ -26,6 +27,13 @@ import {
 const NOW = Date.parse("2026-10-07T12:00:00Z");
 const ago = (ms: number) => new Date(NOW - ms).toISOString();
 const H = 3600_000;
+
+it("keeps confirmed hires out of interview and follow-up reminders", () => {
+  const hired = { ...entry("hired", "hired", ago(H)), next_at: ago(-H), applied_at: ago(240 * H) };
+  expect(nextUp([hired], NOW)).toBeNull();
+  expect(followUps([hired], NOW)).toEqual([]);
+  expect(byStatus([hired]).hired).toEqual([hired]);
+});
 
 function prefs(over: Partial<JobPrefs> = {}): JobPrefs {
   return {

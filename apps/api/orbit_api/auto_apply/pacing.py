@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.auto_apply import quota, rules
 from orbit_api.auto_apply.setup import in_quiet_hours
 from orbit_api.models import ApplicationPacket, ApplySiteState, AutoApplySetup, User
+from orbit_api.transactions import lock_account
 
 log = logging.getLogger(__name__)
 OPEN = ("needs_answer", "review", "ready", "leased")  # prepared, not yet ended
@@ -148,13 +149,16 @@ async def company_count(db: AsyncSession, user_id: str, company_key: str, now: d
     return int(await db.scalar(q) or 0)
 
 
-async def next_due(db: AsyncSession, user: User, now: datetime | None = None, holder: str = "") -> Due:
+async def next_due(db: AsyncSession, user: User, now: datetime | None = None, holder: str = "",
+                   allowed_ats: tuple[str, ...] = rules.ATS_SUPPORTED) -> Due:
     """The packet to lease now, held and leased (the caller commits), or why there's none and when to ask again.
 
     Idempotent for the device holding a lease (`holder`: its session id): while its lease runs, asking again returns
     the same packet, unchanged (same lease end, no second hold), so an executor that restarted mid-application picks
     up where it was instead of being told it's busy. Any other device is told `busy`: one application at a time."""
     now = now or datetime.now(UTC)
+    await lock_account(db, user.id)
+    await db.refresh(user)
     await expire(db, now, user.id)
     setup = await db.get(AutoApplySetup, user.id)
     if setup is None or setup.consent_at is None:
@@ -179,7 +183,7 @@ async def next_due(db: AsyncSession, user: User, now: datetime | None = None, ho
         return Due(None, "pacing", last + rules.MIN_GAP)
     paused = await paused_sites(db, now)
     candidates = (await db.scalars(select(ApplicationPacket).where(
-        mine, ApplicationPacket.status == "ready", ApplicationPacket.ats.in_(rules.ATS_SUPPORTED),
+        mine, ApplicationPacket.status == "ready", ApplicationPacket.ats.in_(allowed_ats),
         ApplicationPacket.expires_at > now).order_by(ApplicationPacket.not_before, ApplicationPacket.match_score.desc())
         .limit(100))).all()
     if not candidates:

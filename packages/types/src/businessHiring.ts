@@ -16,7 +16,7 @@ export interface BizHiringPlanRecord {
 }
 export interface BizEvidenceRating {
   criterion_id: string; score: 1 | 2 | 3 | 4 | null; observation: string;
-  source: "interview" | "resume" | "work_sample"; quote: string;
+  source: "interview" | "resume" | "work_sample" | "saba"; quote: string;
 }
 export interface BizFeedbackContent {
   ratings: BizEvidenceRating[]; recommendation: "hire" | "hold" | "no_hire"; summary: string;

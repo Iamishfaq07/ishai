@@ -112,6 +112,7 @@ export function jobsAiFeatures(country: string = INDIA): JobsAiFeature[] {
 export function jobsAiSections(tracked = 0): ProductSection[] {
   return [
     { to: JOBS_AI_HOME, label: "Overview", icon: LayoutGrid, end: true },
+    { to: "/jobs/journey", label: "Your journey", icon: Target },
     { to: JOBS_MATCHES, label: "Matches", icon: Sparkles, also: /^\/jobs\/listing\// },
     { to: JOBS_TRACKER, label: "Tracker", icon: BookmarkCheck, count: tracked },
     // Orbit Apply (D84): its setup counts as this tab too.

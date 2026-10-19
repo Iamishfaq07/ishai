@@ -149,10 +149,14 @@ async def room_payload(db: AsyncSession, ctx: Ctx, app: BizApplication, job: Biz
         gaps.append("Some feedback uses an earlier plan. Check the changed criteria.")
     if plan.work_sample and plan.work_sample.required and (sample is None or sample.completed_at is None):
         gaps.append("The required work sample and change request are not both submitted.")
+    screening = list(await db.scalars(select(BizEvent.id).where(BizEvent.application_id == app.id,
+        BizEvent.kind.in_(("saba_invited", "saba_answer", "saba_alternative", "saba_review", "saba_explanation",
+                          "saba_integrity_review", "saba_network_check"))).order_by(BizEvent.id)))
     digest = hashlib.sha256(json.dumps({"plan": row.content if row else None, "revision": revision,
         "feedback": [(f.id, f.revision, aware(f.submitted_at).isoformat())
                      for f in submitted if f.submitted_at],
         "addenda": [e.id for e in addenda],
+        **({"screening": screening} if screening else {}),
         "sample": sample.revision if sample else None, "stage": app.stage_id, "status": app.status,
         "panel": sorted(expected), "resume": hashlib.sha256(app.resume_text.encode()).hexdigest()},
         sort_keys=True).encode()).hexdigest()

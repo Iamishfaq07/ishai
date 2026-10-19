@@ -135,7 +135,8 @@ export function WelcomePage() {
         // Home still has the answers; the search profile can be set on its own page.
       }
     }
-    navigate(from ?? "/", { replace: true, state: { welcomed: status === "done" } });
+    navigate(from && !["/jobs", "/jobs/"].includes(from) ? from : "/jobs/journey",
+      { replace: true, state: { welcomed: status === "done" } });
   };
 
   const pickGoal = (g: Goal) => {

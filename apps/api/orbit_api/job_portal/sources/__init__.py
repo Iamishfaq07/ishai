@@ -9,14 +9,15 @@ from orbit_api.job_portal.sources.himalayas import Himalayas
 from orbit_api.job_portal.sources.jobicy import Jobicy
 from orbit_api.job_portal.sources.jsearch import JSearch
 from orbit_api.job_portal.sources.lever import Lever
+from orbit_api.job_portal.sources.orbit import Orbit
 from orbit_api.job_portal.sources.remoteok import RemoteOK
 from orbit_api.job_portal.sources.smartrecruiters import SmartRecruiters
 
 __all__ = ["Attribution", "Budget", "SearchQuery", "Source", "all_sources", "allowed_hosts", "enabled_sources",
            "source_named"]
 
-_ALL: tuple[Source, ...] = (Greenhouse(), Lever(), Ashby(), SmartRecruiters(), JSearch(), Adzuna(), Himalayas(),
-                            RemoteOK(), Jobicy())
+_ALL: tuple[Source, ...] = (Orbit(), Greenhouse(), Lever(), Ashby(), SmartRecruiters(), JSearch(), Adzuna(),
+                            Himalayas(), RemoteOK(), Jobicy())
 PRIORITY = {s.id: i for i, s in enumerate(_ALL)}
 
 

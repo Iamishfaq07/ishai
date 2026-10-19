@@ -99,11 +99,47 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await a11y(page);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-sealed-feedback.png"), fullPage: true });
+  await page.getByRole("button", { name: "Saba screening", exact: true }).click();
+  await page.getByRole("button", { name: "Invite to Saba interview", exact: true }).click();
+  await expect(page.getByText(/invited · 0\//)).toBeVisible();
+  await a11y(page);
+  await page.screenshot({ path: info.outputPath("business-saba-invitation.png"), fullPage: true });
   // The bearer application link works in a separate signed-out browser; it exposes no team feedback.
   const candidate = await browser.newContext({ viewport: { width: 390, height: 844 }, colorScheme: "dark", reducedMotion: "reduce" });
+  await candidate.addInitScript(() => {
+    class DictationFixture {
+      onresult: ((event: { results: Array<{ 0: { transcript: string } }> }) => void) | null = null;
+      onend: (() => void) | null = null;
+      start() { setTimeout(() => { this.onresult?.({ results: [{ 0: { transcript: "A dictated answer about durable transaction keys and safe retries." } }] }); this.onend?.(); }, 0); }
+      stop() { this.onend?.(); }
+      abort() { this.onend?.(); }
+    }
+    (window as unknown as { SpeechRecognition: typeof DictationFixture }).SpeechRecognition = DictationFixture;
+  });
   await candidate.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
   const applicant = await candidate.newPage();
   await applicant.goto(`/application/${token}`);
+  await expect(applicant.getByRole("heading", { name: "Your interview with Saba", exact: true })).toBeVisible();
+  await applicant.getByLabel("I agree to this interview and transcript processing.", { exact: true }).check();
+  await applicant.getByRole("button", { name: "Begin interview", exact: true }).click();
+  await applicant.getByRole("button", { name: "Dictate your answer", exact: true }).click();
+  await applicant.getByRole("alertdialog").getByRole("button", { name: "Start dictation", exact: true }).click();
+  await expect(applicant.getByLabel("Your answer", { exact: true })).toHaveValue(/dictated answer/);
+  await applicant.getByLabel("Your answer", { exact: true }).fill("I independently built a persistent idempotency key and tested retries before making any payment request.");
+  await applicant.getByRole("button", { name: "Hear Saba", exact: true }).click();
+  await expect(applicant.getByText("Natural voice is unavailable.", { exact: false })).toBeVisible();
+  await expect(applicant.getByLabel("Your answer", { exact: true })).toHaveValue(/idempotency/);
+  for (let i = 0; i < 6; i++) {
+    const answer = applicant.getByLabel("Your answer", { exact: true });
+    if (!(await answer.count())) break;
+    await answer.fill(`In this example ${i + 1}, I used a durable transaction key and verified the previous provider response before retrying. I would clarify recovery trade-offs with the team.`);
+    await applicant.getByRole("button", { name: "Save answer and continue", exact: true }).click();
+    await applicant.getByRole("alertdialog").getByRole("button", { name: "Save answer", exact: true }).click();
+    await expect(applicant.getByText("Saved. Your application status has not been changed by this action.", { exact: true })).toBeVisible();
+  }
+  await expect(applicant.getByText(/completed · \d+\/\d+ answers saved/)).toBeVisible();
+  await a11y(applicant);
+  await applicant.screenshot({ path: info.outputPath("business-saba-candidate-mobile.png"), fullPage: true });
   await expect(applicant.getByRole("heading", { name: "Prepare for the conversation" })).toBeVisible();
   await expect(applicant.getByText("A changed constraint", { exact: true })).toHaveCount(0);
   await applicant.getByLabel("Your solution", { exact: true }).fill("I store an order identifier before charging and persist the provider response so repeated requests return the same result.");
@@ -139,6 +175,26 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   expect(await applicant.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await applicant.evaluate(() => window.scrollTo(0, 0));
   await applicant.screenshot({ path: info.outputPath("candidate-practical-challenge-mobile.png"), fullPage: true });
+  await page.getByRole("button", { name: "Offer and hire", exact: true }).click();
+  await page.getByText("Prepare an offer summary", { exact: true }).click();
+  await page.getByLabel("Offered role", { exact: true }).fill("Backend Engineer");
+  await page.getByLabel("Compensation and currency", { exact: true }).fill("INR 2,400,000 per year");
+  await page.getByLabel("Proposed start date", { exact: true }).fill("To be agreed after the formal agreement");
+  await page.getByLabel("Terms and next steps", { exact: true }).fill("This fictional offer summary will be followed by a formal agreement and an onboarding conversation with the hiring team.");
+  await page.getByRole("button", { name: "Publish offer summary", exact: true }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Publish summary", exact: true }).click();
+  await expect(page.getByText("Version 1 · pending · Backend Engineer", { exact: true })).toBeVisible();
+  await applicant.reload();
+  await applicant.getByLabel("I have read this version of the offer summary.", { exact: true }).check();
+  await applicant.getByRole("button", { name: "Accept offer summary", exact: true }).click();
+  await applicant.getByRole("alertdialog").getByRole("button", { name: "Save response", exact: true }).click();
+  await expect(applicant.getByText("Version 1 · accepted · Backend Engineer", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Refresh offer", exact: true }).click();
+  await expect(page.getByText("The candidate accepted this summary.", { exact: false })).toBeVisible();
+  await a11y(page);
+  await a11y(applicant);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: info.outputPath("business-offer-accepted.png"), fullPage: true });
   await candidate.close();
   await page.reload();
   await page.getByRole("button", { name: "Team debrief", exact: true }).click();
@@ -180,4 +236,10 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await a11y(page);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-hiring-desk-mobile.png"), fullPage: true });
+  await page.goto("/jobs/journey");
+  await expect(page.getByRole("heading", { name: "Your path to the next role", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Continue · Add or build your resume", exact: true })).toBeVisible();
+  await a11y(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath("career-journey-mobile.png"), fullPage: true });
 });
