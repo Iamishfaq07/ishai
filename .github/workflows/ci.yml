@@ -62,6 +62,7 @@ jobs:
           tests/test_business_career_cycle.py tests/test_business_handoff.py tests/test_business_withdrawal.py
           tests/test_business_automations.py tests/test_business_coordination.py tests/test_business_races.py
           tests/test_workflow_ai.py
+          tests/test_career_weekly.py tests/test_business_control_room.py
 
   frontend:
     runs-on: ubuntu-latest

@@ -101,6 +101,7 @@ export const JobDetailPage = page(loaders.jobs, (m) => m.JobDetailPage);
 export const JobMissionPage = page(loaders.jobs, (m) => m.JobMissionPage);
 export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
 export const JobActionDeskPage = page(loaders.jobs, (m) => m.JobActionDeskPage);
+export const WeeklyStudioPage = page(loaders.jobs, (m) => m.WeeklyStudioPage);
 export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
 export const LearningPage = page(loaders.learn, (m) => m.LearningPage);
 export const CodeHomePage = page(loaders.code, (m) => m.CodeHomePage);

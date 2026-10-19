@@ -139,19 +139,20 @@ async def preview(job_id: str, ctx: CompanyCtx, db: Db,
                   question_hours: Annotated[int | None, Query(ge=0, le=168)] = 24,
                   feedback_hours: Annotated[int | None, Query(ge=0, le=168)] = 24,
                   assessment_hours: Annotated[int | None, Query(ge=0, le=168)] = 24,
-                  scheduling_hours: Annotated[int | None, Query(ge=0, le=168)] = 0) -> dict[str, Any]:
+                  scheduling_hours: Annotated[int | None, Query(ge=0, le=168)] = 0,
+                  prep_hours: Annotated[int | None, Query(ge=0, le=168)] = 0) -> dict[str, Any]:
     ctx.require("move_applicants")
     job = await job_for(db, ctx, job_id)
     recipe = automation.Recipe(enabled=True, stalled_days=stalled_days or None, question_hours=question_hours or None,
         feedback_hours=feedback_hours or None, assessment_hours=assessment_hours or None,
-        scheduling_hours=scheduling_hours or None)
+        scheduling_hours=scheduling_hours or None, prep_hours=prep_hours or None)
     counts = dict.fromkeys(automation.TITLES, 0)
     cursor = ""
     while True:
         apps = list(await db.scalars(select(BizApplication).where(BizApplication.job_id == job.id,
             BizApplication.id > cursor).order_by(BizApplication.id).limit(200).options(load_only(
                 BizApplication.id, BizApplication.status, BizApplication.stage_id, BizApplication.stage_changed_at,
-                BizApplication.deletion_requested_at))))
+                BizApplication.deletion_requested_at, BizApplication.interviewers))))
         if not apps:
             break
         for pending in (await automation.signals(db, job, apps, recipe, datetime.now(UTC))).values():

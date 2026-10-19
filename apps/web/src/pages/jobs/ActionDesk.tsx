@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Button, Callout, Sparkles, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
-import { errorText } from "../../lib/format";
+import { downloadText, errorText } from "../../lib/format";
 import { shortDate } from "./model";
 
 interface Action {
@@ -48,6 +48,12 @@ export function JobActionDeskPage() {
     finally { setBusy(false); }
   };
   const visible = queue?.items.filter((a) => filter === "all" || (filter === "overdue" ? a.overdue : a.kind === filter)) ?? [];
+  const exportCalendar = async () => {
+    try {
+      const { agendaIcs } = await import("./agenda");
+      downloadText("orbit-next-seven-days.ics", agendaIcs(queue?.items ?? []), "text/calendar;charset=utf-8");
+    } catch (e) { setError(errorText(e)); }
+  };
   return <div className="space-y-6">
     <section className="grid items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900 md:grid-cols-2">
       <div><p className="text-sm font-medium text-indigo-600 dark:text-indigo-300">Your next seven days</p>
@@ -64,7 +70,9 @@ export function JobActionDeskPage() {
     <div className="flex flex-wrap items-center gap-3">
       <Button onClick={() => void generate()} loading={busy} disabled={!queue?.items.length}><Sparkles className="h-4 w-4" /> Build my AI brief</Button>
       <Button variant="secondary" disabled={busy} onClick={() => setLoad((n) => n + 1)}>Refresh records</Button>
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">5 AI previews a day · resets at midnight UTC</span>
+      <Button variant="secondary" disabled={!queue?.items.some((a) => a.due_at && new Date(a.due_at) > new Date())}
+        onClick={() => void exportCalendar()}>Export upcoming dates</Button>
+      <span className="text-xs text-zinc-500 dark:text-zinc-400">5 AI previews/day · resets at midnight UTC. Calendar export is a snapshot.</span>
     </div>
     <div aria-live="polite">{busy && <p className="text-sm">Reading your saved actions and preparing a focused brief…</p>}</div>
     {error && <Callout tone="error">{error}</Callout>}

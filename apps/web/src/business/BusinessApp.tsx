@@ -42,6 +42,7 @@ const Pipeline = lazy(async () => ({ default: (await import("./Pipeline")).Pipel
 const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Candidate }));
 const HiringDesk = lazy(async () => ({ default: (await import("./HiringDesk")).HiringDeskPage }));
 const AutomationCenter = lazy(async () => ({ default: (await import("./AutomationCenter")).AutomationCenter }));
+const ControlRoom = lazy(async () => ({ default: (await import("./ControlRoom")).ControlRoom }));
 const HiringPlan = lazy(async () => ({ default: (await import("./HiringPlan")).HiringPlanPage }));
 const HiringRoom = lazy(async () => ({ default: (await import("./HiringRoom")).HiringRoomPage }));
 const CandidateCompare = lazy(async () => ({ default: (await import("./CandidateCompare")).CandidateComparePage }));
@@ -112,6 +113,7 @@ function Header({ company }: { company?: BizCompany | undefined }) {
 
 const NAV = [
   { to: "", label: "Dashboard", icon: Gauge, end: true },
+  { to: "control-room", label: "Control room", icon: Gauge },
   { to: "jobs", label: "Jobs", icon: Briefcase },
   { to: "hiring-desk", label: "Hiring desk", icon: Users },
   { to: "automations", label: "Automations", icon: Gauge },
@@ -121,11 +123,12 @@ const NAV = [
   { to: "audit", label: "Audit log", icon: ScrollText },
 ] as const;
 
-function CompanyNav({ company }: { company: BizCompany }) {
-  const items = NAV.filter((n) => (n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
+function CompanyNav({ company, sidebar = false }: { company: BizCompany; sidebar?: boolean }) {
+  const items = NAV.filter((n) => (n.to === "control-room" ? company.role !== "interviewer" : n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
   return (
-    <nav aria-label={`${company.name}`} className="border-b border-zinc-200 dark:border-white/10">
-      <ul className="mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6">
+    <nav aria-label={`${company.name}`} className={sidebar ? "hidden w-60 shrink-0 space-y-6 border-r border-zinc-200 p-4 dark:border-white/10 lg:block" : "border-b border-zinc-200 dark:border-white/10 lg:hidden"}>
+      {sidebar && <div className="space-y-3 rounded-xl bg-zinc-950 p-4 text-white"><p className="text-xs uppercase tracking-widest text-indigo-300">Company workspace</p><p className="truncate font-semibold">{company.name}</p><p className="text-xs text-zinc-300">{ROLE_LABEL[company.role]} · {company.verified ? "Verified" : "Verification pending"}</p></div>}
+      <ul className={sidebar ? "space-y-1" : "mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6"}>
         {items.map((n) => (
           <li key={n.to}>
             <NavLink
@@ -133,8 +136,8 @@ function CompanyNav({ company }: { company: BizCompany }) {
               end={"end" in n ? n.end : false}
               className={({ isActive }) =>
                 cx(
-                  "inline-flex h-11 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 text-sm",
-                  isActive ? "border-indigo-600 font-medium text-zinc-900 dark:text-white" : "border-transparent text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                  sidebar ? "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors motion-reduce:transition-none" : "inline-flex h-11 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 text-sm",
+                  isActive ? sidebar ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-white/10 dark:text-indigo-300" : "border-indigo-600 font-medium text-zinc-900 dark:text-white" : "border-transparent text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                   focusRing,
                 )
               }
@@ -144,6 +147,7 @@ function CompanyNav({ company }: { company: BizCompany }) {
           </li>
         ))}
       </ul>
+      {sidebar && <div className="rounded-xl border border-zinc-200 p-4 text-xs text-zinc-600 dark:border-white/10 dark:text-zinc-400"><p className="font-semibold">Keep the loop moving</p><p className="mt-2">Prepare roles, coordinate interviews and review evidence in one workspace.</p><Link to="/jobs/weekly" className={cx("mt-3 inline-block rounded font-medium hover:underline", focusRing)}>Your personal weekly studio →</Link></div>}
     </nav>
   );
 }
@@ -226,6 +230,9 @@ function CompanyLayout() {
     <Ctx.Provider key={company.id} value={{ company, reload, setCompany }}>
       <Header company={company} />
       <CompanyNav company={company} />
+      <div className="mx-auto flex w-full max-w-7xl">
+      <CompanyNav company={company} sidebar />
+      <div className="min-w-0 flex-1">
       <Page wide>
         <Banners company={company} />
         <Suspense fallback={<Loading />}>
@@ -238,6 +245,7 @@ function CompanyLayout() {
             <Route path="jobs/:jid/edit" element={<JobEditor />} />
             <Route path="hiring-desk" element={<HiringDesk />} />
             <Route path="automations" element={<AutomationCenter />} />
+            <Route path="control-room" element={<ControlRoom />} />
             <Route path="jobs/:jid/interview-plan" element={<HiringPlan />} />
             <Route path="jobs/:jid/compare" element={<CandidateCompare />} />
             <Route path="applications/:aid" element={<Candidate />} />
@@ -250,6 +258,8 @@ function CompanyLayout() {
           </Routes>
         </Suspense>
       </Page>
+      </div>
+      </div>
     </Ctx.Provider>
   );
 }

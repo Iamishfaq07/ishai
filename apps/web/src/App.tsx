@@ -54,6 +54,7 @@ import {
   JobMissionPage,
   JobTrackerPage,
   JobActionDeskPage,
+  WeeklyStudioPage,
   JobOutreachPage,
   JobProfilePage,
   AutoApplySetupPage,
@@ -317,6 +318,7 @@ export function App() {
           <Route path="mission/:entryId" element={<JobMissionPage />} />
           <Route path="tracker" element={<JobTrackerPage />} />
           <Route path="actions" element={<JobActionDeskPage />} />
+          <Route path="weekly" element={<WeeklyStudioPage />} />
           <Route path="outreach" element={<JobOutreachPage />} />
           <Route path="profile" element={<JobProfilePage />} />
           <Route path="auto-apply" element={<AutoApplySetupPage />} />
