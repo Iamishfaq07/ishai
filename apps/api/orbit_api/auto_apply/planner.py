@@ -22,6 +22,8 @@ otherwise `ready` for the executor. Pacing (pacing.py) decides when it goes.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 import random
 import re
@@ -34,9 +36,9 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.auto_apply import bank, direct, letters, rules
+from orbit_api.auto_apply import bank, direct, letters, quota, rules
 from orbit_api.auto_apply.forms import FormClient, FormError, FormQuestion, fetch_form, standard_form
-from orbit_api.auto_apply.pacing import OPEN, aware, company_count, daily_limit, expire
+from orbit_api.auto_apply.pacing import OPEN, aware, company_count, daily_limit, expire, pause_if_hired
 from orbit_api.auto_apply.resolve import Target, resolve
 from orbit_api.auto_apply.setup import Facts, Filters
 from orbit_api.auto_apply.tailor import Generate, tailor
@@ -97,6 +99,14 @@ def company_key(company: str) -> str:
 async def load_bank(db: AsyncSession, user_id: str) -> dict[str, str]:
     rows = (await db.scalars(select(AnswerBankEntry).where(AnswerBankEntry.user_id == user_id))).all()
     return {r.norm: r.value for r in rows if r.value.strip()}
+
+
+def approval_fingerprint(setup: AutoApplySetup, entries: dict[str, str]) -> str:
+    """Fence changes to the approved resume, facts, reusable answers, filters or review policy during a run.
+    Quiet hours and limits are checked live rather than requiring the candidate to rebuild the packet."""
+    snapshot = {"resume": setup.resume_hash, "facts": setup.profile, "answers": entries, "filters": setup.filters,
+                "threshold": setup.threshold, "mode": setup.mode, "ai_line": setup.ai_line}
+    return hashlib.sha256(json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 async def master_resume(db: AsyncSession, setup: AutoApplySetup) -> tuple[Resume | None, ResumeData | None, bool]:
@@ -187,7 +197,8 @@ def needs_why(questions: list[FormQuestion]) -> bool:
 
 async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobListing, target: Target,
                   match: ranking.Match, master: ResumeData, resume_title: str, *, now: datetime,
-                  generate: Generate | None, transport: httpx.AsyncBaseTransport | None) -> ApplicationPacket:
+                  generate: Generate | None, transport: httpx.AsyncBaseTransport | None,
+                  persist: bool = True) -> ApplicationPacket:
     from orbit_api.job_portal.routes import _job_text
 
     facts = Facts.model_validate(setup.profile or {})
@@ -223,6 +234,10 @@ async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobL
     if target.automatic:
         answers, missing = await answer_form(questions, ctx)
         answer_dicts = [a.model_dump() for a in answers]
+        if target.ats not in (*rules.BROWSER_ATS, "orbit"):
+            # These forms are rendered by the hosted browser, including multi-step questions. Carry only explicit
+            # saved answers alongside the standard form answers; the browser matches their labels exactly.
+            answer_dicts.extend(_handoff_answers(ctx, entries))
         if missing:
             status, reason = "needs_answer", (
                 f"{len(missing)} question{'' if len(missing) == 1 else 's'} only you can answer")
@@ -240,14 +255,55 @@ async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobL
         job_ref=target.job_ref, site=target.site, company=row.company, company_key=ckey, title=row.title,
         url=row.url, apply_url=target.apply_url or row.apply_url or row.url, dedupe_key=row.dedupe_key,
         match_score=match.score, match_reason=_reason(match, setup.threshold), resume_title=resume_title,
-        resume_data=tailored.data.model_dump(mode="json"), resume_diff=[c.model_dump() for c in tailored.changes],
+        resume_data=tailored.data.model_dump(mode="json"), approval_fingerprint=approval_fingerprint(setup, entries),
+        resume_diff=[c.model_dump() for c in tailored.changes],
         cover_letter=letter, generated=dict(ctx.generated), fields=_fields(facts), answers=answer_dicts,
         questions=[q.model_dump() for q in questions], missing=[m.model_dump() for m in missing],
         form_source=form_source, not_before=now, expires_at=now + rules.PACKET_TTL,
         tenant_gap_s=_rng.randint(*rules.TENANT_GAP_S), reason=reason)
-    db.add(packet)
-    await db.flush()
+    if persist:
+        db.add(packet)
+        await db.flush()
     return packet
+
+
+async def rebuild_packet(db: AsyncSession, user: User, setup: AutoApplySetup, packet: ApplicationPacket) -> None:
+    """Rebuild an unsent packet from the current approvals. New filters are checked again, and Review first never
+    becomes Automatic. Used before leasing stale queue entries and when the candidate explicitly retries."""
+    from orbit_api.auto_apply.resolve import from_listing
+    from orbit_api.job_portal.routes import _matches
+
+    if packet.submission_started_at is not None:
+        raise ValueError("Reconcile the previous submission before rebuilding it")
+    quota.release(db, packet)
+    packet.hosted_token = packet.lease_holder = packet.lease_until = None
+    resume, master, approved = await master_resume(db, setup)
+    listing = await db.get(JobListing, packet.listing_id)
+    if resume is None or master is None or not approved or listing is None:
+        packet.status, packet.reason = "needs_you", "Approve your current resume before rebuilding this application."
+        return
+    filters = Filters.model_validate(setup.filters or {})
+    prefs = await _prefs(db, user, master)
+    searches = _searches(user, prefs, filters, Facts.model_validate(setup.profile or {}))
+    copies = set((await db.scalars(select(JobListing.id).where(JobListing.dedupe_key == listing.dedupe_key))).all()) \
+        if listing.dedupe_key else {listing.id}
+    matches = [m for search in searches for m in await _matches(db, user, search, master, "best")
+               if m.id in copies and m.score >= setup.threshold]
+    if (not matches or not _keywords_ok(listing, filters)
+            or (filters.seniority and listing.level and listing.level not in filters.seniority)
+            or any(same_company(c, listing.company) for c in filters.exclude_companies)
+            or (filters.salary_floor and (salary_top(listing.salary) or float("inf")) < filters.salary_floor)):
+        packet.status, packet.reason = "skipped", "This job no longer matches your approved search rules."
+        return
+    fresh = await prepare(db, user, setup, listing, from_listing(listing), matches[0], master, resume.title,
+                          now=datetime.now(UTC), generate=None, transport=None, persist=False)
+    for key in ("resume_data", "resume_diff", "resume_title", "approval_fingerprint", "cover_letter", "generated",
+                "fields", "answers", "questions", "missing", "form_source", "expires_at", "not_before",
+                "ats", "tenant", "job_ref", "apply_url", "url", "match_score", "match_reason"):
+        setattr(packet, key, getattr(fresh, key))
+    packet.status, packet.reason = fresh.status, fresh.reason
+    packet.hosted_token = packet.lease_holder = packet.lease_until = None
+    packet.result_at = packet.result_status = packet.result_reason = None
 
 
 def _searches(user: User, prefs: JobPrefs, filters: Filters, facts: Facts) -> list[ranking.Search]:
@@ -285,6 +341,11 @@ async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = 
     setup = await db.get(AutoApplySetup, user.id)
     if setup is None or setup.consent_at is None:
         report.blocked = "Finish the Orbit Apply setup and give your consent first."
+        return report
+    if await pause_if_hired(db, setup):
+        await db.commit()
+    if setup.paused:
+        report.blocked = "Automatic applications are paused. Resume when you want to search again."
         return report
     resume, master, approved = await master_resume(db, setup)
     if resume is None or master is None:

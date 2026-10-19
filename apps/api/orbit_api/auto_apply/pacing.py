@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auto_apply import quota, rules
 from orbit_api.auto_apply.setup import in_quiet_hours
-from orbit_api.models import ApplicationPacket, ApplySiteState, AutoApplySetup, User
+from orbit_api.models import ApplicationPacket, ApplySiteState, AuditLog, AutoApplySetup, JobApplication, User
 from orbit_api.transactions import lock_account
 
 log = logging.getLogger(__name__)
@@ -105,12 +105,19 @@ async def expire(db: AsyncSession, now: datetime, user_id: str | None = None) ->
         changed += 1
         if p.status == "leased":
             quota.release(db, p)
-            if p.attempts >= rules.MAX_ATTEMPTS or (aware(p.expires_at) or now) < now:
+            if p.submission_started_at is not None:
+                p.status = "needs_you"
+                p.reason = "Orbit stopped after starting submission. Check the employer before retrying."
+                p.result_reason = "error"
+            elif p.attempts >= rules.MAX_ATTEMPTS or (aware(p.expires_at) or now) < now:
                 p.status, p.reason = "expired", "The browser didn't finish it in time, a few times. Try it again."
             else:
                 p.status = "ready"
                 p.not_before = now + rules.MIN_GAP
-            p.lease_until = p.lease_holder = None
+            p.lease_until = None
+            # Keep a hosted attempt's fence until its late receipt arrives. A new lease overwrites it.
+            if not p.hosted_token:
+                p.lease_holder = None
         else:
             p.status, p.reason = "expired", "Not sent in time: the post may have changed since it was prepared."
     return changed
@@ -163,6 +170,7 @@ async def next_due(db: AsyncSession, user: User, now: datetime | None = None, ho
     setup = await db.get(AutoApplySetup, user.id)
     if setup is None or setup.consent_at is None:
         return Due(None, "not_set_up")
+    await pause_if_hired(db, setup)
     if setup.paused:
         return Due(None, "paused")
     mine = ApplicationPacket.user_id == user.id
@@ -215,3 +223,20 @@ async def next_due(db: AsyncSession, user: User, now: datetime | None = None, ho
         p.not_before = now
         return Due(p)
     return Due(None, "pacing" if soonest else "none", soonest)
+
+
+async def pause_if_hired(db: AsyncSession, setup: AutoApplySetup) -> bool:
+    """A completed search stops new applications, including a worker already preparing a form. Resume explicitly
+    starts the next campaign, so a previous job's hired status does not stop a later search. Caller holds the account
+    lock when using this during execution, and commits."""
+    start = aware(setup.campaign_started_at) or aware(setup.consent_at)
+    if (not setup.stop_when_hired or setup.paused or start is None
+            or setup.consent_version != rules.CONSENT_VERSION):
+        return False
+    hired = await db.scalar(select(JobApplication.id).where(JobApplication.user_id == setup.user_id,
+        JobApplication.status == "hired", JobApplication.status_at >= start).limit(1))
+    if hired is None:
+        return False
+    setup.paused = True
+    db.add(AuditLog(user_id=setup.user_id, action="apply.hired_pause", target=hired))
+    return True

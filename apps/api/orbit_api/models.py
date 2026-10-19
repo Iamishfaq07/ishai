@@ -1104,6 +1104,11 @@ class AutoApplySetup(TimestampMixin, Base):
     # The last time an executor (the extension with auto-apply switched on) asked for work: the web app says whether
     # one is set up.
     executor_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    execution: Mapped[str] = mapped_column(String(12), default="browser", server_default="browser")
+    hosted_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    hosted_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    stop_when_hired: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    campaign_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
@@ -1170,6 +1175,10 @@ class ApplicationPacket(TimestampMixin, Base):
     # The signed-in device holding the lease (its session id; "" for a token without one): asking again from it gets
     # the same packet back, and any other device is told it's busy.
     lease_holder: Mapped[str | None] = mapped_column(String(64))
+    # Persisted BEFORE an external click. An ambiguous attempt is never automatically sent again.
+    submission_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    hosted_token: Mapped[str | None] = mapped_column(String(64))
+    approval_fingerprint: Mapped[str | None] = mapped_column(String(64))
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     charge: Mapped[str | None] = mapped_column(String(8))  # plan | credit, while leased or once submitted
     result_status: Mapped[str | None] = mapped_column(String(12))
@@ -1182,6 +1191,12 @@ class ApplicationPacket(TimestampMixin, Base):
     submitted_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ApplyWorkerHeartbeat(Base):
+    __tablename__ = "apply_worker_heartbeats"
+    worker_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
 
 
 class ApplyProof(TimestampMixin, Base):

@@ -60,16 +60,23 @@ MAX_SCREENSHOT_BYTES = 1_500_000
 MAX_PAYLOAD_CHARS = 200_000
 
 # ---- consent -----------------------------------------------------------------------------------------------------
-CONSENT_VERSION = "2026-10-19.2"
+CONSENT_VERSION = "2026-10-19.3"
 AI_LINE = "Prepared with Orbit AI from my verified profile."
 CONSENT_TEXT = (
     "I ask Orbit to apply to jobs for me, as my agent, within my filters and limits. The facts, answers and resume I "
     "approved are true, and I'll keep them up to date. Orbit submits directly to employers on Orbit Business, sharing "
     "my approved resume, contact facts and answers under their application notice. For supported external employer "
-    "forms it uses my browser or Orbit app. It stops and asks me whenever a form needs something I haven't answered, "
+    "forms it uses my connected browser or, if I separately authorise it, Orbit's hosted browser. "
+    "It stops and asks me whenever a form needs something I haven't answered, "
     "never bypasses a captcha or login, and never applies on job boards for me. I can pause or withdraw consent.")
 
 # Executor results, and what each means for a packet.
 RESULT_STATUSES = ("submitted", "needs_you", "failed", "skipped")
 RESULT_REASONS = ("captcha", "login", "email_verification", "unknown_question", "form_changed", "blocked", "error")
-ATS_SUPPORTED = ("greenhouse", "lever", "ashby")
+BROWSER_ATS = ("greenhouse", "lever", "ashby")
+ATS_SUPPORTED = (*BROWSER_ATS, "workday", "smartrecruiters", "workable", "recruitee")
+HOSTED_CONSENT = (
+    "I authorise Orbit's hosted browser to send applications using my approved resume and answers within my "
+    "filters and limits, even when my device is off. Employers receive the same application data. "
+    "A login, verification code, human check or missing required answer will come back to me. "
+    "I can pause applications or switch back to my browser at any time.")

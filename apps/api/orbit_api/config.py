@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     database_ssl: Literal["verify", "require", "off"] | None = Field(
         None, validation_alias=AliasChoices("ORBIT_DATABASE_SSL"))
     redis_url: str | None = Field(None, validation_alias=AliasChoices("ORBIT_REDIS_URL"))
+    hosted_apply: bool = Field(False, validation_alias="ORBIT_HOSTED_APPLY")
+    apply_worker_secret: SecretStr | None = Field(None, min_length=32, validation_alias="ORBIT_APPLY_WORKER_SECRET")
     # How many API processes serve this deployment. Live-session state (WS tickets, socket ownership, the engine
     # a screenshot is routed to, rate limits) is in process memory, so only 1 is supported until it moves to
     # Redis. Declared so a scaled-out deploy fails loudly at boot instead of breaking sessions at random.
@@ -338,6 +340,12 @@ class Settings(BaseSettings):
     @classmethod
     def _blank_price_is_unknown(cls, v: object) -> object:
         return None if isinstance(v, str) and not v.strip() else v
+
+    @model_validator(mode="after")
+    def _hosted_worker_config(self) -> "Settings":
+        if self.hosted_apply and self.apply_worker_secret is None:
+            raise ValueError("ORBIT_HOSTED_APPLY requires ORBIT_APPLY_WORKER_SECRET (32+ random characters)")
+        return self
 
     @model_validator(mode="after")
     def _public_url_from_the_host(self) -> "Settings":

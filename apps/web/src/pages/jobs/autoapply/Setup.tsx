@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { ApplyBankItem, ApplyFacts, ApplyFilters, ApplyLevel, ApplySetup, ApplySetupInput, ApplyWorkplace, ApplyPlanReport } from "@orbit/types";
 import { ArrowLeft, ArrowRight, Check, LoadGate, Plus, Rocket, Trash2, cx, focusRing } from "@orbit/ui";
@@ -29,13 +29,18 @@ const LEVELS: Array<{ id: ApplyLevel; label: string }> = [
 export function AutoApplySetupPage() {
   const setup = useAsync(() => applyApi.getApplySetup(), [], "apply-setup");
   const bank = useAsync(() => applyApi.getApplyBank(), [], "apply-bank");
+  useEffect(() => {
+    if (setup.data?.execution !== "hosted") return;
+    const timer = window.setInterval(setup.reload, 30_000);
+    return () => window.clearInterval(timer);
+  }, [setup.data?.execution, setup.reload]);
   const loading = (setup.loading && !setup.data) || (bank.loading && !bank.data);
   return (
     <>
       <PageHeader
         icon={Rocket}
         title="Set up Orbit Apply"
-        subtitle="Approve your resume, answers and limits once. Orbit can apply directly to Business jobs while your browser is closed; supported external employer forms use your connected browser. Missing answers come back to you."
+        subtitle="Approve your resume, answers and limits once. Choose hosted applying to keep applications running while your browser is closed, or use your connected browser. Missing answers come back to you."
       />
       <LoadGate loading={loading} variant="card" count={2} label="Getting your Orbit Apply setup">
         {setup.error && !setup.data ? (
@@ -70,6 +75,9 @@ function inputOf(s: ApplySetup): ApplySetupInput {
     quiet_hours: s.quiet_hours,
     tz_offset_min: -new Date().getTimezoneOffset(),
     consent: s.configured,
+    execution: s.execution ?? "browser",
+    hosted_consent: !!s.hosted_consent_at,
+    stop_when_hired: s.stop_when_hired ?? true,
   };
 }
 
@@ -106,6 +114,11 @@ function Wizard({
       setDraft(inputOf(saved));
       setAgree(saved.configured);
       setMessage(saved.configured ? "Saved. Orbit Apply is on." : "Saved. Orbit Apply is off: nothing is sent until you turn it on.");
+      if (saved.configured && !setup.configured) {
+        setBusy("plan");
+        try { setReport(await applyApi.planApplications()); }
+        catch { setMessage("Your setup is saved. The first search could not finish; use Find jobs now to retry. Orbit also searches automatically."); }
+      }
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -152,7 +165,7 @@ function Wizard({
         </ol>
       </nav>
 
-      <ExtensionNeeded seenAt={setup.executor_seen_at} />
+      <ExtensionNeeded seenAt={setup.executor_seen_at} setup={{ ...setup, execution: draft.execution }} preview={draft.execution !== setup.execution} />
 
       <Card>
         <div className="space-y-4 p-5">
@@ -162,7 +175,7 @@ function Wizard({
           {step === 3 && <FiltersStep filters={draft.filters} titles={setup.profile_titles} maxDays={setup.caps.max_fresh_days} setFilters={setFilters} />}
           {step === 4 && <ModeStep setup={setup} draft={draft} set={set} />}
           {step === 5 && (
-            <ConsentStep setup={setup} agree={agree} setAgree={setAgree} />
+            <ConsentStep setup={setup} agree={agree} setAgree={setAgree} draft={draft} set={set} />
           )}
         </div>
       </Card>
@@ -198,8 +211,8 @@ function Wizard({
             <Button
               onClick={() => void save(true)}
               loading={busy === "save"}
-              disabled={!agree}
-              disabledReason="Tick “I agree” in the Consent step first."
+              disabled={!agree || (draft.execution === "hosted" && !draft.hosted_consent) || busy === "plan"}
+              disabledReason="Complete the consent choices first."
             >
               {setup.configured ? "Save changes" : "Save and turn on"}
             </Button>
@@ -568,12 +581,26 @@ function ModeStep({
   const quiet = draft.quiet_hours;
   return (
     <Section title="How it runs">
+      <fieldset className="space-y-3 rounded-xl border border-zinc-200 p-4 dark:border-white/10">
+        <legend className="px-1 text-sm font-semibold">Where applications run</legend>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="radio" name={`${id}-execution`} className={cx("mt-1", focusRing)} checked={draft.execution === "hosted"}
+            disabled={!setup.hosted_enabled} onChange={() => { set("execution", "hosted"); set("hosted_consent", false); }} />
+          <span><strong>Hosted · continue when my browser is closed</strong><span className="mt-1 block text-zinc-600 dark:text-zinc-400">Orbit runs supported employer forms for you. Workday, SmartRecruiters, Workable and Recruitee are available here alongside Greenhouse, Lever and Ashby.</span></span>
+        </label>
+        {!setup.hosted_enabled && <p className="text-sm text-amber-800 dark:text-amber-200">Hosted applying is not available on this Orbit server yet. Browser mode is available.</p>}
+        <label className="flex items-start gap-2 text-sm">
+          <input type="radio" name={`${id}-execution`} className={cx("mt-1", focusRing)} checked={draft.execution !== "hosted"}
+            onChange={() => { set("execution", "browser"); set("hosted_consent", false); }} />
+          <span><strong>My browser</strong><span className="mt-1 block text-zinc-600 dark:text-zinc-400">The connected Orbit extension applies on Greenhouse, Lever and Ashby while this browser is open.</span></span>
+        </label>
+      </fieldset>
       <fieldset>
         <legend className="text-sm font-medium">Mode</legend>
         <div className="mt-2 space-y-2">
           {(
             [
-              ["automatic", "Automatic", "Prepared applications go out from your browser within your limits. You can stop any of them first."],
+              ["automatic", "Automatic", "Prepared applications go out within your approved rules and limits. You can pause them at any time."],
               ["review", "Review first", "Each application waits for you to approve it before it goes."],
             ] as const
           ).map(([value, label, text]) => (
@@ -617,6 +644,12 @@ function ModeStep({
         </Field>
       </div>
       <Toggle
+        checked={draft.stop_when_hired ?? true}
+        onChange={(on) => set("stop_when_hired", on)}
+        label="Pause automatically when I mark a role as hired"
+        description="Finish this search when you accept your next role. Resuming later starts a new search campaign."
+      />
+      <Toggle
         checked={quiet !== null}
         onChange={(on) => set("quiet_hours", on ? { start: 22 * 60, end: 7 * 60 } : null)}
         label="Quiet hours"
@@ -647,7 +680,8 @@ function ModeStep({
   );
 }
 
-function ConsentStep({ setup, agree, setAgree }: { setup: ApplySetup; agree: boolean; setAgree: (v: boolean) => void }) {
+function ConsentStep({ setup, agree, setAgree, draft, set }: { setup: ApplySetup; agree: boolean; setAgree: (v: boolean) => void;
+  draft: ApplySetupInput; set: <K extends keyof ApplySetupInput>(key: K, value: ApplySetupInput[K]) => void }) {
   const id = useId();
   return (
     <Section title="Your consent">
@@ -660,9 +694,13 @@ function ConsentStep({ setup, agree, setAgree }: { setup: ApplySetup; agree: boo
         You can pause it or turn it off any time, and every application shows exactly what was sent in your name.
       </p>
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Applications are sent from your own browser by the Orbit extension, on Greenhouse, Lever and Ashby forms only,
-        once you also switch on “Apply for me automatically” in the extension. Turning it on here alone sends nothing.
+        {draft.execution === "hosted" ? "Hosted applying can send supported external applications after you save this setup, including when you close Orbit."
+          : "For external forms, also switch on “Apply for me automatically” in the connected Orbit extension and keep that browser open."}
       </p>
+      {draft.execution === "hosted" && <label className="flex items-start gap-2 rounded-xl border border-indigo-300 p-4 text-sm dark:border-indigo-500/40">
+        <input type="checkbox" className={cx("mt-1", focusRing)} checked={!!draft.hosted_consent} onChange={(e) => set("hosted_consent", e.target.checked)} />
+        <span><strong className="mb-2 block">I authorise hosted applications</strong>{setup.hosted_consent_text}</span>
+      </label>}
     </Section>
   );
 }

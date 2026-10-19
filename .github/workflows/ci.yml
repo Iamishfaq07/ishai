@@ -80,8 +80,12 @@ jobs:
         with: { python-version: "3.12", enable-cache: true }
       - run: uv sync --project apps/api --frozen
       - run: pnpm exec playwright install --with-deps chromium
+      - name: Hosted personal apply worker in Chromium (local fixtures only)
+        run: pnpm --filter @orbit/apply-worker test:browser
       - name: Browser autosave, mobile context and career flows
         run: pnpm test:e2e
+      - name: Personal hosted apply setup and consent (desktop and mobile)
+        run: pnpm exec playwright test -c tools/e2e/hosted-personal.config.ts
 
   # Windows-first (macOS deferred). Builds a runnable orbit-desktop.exe + NSIS installer artifact.
   desktop-windows:
@@ -166,6 +170,27 @@ jobs:
       # Building isn't enough: a base-image bump can produce an image whose app can't even import.
       - name: Import the app inside the image
         run: docker run --rm -e ORBIT_ENV=test orbit-api:ci python -c "import orbit_api.main"
+      - name: Build personal hosted apply worker
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/apply-worker/Dockerfile
+          push: false
+          load: true
+          tags: orbit-personal-apply:ci
+          cache-from: type=gha,scope=personal-apply
+          cache-to: type=gha,scope=personal-apply,mode=max
+      - name: Sandboxed Chromium starts inside the worker image (local document only)
+        run: >-
+          docker run --rm --init --shm-size=1g --cap-drop=ALL
+          --security-opt no-new-privileges:true
+          --security-opt seccomp=apps/apply-worker/seccomp_profile.json
+          orbit-personal-apply:ci node --input-type=module -e
+          'import { chromium } from "playwright";
+          const b = await chromium.launch({headless:true,chromiumSandbox:true});
+          const p = await b.newPage(); await p.setContent("<h1>Hosted worker ready</h1>");
+          if (await p.locator("h1").textContent() !== "Hosted worker ready") process.exitCode=1;
+          await b.close();'
 
   # SCA + SAST: known-vulnerable dependencies (Python, npm) and risky Python patterns (medium severity and up).
   # See docs/SECURITY_REVIEW.md for the full review and how to run these locally.

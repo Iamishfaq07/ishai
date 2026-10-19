@@ -37,3 +37,9 @@ updates:
       # shipped with a pydantic that can't import on it. Digest and patch updates still come through.
       - dependency-name: python
         update-types: [version-update:semver-major, version-update:semver-minor]
+  - package-ecosystem: docker
+    directory: /apps/apply-worker
+    schedule: { interval: weekly }
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]

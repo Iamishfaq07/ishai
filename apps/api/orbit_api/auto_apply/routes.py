@@ -111,6 +111,14 @@ class SetupOut(BaseModel):
     # When the browser extension (auto-apply switched on there) last asked for work; None: never. Nothing is sent
     # without it.
     executor_seen_at: datetime | None = None
+    execution: Literal["browser", "hosted"] = "browser"
+    stop_when_hired: bool = True
+    hosted_enabled: bool = False
+    hosted_online: bool = False
+    hosted_seen_at: datetime | None = None
+    hosted_consent_at: datetime | None = None
+    hosted_consent_text: str = rules.HOSTED_CONSENT
+    hosted_sites: list[str] = Field(default_factory=lambda: list(rules.ATS_SUPPORTED))
     quiet_hours: QuietHours | None
     tz_offset_min: int
     resume: MasterResume | None
@@ -135,6 +143,9 @@ class SetupIn(BaseModel):
     quiet_hours: QuietHours | None = None
     tz_offset_min: int = Field(0, ge=-14 * 60, le=14 * 60)
     consent: bool = False
+    execution: Literal["browser", "hosted"] = "browser"
+    stop_when_hired: bool = True
+    hosted_consent: bool = False
 
 
 def _link(links: list[tuple[str, str]], needle: str) -> str:
@@ -168,6 +179,7 @@ async def _resumes(db: AsyncSession, user: User) -> list[Resume]:
 
 
 async def _setup_out(db: AsyncSession, user: User, setup: AutoApplySetup | None) -> SetupOut:
+    from orbit_api.auto_apply import hosted
     from orbit_api.job_portal.routes import _profile
 
     resumes = await _resumes(db, user)
@@ -195,6 +207,10 @@ async def _setup_out(db: AsyncSession, user: User, setup: AutoApplySetup | None)
         mode="review" if s.mode == "review" else "automatic", daily_limit=pacing.daily_limit(s),
         threshold=s.threshold or rules.DEFAULT_THRESHOLD, ai_line=bool(s.ai_line), paused=bool(s.paused),
         executor_seen_at=aware(s.executor_seen_at),
+        execution="hosted" if s.execution == "hosted" else "browser", hosted_enabled=hosted.enabled(),
+        stop_when_hired=s.stop_when_hired if s.stop_when_hired is not None else True,
+        hosted_online=await hosted.online(db), hosted_seen_at=aware(s.hosted_seen_at),
+        hosted_consent_at=aware(s.hosted_consent_at),
         quiet_hours=QuietHours(start=s.quiet_start, end=s.quiet_end)
         if s.quiet_start is not None and s.quiet_end is not None else None,
         tz_offset_min=s.tz_offset_min or 0, resume=master,
@@ -235,6 +251,24 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
     setup.quiet_start = body.quiet_hours.start if body.quiet_hours else None
     setup.quiet_end = body.quiet_hours.end if body.quiet_hours else None
     setup.tz_offset_min = body.tz_offset_min
+    setup.stop_when_hired = body.stop_when_hired
+    if body.execution == "hosted" and body.consent:
+        from orbit_api.auto_apply.hosted import enabled
+
+        if not enabled():
+            raise HTTPException(422, "Hosted applying is not enabled on this deployment yet. Use your browser for now.")
+        if not user.email_verified:
+            raise HTTPException(403, "Verify your email before enabling hosted applications.")
+        if not body.hosted_consent and setup.hosted_consent_at is None:
+            raise HTTPException(422, "Authorise hosted applying before turning it on.")
+        if setup.hosted_consent_at is None:
+            setup.hosted_consent_at = datetime.now(UTC)
+            db.add(AuditLog(user_id=user.id, action="apply.hosted_consent", ip=_ip(request)))
+    setup.execution = body.execution
+    if not body.consent or body.execution == "browser":
+        if setup.hosted_consent_at is not None:
+            db.add(AuditLog(user_id=user.id, action="apply.hosted_consent_withdrawn", ip=_ip(request)))
+        setup.hosted_consent_at = None
     if body.consent and (setup.consent_at is None or setup.consent_version != rules.CONSENT_VERSION):
         if not setup.resume_id or not setup.resume_hash:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -242,6 +276,7 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
         if not (body.facts.first_name and body.facts.email):
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Add your name and email first.")
         setup.consent_at, setup.consent_version = datetime.now(UTC), rules.CONSENT_VERSION
+        setup.campaign_started_at = setup.consent_at
         db.add(AuditLog(user_id=user.id, action="apply.consent", ip=_ip(request), target=rules.CONSENT_VERSION))
     elif not body.consent and setup.consent_at is not None:
         setup.consent_at = None
@@ -366,6 +401,7 @@ class PacketSummary(BaseModel):
 
 
 class PacketDetail(PacketSummary):
+    submission_uncertain: bool = False
     employer_status_path: str | None
     resume_title: str
     resume_diff: list[dict[str, Any]]
@@ -410,6 +446,7 @@ async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
             token = status_token_for(app)
             status_path = f"/application/{token}" if token else None
     return PacketDetail(
+        submission_uncertain=p.submission_started_at is not None and p.status not in ("submitted", "applied"),
         employer_status_path=status_path,
         **_summary(p, _has_proof(p, proof is not None)), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
         cover_letter=p.cover_letter, fields=p.fields or {}, answers=p.answers or [],
@@ -495,6 +532,8 @@ async def _move(db: AsyncSession, user: User, packet_id: str, allowed: tuple[str
         p.not_before = now
         p.expires_at = max(aware(p.expires_at) or now, now + rules.PACKET_TTL)
         p.result_status = p.result_reason = None
+        p.result_at = None
+        p.hosted_token = p.submission_started_at = None
     await db.commit()
     return await _detail(db, p)
 
@@ -512,9 +551,35 @@ async def dont_apply(packet_id: str, user: Annotated[User, Depends(current_user)
                                              "expired"), "cancelled", "You chose not to apply.")
 
 
+class RetryIn(BaseModel):
+    confirm_not_submitted: bool = False
+
+
 @router.post("/packets/{packet_id}/retry", response_model=PacketDetail, dependencies=[write_limit])
 async def retry_packet(packet_id: str, user: Annotated[User, Depends(require_verified_email)],
+                       body: RetryIn | None = None, *,
                        db: Annotated[AsyncSession, Depends(get_db)]) -> PacketDetail:
+    await lock_account(db, user.id)
+    p = await packets.owned(db, user, packet_id)
+    if p.status not in ("needs_you", "failed", "expired", "skipped", "cancelled"):
+        raise HTTPException(409, "This application cannot be retried now.")
+    if p.submission_started_at is not None and not (body and body.confirm_not_submitted):
+        raise HTTPException(409, "Check the employer first and confirm this application was not submitted.")
+    setup = await db.get(AutoApplySetup, user.id)
+    if (setup and setup.execution == "hosted" and p.approval_fingerprint != planner.approval_fingerprint(
+            setup, await planner.load_bank(db, user.id))):
+        p.submission_started_at = None  # The candidate confirmed the previous attempt was not submitted above.
+        await planner.rebuild_packet(db, user, setup, p)
+        await db.commit()
+        return await _detail(db, p)
+    if p.missing:
+        raise HTTPException(409, "Answer its open questions first.")
+    if setup and setup.mode == "review":
+        p.status, p.reason = "review", "Ready for your review"
+        p.hosted_token = p.submission_started_at = None
+        p.result_at = p.result_status = p.result_reason = None
+        await db.commit()
+        return await _detail(db, p)
     return await _move(db, user, packet_id, ("needs_you", "failed", "expired", "skipped", "cancelled"), "ready")
 
 
@@ -540,6 +605,8 @@ async def _pause(db: AsyncSession, user: User, paused: bool) -> PauseOut:
     setup = await db.get(AutoApplySetup, user.id)
     if setup is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Set up Orbit Apply first.")
+    if not paused and setup.paused:
+        setup.campaign_started_at = datetime.now(UTC)
     setup.paused = paused
     await db.commit()
     return PauseOut(paused=paused)
@@ -574,7 +641,7 @@ def signed_resume_url(request: Request, packet_id: str, now: float | None = None
 class JobOut(BaseModel):
     url: str
     apply_url: str
-    ats: Literal["greenhouse", "lever", "ashby"]
+    ats: Literal["greenhouse", "lever", "ashby", "workday", "smartrecruiters", "workable", "recruitee"]
     company: str
     title: str
 
@@ -640,7 +707,10 @@ async def seen(db: AsyncSession, user: User, now: datetime) -> None:
             responses={204: {"description": "Nothing is due"}})
 async def next_packet(request: Request, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> Any:
-    due = await pacing.next_due(db, user, holder=lease_holder(request))
+    setup = await db.get(AutoApplySetup, user.id)
+    if setup and setup.execution == "hosted":
+        return Response(status_code=204, headers={"X-Orbit-Apply-Why": "hosted"})
+    due = await pacing.next_due(db, user, holder=lease_holder(request), allowed_ats=rules.BROWSER_ATS)
     if from_executor(request):
         await seen(db, user, datetime.now(UTC))
     await db.commit()
@@ -650,6 +720,10 @@ async def next_packet(request: Request, user: Annotated[User, Depends(current_us
         if due.next_at is not None:
             headers["Retry-After"] = str(max(int((due.next_at - datetime.now(UTC)).total_seconds()), 1))
         return Response(status_code=status.HTTP_204_NO_CONTENT, headers=headers)
+    return executor_packet(request, p)
+
+
+def executor_packet(request: Request, p: ApplicationPacket) -> ExecutorPacket:
     name = (p.fields or {}).get("full_name") or "Resume"
     return ExecutorPacket(
         id=p.id, job=JobOut(url=p.url, apply_url=p.apply_url, ats=p.ats, company=p.company, title=p.title),
@@ -679,6 +753,8 @@ async def post_result(packet_id: str, body: packets.ResultIn, user: Annotated[Us
 
     await lock_account(db, user.id)
     p = await packets.owned(db, user, packet_id)
+    if p.hosted_token:
+        raise HTTPException(409, "This application belongs to the hosted worker.")
     out = await packets.record_result(db, user, p, body)
     await db.commit()
     if out.status in ("needs_you",) and await notify(db, user):

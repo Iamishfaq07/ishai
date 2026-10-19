@@ -1,5 +1,9 @@
 # Orbit Live Protocol — v1
 
+Personal Orbit's hosted application worker uses a separate private protocol documented in
+[HOSTED_APPLY.md](HOSTED_APPLY.md#private-worker-protocol). It shares Orbit Apply's candidate approvals and receipts;
+it does not change the live interview event protocol below.
+
 Source of truth: `apps/api/orbit_api/live/events.py` (Pydantic). TypeScript mirror:
 `packages/types/src/events.ts`. Change both together and bump `PROTOCOL_VERSION`.
 

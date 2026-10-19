@@ -4,6 +4,7 @@ import type { ApplyGroup, ApplyPacketDetail, ApplyPacketSummary, ApplyPlanReport
 import { Copy, ExternalLink, FileText, LoadGate, Pause, Play, Rocket, SlidersHorizontal, cx, focusRing, useCopy } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Select, Textarea } from "../../../components/ui";
 import { errorText } from "../../../lib/format";
+import { practiceHref } from "../../../lib/onboarding";
 import { useAsync } from "../../../lib/useAsync";
 import { Sheet } from "../Sheet";
 import { linkButton, textLink } from "../links";
@@ -18,6 +19,11 @@ export function ApplicationsPage() {
   const setup = useAsync(() => applyApi.getApplySetup(), [], "apply-setup");
   const status = useAsync(() => applyApi.applyStatus(), [], "apply-status");
   const all = useAsync(() => applyApi.applyPackets(), [], "apply-packets");
+  const reloadSetup = setup.reload, reloadStatus = status.reload, reloadPackets = all.reload;
+  useEffect(() => {
+    const timer = window.setInterval(() => { reloadSetup(); reloadStatus(); reloadPackets(); }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [reloadSetup, reloadStatus, reloadPackets]);
   const [group, setGroup] = useState<ApplyGroup>("prepared");
   const [params, setParams] = useSearchParams();
   const open = params.get("packet");
@@ -90,7 +96,7 @@ export function ApplicationsPage() {
           />
         ) : (
           <div className="space-y-4">
-            {configured && <ExtensionNeeded seenAt={s?.executor_seen_at ?? setup.data?.executor_seen_at} />}
+            {configured && <ExtensionNeeded seenAt={s?.executor_seen_at ?? setup.data?.executor_seen_at} setup={setup.data} />}
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-4 p-4">
                 <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
@@ -222,10 +228,13 @@ function useBlobUrl(path: string | null): string | null {
 }
 
 function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) {
+  const [confirmedFor, setConfirmedFor] = useState<string | null>(null);
   const detail = useAsync(() => applyApi.applyPacket(id), [id], `apply-packet|${id}`);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const p = detail.data;
+  const confirmationKey = `${id}:${p?.updated_at}`;
+  const confirmNotSubmitted = confirmedFor === confirmationKey;
   const shot = useBlobUrl(p?.screenshot_url ?? null);
 
   const act = async (what: string, fn: () => Promise<ApplyPacketDetail>) => {
@@ -282,6 +291,11 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
 
       {p.missing_questions.length > 0 && <MissingForm packet={p} busy={busy === "answers"} onSubmit={(answers) => void act("answers", () => applyApi.answerApplyPacket(p.id, answers))} />}
 
+      {p.submission_uncertain && <label className="flex items-start gap-2 rounded-xl border border-amber-400 bg-amber-50 p-4 text-sm text-amber-950 dark:bg-amber-500/10 dark:text-amber-100">
+        <input type="checkbox" checked={confirmNotSubmitted} onChange={(e) => setConfirmedFor(e.target.checked ? confirmationKey : null)} className={cx("mt-1", focusRing)} />
+        <span>Orbit started submission but could not confirm the outcome. I checked the employer site and my email and confirm this application was not submitted. Only then should Orbit try again.</span>
+      </label>}
+
       <div className="flex flex-wrap gap-2">
         {can.finish && (
           <a href={p.apply_url} target="_blank" rel="noreferrer" className={linkButton("primary", "md")}>
@@ -300,7 +314,7 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
           </Button>
         )}
         {can.retry && (
-          <Button variant="secondary" loading={busy === "retry"} disabled={p.missing_questions.length > 0} disabledReason="Answer its questions first." onClick={() => void act("retry", () => applyApi.retryApplyPacket(p.id))}>
+          <Button variant="secondary" loading={busy === "retry"} disabled={p.missing_questions.length > 0 || (!!p.submission_uncertain && !confirmNotSubmitted)} disabledReason="Answer its questions and confirm any uncertain submission first." onClick={() => void act("retry", () => applyApi.retryApplyPacket(p.id, confirmNotSubmitted))}>
             Try again
           </Button>
         )}
@@ -312,6 +326,7 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
         <Button variant="ghost" onClick={() => void openPdf()}>
           <FileText className="h-4 w-4" aria-hidden /> The resume sent (PDF)
         </Button>
+        <Link to={practiceHref({ role: p.title, company: p.company })} className={linkButton("secondary", "md")}>Prepare for this interview with Saba</Link>
       </div>
 
       {(p.confirmation_text || p.final_url || shot) && (

@@ -138,6 +138,12 @@ the sign-in screen; remote servers must be `https://` (plain `http://` only for 
 a retired Render address is ignored, so it can't keep an app on the old host. Releases: see
 `docs/WINDOWS_RELEASE.md`.
 
+## Optional personal Orbit hosted auto-apply
+
+The separate background browser worker and its API opt-in are documented in [HOSTED_APPLY.md](HOSTED_APPLY.md).
+It must run continuously to apply while candidates' browsers are closed; merging code alone does not start it.
+Existing accounts stay in browser mode until they separately authorise hosted execution.
+
 ## Moving the API to another host
 
 Done once, Render → Railway (October 2026). Installed apps follow `api.orbitanswer.com`, so a move is:

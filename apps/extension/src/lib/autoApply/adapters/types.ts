@@ -1,10 +1,9 @@
-import type { Ats } from "../contract";
 import type { Question } from "../questions";
 
 /** One applicant tracking system's hosted application form: how to find its questions, submit it, and tell whether
  * it was accepted. Built on the shared question model and field detection. */
 export interface Adapter {
-  ats: Ats;
+  ats: string;
   /** Hostnames it runs on (and that the optional host permissions cover). */
   hosts: string[];
   /** The application form once it's rendered, else null. */
