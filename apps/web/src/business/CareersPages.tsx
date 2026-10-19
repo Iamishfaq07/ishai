@@ -37,6 +37,7 @@ import { EMAIL_RE, EMPLOYMENT_LABEL, EXPERIENCE_LABEL, careersPath, dayTime, pub
 import { errorText } from "./ui";
 
 const CandidateWithdrawal = lazy(async () => ({ default: (await import("./CandidateWithdrawal")).CandidateWithdrawal }));
+const CandidateScheduling = lazy(async () => ({ default: (await import("./CandidateScheduling")).CandidateScheduling }));
 
 function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T | null; error: Error | null; status: number | null; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
@@ -722,6 +723,7 @@ export function ApplicationStatusPage() {
         </section>
       )}
 
+      <Suspense fallback={<p role="status">Loading scheduling controls…</p>}><CandidateScheduling key={`${token}/${data.application_state}/${data.interview?.chosen ?? "unbooked"}`} token={token} refreshStatus={async () => { setData(await biz.status(token)); }} /></Suspense>
       <CandidateChallenge key={`${token}/${data.application_state}`} token={token} confirmed={data.email_confirmed} deletionRequested={data.deletion_requested} />
       <Suspense fallback={<p role="status">Loading application controls…</p>}><CandidateWithdrawal key={token} token={token} data={data} onSaved={setData} /></Suspense>
       <section aria-labelledby="data-title" className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">

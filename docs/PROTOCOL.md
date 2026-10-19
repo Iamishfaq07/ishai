@@ -387,3 +387,19 @@ BizPublicJob's `company`) ·
 `GET /companies/{cid}` → BizAdminCompanyDetail · `POST /companies/{cid}/suspend {reason}` · `/unsuspend` ·
 `/verify` · `POST /companies/{cid}/plan {plan, days}` · `POST /jobs/{jid}/take-down {reason}` · `/restore` ·
 `GET /reports?status=` → BizJobReport[] · `POST /reports/{id} {status}`.
+
+**Business automation center** (company coordinator permissions, job access enforced):
+`GET /v1/business/companies/{cid}/automations` returns playbooks and eligible owners.
+`PUT /jobs/{jid}/automation {base_revision,recipe}` saves and reconciles;
+`GET /jobs/{jid}/automation/preview` evaluates elapsed-time targets without writing tasks;
+`POST /jobs/{jid}/automation/run` reconciles the saved playbook.
+`GET /hiring-tasks?status=open&mine=false&job_id=&after=` returns a scoped queue, counts and cursor;
+`POST /applications/{aid}/hiring-tasks {request_id,title,due_at,assignee_id}` creates a custom follow-up;
+`POST /hiring-tasks/{tid} {base_revision,action,note,assignee_id?,until?}` handles, assigns, snoozes or reopens it.
+These paths after the first share `/v1/business/companies/{cid}`. See [enterprise automations](BUSINESS_AUTOMATIONS.md).
+
+**Interview coordination:** company application `POST /interview-options` suggests panel slots;
+company and private candidate application `GET /scheduling-requests` lists requests; candidate
+`POST /scheduling-requests` creates one and `POST /scheduling-requests/{id}/withdraw` withdraws it;
+company `POST /scheduling-requests/{id}/reply` proposes alternatives or saves a message-only response.
+Existing candidate `/book` confirms an offered alternative. See [contracts and booking guarantees](BUSINESS_COORDINATION.md).

@@ -29,7 +29,7 @@ dist/
 playwright-report/
 test-results/
 apps/api/e2e-outbox.txt
-apps/api/hosted-e2e-outbox.txt
+apps/api/*-e2e-outbox.txt
 
 # rust / tauri
 target/

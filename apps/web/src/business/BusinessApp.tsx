@@ -41,6 +41,7 @@ const JobEditor = lazy(async () => ({ default: (await import("./Jobs")).JobEdito
 const Pipeline = lazy(async () => ({ default: (await import("./Pipeline")).Pipeline }));
 const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Candidate }));
 const HiringDesk = lazy(async () => ({ default: (await import("./HiringDesk")).HiringDeskPage }));
+const AutomationCenter = lazy(async () => ({ default: (await import("./AutomationCenter")).AutomationCenter }));
 const HiringPlan = lazy(async () => ({ default: (await import("./HiringPlan")).HiringPlanPage }));
 const HiringRoom = lazy(async () => ({ default: (await import("./HiringRoom")).HiringRoomPage }));
 const CandidateCompare = lazy(async () => ({ default: (await import("./CandidateCompare")).CandidateComparePage }));
@@ -113,6 +114,7 @@ const NAV = [
   { to: "", label: "Dashboard", icon: Gauge, end: true },
   { to: "jobs", label: "Jobs", icon: Briefcase },
   { to: "hiring-desk", label: "Hiring desk", icon: Users },
+  { to: "automations", label: "Automations", icon: Gauge },
   { to: "team", label: "Team", icon: Users },
   { to: "settings", label: "Settings", icon: SettingsIcon },
   { to: "plan", label: "Plan", icon: CreditCard },
@@ -120,7 +122,7 @@ const NAV = [
 ] as const;
 
 function CompanyNav({ company }: { company: BizCompany }) {
-  const items = NAV.filter((n) => (n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
+  const items = NAV.filter((n) => (n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
   return (
     <nav aria-label={`${company.name}`} className="border-b border-zinc-200 dark:border-white/10">
       <ul className="mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6">
@@ -235,6 +237,7 @@ function CompanyLayout() {
             <Route path="jobs/:jid" element={<Pipeline />} />
             <Route path="jobs/:jid/edit" element={<JobEditor />} />
             <Route path="hiring-desk" element={<HiringDesk />} />
+            <Route path="automations" element={<AutomationCenter />} />
             <Route path="jobs/:jid/interview-plan" element={<HiringPlan />} />
             <Route path="jobs/:jid/compare" element={<CandidateCompare />} />
             <Route path="applications/:aid" element={<Candidate />} />
@@ -437,13 +440,13 @@ function Notifications() {
     <>
       <Header />
       <Page>
-        <PageTitle title="Notifications" subtitle="When a teammate mentions you in a note." />
+        <PageTitle title="Notifications" subtitle="Team mentions, hiring follow-ups and scheduling requests." />
         {error ? (
           <LoadError error={error} />
         ) : !items ? (
           <Loading />
         ) : items.length === 0 ? (
-          <EmptyState icon={Bell} title="Nothing yet" body="When someone writes @ and your name in a note on an applicant, it shows here and in your email." />
+          <EmptyState icon={Bell} title="Nothing yet" body="Team mentions and assigned hiring follow-ups appear here. Mentions can also arrive by email." />
         ) : (
           <ul className="divide-y divide-zinc-200 rounded-2xl border border-zinc-200 dark:divide-white/10 dark:border-white/10">
             {items.map((n) => (

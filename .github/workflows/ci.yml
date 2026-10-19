@@ -59,7 +59,8 @@ jobs:
           tests/test_razorpay.py tests/test_resume_revision.py tests/test_launch_security_boundaries.py
           tests/test_career_studio.py tests/test_career_depth.py tests/test_launch_readiness.py
           tests/test_business_hiring_studio.py tests/test_business_hiring_operations.py
-          tests/test_business_career_cycle.py tests/test_business_handoff.py tests/test_business_withdrawal.py tests/test_business_races.py
+          tests/test_business_career_cycle.py tests/test_business_handoff.py tests/test_business_withdrawal.py
+          tests/test_business_automations.py tests/test_business_coordination.py tests/test_business_races.py
 
   frontend:
     runs-on: ubuntu-latest
@@ -86,6 +87,8 @@ jobs:
         run: pnpm test:e2e
       - name: Personal hosted apply setup and consent (desktop and mobile)
         run: pnpm exec playwright test -c tools/e2e/hosted-personal.config.ts
+      - name: Enterprise automation and interview coordination desktop and mobile flows
+        run: pnpm exec playwright test -c tools/e2e/business-automation.config.ts
 
   # Windows-first (macOS deferred). Builds a runnable orbit-desktop.exe + NSIS installer artifact.
   desktop-windows:
