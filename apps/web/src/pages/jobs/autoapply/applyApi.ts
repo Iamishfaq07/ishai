@@ -33,7 +33,7 @@ export const applyApi = {
     post<ApplyPacketDetail>(`/v1/apply/packets/${enc(id)}/answers`, { answers }),
   approveApplyPacket: (id: string) => post<ApplyPacketDetail>(`/v1/apply/packets/${enc(id)}/approve`),
   dontApplyPacket: (id: string) => post<ApplyPacketDetail>(`/v1/apply/packets/${enc(id)}/dont-apply`),
-  retryApplyPacket: (id: string) => post<ApplyPacketDetail>(`/v1/apply/packets/${enc(id)}/retry`),
+  retryApplyPacket: (id: string, confirmNotSubmitted = false) => post<ApplyPacketDetail>(`/v1/apply/packets/${enc(id)}/retry`, { confirm_not_submitted: confirmNotSubmitted }),
   doneApplyPacket: (id: string) => post<ApplyPacketDetail>(`/v1/apply/packets/${enc(id)}/done`),
   pauseApply: () => post<{ paused: boolean }>("/v1/apply/pause"),
   resumeApply: () => post<{ paused: boolean }>("/v1/apply/resume"),

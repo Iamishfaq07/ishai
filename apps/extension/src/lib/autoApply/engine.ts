@@ -38,8 +38,8 @@ const EXTRA_FIELDS: [RegExp, string][] = [
 ];
 
 /** The packet's value for a standard field the question asks for, with the field's key. */
-export function profileValue(q: Question, packet: ApplicationPacket): { key: string; value: string } | null {
-  if (q.widget.type !== "text" && q.widget.type !== "combobox") return null;
+export function profileValue(q: Question, packet: ApplicationPacket<string>): { key: string; value: string } | null {
+  if (q.widget.type !== "text" && q.widget.type !== "combobox" && q.widget.type !== "selectbutton") return null;
   if (NOT_PROFILE.test(q.label)) return null;
   const norm = normalize(q.label);
   for (const [re, key] of EXTRA_FIELDS) if (re.test(norm)) return { key, value: packet.fields[key] ?? "" };
@@ -62,6 +62,7 @@ function answerFits(q: Question, answer: PacketAnswer): boolean {
     case "text":
       return typeof value === "string" && value.trim() !== "";
     case "combobox":
+    case "selectbutton":
       return true;
     case "select":
     case "radio":
@@ -78,7 +79,7 @@ function answerFits(q: Question, answer: PacketAnswer): boolean {
 
 /** Decides how each question on show is answered, and which required ones Orbit can't answer. Pure apart from
  * reading the DOM. */
-export function plan(questions: Question[], packet: ApplicationPacket): Plan {
+export function plan(questions: Question[], packet: ApplicationPacket<string>): Plan {
   const steps: Step[] = [];
   const unknown: Question[] = [];
   const answers = packet.answers ?? [];
@@ -122,7 +123,7 @@ export function plan(questions: Question[], packet: ApplicationPacket): Plan {
     // a question they didn't answer.
     if (!consent && isEeo(q.label, q.section) && w.type !== "text") {
       const options = staticOptions(w);
-      if (w.type === "combobox" || declineOption(options) >= 0) {
+      if (w.type === "combobox" || w.type === "selectbutton" || declineOption(options) >= 0) {
         steps.push({ q, source: "eeo" });
         continue;
       }
@@ -162,6 +163,31 @@ async function openCombobox(input: HTMLInputElement, container: Element): Promis
   }, 3000 * Math.max(pace(), 0.3))) ?? [];
 }
 
+async function buttonOptions(button: HTMLElement): Promise<HTMLElement[]> {
+  click(button);
+  return (await waitFor(() => {
+    const options = [...button.ownerDocument.querySelectorAll<HTMLElement>("[role=listbox] [role=option], [data-automation-id=promptOption]")].filter(shown);
+    return options.length ? options : null;
+  }, 2500)) ?? [];
+}
+
+async function chooseButton(q: Question, choose: (options: string[]) => number): Promise<Entered> {
+  if (q.widget.type !== "selectbutton") return { ok: false };
+  const options = await buttonOptions(q.widget.el);
+  const index = choose(options.map(text));
+  if (index < 0 || !options[index]) {
+    keydown(q.widget.el, "Escape");
+    return { ok: false, problem: "unknown" };
+  }
+  const value = text(options[index]);
+  click(options[index]);
+  await sleep(150);
+  // Read the selected value back from the page; a click that did not stick is not a filled answer.
+  if (normalize(text(q.widget.el)) !== normalize(value)) return { ok: false, problem: "unknown" };
+  q.widget.el.setAttribute("data-orbit-selected", value);
+  return { ok: true, value };
+}
+
 function closeCombobox(input: HTMLInputElement): void {
   key(input, "Escape");
   input.blur();
@@ -169,6 +195,11 @@ function closeCombobox(input: HTMLInputElement): void {
 
 /** The options a dropdown offers (opened, read, closed), for reporting a question Orbit can't answer. */
 export async function readComboboxOptions(q: Question): Promise<string[]> {
+  if (q.widget.type === "selectbutton") {
+    const options = await buttonOptions(q.widget.el);
+    keydown(q.widget.el, "Escape");
+    return options.map(text).slice(0, 50);
+  }
   if (q.widget.type !== "combobox") return staticOptions(q.widget);
   const opts = (await openCombobox(q.widget.el, q.container)).map((o) => text(o)).filter((t) => t && !/^no options$/i.test(t));
   closeCombobox(q.widget.el);
@@ -214,7 +245,7 @@ async function chooseInCombobox(q: Question, search: string | null, choose: (opt
 
 export interface FillContext {
   adapter: Adapter;
-  packet: ApplicationPacket;
+  packet: ApplicationPacket<string>;
   resume: ResumeFile | null;
   /** Purple outline on each filled field (the hand-off view), as the basic "fill" does. */
   mark?: boolean;
@@ -262,6 +293,7 @@ export async function enter(ctx: FillContext, step: Step): Promise<Entered> {
   }
   if (step.source === "eeo") {
     const options = staticOptions(w);
+    if (w.type === "selectbutton") return chooseButton(q, declineOption);
     if (w.type === "combobox") {
       const chosen = await chooseInCombobox(q, null, declineOption);
       return chosen ? { ok: true, value: chosen } : { ok: !q.required, problem: q.required ? "unknown" : undefined };
@@ -271,6 +303,8 @@ export async function enter(ctx: FillContext, step: Step): Promise<Entered> {
   }
   const value: AnswerValue = step.value;
   switch (w.type) {
+    case "selectbutton":
+      return chooseButton(q, (options) => Array.isArray(value) ? -1 : pickOption(options, value));
     case "text": {
       const v = Array.isArray(value) ? value.join(", ") : typeof value === "boolean" ? (value ? "Yes" : "No") : value;
       await typeInto(w.el, v);
@@ -389,6 +423,8 @@ function record(submitted: SubmittedPayload, step: Step, value: Value | undefine
 export interface RunOptions {
   /** Hand-off: fill everything Orbit can and leave the rest (and the submit) to the candidate. */
   handoff?: boolean;
+  /** A hosted wizard step; email and resume are verified across steps by the worker before the final submit. */
+  step?: boolean;
 }
 
 /** Fills the form from the packet. Never submits: returns "ready" (everything required is filled, the page shows no
@@ -408,7 +444,7 @@ export async function fillApplication(doc: Document, ctx: FillContext, opts: Run
     return stop("needs_you", "form_changed", "Orbit didn't recognise this application form.");
   }
   const first = adapter.questions(form);
-  if (!first.some((q) => q.attrs.type === "email" || /e-?mail/i.test(q.label)) || !first.some((q) => q.widget.type === "file" || q.role === "resume")) {
+  if (!opts.step && (!first.some((q) => q.attrs.type === "email" || /e-?mail/i.test(q.label)) || !first.some((q) => q.widget.type === "file" || q.role === "resume"))) {
     if (!opts.handoff) return stop("needs_you", "form_changed", "The form doesn't have the fields Orbit expects (email and resume).");
   }
 

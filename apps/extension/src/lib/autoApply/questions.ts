@@ -9,6 +9,7 @@ export type Widget =
   | { type: "select"; el: HTMLSelectElement }
   /** A searchable dropdown (react-select, Ashby autocomplete): options appear once it's opened or typed into. */
   | { type: "combobox"; el: HTMLInputElement }
+  | { type: "selectbutton"; el: HTMLElement }
   | { type: "radio"; inputs: HTMLInputElement[] }
   | { type: "checkbox"; el: HTMLInputElement }
   | { type: "checkboxes"; inputs: HTMLInputElement[] }
@@ -70,6 +71,7 @@ export function kindOf(w: Widget): QuestionKind {
       return w.el.tagName === "TEXTAREA" ? "textarea" : (INPUT_KIND[(w.el.getAttribute("type") ?? "").toLowerCase()] ?? "text");
     case "select":
     case "combobox":
+    case "selectbutton":
     case "radio":
       return "select";
     case "checkboxes":
@@ -93,6 +95,8 @@ export function hasValue(q: Question): boolean {
       return w.el.value !== "";
     case "combobox":
       return comboboxValue(w.el, q.container) !== "";
+    case "selectbutton":
+      return w.el.hasAttribute("data-orbit-selected");
     case "radio":
     case "checkboxes":
       return w.inputs.some((i) => i.checked);

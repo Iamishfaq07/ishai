@@ -1,5 +1,6 @@
 """Account-scoped progress from resume to application outcomes."""
 from collections import Counter
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends
@@ -7,7 +8,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
-from orbit_api.auto_apply import planner, rules
+from orbit_api.auto_apply import hosted, planner, rules
+from orbit_api.auto_apply.pacing import aware
 from orbit_api.db import get_db
 from orbit_api.models import ApplicationPacket, AutoApplySetup, JobApplication, JobSearchProfile, Resume, User
 from orbit_api.ratelimit import limit_user
@@ -22,6 +24,10 @@ async def journey(user: Annotated[User, Depends(current_user)],
     setup = await db.get(AutoApplySetup, user.id)
     approved = (await planner.master_resume(db, setup))[2] if setup else False
     consented = bool(setup and setup.consent_at and setup.consent_version == rules.CONSENT_VERSION)
+    hosted_online = await hosted.online(db)
+    browser_seen = aware(setup.executor_seen_at) if setup else None
+    executor_ready = bool(setup and ((setup.execution == "hosted" and setup.hosted_consent_at and hosted_online)
+        or (setup.execution != "hosted" and browser_seen and browser_seen > datetime.now(UTC) - timedelta(minutes=10))))
     profile = await db.get(JobSearchProfile, user.id)
     packets = Counter({s: n for s, n in await db.execute(select(ApplicationPacket.status, func.count())
         .where(ApplicationPacket.user_id == user.id).group_by(ApplicationPacket.status))})
@@ -36,7 +42,10 @@ async def journey(user: Annotated[User, Depends(current_user)],
          "Confirm the resume, contact facts and reusable answers Orbit may share."),
         ("activate", "Turn on automatic applications", consented and not bool(setup and setup.paused),
          "/jobs/auto-apply",
-         "Choose limits and consent. Direct Business jobs can submit while your browser is closed."),
+         "Choose automatic or review mode, set your limits and quiet hours, and authorise applications."),
+        ("execution", "Choose where applications run", executor_ready, "/jobs/auto-apply",
+         "Hosted applying keeps supported external forms running while your browser is closed. "
+         "Browser mode uses the connected Orbit extension. Logins and human checks need you."),
         ("applications", "Follow applications and resolve blockers", any(n for s, n in tracker.items() if s != "saved"),
          "/jobs/applications",
          "See receipts, answer missing questions once, and monitor employer updates."),
@@ -51,4 +60,5 @@ async def journey(user: Annotated[User, Depends(current_user)],
             (s["id"] for s in steps if not s["done"]), "hired"),
         "packets": dict(packets), "tracker": dict(tracker), "paused": bool(setup and setup.paused),
         "needs_attention": sum(packets[s] for s in ("needs_answer", "needs_you", "review")),
-        "email_verified": user.email_verified}
+        "email_verified": user.email_verified, "execution": setup.execution if setup else "browser",
+        "hosted_online": hosted_online, "executor_ready": executor_ready}

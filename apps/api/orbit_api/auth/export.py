@@ -15,8 +15,11 @@ from sqlalchemy.orm import selectinload
 
 from orbit_api.models import (
     Answer,
+    AnswerBankEntry,
     AnswerFeedback,
+    ApplicationPacket,
     AuditLog,
+    AutoApplySetup,
     CareerPreparation,
     CodeAttempt,
     ContactMessage,
@@ -50,7 +53,7 @@ from orbit_api.models import (
 
 # admin_note: the admin's private notes on the account (admin/accounts.py) or on a contact message, not the account's
 # own data; network_hash: a contact message's keyed network hash (rate limits).
-_NEVER = {"password_hash", "token_version", "embedding", "admin_note", "network_hash"}
+_NEVER = {"password_hash", "token_version", "embedding", "admin_note", "network_hash", "hosted_token", "lease_holder"}
 
 
 def _row(obj: Any) -> dict[str, Any]:
@@ -109,6 +112,13 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
         "sessions": [{**_row(s), "transcript": turns[s.id], "questions": questions[s.id], "answers": answers[s.id],
                       "report": (summaries[s.id][0]["content"] if summaries[s.id] else None)} for s in sessions],
         "job_search": {
+            "auto_apply": {
+                "setup": _row(s) if (s := await db.get(AutoApplySetup, user_id)) else None,
+                "answer_bank": [_row(a) for a in (await db.scalars(select(AnswerBankEntry).where(
+                    AnswerBankEntry.user_id == user_id).order_by(AnswerBankEntry.created_at))).all()],
+                "applications": [_row(a) for a in (await db.scalars(select(ApplicationPacket).where(
+                    ApplicationPacket.user_id == user_id).order_by(ApplicationPacket.created_at))).all()],
+            },
             "profile": _row(p) if (p := await db.get(JobSearchProfile, user_id)) else None,
             "tracker": [_row(t) for t in (await db.scalars(select(JobApplication).where(
                 JobApplication.user_id == user_id).order_by(JobApplication.created_at))).all()],

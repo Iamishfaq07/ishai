@@ -13,6 +13,7 @@
 
 /** The ATSs Orbit submits to from the candidate's device. Job boards are never automated. */
 export type ApplyAts = "greenhouse" | "lever" | "ashby";
+export type HostedApplyAts = ApplyAts | "workday" | "smartrecruiters" | "workable" | "recruitee";
 
 /** Where an answer came from: the candidate's answer bank, their confirmed profile facts, or text Orbit wrote for
  *  this job from those facts (a "why this company" answer, the cover letter, how they found the post). */
@@ -222,6 +223,14 @@ export interface ApplyCaps {
 }
 
 export interface ApplySetup {
+  stop_when_hired?: boolean;
+  execution?: "browser" | "hosted";
+  hosted_enabled?: boolean;
+  hosted_online?: boolean;
+  hosted_seen_at?: string | null;
+  hosted_consent_at?: string | null;
+  hosted_consent_text?: string;
+  hosted_sites?: HostedApplyAts[];
   configured: boolean;
   consent_at: string | null;
   consent_text: string;
@@ -248,6 +257,9 @@ export interface ApplySetup {
 }
 
 export interface ApplySetupInput {
+  stop_when_hired?: boolean;
+  execution?: "browser" | "hosted";
+  hosted_consent?: boolean;
   resume_id: string | null;
   approve_resume: boolean;
   facts: ApplyFacts;
@@ -336,6 +348,7 @@ export interface ApplyResumeChange {
 }
 
 export interface ApplyPacketDetail extends ApplyPacketSummary {
+  submission_uncertain?: boolean;
   employer_status_path?: string | null;
   resume_title: string;
   resume_diff: ApplyResumeChange[];

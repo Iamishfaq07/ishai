@@ -10,10 +10,10 @@
 
 export type Ats = "greenhouse" | "lever" | "ashby";
 
-export interface PacketJob {
+export interface PacketJob<A extends string = Ats> {
   url: string;
   apply_url: string;
-  ats: Ats;
+  ats: A;
   company: string;
   title: string;
 }
@@ -67,9 +67,9 @@ export interface PacketAnswer {
   options?: string[] | null;
 }
 
-export interface ApplicationPacket {
+export interface ApplicationPacket<A extends string = Ats> {
   id: string;
-  job: PacketJob;
+  job: PacketJob<A>;
   resume: PacketResume;
   cover_letter: string | null;
   fields: PacketFields;

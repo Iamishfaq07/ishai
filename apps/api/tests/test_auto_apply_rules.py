@@ -233,7 +233,7 @@ def test_boards_are_handed_off_and_ats_links_resolved() -> None:
         t = resolve.from_url(url)
         assert t is not None and t.ats == "board" and t.site == site and not t.automatic
     other = resolve.from_url("https://acme.wd5.myworkdayjobs.com/en-US/careers/job/1")
-    assert other is not None and other.ats == "other" and not other.automatic
+    assert other is not None and other.ats == "workday" and other.automatic
 
 
 # ---- tailoring never adds what the candidate lacks ---------------------------------------------------------------

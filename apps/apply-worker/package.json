@@ -1,0 +1,23 @@
+{
+  "name": "@orbit/apply-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node src/main.mjs",
+    "typecheck": "tsc -p tsconfig.json && node --check src/main.mjs && node --check src/worker.mjs && node --check src/egress.mjs",
+    "lint": "eslint src",
+    "test": "node --test src/security.test.mjs && vitest run",
+    "test:browser": "node --test src/browser.test.mjs"
+  },
+  "files": ["src/main.mjs", "src/worker.mjs", "src/egress.mjs", "src/outbox.mjs", "src/sites.mjs", "dist/page.js"],
+  "dependencies": { "playwright": "1.64.1" },
+  "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "jsdom": "^27",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.3"
+  }
+}

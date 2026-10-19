@@ -55,12 +55,15 @@ def from_url(url: str) -> Target | None:
     """An employer ATS form named by its address, or a board's hand-off. None: nothing Orbit recognises."""
     try:
         parts = urlsplit(url)
+        port = parts.port
     except ValueError:
         return None
     host = (parts.hostname or "").lower()
     if parts.scheme not in ("http", "https") or not host:
         return None
-    if host.endswith("greenhouse.io"):
+    if parts.scheme != "https" or parts.username or parts.password or port not in (None, 443):
+        return Target("other", apply_url=url, site=board_of(host) or host)
+    if host in ("boards.greenhouse.io", "job-boards.greenhouse.io", "job-boards.eu.greenhouse.io"):
         m = _GH.match(parts.path)
         if m:
             return Target("greenhouse", m.group(1), m.group(2), url)
@@ -76,6 +79,23 @@ def from_url(url: str) -> Target | None:
         if m:
             return Target("ashby", m.group(1), m.group(2), f"https://jobs.ashbyhq.com/{m.group(1)}/{m.group(2)}/"
                                                             "application")
+    # Hosted-only adapters. Recognise actual employer URLs, never suffix lookalikes or arbitrary redirects.
+    if parts.scheme == "https" and not parts.username and not parts.password and port in (None, 443):
+        path = parts.path.rstrip("/")
+        if re.fullmatch(r"[a-z0-9-]+\.wd\d+\.myworkdayjobs\.com", host) and "/job/" in path:
+            path = re.sub(r"/apply(?:/.*)?$", "", path)
+            return Target("workday", host, path[-200:], f"https://{host}{path}/apply")
+        if (re.fullmatch(r"[a-z0-9-]+\.wd\d+\.myworkdaysite\.com", host)
+                and path.startswith("/recruiting/") and "/job/" in path):
+            path = re.sub(r"/apply(?:/.*)?$", "", path)
+            return Target("workday", host, path[-200:], f"https://{host}{path}/apply")
+        if host == "jobs.smartrecruiters.com" and (m := re.fullmatch(r"/([\w.-]+)/(\d+)(?:-[^/]*)?", path)):
+            return Target("smartrecruiters", m[1], m[2], f"https://{host}{path}?oga=true")
+        if host == "apply.workable.com" and (m := re.fullmatch(r"/(?:([\w-]+)/)?j/([A-Za-z0-9]+)(?:/apply)?", path)):
+            prefix = f"/{m[1]}" if m[1] else ""
+            return Target("workable", m[1] or "workable", m[2], f"https://{host}{prefix}/j/{m[2]}/apply/")
+        if re.fullmatch(r"[a-z0-9-]+\.recruitee\.com", host) and (m := re.fullmatch(r"/o/([\w-]+)(?:/c/new)?", path)):
+            return Target("recruitee", host.split(".")[0], m[1], f"https://{host}/o/{m[1]}/c/new")
     site = board_of(host)
     if site:
         return Target("board", apply_url=url, site=site)

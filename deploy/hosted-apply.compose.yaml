@@ -1,0 +1,24 @@
+# Run on a Linux Docker host that permits unprivileged Chromium user namespaces. No public worker port.
+services:
+  personal-apply:
+    build:
+      context: ..
+      dockerfile: apps/apply-worker/Dockerfile
+    init: true
+    restart: unless-stopped
+    user: "10001:10001"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+      - "seccomp:${ORBIT_APPLY_SECCOMP_PROFILE:?Set absolute path to apps/apply-worker/seccomp_profile.json}"
+    shm_size: 1gb
+    mem_limit: 1g
+    pids_limit: 256
+    environment:
+      ORBIT_API_URL: ${ORBIT_API_URL:?Set the HTTPS Orbit API URL}
+      ORBIT_APPLY_WORKER_SECRET: ${ORBIT_APPLY_WORKER_SECRET:?Set the matching worker secret}
+      ORBIT_APPLY_OUTBOX: /data/receipts
+    volumes:
+      - personal-apply-receipts:/data
+volumes:
+  personal-apply-receipts:

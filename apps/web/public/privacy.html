@@ -64,24 +64,29 @@
   <p>Orbit does not sell your data or use it for advertising.</p>
 
   <h2 id="orbit-apply">Orbit Apply (applying for you)</h2>
-  <p>Orbit Apply is off unless you turn it on, in two places: you set it up and agree to it in the web app (Jobs →
-    Applications), and you switch on <em>Apply for me automatically</em> in the Orbit browser extension. Until both are
-    on, nothing is ever submitted for you.</p>
+  <p>Orbit Apply is off unless you approve your resume, answers, limits and agreement in Jobs → Applications.
+    You choose browser or hosted execution. Browser mode also requires <em>Apply for me automatically</em> in the
+    connected extension. Hosted mode requires a separate authorisation and can continue while your device is off.
+    Direct applications to employers on Orbit Business use the approved rules without a browser.</p>
   <ul>
     <li><strong>Which sites.</strong> Only job application forms on Greenhouse (boards.greenhouse.io,
       job-boards.greenhouse.io), Lever (jobs.lever.co) and Ashby (jobs.ashbyhq.com). Switching it on asks your browser
       for access to exactly those four sites; switching it off gives that access back. Job boards such as LinkedIn are
-      never filled or submitted automatically.</li>
+      never filled or submitted automatically. Hosted execution additionally supports employer forms on Workday,
+      SmartRecruiters, Workable and Recruitee. Coverage depends on the employer's form: sign-ins, human checks and
+      unsupported forms require you.</li>
     <li><strong>What Orbit prepares, and with what.</strong> For jobs that match the filters you set, Orbit's server
       prepares each application from what you approved: the resume you chose (reordered or reworded for the job from
       its own true facts, never with skills or numbers it doesn't have), a short cover letter, the details you
       confirmed (name, contact details, links, work authorisation and similar) and the answers you saved in your
       answer bank. Our AI model provider receives your resume's text and the job post to write the cover letter and the
       rewording. To read each form's questions, Orbit's server fetches the job's public application form from the
-      site; it never posts anything to it.</li>
+      site. Reading a form is preparation; only your approved execution mode submits it.</li>
     <li><strong>What is sent to the employer.</strong> The extension, in your browser, opens the form in its own
       window labelled "Orbit Apply", fills in those details, answers and the resume, and presses the form's own submit
-      button. That goes from your browser to the employer's application site, as if you had filled it in yourself.
+      button. In hosted mode an isolated Orbit browser fills and submits the same approved data to the employer,
+      even when your browser is closed. Browser contexts are not shared between applications, and Orbit never stores
+      your job-site passwords or imports your logged-in sessions.
       Voluntary equal-opportunity questions (gender, ethnicity, veteran or disability status) are answered "decline to
       self-identify" unless you chose your own answers. A question Orbit has no approved answer for is never guessed:
       the application stops and asks you. Captchas, sign-ins and email codes are never solved for you: Orbit stops and
@@ -89,12 +94,15 @@
     <li><strong>What is kept as proof.</strong> For each application: what was entered into the form, the site's
       confirmation message and page address, the time, and the resume version sent (also added to your Jobs tracker as
       Applied). If the browser can take a picture of the confirmation page, that is kept too. This is kept with your
-      account, so you can see what was sent, and deleted with it.</li>
+      account, so you can see what was sent, and deleted with it. A hosted worker may temporarily keep an encrypted
+      receipt while reconnecting to Orbit; it deletes the receipt after acknowledgement or a final stale-attempt
+      rejection. If an account is deleted, delivery of its receipt is rejected and the worker deletes its local copy.</li>
     <li><strong>Limits.</strong> At most the daily number you set (never more than 25), two per company in 30 days,
       spaced out like a person would, and never during the quiet hours you set.</li>
     <li><strong>Turning it off.</strong> Pause it at any time from the extension or the web app; switch it off in the
       extension (which also removes its access to those sites); or withdraw your agreement in the web app's Orbit
-      Apply setup. Deleting your account deletes all of it.</li>
+      Apply setup. In hosted mode you can also switch back to browser execution. An application whose submission
+      outcome is uncertain is not sent again automatically: you must check with the employer before retrying.</li>
   </ul>
 
   <h2>Your controls</h2>
