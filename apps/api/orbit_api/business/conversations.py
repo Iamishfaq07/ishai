@@ -68,6 +68,7 @@ _ACTIVITY = {
     "saba_alternative": "Alternative interview requested", "saba_integrity_review": "Interview review update available",
     "offer_published": "Offer summary available", "offer_response": "Your offer response was saved",
     "offer_withdrawn": "Offer summary withdrawn",
+    "withdrawn": "You withdrew your application",
     "handoff_published": "Joining plan available", "handoff_task_added": "Joining task added",
     "handoff_progress": "Joining task progress updated",
 }

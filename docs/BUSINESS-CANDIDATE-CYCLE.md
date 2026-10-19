@@ -2,6 +2,7 @@
 
 This release extends [Hiring Studio](BUSINESS-HIRING-STUDIO.md) and [hiring operations](BUSINESS-HIRING-OPERATIONS.md).
 For the subsequent joining-plan workflow and readable offer history, see [Joining plans](BUSINESS-JOINING-PLANS.md).
+For candidate withdrawal and cancellation of outstanding interview invitations, see [Withdrawal](BUSINESS-WITHDRAWAL.md).
 It adds Business Saba, reviewable integrity evidence, offer summaries, unattended first-party applications and a
 candidate journey. Personal Saba's interviewer, practice prompts, voice controls and conversation engine are unchanged.
 

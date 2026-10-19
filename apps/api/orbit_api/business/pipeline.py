@@ -289,6 +289,7 @@ async def list_applications(
 
 
 _EVENT_TEXT = {
+    "withdrawn": "Withdrew their application", "interview_cancelled": "Interview invitation cancelled",
     "applied": "Applied", "email_confirmed": "Confirmed their email", "stage": "Moved to {to}",
     "rejected": "Rejected", "unrejected": "Moved back into the pipeline", "hired": "Hired", "note": "Added a note",
     "scorecard": "Added a scorecard ({recommendation})", "email": "Emailed: {subject}",
@@ -452,6 +453,8 @@ async def move(body: MoveIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depend
     pairs = await _apps_for(db, ctx, body.ids)
     to_send: list[tuple[BizApplication, BizJob, str]] = []
     for app, job in pairs:
+        if app.status == "withdrawn":
+            raise HTTPException(409, "The candidate withdrew this application. It cannot be moved back into hiring.")
         stage = next((s for s in job.stages if s["id"] == body.stage_id), None)
         if stage is None:
             raise HTTPException(422, "That stage isn't in this job's pipeline.")
@@ -505,6 +508,8 @@ async def reject(body: RejectIn, ctx: CompanyCtx, db: Annotated[AsyncSession, De
     pairs = await _apps_for(db, ctx, body.ids)
     done: list[tuple[BizApplication, BizJob]] = []
     for app, job in pairs:
+        if app.status == "withdrawn":
+            raise HTTPException(409, "The candidate withdrew this application. It cannot be marked rejected.")
         if app.status == "rejected":
             continue
         target = rules.first_stage(job.stages, "rejected") or "rejected"
@@ -535,6 +540,10 @@ async def unreject(application_id: str, ctx: CompanyCtx, db: Annotated[AsyncSess
     ctx.require("move_applicants")
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
+    await lock_company(db, ctx.company.id)
+    await db.refresh(app)
+    if app.status == "withdrawn":
+        raise HTTPException(409, "The candidate withdrew this application. It cannot be reopened by the team.")
     if app.status == "rejected":
         app.status, app.rejected_at = "active", None
         app.stage_id = rules.first_stage(job.stages, "applied") or app.stage_id
@@ -640,6 +649,10 @@ async def add_scorecard(application_id: str, body: ScorecardIn, ctx: CompanyCtx,
                         db: Annotated[AsyncSession, Depends(get_db)]) -> Detail:
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
+    await lock_company(db, ctx.company.id)
+    await db.refresh(app)
+    if app.status == "withdrawn":
+        raise HTTPException(409, "This application was withdrawn and is not collecting assessments.")
     if await db.get(BizHiringPlan, job.id) is not None:
         raise HTTPException(409, "This job uses a structured interview plan. Submit evidence in the interview room.")
     if not any(s["id"] == body.stage_id for s in job.stages):
@@ -688,6 +701,10 @@ async def email_applicant(application_id: str, body: EmailIn, ctx: CompanyCtx,
     ctx.require("move_applicants")
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
+    await lock_company(db, ctx.company.id)
+    await db.refresh(app)
+    if app.status == "withdrawn":
+        raise HTTPException(409, "This application was withdrawn. Review its saved record before contacting them.")
     if body.kind is None and not (body.subject and body.body):
         raise HTTPException(422, "Choose a template or write a subject and message.")
     _refuse_unconfirmed(app)
@@ -778,6 +795,10 @@ async def rerank(application_id: str, ctx: CompanyCtx, db: Annotated[AsyncSessio
     ctx.require("move_applicants")
     ctx.writable()
     app, job = await application_for(db, ctx, application_id)
+    await lock_company(db, ctx.company.id)
+    await db.refresh(app)
+    if app.status == "withdrawn":
+        raise HTTPException(409, "This application was withdrawn and is not collecting new rankings.")
     ratelimit.check(_rerank_app, f"biz-rerank:{app.id}", "This applicant was ranked again a moment ago. Try again "
                     "in 10 minutes.")
     ratelimit.check(_rerank_company, f"biz-rerank-company:{ctx.company.id}", "That's today's limit for ranking "

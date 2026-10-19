@@ -1336,7 +1336,7 @@ class BizApplication(TimestampMixin, Base):
     # company's setting applies only to later applications.
     retention_months: Mapped[int] = mapped_column(Integer, default=12, server_default="12")
     stage_id: Mapped[str] = mapped_column(String(16))
-    status: Mapped[str] = mapped_column(String(10), default="active")  # active | rejected | hired
+    status: Mapped[str] = mapped_column(String(10), default="active")  # active | rejected | hired | withdrawn
     stage_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     first_response_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

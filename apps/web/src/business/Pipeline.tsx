@@ -48,6 +48,7 @@ type View = "board" | "list";
 const VIEW_KEY = "orbit.biz.pipelineView";
 
 function ScoreBadge({ a }: { a: BizApplicationListItem }) {
+  if (a.status === "withdrawn") return <Badge>Withdrawn</Badge>;
   if (a.ranking_status === "pending") return <Badge>Ranking…</Badge>;
   if (a.ranking_status === "failed" || a.score === null) return <Badge>Not ranked</Badge>;
   return (
@@ -169,7 +170,7 @@ function Board({ data, cid, selected, setSelected, onMove, sort, canMove }: { da
             <ul className="flex max-h-[65vh] flex-col gap-2 overflow-y-auto">
               {items.map((a) => (
                 <li key={a.id}>
-                  <Card a={a} cid={cid} stages={data.job.stages} selected={selected.includes(a.id)} onSelect={() => setSelected(toggleId(selected, a.id))} onMove={(to) => onMove([a.id], to)} canMove={canMove} />
+                  <Card a={a} cid={cid} stages={data.job.stages} selected={selected.includes(a.id)} onSelect={() => setSelected(toggleId(selected, a.id))} onMove={(to) => onMove([a.id], to)} canMove={canMove && a.status !== "withdrawn"} />
                 </li>
               ))}
               {items.length === 0 && <li className="px-1.5 py-4 text-center text-xs text-zinc-500 dark:text-zinc-400">No one here</li>}
@@ -208,7 +209,7 @@ function ListView({ data, cid, selected, setSelected, onMove, sort, canMove }: {
           <Tr key={a.id} selected={selected.includes(a.id)}>
             {canMove && (
               <Td>
-                <input type="checkbox" aria-label={`Select ${a.name}`} checked={selected.includes(a.id)} onChange={() => setSelected(toggleId(selected, a.id))} className={cx("h-4 w-4", focusRing)} />
+                <input type="checkbox" disabled={a.status === "withdrawn"} aria-label={`Select ${a.name}`} checked={selected.includes(a.id)} onChange={() => setSelected(toggleId(selected, a.id))} className={cx("h-4 w-4", focusRing)} />
               </Td>
             )}
             <Td primary>
@@ -219,7 +220,7 @@ function ListView({ data, cid, selected, setSelected, onMove, sort, canMove }: {
               {a.tags.length > 0 && <span className="block text-xs font-normal text-zinc-500">{a.tags.join(", ")}</span>}
             </Td>
             <Td label="Stage">
-              {canMove && a.status !== "rejected" ? (
+              {canMove && !["rejected", "withdrawn"].includes(a.status) ? (
                 <Select aria-label={`Stage for ${a.name}`} className="!w-auto !py-1" value={a.stage_id} onChange={(e) => onMove([a.id], e.target.value)}>
                   {data.job.stages
                     .filter((s) => s.kind !== "rejected")
@@ -230,7 +231,7 @@ function ListView({ data, cid, selected, setSelected, onMove, sort, canMove }: {
                     ))}
                 </Select>
               ) : (
-                stageName(a.stage_id)
+                a.status === "withdrawn" ? "Withdrawn" : stageName(a.stage_id)
               )}
             </Td>
             <Td label="Score">
@@ -316,6 +317,7 @@ export function Pipeline() {
   const [bulkStage, setBulkStage] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
+  const [showWithdrawn, setShowWithdrawn] = useState(false);
   const [n, setN] = useState(0);
   const reload = () => setN((x) => x + 1);
 
@@ -383,7 +385,9 @@ export function Pipeline() {
   if (error) return <LoadError error={error} onRetry={reload} />;
   if (!data || data.job.id !== jid) return <Loading />;
   const rejectedStage = data.job.stages.find((s) => s.kind === "rejected");
-  const visible: BizApplicationList = showRejected ? data : { ...data, items: data.items.filter((a) => a.status !== "rejected"), job: { ...data.job, stages: data.job.stages.filter((s) => s.kind !== "rejected") } };
+  const visible: BizApplicationList = { ...data,
+    items: data.items.filter((a) => (showRejected || a.status !== "rejected") && (showWithdrawn || a.status !== "withdrawn")),
+    job: { ...data.job, stages: data.job.stages.filter((s) => showRejected || s.kind !== "rejected") } };
   const rejectedCount = data.items.filter((a) => a.status === "rejected").length;
 
   return (
@@ -449,6 +453,7 @@ export function Pipeline() {
         {rejectedStage && (
           <Checkbox label={`Show rejected (${rejectedCount})`} checked={showRejected} onChange={(e) => setShowRejected(e.target.checked)} />
         )}
+        <Checkbox label={`Show withdrawn (${data.items.filter((a) => a.status === "withdrawn").length})`} checked={showWithdrawn} onChange={(e) => { setShowWithdrawn(e.target.checked); setSelected([]); }} />
         {data.blind && (company.role === "owner" || company.role === "admin" || company.role === "recruiter") && (
           <Button variant="ghost" size="sm" onClick={() => setReveal((r) => !r)} aria-pressed={reveal}>
             {reveal ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />} {reveal ? "Hide names (blind review)" : "Show names"}

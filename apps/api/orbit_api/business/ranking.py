@@ -12,7 +12,7 @@ from typing import Any
 
 from orbit_api import jobs
 from orbit_api.business import usage
-from orbit_api.business.access import audit, timeline
+from orbit_api.business.access import audit, lock_company, timeline
 from orbit_api.business.ai_port import (
     QA,
     JobSpec,
@@ -43,7 +43,7 @@ async def rank_application(application_id: str) -> None:
     async with sessionmaker()() as db:
         app = await db.get(BizApplication, application_id)
         job = await db.get(BizJob, app.job_id) if app is not None else None
-        if app is None or job is None:
+        if app is None or job is None or app.status == "withdrawn":
             return  # deleted meanwhile
         text, answers = app.resume_text, [QA(question=a.get("question", ""), answer=a.get("answer", ""))
                                           for a in app.answers or []]
@@ -58,12 +58,21 @@ async def rank_application(application_id: str) -> None:
         async with sessionmaker()() as db:
             app = await db.get(BizApplication, application_id)
             if app is not None:
-                app.ranking_status = "failed"
+                await lock_company(db, app.company_id)
+                await db.refresh(app)
+                if app.status != "withdrawn":
+                    app.ranking_status = "failed"
                 await db.commit()
         raise
     async with sessionmaker()() as db:
         app = await db.get(BizApplication, application_id)
         if app is None:
+            return
+        await lock_company(db, app.company_id)
+        await db.refresh(app)
+        if app.status == "withdrawn":
+            usage.store(db, app.company_id, None, calls)
+            await db.commit()
             return
         stored: dict[str, Any] = {**ranking.model_dump(), "ranked_at": datetime.now(UTC).isoformat()}
         app.parsed = parsed.model_dump()

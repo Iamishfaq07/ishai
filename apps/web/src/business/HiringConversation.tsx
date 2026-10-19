@@ -70,7 +70,7 @@ function Conversation({ token, cid, aid, canWrite }: { token: string; cid: strin
   const writable = canWrite && !!data?.accepting;
   return <div className="space-y-5">
     <Panel title={token ? "Questions and replies" : "Candidate inbox"} hint={token
-      ? "Ask about the interview or request clarification. The hiring team replies on this page."
+      ? data && !data.accepting ? "Read your saved questions and the hiring team's replies." : "Ask about the interview or request clarification. The hiring team replies on this page."
       : "Replies here are visible to the candidate. Internal interview feedback stays in the debrief."}
       actions={<Button size="sm" variant="secondary" disabled={!!busy} onClick={() => setLoad((n) => n + 1)}>Refresh replies</Button>}>
       {!data && !error && <p role="status" className="text-sm text-zinc-500">Loading questions…</p>}

@@ -1,8 +1,9 @@
 // Orbit for Business (D82): one applicant, inside the company: what they shared (resume, answers), Orbit's ranking
 // with its evidence, the team's notes and scorecards, scheduling, email, and the timeline. Everything here is what
 // they sent this company when they applied; nothing else from Orbit.
-import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+
 import type { BizApplicationDetail, BizMember, BizMet, BizRequirementMatch, BizScoreItem, BizTemplateKind } from "@orbit/types";
 import {
   ArrowLeft,
@@ -45,6 +46,8 @@ import {
   scoreTone,
 } from "./model";
 import { Loading, LoadError, Panel, errorText } from "./ui";
+
+const CompanyWithdrawal = lazy(async () => ({ default: (await import("./CandidateWithdrawal")).CompanyWithdrawal }));
 
 const MET: Record<BizMet, { label: string; icon: typeof CircleCheck; tone: string }> = {
   yes: { label: "Met", icon: CircleCheck, tone: "text-emerald-700 dark:text-emerald-300" },
@@ -433,7 +436,7 @@ export function Candidate() {
   if (error) return <LoadError error={error} onRetry={() => setN((x) => x + 1)} />;
   if (!a || a.id !== aid) return <Loading />;
   const p = company.permissions;
-  const canMove = p.move_applicants && company.status === "active";
+  const canMove = p.move_applicants && company.status === "active" && a.status !== "withdrawn";
   const blind = company.blind_review && !reveal;
   const match = matchLabel(a);
 
@@ -499,6 +502,9 @@ export function Candidate() {
           </>
         }
       />
+      {a.status === "withdrawn" && (p.move_applicants
+        ? <Suspense fallback={<p role="status">Loading withdrawal…</p>}><CompanyWithdrawal cid={company.id} aid={a.id} /></Suspense>
+        : <Callout tone="info" title="Application withdrawn">The candidate ended this hiring process.</Callout>)}
       {a.deletion_requested && (
         <Callout tone="warning" title="They asked to have their data deleted">
           Delete the application at the bottom of this page when you're done with it (within 30 days).
@@ -511,7 +517,7 @@ export function Candidate() {
       )}
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-sm text-zinc-600 dark:text-zinc-400">Stage:</span>
-        {canMove && a.status !== "rejected" ? <StageSelect a={a} onMoved={setA} /> : <Badge>{a.status === "rejected" ? "Rejected" : a.stage_id}</Badge>}
+        {canMove && a.status !== "rejected" ? <StageSelect a={a} onMoved={setA} /> : <Badge>{a.status === "withdrawn" ? "Withdrawn" : a.status === "rejected" ? "Rejected" : a.stage_id}</Badge>}
         <Tags a={a} onSaved={setA} canEdit={canMove} />
       </div>
 
@@ -638,7 +644,7 @@ export function Candidate() {
                 ))}
               </ul>
             )}
-            {a.hiring_plan_revision ? <p className="text-sm text-zinc-500">Use the interview room to record structured evidence for this job.</p> : <ScorecardForm a={a} onSaved={setA} />}
+            {a.status === "withdrawn" ? <p className="text-sm text-zinc-500">Saved scorecards remain readable. This application is no longer collecting assessments.</p> : a.hiring_plan_revision ? <p className="text-sm text-zinc-500">Use the interview room to record structured evidence for this job.</p> : <ScorecardForm a={a} onSaved={setA} />}
           </Panel>
           <Panel title="Notes">
             <Notes a={a} members={members} onSaved={setA} />

@@ -1,7 +1,7 @@
 // Orbit for Business (D82), public: a company's careers page, a job with its Apply form, a candidate's status page.
 // The Worker serves the first two as full HTML (worker/careers.js) for search engines; this is the same page with
 // the form, and takes over once its data is here (lib/prerender.tsx).
-import { useCallback, useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import type { BizApplicationStatus, BizApplyPreview, BizApplyResult, BizJobReport, BizPublicCompany, BizPublicJob, BizQuestion } from "@orbit/types";
 import {
@@ -30,10 +30,13 @@ import { useAuth } from "../lib/auth";
 import { handOff } from "../lib/prerender";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { biz } from "./api";
+
 import { CandidateChallenge } from "./CandidateChallenge";
 import { hiringApi } from "./hiringApi";
 import { EMAIL_RE, EMPLOYMENT_LABEL, EXPERIENCE_LABEL, careersPath, dayTime, publicJobPath, resumeFileProblem, salaryLine } from "./model";
 import { errorText } from "./ui";
+
+const CandidateWithdrawal = lazy(async () => ({ default: (await import("./CandidateWithdrawal")).CandidateWithdrawal }));
 
 function useLoad<T>(load: () => Promise<T>, deps: unknown[]): { data: T | null; error: Error | null; status: number | null; reload: () => void } {
   const [data, setData] = useState<T | null>(null);
@@ -719,7 +722,8 @@ export function ApplicationStatusPage() {
         </section>
       )}
 
-      <CandidateChallenge key={token} token={token} confirmed={data.email_confirmed} deletionRequested={data.deletion_requested} />
+      <CandidateChallenge key={`${token}/${data.application_state}`} token={token} confirmed={data.email_confirmed} deletionRequested={data.deletion_requested} />
+      <Suspense fallback={<p role="status">Loading application controls…</p>}><CandidateWithdrawal key={token} token={token} data={data} onSaved={setData} /></Suspense>
       <section aria-labelledby="data-title" className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
         <h2 id="data-title" className="font-semibold text-zinc-800 dark:text-zinc-200">
           Your data

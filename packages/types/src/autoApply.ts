@@ -336,6 +336,7 @@ export interface ApplyResumeChange {
 }
 
 export interface ApplyPacketDetail extends ApplyPacketSummary {
+  employer_status_path?: string | null;
   resume_title: string;
   resume_diff: ApplyResumeChange[];
   cover_letter: string | null;

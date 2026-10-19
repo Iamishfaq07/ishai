@@ -2081,7 +2081,7 @@ export type JobEmploymentType = "full_time" | "part_time" | "contract" | "intern
 export type JobLevel = "fresher" | "junior" | "mid" | "senior";
 /** Posted within this many days. */
 export type JobPostedWithin = 1 | 3 | 7 | 30;
-export type JobStatus = "saved" | "applied" | "interviewing" | "offer" | "hired" | "rejected";
+export type JobStatus = "saved" | "applied" | "interviewing" | "offer" | "hired" | "rejected" | "withdrawn";
 export type JobSort = "best" | "newest";
 
 /** What the feed looks for: read from a resume by the AI, then the user's to edit. */

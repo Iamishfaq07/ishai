@@ -47,6 +47,7 @@ from orbit_api.models import (
     ApplySiteState,
     AuditLog,
     AutoApplySetup,
+    BizApplication,
     Resume,
     User,
 )
@@ -365,6 +366,7 @@ class PacketSummary(BaseModel):
 
 
 class PacketDetail(PacketSummary):
+    employer_status_path: str | None
     resume_title: str
     resume_diff: list[dict[str, Any]]
     cover_letter: str | None
@@ -399,7 +401,16 @@ def _summary(p: ApplicationPacket, has_proof: bool) -> dict[str, Any]:
 
 async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
     proof = await db.get(ApplyProof, p.id)
+    status_path = None
+    if p.ats == "orbit" and p.status == "submitted":
+        from orbit_api.business.emails import status_token_for
+        app_id = (p.submitted_payload or {}).get("business_application_id")
+        app = await db.get(BizApplication, app_id) if isinstance(app_id, str) else None
+        if app is not None and app.user_id == p.user_id and app.job_id == p.job_ref:
+            token = status_token_for(app)
+            status_path = f"/application/{token}" if token else None
     return PacketDetail(
+        employer_status_path=status_path,
         **_summary(p, _has_proof(p, proof is not None)), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
         cover_letter=p.cover_letter, fields=p.fields or {}, answers=p.answers or [],
         missing_questions=p.missing or [], unknown_questions=p.unknown_questions or [], form_source=p.form_source,

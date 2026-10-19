@@ -93,7 +93,7 @@ export function JobTrackerPage() {
       <PageHeader
         icon={BookmarkCheck}
         title="Your applications"
-        subtitle="Saved, applied, interviewing, offer and hired. Move each job along as it goes, with notes and dates."
+        subtitle="Follow applications through interviews, offers and hiring, or record when you withdraw."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setAdding(true)} aria-haspopup="dialog">
@@ -254,7 +254,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       </div>}
 
       {/* Wide screens: a board, one column per status. */}
-      {wide && <div ref={boardRef} className="hidden gap-3 lg:grid lg:grid-cols-6">
+      {wide && <div ref={boardRef} className="hidden gap-3 lg:grid lg:grid-cols-4 xl:grid-cols-7">
         {STATUSES.map((s) => (
           <section key={s} aria-label={STATUS_LABEL[s]} className="relative min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
             <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_MARK[s])} />
@@ -479,7 +479,7 @@ function TrackerCard({
               </button>
             </li>
           )}
-          {entry.next_at && !["rejected", "hired"].includes(entry.status) && (
+          {entry.next_at && !["rejected", "hired", "withdrawn"].includes(entry.status) && (
             <li>
               <button
                 type="button"
@@ -524,6 +524,7 @@ function TrackerCard({
           <IconButton size="sm" icon={Trash2} onClick={onRemove} label={`Remove ${entry.title}`} title="Remove" className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300" />
         </div>
       )}
+      {entry.status === "withdrawn" && <p className="mt-2 text-xs text-zinc-500">A tracker edit alone does not notify an employer. Manage the application on the employer's page to withdraw it there.</p>}
     </article>
   );
 }

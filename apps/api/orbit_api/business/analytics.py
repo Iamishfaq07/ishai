@@ -49,6 +49,7 @@ class CompanyAnalytics(BaseModel):
     applicants_total: int
     applicants_30d: int
     hired: int
+    withdrawn: int
     median_first_response_hours: float | None
     by_source: dict[str, int]
     jobs: list[JobAnalytics]
@@ -121,6 +122,7 @@ async def get_company_analytics(ctx: CompanyCtx, db: Annotated[AsyncSession, Dep
     return CompanyAnalytics(
         open_jobs=sum(1 for j in jobs if j.status == "open"), applicants_total=len(apps),
         applicants_30d=sum(days.values()), hired=sum(1 for a in apps if a.status == "hired"),
+        withdrawn=sum(1 for a in apps if a.status == "withdrawn"),
         median_first_response_hours=round(statistics.median(hours), 1) if hours else None,
         by_source=dict(Counter(a.source for a in apps)),
         jobs=[_job_analytics(j, grouped[j.id], moves[j.id]) for j in jobs[:50]],
