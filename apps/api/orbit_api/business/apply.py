@@ -432,6 +432,8 @@ async def sync_tracker_status(db: AsyncSession, app: BizApplication, kind: str) 
     status_ = rules.TRACKER_STATUS.get(kind, "applied")
     if entry.status != status_:
         entry.status, entry.status_at = status_, now()
+        if status_ == "hired":
+            entry.next_at = None
 
 
 @public_router.post("/jobs/{job_id}/apply", response_model=ApplyResult)

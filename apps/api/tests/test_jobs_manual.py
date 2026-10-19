@@ -141,7 +141,9 @@ def test_typed_details_win_over_the_link_and_a_job_can_be_typed_in_without_one(j
                        ({"url": "mailto:hr@example.com", "company": "X", "title": "Y"}, "web link")):
         r = add(jobs, h, **body)
         assert r.status_code == 422 and says in r.json()["detail"], r.text
-    for body in ({"title": "x" * 301, "company": "X"}, {"status": "hired", "company": "X", "title": "Y"},
+    hired = add(jobs, h, company="Confirmed Company", title="Engineer", status="hired")
+    assert hired.status_code == 201 and hired.json()["status"] == "hired" and hired.json()["applied_at"]
+    for body in ({"title": "x" * 301, "company": "X"}, {"status": "not-a-stage", "company": "X", "title": "Y"},
                  {"notes": "n" * 4_001, "company": "X", "title": "Y"}, {"url": "https://x.com/" + "a" * 2_100}):
         assert add(jobs, h, **body).status_code == 422
 

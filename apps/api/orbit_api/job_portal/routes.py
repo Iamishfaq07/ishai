@@ -29,7 +29,7 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select
+from sqlalchemy import exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import defer
 
@@ -98,7 +98,7 @@ PAGE_SIZE = 20
 MAX_TRACKED = 500
 MAX_FIT_EVIDENCE = 40  # confirmed evidence claims a fit check reads, most recently changed first
 FULL_TEXT_MIN = 700  # shorter than this, a post is likely only a snippet: tailoring fetches the page once
-Status = Literal["saved", "applied", "interviewing", "offer", "rejected"]
+Status = Literal["saved", "applied", "interviewing", "offer", "hired", "rejected"]
 Sort = Literal["best", "newest"]
 
 _user_locks: dict[str, asyncio.Lock] = {}
@@ -479,8 +479,15 @@ async def _rows(db: AsyncSession, days: int, country: str) -> list[ranking.Row]:
     """The recent posts that could be shown to someone applying in `country`: there, or remote (ranking checks who
     a remote one is open to)."""
     since = datetime.now(UTC) - timedelta(days=days)
+    from orbit_api.models import BizCompany, BizJob
+
+    live_business = exists(select(BizJob.id).join(BizCompany, BizCompany.id == BizJob.company_id).where(
+        BizJob.id == JobListing.external_id, BizJob.status == "open", BizJob.taken_down_reason.is_(None),
+        BizCompany.status == "active", BizCompany.verified_at.is_not(None),
+        or_(BizJob.valid_through.is_(None), BizJob.valid_through > datetime.now(UTC))))
     result = await db.execute(select(*_ROW_COLUMNS).where(
-        JobListing.posted_at >= since, or_(JobListing.country == country, JobListing.workplace == "remote")))
+        JobListing.posted_at >= since, or_(JobListing.country == country, JobListing.workplace == "remote"),
+        or_(JobListing.source != "orbit", live_business)))
     return [ranking.row_of(r) for r in result.all()]
 
 
@@ -1066,7 +1073,7 @@ async def track_manual(body: ManualIn, user: Annotated[User, Depends(current_use
         db.add(entry)
     if body.applied_at is not None:
         entry.applied_at = body.applied_at
-    elif entry.applied_at is None and body.status in ("applied", "interviewing", "offer"):
+    elif entry.applied_at is None and body.status in ("applied", "interviewing", "offer", "hired"):
         entry.applied_at = now
     entry.next_at = body.next_at
     entry.notes = manual.clean_notes(body.notes)

@@ -93,7 +93,7 @@ export function JobTrackerPage() {
       <PageHeader
         icon={BookmarkCheck}
         title="Your applications"
-        subtitle="Saved, applied, interviewing, offer. Move each job along as it goes, with notes and dates."
+        subtitle="Saved, applied, interviewing, offer and hired. Move each job along as it goes, with notes and dates."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => setAdding(true)} aria-haspopup="dialog">
@@ -254,7 +254,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       </div>}
 
       {/* Wide screens: a board, one column per status. */}
-      {wide && <div ref={boardRef} className="hidden gap-3 lg:grid lg:grid-cols-5">
+      {wide && <div ref={boardRef} className="hidden gap-3 lg:grid lg:grid-cols-6">
         {STATUSES.map((s) => (
           <section key={s} aria-label={STATUS_LABEL[s]} className="relative min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
             <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_MARK[s])} />
@@ -479,7 +479,7 @@ function TrackerCard({
               </button>
             </li>
           )}
-          {entry.next_at && entry.status !== "rejected" && (
+          {entry.next_at && !["rejected", "hired"].includes(entry.status) && (
             <li>
               <button
                 type="button"

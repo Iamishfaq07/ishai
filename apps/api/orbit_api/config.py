@@ -184,6 +184,7 @@ class Settings(BaseSettings):
     # Console. Unset: no pings (Google still finds jobs through the sitemap).
     google_indexing_sa_json: SecretStr | None = Field(
         None, validation_alias=AliasChoices("ORBIT_GOOGLE_INDEXING_SA_JSON"))
+    business_ipinfo_token: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_BUSINESS_IPINFO_TOKEN"))
     # Continue with Google. Both must be set or the button stays hidden. The redirect URI registered in
     # Google Cloud is ORBIT_GOOGLE_REDIRECT_URI, or (when unset) localhost's own callback in development and
     # {ORBIT_WEB_URL}/api/v1/auth/google/callback in production, where the site proxies /api.

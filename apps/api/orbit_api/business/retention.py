@@ -24,7 +24,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
-from orbit_api.business import indexing, rules
+from orbit_api.business import indexing, listings, rules
 from orbit_api.business.access import audit, delete_application_rows
 from orbit_api.business.jobs import public_url
 from orbit_api.config import get_settings
@@ -114,6 +114,7 @@ async def sweep(now: datetime | None = None) -> dict[str, int]:
                 audit(db, c.id, None, "job.expired", job.title, job_id=job.id)
                 if was_open:
                     await indexing.notify(db, public_url(c, job), deleted=True)
+        await listings.refresh_catalog(db)
         await db.commit()
     for m in mail:
         await send_safely(m)

@@ -1,5 +1,5 @@
-"""Orbit Apply: the candidate's own auto-apply (docs/DECISIONS.md D84). The server plans and the candidate's device
-submits.
+"""Orbit Apply: approved application campaigns. The server submits first-party Business jobs;
+the connected candidate device submits supported external employer forms.
 
 - `setup.py`: the one-time setup. The master resume the candidate approves, the facts they confirm (contact, work
   authorisation per country, notice period, salary only if they give it, links, years), filters, mode (Automatic or
@@ -9,7 +9,7 @@ submits.
 - `forms.py`: each ATS's public application form (Greenhouse's job board API with `questions=true`, Lever's apply
   page, Ashby's public posting GraphQL) read into one list of questions.
 - `resolve.py`: where a listing can be applied to. Its own Greenhouse, Lever or Ashby form, Orbit Direct (`direct.py`,
-  a seam until Orbit for Business lands), or a hand-off for a job board, which Orbit never automates.
+  atomic first-party submissions), or a hand-off for a job board, which Orbit never automates.
 - `tailor.py` and `letters.py`: the resume reordered and reworded for the job from true facts only, with a diff, and
   a short cover letter. `pdf.py` writes the resume the executor uploads.
 - `planner.py`: picks jobs from Jobs AI's feed and turns each into an ApplicationPacket. It runs from the sweeper

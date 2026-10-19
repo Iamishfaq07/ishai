@@ -1,10 +1,13 @@
-import { useEffect, useId, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import type { BizCandidateSample, BizSampleSubmission } from "@orbit/types";
 import { Button, Callout, Field, Select, Textarea, confirmDialog } from "@orbit/ui";
 import { hiringApi } from "./hiringApi";
 import { CandidateConversation } from "./HiringConversation";
 import { validateSample } from "./hiringModel";
 import { errorText, Panel } from "./ui";
+
+const CandidateSaba = lazy(async () => ({ default: (await import("./BusinessSaba")).CandidateSaba }));
+const CandidateOffer = lazy(async () => ({ default: (await import("./BusinessOffer")).CandidateOffer }));
 
 export function CandidateChallenge({ token, confirmed, deletionRequested }: { token: string; confirmed: boolean; deletionRequested: boolean }) {
   const id = useId();
@@ -41,6 +44,10 @@ export function CandidateChallenge({ token, confirmed, deletionRequested }: { to
     } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
   return <div className="mt-6 space-y-5">
+    {confirmed && <Suspense fallback={<p role="status">Loading interview and offer updates…</p>}>
+      <CandidateSaba token={token} readOnly={deletionRequested || !data?.accepting} />
+      <CandidateOffer token={token} readOnly={deletionRequested || !data?.accepting} />
+    </Suspense>}
     {data?.interview_brief && <Panel title="Prepare for the conversation" hint="What this hiring team plans to assess.">
       <p className="whitespace-pre-wrap text-sm">{data.interview_brief.intro}</p>
       <ul className="mt-3 flex flex-wrap gap-2">{data.interview_brief.areas.map((area) => <li key={area} className="rounded-lg bg-zinc-100 px-3 py-1 text-sm dark:bg-white/5">{area}</li>)}</ul>

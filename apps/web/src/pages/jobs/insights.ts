@@ -54,8 +54,8 @@ const MEASURED_MS = 60_000;
 
 export function searchInsights(entries: JobTrackerEntry[], now: number = Date.now()): SearchInsights {
   const applied = entries.filter((e) => e.applied_at);
-  const answered = (e: JobTrackerEntry) => e.status === "interviewing" || e.status === "offer" || e.status === "rejected";
-  const interviewed = (e: JobTrackerEntry) => e.status === "interviewing" || e.status === "offer";
+  const answered = (e: JobTrackerEntry) => ["interviewing", "offer", "hired", "rejected"].includes(e.status);
+  const interviewed = (e: JobTrackerEntry) => ["interviewing", "offer", "hired"].includes(e.status);
   const heard = applied.filter(answered);
   // A wait is only measured when the answer came after the application. A job added straight in as interviewing
   // (or offer) gets both dates at once: that's no wait at all, and it made "Typical wait: 0 days" before any reply.
@@ -83,7 +83,7 @@ export function searchInsights(entries: JobTrackerEntry[], now: number = Date.no
     applied: applied.length,
     heardBack: heard.length,
     interviews: applied.filter(interviewed).length,
-    offers: applied.filter((e) => e.status === "offer").length,
+    offers: applied.filter((e) => ["offer", "hired"].includes(e.status)).length,
     responseRate: applied.length ? heard.length / applied.length : null,
     interviewRate: applied.length ? applied.filter(interviewed).length / applied.length : null,
     medianDaysToHear: median === null ? null : Math.round(median),
