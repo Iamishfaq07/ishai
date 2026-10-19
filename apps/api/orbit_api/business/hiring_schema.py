@@ -74,6 +74,7 @@ class HiringPlan(Contract):
 class PlanIn(Contract):
     base_revision: int = Field(ge=0)
     plan: HiringPlan
+    source_version: str | None = Field(None, pattern=r"^[0-9a-f]{64}$")
 
 
 class EvidenceRating(Contract):

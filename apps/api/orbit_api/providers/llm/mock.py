@@ -433,6 +433,19 @@ class MockLLMProvider(LLMProvider):
     def _response_for(self, request: LLMRequest) -> str:
         if self._script:
             return self._script.pop(0)
+        if request.request_type in ("career_action_brief", "business_plan_assist"):
+            body = request.messages[-1].content
+            data = json.loads(body[body.find("{"):body.rfind("}") + 1])
+            if request.request_type == "career_action_brief":
+                return json.dumps({"steps": [{"action_id": a["id"], "source_quote": a["detail"],
+                    "suggestion": "[mock] Open the linked workspace and review this saved next step."}
+                    for a in data["actions"][:3]]})
+            plan = data["current_plan"]
+            for criterion in plan["criteria"]:
+                criterion["question"] = "[mock] " + criterion["question"][:790]
+            return json.dumps({"plan": plan, "sources": [{"criterion_id": c["id"],
+                "requirement_quote": next((s for s in data["requirements"] if s in c["name"]), data["title"])}
+                for c in plan["criteria"]]})
         if request.request_type in ("job_profile", "job_fit"):
             return _mock_jobs(request.request_type, request.messages[-1].content if request.messages else "")
         if request.request_type == "summary":

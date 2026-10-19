@@ -53,6 +53,7 @@ import {
   JobDetailPage,
   JobMissionPage,
   JobTrackerPage,
+  JobActionDeskPage,
   JobOutreachPage,
   JobProfilePage,
   AutoApplySetupPage,
@@ -315,6 +316,7 @@ export function App() {
           <Route path="listing/:listingId" element={<JobDetailPage />} />
           <Route path="mission/:entryId" element={<JobMissionPage />} />
           <Route path="tracker" element={<JobTrackerPage />} />
+          <Route path="actions" element={<JobActionDeskPage />} />
           <Route path="outreach" element={<JobOutreachPage />} />
           <Route path="profile" element={<JobProfilePage />} />
           <Route path="auto-apply" element={<AutoApplySetupPage />} />

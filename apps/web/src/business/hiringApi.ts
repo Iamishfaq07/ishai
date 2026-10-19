@@ -10,8 +10,8 @@ const post = (body?: unknown): RequestInit => ({ method: "POST", ...(body === un
 
 export const hiringApi = {
   plan: (cid: string, jid: string) => api.call<H.BizHiringPlanRecord>(`${c(cid)}/jobs/${e(jid)}/hiring-plan`),
-  savePlan: (cid: string, jid: string, plan: H.BizHiringPlan, baseRevision: number) =>
-    api.call<H.BizHiringPlanRecord>(`${c(cid)}/jobs/${e(jid)}/hiring-plan`, put({ plan, base_revision: baseRevision })),
+  savePlan: (cid: string, jid: string, plan: H.BizHiringPlan, baseRevision: number, sourceVersion?: string | null) =>
+    api.call<H.BizHiringPlanRecord>(`${c(cid)}/jobs/${e(jid)}/hiring-plan`, put({ plan, base_revision: baseRevision, source_version: sourceVersion })),
   room: (cid: string, aid: string) => api.call<H.BizHiringRoom>(`${a(cid, aid)}/hiring-room`),
   feedback: (cid: string, aid: string, content: H.BizFeedbackContent, stageId: string, baseRevision: number, planRevision: number, submit: boolean) =>
     api.call<H.BizHiringRoom>(`${a(cid, aid)}/interview-feedback`, put({ ...content, stage_id: stageId, base_revision: baseRevision, plan_revision: planRevision, submit })),

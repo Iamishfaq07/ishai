@@ -51,7 +51,9 @@ export function PeopleSection() {
   const loaded = Boolean(contacts.data);
   useEffect(() => {
     if (loaded && window.location.hash === "#people") {
-      document.getElementById("people")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("people")?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start",
+      });
     }
   }, [loaded]);
 
