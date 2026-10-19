@@ -52,6 +52,7 @@ from orbit_api.models import (
 )
 from orbit_api.ratelimit import limit_user
 from orbit_api.resumes.schema import ResumeData
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/apply", tags=["apply"])
 admin_router = APIRouter(prefix="/v1/admin/apply", tags=["admin"])
@@ -188,7 +189,8 @@ async def _setup_out(db: AsyncSession, user: User, setup: AutoApplySetup | None)
     s = setup or AutoApplySetup(user_id=user.id, mode="automatic", daily_limit=rules.DEFAULT_DAILY_LIMIT,
                                 threshold=rules.DEFAULT_THRESHOLD, ai_line=True, paused=False, tz_offset_min=0)
     return SetupOut(
-        configured=bool(setup and setup.consent_at), consent_at=aware(setup.consent_at) if setup else None,
+        configured=bool(setup and setup.consent_at and setup.consent_version == rules.CONSENT_VERSION),
+        consent_at=aware(setup.consent_at) if setup else None,
         mode="review" if s.mode == "review" else "automatic", daily_limit=pacing.daily_limit(s),
         threshold=s.threshold or rules.DEFAULT_THRESHOLD, ai_line=bool(s.ai_line), paused=bool(s.paused),
         executor_seen_at=aware(s.executor_seen_at),
@@ -211,6 +213,7 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
                      db: Annotated[AsyncSession, Depends(get_db)]) -> SetupOut:
     from orbit_api.auth.routes import _ip
 
+    await lock_account(db, user.id)
     setup = await db.get(AutoApplySetup, user.id)
     if setup is None:
         setup = AutoApplySetup(user_id=user.id)
@@ -231,7 +234,7 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
     setup.quiet_start = body.quiet_hours.start if body.quiet_hours else None
     setup.quiet_end = body.quiet_hours.end if body.quiet_hours else None
     setup.tz_offset_min = body.tz_offset_min
-    if body.consent and setup.consent_at is None:
+    if body.consent and (setup.consent_at is None or setup.consent_version != rules.CONSENT_VERSION):
         if not setup.resume_id or not setup.resume_hash:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
                                 "Approve the resume Orbit Apply should use before you turn it on.")
@@ -469,6 +472,7 @@ async def answer_packet(packet_id: str, body: AnswersIn, user: Annotated[User, D
 
 async def _move(db: AsyncSession, user: User, packet_id: str, allowed: tuple[str, ...], to: str,
                 reason: str = "") -> PacketDetail:
+    await lock_account(db, user.id)
     p = await packets.owned(db, user, packet_id)
     if p.status not in allowed:
         raise HTTPException(status.HTTP_409_CONFLICT, f"Can't do that to an application that's {p.status}.")
@@ -521,6 +525,7 @@ class PauseOut(BaseModel):
 
 
 async def _pause(db: AsyncSession, user: User, paused: bool) -> PauseOut:
+    await lock_account(db, user.id)
     setup = await db.get(AutoApplySetup, user.id)
     if setup is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Set up Orbit Apply first.")
@@ -661,6 +666,7 @@ async def post_result(packet_id: str, body: packets.ResultIn, user: Annotated[Us
                       db: Annotated[AsyncSession, Depends(get_db)]) -> packets.ResultOut:
     from orbit_api.auto_apply.notify import notify
 
+    await lock_account(db, user.id)
     p = await packets.owned(db, user, packet_id)
     out = await packets.record_result(db, user, p, body)
     await db.commit()

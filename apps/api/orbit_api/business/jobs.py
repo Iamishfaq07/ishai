@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import ratelimit
-from orbit_api.business import indexing, rules, usage
+from orbit_api.business import indexing, listings, rules, usage
 from orbit_api.business.access import CompanyCtx, Ctx, audit, job_for, lock_company, sees_job
 from orbit_api.business.ai_port import JobBrief, get_business_ai, recording
 from orbit_api.business.companies import active_jobs, effective_plan, limit_error, logo_url
@@ -360,6 +360,7 @@ async def update_job(job_id: str, body: JobPatch, ctx: CompanyCtx,
           fields=sorted(body.model_fields_set))
     if job.status == "open":
         await indexing.notify(db, public_url(ctx.company, job), deleted=False)
+    await listings.sync(db, ctx.company, job)
     await db.commit()
     return await job_out(db, ctx.company, job)
 
@@ -396,6 +397,7 @@ async def publish(job_id: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depe
             job.valid_through = now() + timedelta(days=VALID_DAYS)
         audit(db, ctx.company.id, ctx.user, "job.published", job.title, job_id=job.id)
         await indexing.notify(db, public_url(ctx.company, job), deleted=False)
+    await listings.sync(db, ctx.company, job)
     await db.commit()
     return await job_out(db, ctx.company, job)
 
@@ -415,6 +417,7 @@ async def _set_status(db: AsyncSession, ctx: Ctx, job_id: str, to: str) -> JobOu
     audit(db, ctx.company.id, ctx.user, f"job.{to}", job.title, job_id=job.id)
     if was_open:
         await indexing.notify(db, public_url(ctx.company, job), deleted=True)
+    await listings.sync(db, ctx.company, job)
     await db.commit()
     return await job_out(db, ctx.company, job)
 

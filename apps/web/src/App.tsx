@@ -56,6 +56,7 @@ import {
   JobOutreachPage,
   JobProfilePage,
   AutoApplySetupPage,
+  CareerJourneyPage,
   ApplicationsPage,
   OffersPage,
   LinkedInPage,
@@ -317,6 +318,7 @@ export function App() {
           <Route path="outreach" element={<JobOutreachPage />} />
           <Route path="profile" element={<JobProfilePage />} />
           <Route path="auto-apply" element={<AutoApplySetupPage />} />
+          <Route path="journey" element={<CareerJourneyPage />} />
           <Route path="applications" element={<ApplicationsPage />} />
           <Route path="*" element={<Navigate to={JOBS_AI_HOME} replace />} />
         </Route>

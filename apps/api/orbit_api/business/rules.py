@@ -367,7 +367,7 @@ CANDIDATE_STAGE: dict[str, tuple[str, str]] = {
 }
 # The candidate's Jobs AI tracker status for each kind of stage (job_portal: saved|applied|interviewing|offer|rejected).
 TRACKER_STATUS: dict[str, str] = {"applied": "applied", "screen": "applied", "interview": "interviewing",
-                                  "offer": "offer", "hired": "offer", "rejected": "rejected"}
+                                  "offer": "offer", "hired": "hired", "rejected": "rejected"}
 
 
 def stage_kind(stages: list[dict[str, Any]], stage_id: str) -> str:

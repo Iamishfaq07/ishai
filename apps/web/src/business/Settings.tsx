@@ -318,7 +318,7 @@ export function PlanPage() {
           </li>
         ))}
       </ul>
-      <p className="text-xs text-zinc-600 dark:text-zinc-400">Paying by card or UPI in the app is coming. For now an upgrade is a request: the Orbit team confirms the plan and sets it up for you. Saba interviews for companies are coming soon.</p>
+      <p className="text-xs text-zinc-600 dark:text-zinc-400">Paying by card or UPI in the app is coming. For now an upgrade is a request: the Orbit team confirms the plan and sets it up for you. Invite Saba from an application's Interview workspace after saving the job's interview plan.</p>
       {company.role !== "owner" && <p className="text-sm">Only the owner can change the plan.</p>}
     </div>
   );

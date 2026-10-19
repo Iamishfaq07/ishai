@@ -475,6 +475,16 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/public/business/applications/{token}/clarification"),
     ("GET", "/v1/public/business/applications/{token}/calendar.ics"),
     ("GET", "/v1/public/business/applications/{token}/conversation"),
+    ("GET", "/v1/public/business/applications/{token}/saba"),
+    ("POST", "/v1/public/business/applications/{token}/saba/start"),
+    ("POST", "/v1/public/business/applications/{token}/saba/answers"),
+    ("POST", "/v1/public/business/applications/{token}/saba/alternative"),
+    ("POST", "/v1/public/business/applications/{token}/saba/explanation"),
+    ("POST", "/v1/public/business/applications/{token}/saba/speech"),
+    ("POST", "/v1/public/business/applications/{token}/saba/network-check"),
+    ("POST", "/v1/public/business/applications/{token}/saba/stop-country-sharing"),
+    ("GET", "/v1/public/business/applications/{token}/offer"),
+    ("POST", "/v1/public/business/applications/{token}/offer/respond"),
 })
 
 

@@ -39,12 +39,15 @@ def test_question_reply_and_candidate_activity_are_explicit_safe_and_idempotent(
     desk = client.get(f"/v1/business/companies/{cid}/hiring-desk", headers=auth(owner)).json()
     assert "question" in desk["attention"][0]["reason"]
     body = answer()
-    before = len(outbox().sent)
+    def notifications() -> int:
+        # DevOutbox keeps only the latest 100 messages; count this application's replies, not its total size.
+        return sum(token in m.text and m.subject.startswith("The hiring team replied:") for m in outbox().sent)
+    before = notifications()
     r = client.post(base + f"/questions/{qid}/reply", headers=auth(owner), json=body)
     assert r.status_code == 200, r.text
-    assert len(outbox().sent) == before + 1
+    assert notifications() == before + 1
     retry = client.post(base + f"/questions/{qid}/reply", headers=auth(owner), json=body)
-    assert retry.json() == r.json() and len(outbox().sent) == before + 1
+    assert retry.json() == r.json() and notifications() == before + 1
     assert client.post(base + f"/questions/{qid}/reply", headers=auth(owner), json=answer()).status_code == 409
     public = client.get(f"/v1/public/business/applications/{token}/conversation").json()
     assert public["threads"][0]["reply"]["message"] == body["message"]
@@ -82,14 +85,16 @@ def test_two_recruiters_cannot_overwrite_or_double_notify_a_reply(client: TestCl
     qid = question(client, token)
     path = f"/v1/business/companies/{cid}/applications/{aid}/questions/{qid}/reply"
     barrier = Barrier(2)
-    before = len(outbox().sent)
+    def notifications() -> int:
+        return sum(token in m.text and m.subject.startswith("The hiring team replied:") for m in outbox().sent)
+    before = notifications()
     def publish(_: int) -> int:
         body = answer()
         barrier.wait()
         return client.post(path, headers=auth(owner), json=body).status_code
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert sorted(pool.map(publish, range(2))) == [200, 409]
-    assert len(outbox().sent) == before + 1
+    assert notifications() == before + 1
 
 
 def test_conversation_tenant_role_cursor_and_deletion_boundaries(client: TestClient) -> None:

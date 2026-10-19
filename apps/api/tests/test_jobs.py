@@ -1082,7 +1082,9 @@ def test_the_tracker_saves_moves_notes_and_deletes_and_is_private(jobs: TestClie
     for method, kw in (("PATCH", {"json": {"status": "rejected"}}), ("DELETE", {})):
         assert jobs.request(method, f"/v1/jobs/tracker/{entry}", headers=other, **kw).status_code == 404
     assert jobs.get("/v1/jobs/feed", headers=other).json()["items"][0]["tracked"] is None
-    assert jobs.patch(f"/v1/jobs/tracker/{entry}", headers=h, json={"status": "hired"}).status_code == 422
+    hired = jobs.patch(f"/v1/jobs/tracker/{entry}", headers=h, json={"status": "hired"})
+    assert hired.status_code == 200 and hired.json()["status"] == "hired"
+    assert jobs.patch(f"/v1/jobs/tracker/{entry}", headers=h, json={"status": "not-a-stage"}).status_code == 422
     # The listing ages out of the cache: the entry stays, from its own copy.
     run(jobs, _clear_jobs)
     kept = jobs.get("/v1/jobs/tracker", headers=h).json()
