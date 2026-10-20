@@ -198,6 +198,92 @@ async def test_live_search_uses_fixed_service_and_only_employer_job_query(monkey
     assert "Acme" in seen[0].url.params["q"] and result[0].kind == "search_snippet"
 
 
+@pytest.mark.parametrize("key", [None, SecretStr("unused-vendor-key")])
+async def test_searxng_needs_no_api_key_and_does_not_forward_brave_key(
+    monkeypatch: pytest.MonkeyPatch, key: SecretStr | None,
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "contact_searxng_url", "http://searxng:8080")
+    monkeypatch.setattr(settings, "contact_search_key", key)
+    real = httpx.AsyncClient
+    seen: list[httpx.Request] = []
+
+    def response(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"results": [
+            {"title": "Alex Rivera at Acme", "content": "<b>Recruiter</b>", "url": "https://acme.com/team"},
+            {"title": "Blocked", "content": "Private link", "url": "http://127.0.0.1/private"},
+            *[{"title": "A result", "content": "Public text", "url": "https://acme.com/jobs"}] * 10]})
+
+    monkeypatch.setattr(contact_sources.httpx, "AsyncClient", lambda **kw: real(**kw,
+        transport=httpx.MockTransport(response)))
+    results = await contact_sources.search_sources("Acme", "Designer")
+    assert contact_sources.search_provider() == "searxng" and len(seen) == 1
+    request = seen[0]
+    assert str(request.url).startswith("http://searxng:8080/search?")
+    assert request.url.params["format"] == "json" and request.url.params["pageno"] == "1"
+    assert "X-Subscription-Token" not in request.headers and "Authorization" not in request.headers
+    assert len(results) == 4 and results[0].text == "Alex Rivera at Acme\nRecruiter"
+
+
+@pytest.mark.parametrize("status", [302, 403, 429, 503])
+async def test_searxng_refuses_redirects_and_reports_service_failure(
+    monkeypatch: pytest.MonkeyPatch, status: int,
+) -> None:
+    monkeypatch.setattr(get_settings(), "contact_searxng_url", "http://search:8080")
+    real = httpx.AsyncClient
+    seen = []
+
+    def response(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(status, headers={"location": "http://169.254.169.254/"})
+
+    monkeypatch.setattr(contact_sources.httpx, "AsyncClient", lambda **kw: real(**kw,
+        transport=httpx.MockTransport(response)))
+    with pytest.raises(httpx.HTTPStatusError):
+        await contact_sources.search_sources("Acme", "Designer")
+    assert len(seen) == 1
+
+
+@pytest.mark.parametrize("payload", [b"not json", b"x" * 400001], ids=["malformed", "oversized"])
+async def test_searxng_rejects_malformed_and_oversized_responses(
+    monkeypatch: pytest.MonkeyPatch, payload: bytes,
+) -> None:
+    monkeypatch.setattr(get_settings(), "contact_searxng_url", "http://search:8080")
+    real = httpx.AsyncClient
+    monkeypatch.setattr(contact_sources.httpx, "AsyncClient", lambda **kw: real(**kw,
+        transport=httpx.MockTransport(lambda request: httpx.Response(200, content=payload))))
+    with pytest.raises((ValueError, job_link.JobLinkError)):
+        await contact_sources.search_sources("Acme", "Designer")
+
+
+def test_searxng_enabled_context_and_failure_keep_other_sources(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    h, jid = world(client)
+    monkeypatch.setattr(get_settings(), "contact_search_key", None)
+    monkeypatch.setattr(get_settings(), "contact_searxng_url", "http://search:8080")
+    current = context(client, h, jid)
+    assert current["web_search_enabled"] and current["web_search_provider"] == "searxng"
+    assert "search:8080" not in json.dumps(current)
+
+    async def unavailable(*args: Any) -> list[Source]:
+        raise TimeoutError
+
+    monkeypatch.setattr(research, "search_sources", unavailable)
+    result = find(client, h, jid, search_web=True)
+    assert result.status_code == 200 and result.json()["people"][0]["name"] == "Alex Rivera"
+    assert result.json()["warnings"] == ["Live search is unavailable. Other supplied sources were still checked."]
+
+
+@pytest.mark.parametrize("url", ["file:///etc/passwd", "https://user:pass@search.com", "https://search.com?q=x",
+                               "https://search.com/#fragment", "https://search.com:bad", "https://sea rch.com"])
+def test_searxng_config_rejects_unsafe_service_urls(url: str) -> None:
+    from orbit_api.config import Settings
+    with pytest.raises(ValueError):
+        Settings(ORBIT_CONTACT_SEARXNG_URL=url)
+
+
 @pytest.mark.parametrize("address", ["candidate@example.com", "noreply@acme.com", "automated@acme.com"])
 def test_self_and_automatic_mailboxes_with_exact_evidence_are_rejected(address: str) -> None:
     text = f"Alex Rivera, Recruiter, {address}"

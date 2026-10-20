@@ -3,10 +3,10 @@ import { allNavItems, exploreItems, navGroups, phoneTabs, sidebarCollapsed } fro
 
 describe("app navigation", () => {
   it("groups the tools by task, every tool once", () => {
-    expect(navGroups(true).map((g) => g.label)).toEqual([null, "Prepare", "Apply", "Interview & offer"]);
+    expect(navGroups(true).map((g) => g.label)).toEqual([null, "Prepare", "Interview & offer"]);
     const ids = allNavItems(true).map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(["home", "tools", "practice", "video", "resume", "learning", "jobs", "linkedin", "copilot", "offer"]);
+    expect(ids).toEqual(["home", "jobs", "tools", "practice", "video", "resume", "learning", "linkedin", "copilot", "offer"]);
   });
 
   it("gives phones five destinations: four tabs and Explore with the rest", () => {

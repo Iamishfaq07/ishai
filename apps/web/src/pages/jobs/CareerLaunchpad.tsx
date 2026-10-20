@@ -34,6 +34,15 @@ export function CareerLaunchpad() {
   const [busy, setBusy] = useState<"load" | "ai" | "save" | null>("load");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [step, setStep] = useState(0);
+  const move = (next: number) => {
+    setStep(next);
+    requestAnimationFrame(() => {
+      const heading = document.getElementById(["starting-point", "role-exploration", "launchpad-search"][next]!);
+      heading?.focus({ preventScroll: true });
+      heading?.scrollIntoView({ block: "start", behavior: "auto" });
+    });
+  };
   const initialized = useRef(false);
   const request = useRef(0);
   const load = useCallback(async (resumeId?: string) => {
@@ -84,20 +93,20 @@ export function CareerLaunchpad() {
   const existingTypes = (context?.prefs.job_types.length ? context.prefs.job_types : standardTypes).filter((type) => type !== "internship");
   const searchTypes = stage === "fresher" ? ["full_time"] : existingTypes.length ? existingTypes : standardTypes;
   const typePreview = [...searchTypes, ...(internships ? ["internship"] : [])].map((type) => type.replace("_", "-")).join(", ");
-  return <section aria-labelledby="launchpad-title" className="space-y-5">
+  return <section aria-labelledby="launchpad-title" className="min-w-0 space-y-5 break-words">
     <header className="relative overflow-hidden rounded-2xl bg-indigo-950 p-5 text-white sm:p-7">
       <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full border-[22px] border-indigo-400/15 motion-safe:animate-pulse" />
-      <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">Your career launchpad</p>
+      <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">Search setup · Step {step + 1} of 3</p>
       <h2 id="launchpad-title" className="relative mt-2 text-2xl font-semibold">A clear start. A next step you can take.</h2>
       <p className="relative mt-2 max-w-xl text-sm text-indigo-100">Bring what you have, even if it is your first project. Build a resume, explore roles and start a focused search.</p>
       <ol aria-label="Getting started" className="relative mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-indigo-100">
-        {["Your starting point", "Explore roles", "Find jobs & practice"].map((text, i) => <li key={text} className="flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full border border-indigo-300/50">{i + 1}</span>{text}</li>)}
+        {["Your starting point", "Explore roles", "Review & start"].map((text, i) => <li key={text}><button type="button" disabled={Boolean(busy)} aria-current={step === i ? "step" : undefined} onClick={() => move(i)} className={cx("flex min-h-11 items-center gap-2 rounded-lg px-2", step === i ? "bg-white/15 font-semibold" : "hover:bg-white/10", focusRing)}><span className="grid h-6 w-6 place-items-center rounded-full border border-indigo-300/50">{i + 1}</span>{text}</button></li>)}
       </ol>
     </header>
     {error && <Callout tone="error"><p>{error}</p><Button variant="ghost" disabled={Boolean(busy)} onClick={() => void load()}>Refresh launchpad</Button></Callout>}
     {!context ? <p role="status" className={muted}>{busy ? "Opening your starting point…" : "Refresh to load your resumes and search settings."}</p> : <>
-      <section className={panel} aria-labelledby="starting-point">
-        <h3 id="starting-point" className="font-semibold">1. Your starting point</h3>
+      <section hidden={step !== 0} className={panel} aria-labelledby="starting-point">
+        <h3 id="starting-point" tabIndex={-1} className="scroll-mt-4 font-semibold">1. Your starting point</h3>
         <fieldset disabled={Boolean(busy)} className="mt-4 space-y-4">
           <legend className="sr-only">Choose your career stage</legend>
           <div className="grid gap-2 sm:grid-cols-3">{STAGES.map((item) => <label key={item.id} className={cx("cursor-pointer rounded-xl border p-3 transition-colors motion-reduce:transition-none", stage === item.id ? "border-indigo-500 bg-indigo-500/10" : "border-zinc-200 dark:border-white/15")}>
@@ -114,10 +123,11 @@ export function CareerLaunchpad() {
           <Link className={cx("rounded underline underline-offset-4", focusRing)} to="/resume-ai?start=import">Import a resume</Link>
           <Button variant="ghost" disabled={Boolean(busy)} onClick={() => void load(context.resume_id ?? undefined)}>Refresh resumes</Button>
         </div>
+        <Button className="mt-4" disabled={Boolean(busy)} onClick={() => move(1)}>Continue to role ideas</Button>
       </section>
       <form onSubmit={(e) => void save(e)} className="space-y-5">
-        <section className={panel} aria-labelledby="role-exploration">
-          <h3 id="role-exploration" className="font-semibold">2. Choose a direction</h3>
+        <section hidden={step !== 1} className={panel} aria-labelledby="role-exploration">
+          <h3 id="role-exploration" tabIndex={-1} className="scroll-mt-4 font-semibold">2. Choose a direction</h3>
           <fieldset disabled={Boolean(busy)} className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field htmlFor="launchpad-role" label="Job title to explore"><Input id="launchpad-role" placeholder="e.g. Graduate software engineer" required minLength={2} maxLength={80} value={title} onChange={(e) => { setTitle(e.target.value); edit(); }} /></Field>
             <Field htmlFor="launchpad-location" label="Preferred city (optional)"><Input id="launchpad-location" placeholder="Blank keeps your saved locations" maxLength={120} value={location} onChange={(e) => { setLocation(e.target.value); edit(); }} /></Field>
@@ -129,11 +139,12 @@ export function CareerLaunchpad() {
             <h4 className="font-semibold">{idea.title}</h4><p className={cx("mt-1", muted)}>{idea.reason}</p>
             <blockquote className="my-3 border-l-2 border-indigo-400 pl-3 text-sm"><span className="block text-xs text-zinc-600 dark:text-zinc-400">From your resume</span>“{idea.source_quote}”</blockquote>
             <p className="text-sm"><strong>Try next: </strong>{idea.experiment}</p><p className={cx("mt-1", muted)}><strong>Check your learning: </strong>{idea.check}</p>
-            <Button type="button" variant="secondary" className="mt-3" disabled={Boolean(busy)} onClick={() => { setTitle(idea.title); edit(); }}>Use {idea.title}</Button>
+            <Button type="button" variant="secondary" className="mt-3" disabled={Boolean(busy)} onClick={() => { setTitle(idea.title); edit(); move(2); }}>Use {idea.title}</Button>
           </article>)}<p className="text-xs text-zinc-600 dark:text-zinc-400">Learning experiments are future work. Add them to a resume only after you have done them.</p></div>}
+          <div className="mt-5 flex flex-wrap gap-3"><Button type="button" variant="secondary" disabled={Boolean(busy)} onClick={() => move(0)}>Back to resume</Button><Button type="button" disabled={Boolean(busy) || title.trim().length < 2} onClick={() => move(2)}>Review my search</Button></div>
         </section>
-        <section className={panel} aria-labelledby="launchpad-search">
-          <h3 id="launchpad-search" className="font-semibold">3. Review your search</h3>
+        <section hidden={step !== 2} className={panel} aria-labelledby="launchpad-search">
+          <h3 id="launchpad-search" tabIndex={-1} className="scroll-mt-4 font-semibold">3. Review your search</h3>
           <label className="mt-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={internships} disabled={Boolean(busy)} onChange={(e) => { setInternships(e.target.checked); edit(); }} />Include internships</label>
           <div className="mt-4 rounded-xl bg-zinc-50 p-4 text-sm dark:bg-white/5">
             <p><strong>Role:</strong> {title.trim() || "Choose a title above"} <span className="text-zinc-600 dark:text-zinc-400">(replaces your saved role list)</span></p>
@@ -141,7 +152,7 @@ export function CareerLaunchpad() {
             <p className="mt-1">{stage === "fresher" ? `Fresher level · 0 years of professional experience · full-time${internships ? " and internships" : " only"}.` : `Keeps your saved experience level and years. Job types: ${typePreview}.`}</p>
             <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Other search filters stay as saved. Projects and education do not count as professional experience. Employers set each role’s requirements.</p>
           </div>
-          <Button type="submit" className="mt-4" loading={busy === "save"} disabled={Boolean(busy) || saved || title.trim().length < 2}>{saved ? "Search settings saved" : "Save this search"}</Button>
+          <div className="mt-4 flex flex-wrap gap-3"><Button type="button" variant="secondary" disabled={Boolean(busy)} onClick={() => move(1)}>Back to role</Button><Button type="submit" loading={busy === "save"} disabled={Boolean(busy) || saved || title.trim().length < 2}>{saved ? "Search settings saved" : "Save this search"}</Button></div>
           {saved && <div role="status" className="mt-4 space-y-3"><p className="text-sm font-medium">Your search is ready. Review matches and their requirements, then shortlist the roles you want.</p><div className="flex flex-wrap gap-3 text-sm font-semibold">{([["/jobs/matches", "Find matching jobs"], [`/mock?${new URLSearchParams({ role: title.trim() })}`, "Practice with Saba"], ["/jobs/weekly", "Set my weekly plan"]] as const).map(([to, label]) => <Link key={to} to={to} className={cx("rounded text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing)}>{label}</Link>)}</div></div>}
         </section>
       </form>

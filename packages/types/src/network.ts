@@ -16,6 +16,7 @@ export interface NetworkContext {
     applications: Array<{ id: string; title: string; status: JobStatus; applied_at: string | null }>;
   };
   web_search_enabled: boolean;
+  web_search_provider?: "searxng" | "brave" | null;
   search_links: Array<{ label: string; url: string }>;
 }
 export interface NetworkResearch {

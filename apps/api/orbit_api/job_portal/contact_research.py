@@ -15,10 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
-from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.job_portal import contacts
-from orbit_api.job_portal.contact_sources import Source, page_source, public_url, search_sources
+from orbit_api.job_portal.contact_sources import Source, page_source, public_url, search_provider, search_sources
 from orbit_api.models import AutoApplySetup, JobApplication, JobContact, JobListing, Resume, User
 from orbit_api.prep.job_link import JobLinkError
 from orbit_api.ratelimit import limit_user
@@ -122,7 +121,8 @@ async def context(db: AsyncSession, user: User, job: JobApplication) -> dict[str
             "last_contacted_at": max((str(c.last_contacted_at) for c in warm if c.last_contacted_at), default=None),
             "applications": [{"id": j.id, "title": j.title, "status": j.status, "applied_at": j.applied_at}
                              for j in history[:10]]},
-        "web_search_enabled": bool(get_settings().contact_search_key),
+        "web_search_enabled": search_provider() is not None,
+        "web_search_provider": search_provider(),
         "search_links": [{"label": "Public web search",
             "url": "https://www.google.com/search?" + urlencode({"q": query})},
             {"label": "Professional profiles", "url": "https://www.google.com/search?" +
@@ -218,7 +218,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
             else:
                 try:
                     sources.extend(await search_sources(job.company, job.title))
-                except (httpx.HTTPError, JobLinkError, ValueError, TypeError):
+                except (httpx.HTTPError, JobLinkError, ValueError, TypeError, TimeoutError):
                     warnings.append("Live search is unavailable. Other supplied sources were still checked.")
         return json.dumps({"company": job.company, "job_title": job.title,
             "sources": [s.model_dump() for s in sources]})

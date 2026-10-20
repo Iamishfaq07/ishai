@@ -20,7 +20,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     const finder = page.getByRole("region", { name: "Contact finder", exact: true });
     await expect(finder.getByRole("button", { name: "Draft for Jamie Mentor", exact: true })).toBeVisible();
     await expect(finder.getByText("No prior contact logged", { exact: true })).toBeVisible();
-    await expect(finder.getByText(/Automatic web search is not configured/)).toBeVisible();
+    await expect(finder.getByText(/Web search is unavailable here/)).toBeVisible();
     await finder.getByLabel("Recruiter reply or public profile text (optional)").fill("From: Alex Rivera <alex@acme.com>\nTitle: Talent Acquisition Partner\nAcme is hiring Python engineers.");
     await finder.getByRole("button", { name: "Find contacts with AI", exact: true }).click();
     await expect(finder.getByRole("heading", { name: "Alex Rivera", exact: true })).toBeVisible();

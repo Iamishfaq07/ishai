@@ -1,4 +1,6 @@
 """Bounded public contact research. Never logs in, guesses email addresses or accesses a mailbox."""
+import asyncio
+import json
 import re
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
@@ -37,26 +39,40 @@ async def page_source(url: str) -> Source:
     return Source(id="page", kind="public_page", url=public_url(page.url), text=page.text[:10000])
 
 
+def search_provider() -> str | None:
+    settings = get_settings()
+    if settings.contact_searxng_url:
+        return "searxng"
+    return "brave" if settings.contact_search_key else None
+
+
 async def search_sources(company: str, title: str) -> list[Source]:
-    key = get_settings().contact_search_key
-    if key is None:
+    settings = get_settings()
+    provider = search_provider()
+    if provider is None:
         return []
-    # Fixed service, no redirects, no environment proxy. Candidate names, resumes and email are never query inputs.
+    # Operator-configured service, no redirects or environment proxy. Only company and role become query inputs.
     query = re.sub(r'[^\w .&-]', ' ', company)[:160] + " " + re.sub(r'[^\w -]', ' ', title)[:100]
     query += ' (recruiter OR "talent acquisition" OR "hiring manager")'
-    async with httpx.AsyncClient(timeout=8, follow_redirects=False, trust_env=False) as client:
-        async with client.stream("GET", "https://api.search.brave.com/res/v1/web/search",
-            params={"q": query, "count": 5, "text_decorations": "false"},
-            headers={"X-Subscription-Token": key.get_secret_value(), "Accept": "application/json"}) as response:
+    headers = {"Accept": "application/json"}
+    if provider == "searxng":
+        url = str(settings.contact_searxng_url) + "/search"
+        params: dict[str, str | int] = {"q": query, "format": "json", "categories": "general", "pageno": 1}
+    else:
+        assert settings.contact_search_key is not None
+        url = "https://api.search.brave.com/res/v1/web/search"
+        params = {"q": query, "count": 5, "text_decorations": "false"}
+        headers["X-Subscription-Token"] = settings.contact_search_key.get_secret_value()
+    async with asyncio.timeout(10), httpx.AsyncClient(timeout=8, follow_redirects=False, trust_env=False) as client:
+        async with client.stream("GET", url, params=params, headers=headers) as response:
             response.raise_for_status()
             body = bytearray()
             async for chunk in response.aiter_bytes():
                 body.extend(chunk)
                 if len(body) > 400000:
                     raise JobLinkError("Search returned too much data. Try a specific public company page.")
-    import json
     data = json.loads(body)
-    web = data.get("web") if isinstance(data, dict) else None
+    web = data if provider == "searxng" else data.get("web") if isinstance(data, dict) else None
     results = web.get("results", []) if isinstance(web, dict) else []
     sources: list[Source] = []
     for row in results[:5] if isinstance(results, list) else []:
@@ -66,6 +82,9 @@ async def search_sources(company: str, title: str) -> list[Source]:
             url = public_url(str(row.get("url", "")))
         except ValueError:
             continue
-        text = html_to_text(str(row.get("title", "")) + "\n" + str(row.get("description", "")))[:1500]
+        text = html_to_text(str(row.get("title", "")) + "\n" +
+                            str(row.get("content" if provider == "searxng" else "description", "")))[:1500]
+        if not text.strip():
+            continue
         sources.append(Source(id=f"web:{len(sources)}", kind="search_snippet", url=url, text=text))
     return sources

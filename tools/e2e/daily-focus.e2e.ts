@@ -15,7 +15,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
       next_at: new Date(Date.now() + 72 * 3_600_000).toISOString(),
     } });
     expect(later.status(), await later.text()).toBe(201);
-    await page.goto("/jobs");
+    await page.goto("/jobs/actions");
     const focus = page.getByRole("region", { name: "Recommended next action", exact: true });
     await expect(focus.getByRole("heading", { name: "Backend engineer · Northstar Studio", exact: true })).toBeVisible();
     await expect(focus.getByText("Your prepared application is waiting for your review.", { exact: true })).toBeVisible();
@@ -35,7 +35,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await expect(page.getByRole("region", { name: "Contact finder", exact: true }).getByLabel("Job to research", { exact: true })).toHaveValue(tracker.id);
     const closed = await context.request.patch(`${API}/v1/jobs/tracker/${tracker.id}`, { data: { status: "withdrawn" } });
     expect(closed.ok(), await closed.text()).toBe(true);
-    await page.goto("/jobs");
+    await page.goto("/jobs/actions");
     await expect(focus.getByRole("heading", { name: "Later interview · Other company", exact: true })).toBeVisible();
     const current = await (await context.request.get(`${API}/v1/jobs/actions`)).json();
     expect(current.items.some((action: { id: string }) => action.id === `packet:${packet.id}`)).toBe(false);

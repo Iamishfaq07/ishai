@@ -49,7 +49,7 @@ const RESUME: NavItem = {
 };
 const LEARNING: NavItem = { id: "learning", to: LEARN_HOME, label: "Learning AI", icon: GraduationCap, ai: true, current: (p) => LEARNING_PATH.test(p) };
 const JOBS: NavItem = {
-  id: "jobs", to: JOBS_AI_HOME, label: "Jobs AI", tab: "Jobs", icon: PRODUCTS.jobs.icon, product: "jobs", ai: true,
+  id: "jobs", to: JOBS_AI_HOME, label: "Career launchpad", tab: "Career", icon: PRODUCTS.jobs.icon, product: "jobs", ai: true,
   current: under(JOBS_AI_HOME),
 };
 const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn AI", icon: IdCard, ai: true, current: under(LINKEDIN_HOME) };
@@ -65,9 +65,8 @@ const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
   const offer = isIndia(country) ? OFFER : OFFER_WORLD;
   return [
-    { label: null, items: [HOME, { id: "tools", to: "/tools", label: "Explore tools", icon: House, current: under("/tools") }] },
-    { label: "Prepare", items: [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING] },
-    { label: "Apply", items: [JOBS, LINKEDIN] },
+    { label: null, items: [HOME, JOBS, { id: "tools", to: "/tools", label: "Explore tools", icon: House, current: under("/tools") }] },
+    { label: "Prepare", items: [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING, LINKEDIN] },
     { label: "Interview & offer", items: [COPILOT, offer] },
   ];
 }

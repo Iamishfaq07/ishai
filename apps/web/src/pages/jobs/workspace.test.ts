@@ -34,7 +34,7 @@ describe("Jobs AI task navigation", () => {
     expect(currentJobTool("/jobs/auto-apply/")).toBe("/jobs/journey");
     expect(currentJobTool("/jobs/mission/a")).toBe("/jobs/tracker");
     expect(currentJobTool("/jobs/listing/a")).toBe("/jobs/matches");
-    expect(currentJobTool("/jobs/actions")).toBe("/jobs");
+    expect(currentJobTool("/jobs/actions")).toBe("/jobs/actions");
   });
 
   it("keeps every mission deep-link tool in exactly one task group", () => {
