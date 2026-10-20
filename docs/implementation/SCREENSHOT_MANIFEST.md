@@ -22,3 +22,14 @@ Earlier `ORBIT_V6_BEFORE=1` capture mode ran before changing Home and saved the 
 Checks: no horizontal overflow; Axe and label-in-name; More dialog focus restoration; opportunity-step scroll below sticky header; narrow sidebar pipeline uses two columns to avoid overlapping Interviewing/Offer labels. The primary next step is a visible button. No animations run with Motion Off.
 
 Playwright full-page captures place fixed phone navigation/support at the viewport position within the tall image. That does not mean the fixed bar occurs halfway down the live scrollable document. Live viewport/focus/overflow assertions run separately. Physical devices, manual screenreader traversal, comfortable/compact variants and every business/admin view are not certified by this matrix.
+
+## Increment 2 — invitation and preparation
+
+Captured by `tools/e2e/calendar-intake.e2e.ts`, final local run: `16 passed (2.2m)` across calendar intake, employer updates, opportunity guide and V6 journey suites. New invitation/preparation views run at 1440 light, 360 light and 320 dark, OS reduced motion, Asia/Kolkata browser timezone. Axe, horizontal overflow, review focus, exact saved UTC seconds and no implicit AI/write checks pass. Synthetic fixture data only; no real candidate/employer calendar. The new UI does not exist at the base; prior Today screenshots above provide the unchanged journey context.
+
+- [Invitation review, desktop](screenshots/v6-calendar-desktop.png): 177994 bytes, SHA256 `6d2fdddafc025e9ae2603e2cae1a57970860a1f0855f4df8f99bc99add5d40a2`.
+- [Invitation review, 320 dark](screenshots/v6-calendar-narrow-dark.png): 142871 bytes, SHA256 `a3b3485d9915be959cc18483e50c715efb8eddd90765c1517e6ab2bfe63a8180`.
+- [Preparation guidance, 360](screenshots/v6-preparation-mobile.png): 238478 bytes, SHA256 `b5ca1f3d814fd209fe7a2252afce64e45de4da7c0f5982cdb0eacadffe024d41`.
+- [Preparation guidance, 320 dark](screenshots/v6-preparation-narrow-dark.png): 247563 bytes, SHA256 `0b4ce7f335932005c932b07fdef15c320dad548e633f9307eeacbcde11dfbe30`.
+
+Desktop invitation, 360 preparation and 320 dark invitation were inspected visually: readable groups, wrapped labels, visible review fields and the single job context. Full-page fixed-nav capture caveat above applies. Opening optional AI expands the page; the checklist stays available below it. Images are review evidence, not automatically accepted pixel baselines.

@@ -9,6 +9,7 @@ import { applicationPath } from "./paths";
 import { packetGuidance } from "./autoapply/inbox";
 import { OPPORTUNITY_STEPS, opportunityStep } from "./opportunity";
 
+const Calendar = lazy(() => import("./CalendarIntake").then((m) => ({ default: m.CalendarIntake })));
 const Message = lazy(() => import("./MessageUpdate").then((m) => ({ default: m.MessageUpdate })));
 const icons = [FileText, Search, Send, Sparkles, BookmarkCheck];
 const link = cx("inline-flex min-h-11 items-center rounded text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
@@ -23,6 +24,7 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
   const previous = useRef(`${entry.id}:${tab}`);
   const [coach, setCoach] = useState(false);
   const [messages, setMessages] = useState(false);
+  const [invitation, setInvitation] = useState(false);
   useEffect(() => {
     const next = `${entry.id}:${tab}`;
     if (previous.current === next) return;
@@ -47,11 +49,12 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
       })}</ol></nav>
       <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">Choose any step. Indicators describe saved records, not readiness or required completion.</p>
     </div>
-    <details onToggle={(event) => setCoach(event.currentTarget.open)} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
+    {tab !== "plan" && <details onToggle={(event) => setCoach(event.currentTarget.open)} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
       <summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Get help with this step</summary>
       {coach && <OpportunityCoach key={revision} entryId={entry.id} focus={step.tool} />}
-    </details>
+    </details>}
     {index >= 2 && <details onToggle={(event) => setMessages(event.currentTarget.open)} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Record an employer reply</summary><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Turn a pasted message into a reviewed stage or interview-date update.</p>{messages && <Suspense fallback={<p role="status">Opening message review…</p>}><Message key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense>}</details>}
+    {index === 3 && <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10" onToggle={(e) => setInvitation(e.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Import interview invitation</summary>{invitation && <Suspense fallback={<p role="status">Opening invitation review…</p>}><Calendar key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense>}</details>}
     {tab === "resume" && mission.resume && <Link className={link} to={`/resume-ai/${mission.resume.id}?guide=1&job=${entry.id}`}>Edit this resume and return to this job <ArrowRight aria-hidden className="ml-2 h-4 w-4" /></Link>}
     {tab === "timeline" && <section aria-label="Application kit for this job" className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
       <h3 className="font-semibold">{mission.application ? packetGuidance(mission.application).label : "Your application materials"}</h3>
@@ -72,7 +75,7 @@ export function OpportunityNext({ tab, onSelect }: { tab: MissionTool; onSelect:
   </nav>;
 }
 
-function OpportunityCoach({ entryId, focus }: { entryId: string; focus: string }) {
+export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: string }) {
   const [source, setSource] = useState<Source | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);

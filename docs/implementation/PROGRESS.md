@@ -1,5 +1,17 @@
 # V6 progress — first review increment
 
+## Increment 2 — reviewed invitations and preparation (base `47bececf`)
+
+PR #438 is merged. The first-increment snapshot below is historical; this section supersedes its invitation-intake deferral.
+
+**DONE in this slice:** owned `.ics` preview; file/paste review; explicit event/date/stage confirmation through the existing atomic tracker writer; continuation to existing prep/actions; optional existing AI coach grounded in saved date and unchecked tasks; stale-advice invalidation on task completion; serialized checklist saves and stale-response guards; privacy/security/support documentation. No schema/dependency change.
+
+**PARTIAL:** F04/F08 support a narrow reviewed calendar subset, with manual handling for recurrence, cancellations, custom zones and ambiguous times. Same-date/stage UI deduplication is not durable cross-file event sync. F05 guidance integrates the existing prep plan; date-keyed completed records are preserved but not remapped into future rounds/reschedules.
+
+**DEFERRED:** mailbox OAuth/sync, organizer verification, custom zone/recurrence resolution, adaptive multi-round completion continuity, notification expansion and the remaining V6 feature slices. Existing consent/worker permissions are unchanged.
+
+**Verification:** see the increment-2 addendum in `BASELINE.md`, `V6_INTERVIEW_INTAKE.md` and screenshot manifest. No whole-V6 completion or release GO is claimed. Remote CI/staging/provider/hardware gates remain separate and must be freshly checked for the new PR.
+
 Base:9c39e601, PR437 confirmed merged. No merge or deployment performed for this increment.
 
 ## DONE

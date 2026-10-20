@@ -1,5 +1,7 @@
 # Personal Orbit V6 inventory
 
+Increment-2 delta against `47bececf`: F04/F08 now include `job_portal/calendar_intake.py:events_from/calendar_preview` and `pages/jobs/CalendarIntake.tsx`, integrated into the existing message review hub and guided interview step. F05 reuses `plan_for` in `opportunity_coach.source` and the existing coach in `PrepPlanPanel`. No parallel dashboard, coach engine, database, worker or calendar sync. Classification remains PARTIAL for full F04/F05/F08 acceptance; the initial inventory below is retained as base evidence. See `V6_INTERVIEW_INTAKE.md`.
+
 Inspected 2026-10-20 on Windows; source base `9c39e601` (PR #437 merged). The supplied ZIP is not in this workspace; current GitHub main is the code source. No archived counts are adopted.
 
 ## Repository facts
