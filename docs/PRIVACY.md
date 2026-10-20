@@ -3,6 +3,8 @@
 What Orbit keeps, what it never keeps, and the controls you have. The code behind each point is named so it can
 be checked.
 
+**Job source review (V6 increment 5, unverified):** the signed-in opportunity compares your saved job fields with Orbit's shared public cache. No new comparison record or analytics content is stored. The existing coach receives derived observation/change indicators and a review link, not raw changed links or a new job-description body. Reloading this review makes no external provider request. Existing tracker export/deletion applies; all verification is deferred by owner request. See `implementation/V6_SOURCE_REVIEW.md`.
+
 **Saved-version comparison (V6 increment4, not yet runtime-verified):** on your request, Orbit compares an owned job's saved resume copy with its currently linked owned resume. Bounded readable excerpts and photo fingerprints are returned to your signed-in page; no new comparison record is stored. Existing resume/snapshot export and deletion apply. The opportunity coach receives derived latest-version match/change counts and an owned link, not comparison excerpts, resume bodies or photo bytes. See `implementation/V6_RESUME_LINEAGE.md`. All testing for this increment is deferred by the owner's instruction.
 
 ## Never stored

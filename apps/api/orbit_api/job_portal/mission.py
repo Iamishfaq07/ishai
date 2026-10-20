@@ -28,6 +28,7 @@ from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
 from .resume_lineage import VersionComparison, comparison
+from .source_review import SourceReview, review as review_source
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["jobs"])
 read_limit = Depends(limit_user("jobs-mission", rate_per_s=3, burst=60))
@@ -272,6 +273,12 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
 async def get_mission(entry_id: str, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     return await mission(db, user, await _entry(db, entry_id, user), tz_offset=tz_offset)
+
+
+@router.get("/{entry_id}/mission/source", response_model=SourceReview, dependencies=[read_limit])
+async def get_source_review(entry_id: str, user: Annotated[User, Depends(current_user)],
+                            db: Annotated[AsyncSession, Depends(get_db)]) -> SourceReview:
+    return await review_source(db, await _entry(db, entry_id, user))
 
 
 class LinkResumeIn(BaseModel):

@@ -109,7 +109,7 @@ export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: s
     finally { if (request === seq.current) { busyRef.current = false; setBusy(false); } }
   };
   return <div className="mt-3 space-y-3 text-sm">
-    <p className="text-zinc-600 dark:text-zinc-400">Optional AI guidance from this job’s recorded resume links, prior fit-check requirements, application stages and dates. Nothing is edited, enabled or submitted. Review every suggestion.</p>
+    <p className="text-zinc-600 dark:text-zinc-400">Optional AI guidance from this job’s recorded resume links, prior fit-check requirements, cached source status, application stages and dates. Nothing is edited, enabled or submitted. Review every suggestion.</p>
     {error && <ErrorNote onRetry={() => void refresh()}>{error}</ErrorNote>}
     <Button disabled={busy || !source} loading={busy && Boolean(source)} onClick={() => void generate()}>Help me with this step</Button>
     <p className="text-xs text-zinc-600 dark:text-zinc-400">5 requests per UTC day, including failures. Opening this panel does not call AI.</p>

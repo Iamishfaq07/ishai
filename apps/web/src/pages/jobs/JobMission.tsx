@@ -41,6 +41,7 @@ import { InterviewPrepPanel } from "./interview/InterviewPrep";
 import { opportunityStart } from "./opportunity";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
+const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
 const GuideNext = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityNext })));
 type Tab = MissionTool;
 
@@ -142,6 +143,7 @@ export function JobMissionPage() {
                 </Field></div></>}
                 {guided && ["fit", "interview", "plan", "practice", "company"].includes(tab) && <div className="mb-4"><Field label="Tools for this step" htmlFor="guided-step-tool"><Select id="guided-step-tool" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>{MISSION_TOOLS.filter((tool) => tool.group === selected.group && tool.id !== "resume").map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}</Select></Field></div>}
                 <section id="mission-tool-panel" aria-label={selected.label}>
+                  {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
                   {tab === "interview" && (
                     <InterviewPrepPanel
                       entry={entry}

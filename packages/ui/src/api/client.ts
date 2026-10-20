@@ -14,6 +14,7 @@ import type {
   SecurityActivity,
   SignedInDevice,
   JobMission,
+  JobSourceReview,
   ResumeVersionComparison,
   PrepPlan,
   JobTimelineEvent,
@@ -901,6 +902,7 @@ export function createApiClient(options: ApiClientOptions) {
 
     /** Job Mission Room: one tracked job as a workspace (stages, fit, resume, sent versions, offer, next step). */
     jobMission: (id: string) => json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission${localDays()}`),
+    jobSourceReview: (id: string) => json<JobSourceReview>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/source`),
     linkMissionResume: (id: string, resumeId: string | null) =>
       json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/resume${localDays()}`, { method: "PUT", body: body({ resume_id: resumeId }) }),
     /** Keep an immutable copy; this does not establish that it was submitted. */

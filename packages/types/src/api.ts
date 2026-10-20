@@ -2791,6 +2791,25 @@ export interface MissionNextStep {
   to: string;
 }
 
+/** Private read-only tracker/cache comparison; absence is not proof of employer closure. */
+export interface JobSourceReview {
+  entry_id: string;
+  version: string;
+  status: "manual" | "missing" | "unknown" | "stale" | "recent";
+  source_label: string;
+  direct: boolean;
+  saved_at: string;
+  last_seen_at: string | null;
+  first_seen_at: string | null;
+  freshness_window_hours: number;
+  changed_count: number | null;
+  fields: { key: string; label: string; saved: string; current: string | null; changed: boolean | null }[];
+  duplicates: { id: string; title: string; company: string; source_label: string; last_seen_at: string | null;
+    attribution: { label: string; url: string; large: boolean } | null }[];
+  more_duplicates: boolean;
+  attribution: { label: string; url: string; large: boolean } | null;
+}
+
 export interface JobMission {
   entry_id: string;
   /** Owned packet for the exact listing. Its presence does not establish submission. Optional for older APIs. */
