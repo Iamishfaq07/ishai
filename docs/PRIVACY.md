@@ -3,6 +3,8 @@
 What Orbit keeps, what it never keeps, and the controls you have. The code behind each point is named so it can
 be checked.
 
+**Saved-version comparison (V6 increment4, not yet runtime-verified):** on your request, Orbit compares an owned job's saved resume copy with its currently linked owned resume. Bounded readable excerpts and photo fingerprints are returned to your signed-in page; no new comparison record is stored. Existing resume/snapshot export and deletion apply. The opportunity coach receives derived latest-version match/change counts and an owned link, not comparison excerpts, resume bodies or photo bytes. See `implementation/V6_RESUME_LINEAGE.md`. All testing for this increment is deferred by the owner's instruction.
+
 ## Never stored
 - **Personal interview calendar imports.** The `.ics` body, event title, organizer and raw UID are not persisted or sent to an AI provider (`job_portal/calendar_intake.py`). Only a candidate-confirmed tracker date and optional stage are saved through the existing tracker flow. Invitation text is transient and cleared after a successful save. Interview coach requests may include the saved date and suggested preparation-task text under the existing AI policy; importing an invitation itself makes no model call.
 - **Audio.** It streams to the API and is relayed to transcription. Nothing is written to disk.

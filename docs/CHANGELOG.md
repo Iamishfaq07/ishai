@@ -1,5 +1,11 @@
 # Implementation log
 
+## Personal Orbit V6: saved resume comparison (2026-10-21, unverified)
+
+- Compare a job's saved resume version with its current linked resume: section changes, design/visibility/target-text differences, missing/replaced source states and bounded excerpts. The comparison makes no edits or model calls.
+- Existing AI coach links to the latest saved-version comparison using derived status facts and content-bound versions. Saved copies are no longer presented as proof of sending; prior fit quotes are labeled as historical inputs. Editor links preserve the return to the opportunity.
+- **All verification deferred by owner request.** No tests/builds/lint/typecheck/browser checks were executed; earlier counts do not cover this increment. No migration/dependency. See `implementation/V6_RESUME_LINEAGE.md` and the draft PR.
+
 ## Personal Orbit V6: preparation continuity and a clearer next task (2026-10-21)
 
 - Preparation now starts with one suggested unchecked task and the current day. Upcoming days and history open on request, reducing long-page scrolling. A clearly labeled rehearsal path works before an interview is booked.

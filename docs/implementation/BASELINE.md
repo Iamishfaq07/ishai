@@ -1,5 +1,11 @@
 # V6 baseline and verification — 20–21 October 2026
 
+## Increment 4 — resume version lineage, verification deferred by owner
+
+Base `03d8ce37`, PR #440 merged. The owner explicitly requested the next phase **without any tests; testing will happen later**. For this increment no tests, builds, lint, typecheck, browser checks, screenshots or validation scripts were executed. Source inspection and Git operations only. No tests were added or modified. Earlier pass counts below do not apply to this code. `[skip ci]` commit messages request skipping automatic GitHub Actions without changing workflows or protection rules. No CI rerun/dispatch is requested.
+
+Implementation and deferred verification tasks: `V6_RESUME_LINEAGE.md`. This is an unverified draft for code review, not a launch sign-off. Source and UI behavior still need later runtime, security, accessibility and regression verification.
+
 ## Increment 3 — preparation continuity, 21 October
 
 Base `822c7d49`, PR #439 confirmed merged before branching. Windows/PowerShell, pinned Corepack pnpm9.12.0 and API Python3.12 environment described below. This section is the current increment; earlier snapshots are historical.

@@ -1,5 +1,11 @@
 # V6 progress
 
+## Increment 4 — resume version lineage (base `03d8ce37`)
+
+PR #440 is merged. **IMPLEMENTED / UNVERIFIED:** read-only saved/current resume comparison inside the existing opportunity; bounded section excerpts and photo fingerprints; editor return-to-job links; saved-versus-sent wording corrections; prior-fit source disclaimers; latest-version facts and content-bound source invalidation in the existing coach. No new schema, dependency, tool dashboard or worker permission.
+
+**DEFERRED BY OWNER:** every test/build/lint/typecheck/browser verification for this increment. No earlier pass result is attributed to these changes. Commits request CI skipping with `[skip ci]`; workflows remain intact. See `V6_RESUME_LINEAGE.md` for the later checklist and full F03/F06 work still outstanding. Open as a draft PR for review; no merge/manual deployment.
+
 ## Increment 3 — preparation continuity (base `822c7d49`)
 
 PR #439 is merged. Earlier increment snapshots below remain historical.

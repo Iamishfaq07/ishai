@@ -33,7 +33,7 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
     return () => cancelAnimationFrame(frame);
   }, [entry.id, tab]);
   const signals = [mission.resume ? "Resume linked" : "Choose a resume", mission.fit ? "Prior check saved" : "Check evidence",
-    `${mission.snapshots.length} sent versions saved`, entry.next_at ? "Date recorded" : "Add date when confirmed", `Recorded: ${entry.status}`];
+    `${mission.snapshots.length} resume copies saved`, entry.next_at ? "Date recorded" : "Add date when confirmed", `Recorded: ${entry.status}`];
   const revision = JSON.stringify([entry.id, tab, entry.status, entry.next_at, mission.resume?.updated_at, mission.resume?.id,
     mission.fit?.checked_at, mission.snapshots.map((snapshot) => snapshot.id), mission.offer]);
   return <section aria-label="Guided opportunity" className="min-w-0 space-y-4">

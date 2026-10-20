@@ -214,7 +214,7 @@ function LaunchCard({ view }: { view: InterviewPrepView }) {
         <Spot kind="copilot" /> On the day
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-        The copilot starts with this job's post, the resume you sent and {view.guide ? `the ${view.guide} guide` : "the role"} loaded, so answers are about you and this job.
+        The copilot starts with this job's post, the selected resume version and {view.guide ? `the ${view.guide} guide` : "the role"} loaded, so answers are about you and this job.
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <Link to={copilotPath(view.entry_id)} className={linkButton("primary", "md")}>
@@ -336,7 +336,7 @@ function ResumeCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Int
   return (
     <Card>
       <h2 className={cx(h2, "flex items-center gap-2")}>
-        <Spot kind="resume" /> The resume you sent
+        <Spot kind="resume" /> The selected resume version
       </h2>
       {r ? (
         <div className="mt-3 flex items-center gap-3">
@@ -377,7 +377,7 @@ function ResumeCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Int
           {view.versions.map((x) =>
             x.kind === "snapshot" ? (
               <option key={x.id} value={`snap:${x.id}`}>
-                Sent {formatDate(x.at)}: {x.title} ({x.score})
+                Saved {formatDate(x.at)}: {x.title} ({x.score})
               </option>
             ) : (
               <option key={x.id} value="resume:">
@@ -457,13 +457,13 @@ function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGener
       {!out ? (
         <>
           <p className={cx("mt-1", muted)}>
-            The questions an interviewer is likely to ask you for this job, from {view.version ? "the resume you sent" : "your resume"} and the post, each with an outline from your own lines and where they'll push.
+            The questions an interviewer is likely to ask you for this job, from {view.version ? "the selected resume version" : "your resume"} and the post, each with an outline from your own lines and where they'll push.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <Button onClick={() => void ask()} loading={busy === "ask"} disabled={!view.version || none}>
               <Sparkles className="h-4 w-4" aria-hidden /> Get likely questions
             </Button>
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">{view.version ? creditLine(a) : `Pick the resume you sent first. ${creditLine(a)}`}</span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">{view.version ? creditLine(a) : `Pick a resume version first. ${creditLine(a)}`}</span>
             {none && (
               <Link to={`/billing?pack=${a?.upgrade?.pack ?? ""}`} className={textLink}>
                 Get credits
