@@ -92,8 +92,8 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await a11y(page);
     await page.screenshot({ path: info.outputPath(`career-hub-${viewport.name}.png`), fullPage: true });
     // Open a query-only page transition from a real, scrolled position.
-    await page.getByRole("link", { name: "Start guided setup", exact: true }).scrollIntoViewIfNeeded();
-    await page.getByRole("link", { name: "Start guided setup", exact: true }).click();
+    await steps.getByText("Tools for this step", { exact: true }).nth(0).click();
+    await steps.getByRole("link", { name: "Search setup", exact: true }).click();
     await expect(page.getByRole("button", { name: "Continue to role ideas", exact: true })).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.getByRole("button", { name: "Continue to role ideas", exact: true }).click();

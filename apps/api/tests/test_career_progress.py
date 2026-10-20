@@ -74,6 +74,7 @@ def test_interview_and_outcome_recommendations_use_only_own_tracker(client: Test
         json={"title": "Engineer", "company": "Acme", "status": "interviewing"})
     assert response.status_code == 201
     assert source(client, user)["next_step"]["id"] == "interviews"
+    assert source(client, user)["next_step"]["path"] == f"/jobs/mission/{response.json()['id']}?tab=plan"
     assert client.patch(f"/v1/jobs/tracker/{response.json()['id']}", headers=auth(user),
                         json={"status": "hired"}).status_code == 200
     current = source(client, user)
@@ -144,3 +145,50 @@ def test_selected_resume_search_links_do_not_fall_back_to_another_profile_resume
     assert current["next_step"]["action"] == "Choose your search direction"
     assert current["next_step"]["path"] == f"/jobs?start=1&resume_id={selected}"
     assert client.get("/v1/jobs/profile", headers=auth(user)).json()["resume"]["id"] == first
+
+
+def test_launchpad_uses_same_priority_as_daily_actions_and_keeps_names_private(client: TestClient) -> None:
+    from tests.test_career_next_actions import job, packet, queue
+
+    user, _ = account(client)
+    other, _ = account(client)
+    private = job(client, other, hours=-2)
+    pid = packet(client, user)
+    first = source(client, user)
+    assert first["next_step"]["path"] == f"/jobs/applications?packet={pid}"
+    assert first["next_step"]["action"] == "Answer questions"
+    assert first["activity"]["count"] == 1
+    soon = job(client, user, hours=2)
+    current = source(client, user)
+    assert current["next_step"]["path"] == f"/jobs/mission/{soon['id']}?tab=plan"
+    assert current["next_step"]["path"] == queue(client, user)["items"][0]["path"]
+    assert current["activity"]["next_at"] is not None
+    assert current["version"] != first["version"]
+    facts = json.dumps(current["facts"])
+    assert soon["title"] not in facts and private["title"] not in facts and "Northstar" not in facts
+    plan = client.post("/v1/jobs/launchpad/plan", headers=auth(user), json={"version": current["version"]})
+    assert plan.status_code == 200, plan.text
+    assert plan.json()["tips"][0]["path"] == current["next_step"]["path"]
+    assert client.patch(f"/v1/jobs/tracker/{soon['id']}", headers=auth(user),
+                        json={"status": "withdrawn"}).status_code == 200
+    after = source(client, user)
+    assert after["next_step"]["path"] == first["next_step"]["path"]
+    assert client.post("/v1/jobs/launchpad/plan", headers=auth(user),
+                       json={"version": current["version"]}).status_code == 409
+
+
+def test_saved_followup_is_actionable_and_date_change_invalidates_plan(client: TestClient) -> None:
+    from tests.test_career_next_actions import job
+
+    user, _ = account(client)
+    record = job(client, user, hours=-8, status="applied")
+    current = source(client, user)
+    assert current["next_step"]["action"] == "Update next step"
+    assert current["next_step"]["path"] == f"/jobs/mission/{record['id']}?tab=timeline"
+    assert "past due" in current["next_step"]["text"]
+    assert client.patch(f"/v1/jobs/tracker/{record['id']}", headers=auth(user),
+                        json={"clear_next": True}).status_code == 200
+    after = source(client, user)
+    assert after["activity"]["count"] == 0
+    assert after["next_step"]["id"] == "search"
+    assert after["version"] != current["version"]
