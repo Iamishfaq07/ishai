@@ -131,7 +131,7 @@ def stages_for(f: Facts) -> dict[str, bool]:
 
 def next_step(f: Facts, listing_path: str) -> NextStep | None:
     """The first gap, in the order a job is won, with why in words. None once nothing is left to suggest."""
-    if f.status == "withdrawn":
+    if f.status in {"withdrawn", "hired"}:
         return None
     if f.status == "rejected":
         return NextStep(key="debrief", title="Note what you learned", action="Add a note",
@@ -159,7 +159,8 @@ def next_step(f: Facts, listing_path: str) -> NextStep | None:
                         to="link_resume")
     if not f.applied and f.status == "saved":
         return NextStep(key="apply", title="Apply, then mark it applied", action="Mark as applied",
-                        why="Your resume is ready. Once you've applied, Orbit counts the days for a follow-up.",
+                        why="Your resume is linked. Review the materials and apply on the employer's site. "
+                            "Mark this stage only after you have actually applied.",
                         to="mark_applied")
     if f.applied and not f.snapshot:
         return NextStep(key="snapshot", title="Keep the version you sent", action="Freeze this resume",

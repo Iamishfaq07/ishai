@@ -15,8 +15,8 @@ const STEPS = [
   { id: "review", label: "Review & continue", hint: "Check your facts, open the resume checks if helpful, then save and continue to your search." },
 ];
 
-export function GuidedResume({ data, saveState, children, onContinue, onReview }: {
-  data: ResumeData; saveState: string; children: ReactNode; onContinue: () => Promise<void>; onReview: () => void;
+export function GuidedResume({ data, saveState, children, onContinue, onReview, continueLabel = "Save & continue to jobs" }: {
+  continueLabel?: string; data: ResumeData; saveState: string; children: ReactNode; onContinue: () => Promise<void>; onReview: () => void;
 }) {
   const [params, setParams] = useSearchParams();
   const index = Math.max(0, STEPS.findIndex((s) => s.id === params.get("section")));
@@ -74,7 +74,7 @@ export function GuidedResume({ data, saveState, children, onContinue, onReview }
     <nav aria-label="Resume editing steps" className="flex flex-wrap items-center justify-between gap-3 pb-3">
       <Button type="button" variant="secondary" disabled={busy || index === 0} onClick={() => move(index - 1)}>Previous section</Button>
       {index < STEPS.length - 1 ? <Button type="button" disabled={busy} onClick={() => move(index + 1)}>Next: {STEPS[index + 1]!.label}</Button> :
-        <Button type="button" loading={busy} onClick={() => void finish()}>Save & continue to jobs</Button>}
+        <Button type="button" loading={busy} onClick={() => void finish()}>{continueLabel}</Button>}
     </nav>
     <p className="text-xs text-zinc-600 dark:text-zinc-400">You can edit any section again. Nothing is submitted to an employer from this editor.</p>
   </section>;

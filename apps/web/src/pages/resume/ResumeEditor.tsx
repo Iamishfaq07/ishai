@@ -1,3 +1,4 @@
+import { resumeReturnJob } from "./returnJob";
 import { lazy, Suspense, memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -134,6 +135,7 @@ function ResumeEditor() {
   const location = useLocation();
   const navigate = useNavigate();
   const guided = new URLSearchParams(location.search).get("guide") === "1";
+  const returnJob = resumeReturnJob(location.search);
   const [resume, setResume] = useState<Resume | null>(null);
   const [loadError, setLoadError] = useState<{ text: string; missing: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("content");
@@ -376,7 +378,7 @@ function ResumeEditor() {
     }
     drafts.clear(userId, current.id);
     setSave({ state: "saved" });
-    navigate(`/jobs?start=1&resume_id=${encodeURIComponent(current.id)}`);
+    navigate(returnJob ? `/jobs/mission/${returnJob}?guide=1&tab=resume` : `/jobs?start=1&resume_id=${encodeURIComponent(current.id)}`);
   }
   function setGuided(next: boolean) {
     const query = new URLSearchParams(location.search);
@@ -844,7 +846,7 @@ function ResumeEditor() {
               onFocus={(e) => setEditing((e.target as HTMLElement).closest("[data-path]")?.getAttribute("data-path") ?? null)}
               onBlur={() => setEditing(null)}
             >
-              {guided ? <Suspense fallback={<p role="status">Opening guided editing…</p>}><Guided data={resume.data} saveState={save.state} onContinue={saveAndContinue} onReview={() => setTab("score")}>{editorForm}</Guided></Suspense> : editorForm}
+              {guided ? <Suspense fallback={<p role="status">Opening guided editing…</p>}><Guided continueLabel={returnJob ? "Save & return to job" : undefined} data={resume.data} saveState={save.state} onContinue={saveAndContinue} onReview={() => setTab("score")}>{editorForm}</Guided></Suspense> : editorForm}
             </div>
           )}
           {tab === "score" && (
