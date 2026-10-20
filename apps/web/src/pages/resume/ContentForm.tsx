@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
 import type {
   AtsCheck,
   EvidenceItem,
@@ -28,6 +28,14 @@ function duplicateAt<T extends { id: string }>(list: T[], i: number): T[] {
   const item = list[i];
   if (!item) return list;
   return [...list.slice(0, i + 1), { ...structuredClone(item), id: newId() }, ...list.slice(i + 1)];
+}
+
+function revealAdded(path: string) {
+  requestAnimationFrame(() => {
+    const item = document.querySelector<HTMLElement>(`[data-path="${path}"]`);
+    item?.scrollIntoView({ block: "start", behavior: "auto" });
+    item?.querySelector<HTMLElement>("input, textarea")?.focus({ preventScroll: true });
+  });
 }
 
 function move<T>(list: T[], i: number, by: -1 | 1): T[] {
@@ -90,9 +98,15 @@ function ItemTools({ i, n, label, onMove, onRemove, onDuplicate }: {
 // The sections folded away, kept while the app is open so switching to Score and back (which rebuilds this form)
 // doesn't unfold them.
 const folded = new Set<string>();
+const VisibleSection = createContext<string | null>(null);
+export function ResumeSectionScope({ section, children }: { section: string; children: ReactNode }) {
+  return <VisibleSection.Provider value={section}>{children}</VisibleSection.Provider>;
+}
 
 function Section({ id, title, children, action }: { id: string; title: string; children: ReactNode; action?: ReactNode }) {
+  const selected = useContext(VisibleSection);
   const [open, setOpenState] = useState(() => !folded.has(id));
+  useEffect(() => { if (selected === id) { folded.delete(id); setOpenState(true); } }, [selected, id]);
   const setOpen = (next: (o: boolean) => boolean) =>
     setOpenState((o) => {
       const v = next(o);
@@ -101,6 +115,7 @@ function Section({ id, title, children, action }: { id: string; title: string; c
       return v;
     });
   const body = `section-body-${id}`;
+  if (selected && selected !== id) return null;
   return (
     <section
       data-path={id}
@@ -415,6 +430,7 @@ function SkillItems({ id, items, onChange }: { id: string; items: string[]; onCh
         setText(e.target.value);
         onChange(e.target.value.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 40));
       }}
+      aria-label="Skills, separated by commas"
       placeholder="Python, SQL, Figma, Stakeholder management"
     />
   );
@@ -591,7 +607,7 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
         id="experience"
         title="Experience"
         action={
-          <Button size="sm" variant="secondary" onClick={() => exp.set([{ id: newId(), title: "", company: "", location: "", start: "", end: "", current: false, bullets: [""] } as ResumeExperience, ...data.experience])} disabled={data.experience.length >= 20}>
+          <Button size="sm" variant="secondary" onClick={() => { const id = newId(); exp.set([{ id, title: "", company: "", location: "", start: "", end: "", current: false, bullets: [""] } as ResumeExperience, ...data.experience]); revealAdded(`experience.${id}`); }} disabled={data.experience.length >= 20}>
             <Plus className="h-3.5 w-3.5" /> Add role
           </Button>
         }
@@ -632,16 +648,16 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
         id="skills"
         title="Skills"
         action={
-          <Button size="sm" variant="secondary" onClick={() => skills.set([...data.skills, { id: newId(), name: "", items: [] } as ResumeSkillGroup])} disabled={data.skills.length >= 10}>
+          <Button size="sm" variant="secondary" onClick={() => { const id = newId(); skills.set([...data.skills, { id, name: "", items: [] } as ResumeSkillGroup]); revealAdded(`skills.${id}`); }} disabled={data.skills.length >= 10}>
             <Plus className="h-3.5 w-3.5" /> Add group
           </Button>
         }
       >
         {!data.skills.length && <p className="text-sm text-zinc-500 dark:text-zinc-400">Group them if you like: Languages, Tools, Methods.</p>}
         {data.skills.map((g, i) => (
-          <div key={g.id} className="flex items-start gap-2">
-            <Input aria-label="Group name" maxLength={60} value={g.name} placeholder="Tools" className="!w-32 shrink-0" onChange={(ev) => skills.patch(g.id, { name: ev.target.value })} />
-            <div className="flex-1"><SkillItems id={`k-${g.id}`} items={g.items} onChange={(items) => skills.patch(g.id, { items })} /></div>
+          <div key={g.id} data-path={`skills.${g.id}`} className="flex flex-wrap items-start gap-2">
+            <Input aria-label="Group name" maxLength={60} value={g.name} placeholder="Tools" className="!w-full shrink-0 sm:!w-32" onChange={(ev) => skills.patch(g.id, { name: ev.target.value })} />
+            <div className="min-w-0 flex-1 basis-32"><SkillItems id={`k-${g.id}`} items={g.items} onChange={(items) => skills.patch(g.id, { items })} /></div>
             <ItemTools i={i} n={data.skills.length} label="skill group" onMove={(by) => skills.set(move(data.skills, i, by))} onRemove={() => skills.set(data.skills.filter((x) => x.id !== g.id))} />
           </div>
         ))}
@@ -651,7 +667,7 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
         id="projects"
         title="Projects"
         action={
-          <Button size="sm" variant="secondary" onClick={() => projects.set([...data.projects, { id: newId(), name: "", link: "", description: "", bullets: [] } as ResumeProject])} disabled={data.projects.length >= 10}>
+          <Button size="sm" variant="secondary" onClick={() => { const id = newId(); projects.set([...data.projects, { id, name: "", link: "", description: "", bullets: [] } as ResumeProject]); revealAdded(`projects.${id}`); }} disabled={data.projects.length >= 10}>
             <Plus className="h-3.5 w-3.5" /> Add project
           </Button>
         }
@@ -685,7 +701,7 @@ export function ContentForm({ data, update, onRewrite, issues = [], scored = nul
         id="education"
         title="Education"
         action={
-          <Button size="sm" variant="secondary" onClick={() => edu.set([...data.education, { id: newId(), school: "", degree: "", field: "", start: "", end: "", grade: "", details: "" } as ResumeEducation])} disabled={data.education.length >= 10}>
+          <Button size="sm" variant="secondary" onClick={() => { const id = newId(); edu.set([...data.education, { id, school: "", degree: "", field: "", start: "", end: "", grade: "", details: "" } as ResumeEducation]); revealAdded(`education.${id}`); }} disabled={data.education.length >= 10}>
             <Plus className="h-3.5 w-3.5" /> Add education
           </Button>
         }

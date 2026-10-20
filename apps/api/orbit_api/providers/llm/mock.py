@@ -461,7 +461,8 @@ class MockLLMProvider(LLMProvider):
                 "reason": "[mock] This resume evidence is a starting point for exploring the role.",
                 "experiment": "[mock] Build one small example using this skill and document how it works.",
                 "check": "[mock] Explain your decisions and demonstrate the example to a peer."}]})
-        if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader"):
+        if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader",
+                                   "career_next_step_plan"):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
             return json.dumps({"tips": [{"fact_id": f["id"], "source_quote": f["text"][:300],
