@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobMission, JobTrackerEntry } from "@orbit/types";
 import { ArrowRight, Button, ErrorNote, FileText, Search, Send, Sparkles, BookmarkCheck, cx, focusRing } from "@orbit/ui";
@@ -7,18 +7,20 @@ import { errorText } from "../../lib/format";
 import type { MissionTool } from "./mission";
 import { OPPORTUNITY_STEPS, opportunityStep } from "./opportunity";
 
+const Message = lazy(() => import("./MessageUpdate").then((m) => ({ default: m.MessageUpdate })));
 const icons = [FileText, Search, Send, Sparkles, BookmarkCheck];
 const link = cx("inline-flex min-h-11 items-center rounded text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
 interface Fact { id: string; label: string; text: string; path: string }
 interface Source { version: string; facts: Fact[] }
 interface Plan { version: string; source: string; tips: { fact_id: string; source_quote: string; suggestion: string; success_check: string; path: string; label: string }[] }
 
-export function GuidedOpportunity({ entry, mission, tab, onSelect }: { entry: JobTrackerEntry; mission: JobMission; tab: MissionTool; onSelect: (tool: MissionTool) => void }) {
+export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { entry: JobTrackerEntry; mission: JobMission; tab: MissionTool; onSelect: (tool: MissionTool) => void; onSaved: () => void }) {
   const index = opportunityStep(tab);
   const step = OPPORTUNITY_STEPS[index]!;
   const heading = useRef<HTMLHeadingElement>(null);
   const previous = useRef(`${entry.id}:${tab}`);
   const [coach, setCoach] = useState(false);
+  const [messages, setMessages] = useState(false);
   useEffect(() => {
     const next = `${entry.id}:${tab}`;
     if (previous.current === next) return;
@@ -47,6 +49,7 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect }: { entry: Jo
       <summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Get help with this step</summary>
       {coach && <OpportunityCoach key={revision} entryId={entry.id} focus={step.tool} />}
     </details>
+    {index >= 2 && <details onToggle={(event) => setMessages(event.currentTarget.open)} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Record an employer reply</summary><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Turn a pasted message into a reviewed stage or interview-date update.</p>{messages && <Suspense fallback={<p role="status">Opening message review…</p>}><Message key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense>}</details>}
     {tab === "resume" && mission.resume && <Link className={link} to={`/resume-ai/${mission.resume.id}?guide=1&job=${entry.id}`}>Edit this resume and return to this job <ArrowRight aria-hidden className="ml-2 h-4 w-4" /></Link>}
     {tab === "timeline" && <div className="flex flex-wrap gap-x-4"><Link className={link} to="/jobs/applications">Review prepared applications</Link><Link className={link} to="/jobs/journey">Set up application automation</Link></div>}
     {tab === "offer" && <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10"><p>Your recorded stage: <strong>{entry.status}</strong>. Keep offer details only if useful; you can also record a different outcome.</p><Link className={link} to="/jobs/tracker">Update outcome in tracker</Link></div>}

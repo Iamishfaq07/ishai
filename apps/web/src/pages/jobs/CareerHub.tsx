@@ -4,6 +4,7 @@ import { ArrowRight, BookmarkCheck, FileText, Search, Sparkles, Users, cx, focus
 import { ErrorNote } from "../../components/ui";
 import { useJobsAi } from "./JobsAi";
 
+const Messages = lazy(() => import("./MessageUpdate").then((m) => ({ default: m.MessageInbox })));
 const Companion = lazy(() => import("./CareerCompanion").then((m) => ({ default: m.CareerCompanion })));
 const Setup = lazy(() => import("./CareerLaunchpad").then((m) => ({ default: m.CareerLaunchpad })));
 const link = cx("inline-flex min-h-11 items-center rounded py-2 text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
@@ -38,7 +39,7 @@ export function CareerHub() {
       to: "/jobs/matches", action: "Find jobs", tools: [["/jobs/profile", "Search preferences"], ["/linkedin", "Professional profiles"]] },
     { title: "Apply & connect", icon: Users, detail: "Manage applications, review agent work and find people at the company.",
       status: tracker.error ? "Tracker count unavailable" : active === undefined ? "Loading tracker…" : `${active} active tracked application${active === 1 ? "" : "s"}`,
-      to: "/jobs/tracker", action: "My applications", tools: [["/jobs/tracker?add=1", "Add a job or interview"], ["/jobs/journey", "Auto-apply agent"], ["/jobs/applications", "Review queue"], ["/jobs/outreach?network=1", "Contacts & outreach"]] },
+      to: "/jobs/tracker", action: "My applications", tools: [["/jobs?work=updates", "Record an employer reply"], ["/jobs/tracker?add=1", "Add a job or interview"], ["/jobs/journey", "Auto-apply agent"], ["/jobs/applications", "Review queue"], ["/jobs/outreach?network=1", "Contacts & outreach"]] },
     { title: "Prepare for interviews", icon: Sparkles, detail: "Practise with Saba, try a video interview and use each tracked job’s preparation tools.",
       status: role ? `Practice role: ${role}` : "Choose a role in practice setup",
       to: practice, action: "Practice with Saba", tools: [["/interview", "Video interview"], ["/jobs/tracker", "Prepare for a saved job"], ["/start", "Live interview copilot"]] },
@@ -53,7 +54,7 @@ export function CareerHub() {
         <p className="mt-2 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">From your first resume to your next role. Follow the steps or jump straight to the tool you need.</p></div>
     </header>
     {(profile.error || tracker.error) && <ErrorNote onRetry={() => { profile.reload(); tracker.reload(); }}>Some saved information could not load. You can still open your tools, or retry.</ErrorNote>}
-    {work === "resume" || work === "plan" ? <>
+    {work === "updates" ? <><Link to="/jobs" className={link}>← Back to all career steps</Link><Suspense fallback={<p role="status">Opening employer updates…</p>}><Messages /></Suspense></> : work === "resume" || work === "plan" ? <>
       <Link to="/jobs" className={link}>← Back to all career steps</Link>
       <Suspense fallback={<p role="status">Opening your career companion…</p>}><Companion mode={work} resumeId={resumeId} onSelect={(id) => { const query = new URLSearchParams(params); query.set("resume_id", id); setParams(query); }} /></Suspense>
     </> : setup ? <>

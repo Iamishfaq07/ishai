@@ -113,7 +113,7 @@ export function JobMissionPage() {
         ) : m && entry ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-zinc-600 dark:text-zinc-400">{guided ? "One job, one step at a time." : "All tools for this opportunity."}</p><Button variant="secondary" onClick={toggleGuide}>{guided ? "Open all job tools" : "Follow guided steps"}</Button></div>
-            {guided ? <Suspense fallback={<p role="status">Opening guided steps…</p>}><Guided entry={entry} mission={m} tab={tab} onSelect={setTab} /></Suspense> : <Stages mission={m} />}
+            {guided ? <Suspense fallback={<p role="status">Opening guided steps…</p>}><Guided entry={entry} mission={m} tab={tab} onSelect={setTab} onSaved={() => { tracker.reload(); mission.reload(); }} /></Suspense> : <Stages mission={m} />}
             <div className={cx("grid grid-cols-[minmax(0,1fr)] gap-6", !guided && "lg:grid-cols-[minmax(0,1fr)_20rem]")}>
               <div className="min-w-0">
                 {!guided && <><div role="group" aria-label="Job workspace areas" className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-zinc-500/5 p-1">
