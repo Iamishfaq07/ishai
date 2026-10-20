@@ -14,6 +14,8 @@ const RULES = [
   { key: "assessment_hours", name: "Assessment review", help: "Review completed work samples, Saba interviews or alternative requests.", unit: "hours", max: 168, initial: 24 },
   { key: "scheduling_hours", name: "Interview time requests", help: "Reply when a candidate needs different interview times. Off until you enable this rule.", unit: "hours", max: 168, initial: 24 },
   { key: "prep_hours", name: "Interview preparation", help: "Before a booked interview, flag a missing active panel or saved interview criteria. Off until enabled.", unit: "hours", max: 168, initial: 24 },
+  { key: "offer_hours", name: "Offer response deadline", help: "Create an internal review task before the latest offer expires. Expired offers stay for review until answered or withdrawn. Off until enabled.", unit: "hours", max: 168, initial: 24 },
+  { key: "handoff_hours", name: "Accepted offer handoff", help: "Flag an accepted offer without a published joining plan. Applies while the application and role remain active. Off until enabled.", unit: "hours", max: 168, initial: 24 },
 ] as const;
 const errorOf = (e: unknown) => e instanceof Error ? e : new Error(String(e));
 
@@ -46,11 +48,11 @@ function RecipeEditor({ job, cid, onSaved }: { job: BizAutomationJob; cid: strin
         disabled={disabled || job.status !== "open"} onChange={(e) => edit({ ...draft, enabled: e.target.checked })} className="mt-1" />
         Run these automations for {job.title}</label>
       {job.status !== "open" && <p className="text-sm text-zinc-500">Open this job before enabling automation. Pending work pauses while the job is closed or paused.</p>}
-      <div className="grid gap-3 sm:grid-cols-2">{RULES.map((rule) => <div key={rule.key} className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
+      <div className="grid gap-3 sm:grid-cols-2">{RULES.map((rule) => <div key={rule.key} role="group" aria-label={`${rule.name} settings`} className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
         <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={draft[rule.key] !== null} disabled={disabled}
           onChange={(e) => edit({ ...draft, [rule.key]: e.target.checked ? rule.initial : null })} />{rule.name}</label>
         <p className="my-2 text-xs text-zinc-500 dark:text-zinc-400">{rule.help}</p>
-        <Field label={`${rule.key === "prep_hours" ? "Prepare before" : "Follow up after"} (${rule.unit})`} htmlFor={`${id}-${rule.key}`}>
+        <Field label={`${rule.key === "offer_hours" ? "Review before expiry" : rule.key === "prep_hours" ? "Prepare before" : "Follow up after"} (${rule.unit})`} htmlFor={`${id}-${rule.key}`}>
           <Input id={`${id}-${rule.key}`} type="number" min={1} max={rule.max} required={draft[rule.key] !== null}
             disabled={disabled || draft[rule.key] === null} value={draft[rule.key] ?? ""}
             onChange={(e) => edit({ ...draft, [rule.key]: e.target.value === "" ? null : Number(e.target.value) })} />

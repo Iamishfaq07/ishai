@@ -8,7 +8,7 @@ describe("tool discovery", () => {
     }
   });
   it("combines workflow, search and automation filters", () => {
-    expect(filterTools("personal", "applications", "apply", "automation").map((t) => t.id)).toEqual(["agent"]);
+    expect(filterTools("personal", "workday", "apply", "automation").map((t) => t.id)).toEqual(["agent"]);
     expect(filterTools("business", "reminders", "apply", "automation").map((t) => t.id)).toEqual(["automation"]);
     expect(filterTools("personal", "nothing matches this search", "all", "all")).toEqual([]);
   });

@@ -4,10 +4,12 @@ import { ArrowRight, Button, Callout, Sparkles, cx, focusRing } from "@orbit/ui"
 import { api } from "../../lib/api";
 import { downloadText, errorText } from "../../lib/format";
 import { shortDate } from "./model";
+import { PlaybookEditor } from "./PlaybookEditor";
 
 interface Action {
   id: string; kind: "interview" | "follow_up" | "contact" | "application";
   title: string; detail: string; due_at: string | null; overdue: boolean; path: string;
+  rule?: "application_follow_up" | "interview_preparation";
 }
 interface Queue { version: string; items: Action[]; truncated: boolean; as_of: string; horizon_days: number }
 interface Brief { version: string; source: "ai" | "mock"; steps: { action_id: string; source_quote: string; suggestion: string }[] }
@@ -19,6 +21,7 @@ export function JobActionDeskPage() {
   const [busy, setBusy] = useState(false);
   const [load, setLoad] = useState(0);
   const [filter, setFilter] = useState("all");
+  const [savedRules, setSavedRules] = useState(false);
   useEffect(() => {
     let live = true;
     const refresh = () => {
@@ -47,7 +50,7 @@ export function JobActionDeskPage() {
     } catch (e) { setError(errorText(e)); }
     finally { setBusy(false); }
   };
-  const visible = queue?.items.filter((a) => filter === "all" || (filter === "overdue" ? a.overdue : a.kind === filter)) ?? [];
+  const visible = queue?.items.filter((a) => filter === "all" || (filter === "overdue" ? a.overdue : filter === "playbook" ? !!a.rule : a.kind === filter)) ?? [];
   const exportCalendar = async () => {
     try {
       const { agendaIcs } = await import("./agenda");
@@ -67,6 +70,8 @@ export function JobActionDeskPage() {
         <rect x="235" y="34" width="105" height="52" rx="14" fill="currentColor" opacity=".12" /><text x="287" y="65" textAnchor="middle" fill="currentColor" fontSize="14">Next step</text>
       </svg>
     </section>
+    <PlaybookEditor onChanged={(saved) => { setLoad((n) => n + 1); setBrief(null); setSavedRules(saved); }} />
+    {savedRules && <p role="status" className="text-sm">Follow-up rules saved.</p>}
     <div className="flex flex-wrap items-center gap-3">
       <Button onClick={() => void generate()} loading={busy} disabled={!queue?.items.length}><Sparkles className="h-4 w-4" /> Build my AI brief</Button>
       <Button variant="secondary" disabled={busy} onClick={() => setLoad((n) => n + 1)}>Refresh records</Button>
@@ -85,10 +90,10 @@ export function JobActionDeskPage() {
           <p className="mt-1 text-sm">{step.suggestion}</p><p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Source: “{step.source_quote}”</p></li>;
       })}</ol>
     </section>}
-    <div className="flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["contact", "Contacts"], ["application", "Applications"]].map(([key, label]) =>
+    <div className="flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["contact", "Contacts"], ["application", "Applications"], ["playbook", "Playbook"]].map(([key, label]) =>
       <Button key={key} size="sm" variant={filter === key ? "primary" : "secondary"} aria-pressed={filter === key} onClick={() => setFilter(key!)}>{label}</Button>)}</div>
     {!queue && !error && <p role="status">Loading your saved actions…</p>}
-    {queue && !queue.items.length && <div className="rounded-xl border border-zinc-200 p-5 dark:border-white/10"><h3 className="font-medium">Room for your next opportunity</h3>
+    {queue && !queue.items.length && !queue.truncated && <div className="rounded-xl border border-zinc-200 p-5 dark:border-white/10"><h3 className="font-medium">Room for your next opportunity</h3>
       <p className="mt-2 text-sm">Add your next interview or follow-up date in the tracker, or a contact follow-up in Outreach. Actions appear here when they are due within seven days.</p>
       <Link to="/jobs/tracker" className={cx("mt-3 inline-flex items-center gap-2 rounded text-sm hover:underline", focusRing)}>Open tracker <ArrowRight className="h-4 w-4" /></Link></div>}
     {queue && queue.items.length > 0 && !visible.length && <p className="text-sm">No actions in this filter.</p>}
@@ -96,8 +101,9 @@ export function JobActionDeskPage() {
       <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-medium">{action.title}</h3>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">{action.overdue ? "Past due · " : ""}{action.due_at ? shortDate(action.due_at) : "Needs your review"}</span></div>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{action.detail}</p>
+      {action.rule && <p className="mt-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your playbook · {action.rule === "application_follow_up" ? "Application follow-up" : "Interview preparation"}</p>}
       <Link to={action.path} className={cx("mt-3 inline-flex items-center gap-2 rounded text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>Open workspace <ArrowRight className="h-4 w-4" /></Link>
     </li>)}</ul>
-    {queue?.truncated && <Callout>Showing the first 100 actions. Resolve or reschedule records to see later items.</Callout>}
+    {queue?.truncated && <Callout>This queue is bounded to 100 actions. Resolve or reschedule records, and review your tracker for the full list.</Callout>}
   </div>;
 }

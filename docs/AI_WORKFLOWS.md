@@ -1,5 +1,8 @@
 # AI workflows for personal Orbit and Business
 
+Opt-in personal follow-up rules now feed the Action desk and its AI brief; see
+[Outcome playbooks](OUTCOME_PLAYBOOKS.md#personal-orbit).
+
 ## Personal Orbit: Action desk
 
 Open **Jobs → Action desk** (`/jobs/actions`). It automatically assembles saved next-step dates within seven days,

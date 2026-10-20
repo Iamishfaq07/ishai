@@ -4,6 +4,8 @@ export interface BizAutomationRecipe {
   feedback_hours: number | null; assessment_hours: number | null; default_assignee_id: string | null;
   scheduling_hours: number | null;
   prep_hours: number | null;
+  offer_hours: number | null;
+  handoff_hours: number | null;
 }
 export interface BizAutomationRecord {
   revision: number; recipe: BizAutomationRecipe; last_run_at: string | null;

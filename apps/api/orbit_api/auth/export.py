@@ -20,6 +20,7 @@ from orbit_api.models import (
     ApplicationPacket,
     AuditLog,
     AutoApplySetup,
+    CareerPlaybook,
     CareerPreparation,
     CareerWeeklyGoal,
     CodeAttempt,
@@ -126,6 +127,7 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             "fit_checks": [_row(f) for f in (await db.scalars(select(JobFitCheck).where(
                 JobFitCheck.user_id == user_id).order_by(JobFitCheck.created_at))).all()],
             "weekly_goals": _row(goal) if (goal := await db.get(CareerWeeklyGoal, user_id)) else None,
+            "playbook": _row(book) if (book := await db.get(CareerPlaybook, user_id)) else None,
             "contacts": [_row(c) for c in (await db.scalars(select(JobContact).where(
                 JobContact.user_id == user_id).order_by(JobContact.created_at))).all()],
             "prep_plan_ticks": [_row(r) for r in (await db.scalars(select(JobPlanCheck).where(

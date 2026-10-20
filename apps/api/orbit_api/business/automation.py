@@ -35,7 +35,8 @@ log = logging.getLogger(__name__)
 TITLES = {"stalled": "Review the stalled pipeline stage", "question": "Reply to the candidate's question",
     "feedback": "Collect outstanding interview feedback",
     "assessment": "Review assessment or alternative interview request",
-    "scheduling": "Reply to a candidate's interview time request", "prep": "Prepare the interview kit"}
+    "scheduling": "Reply to a candidate's interview time request", "prep": "Prepare the interview kit",
+    "offer": "Review the offer response deadline", "handoff": "Prepare the accepted offer joining plan"}
 
 
 class Recipe(BaseModel):
@@ -47,6 +48,8 @@ class Recipe(BaseModel):
     assessment_hours: int | None = Field(24, ge=1, le=168)
     scheduling_hours: int | None = Field(None, ge=1, le=168)
     prep_hours: int | None = Field(None, ge=1, le=168)
+    offer_hours: int | None = Field(None, ge=1, le=168)
+    handoff_hours: int | None = Field(None, ge=1, le=168)
     default_assignee_id: str | None = Field(None, max_length=36)
 
 
@@ -71,7 +74,8 @@ async def signals(db: AsyncSession, job: BizJob, apps: list[BizApplication], rec
     for event in await db.scalars(select(BizEvent).where(BizEvent.application_id.in_(ids), BizEvent.kind.in_(
             ("candidate_question", "candidate_reply", "work_sample_completed", "saba_completed",
              "saba_alternative", "hiring_decision", "interview_change_requested", "interview_change_replied",
-             "interview_change_withdrawn", "interview_change_closed")))
+             "interview_change_withdrawn", "interview_change_closed", "offer_published", "offer_response",
+             "offer_withdrawn", "handoff_published")))
             .order_by(BizEvent.created_at.desc(), BizEvent.id.desc())):
         events[event.application_id].append(event)
     interviews: dict[str, BizInterview] = {}
@@ -102,6 +106,8 @@ async def signals(db: AsyncSession, job: BizJob, apps: list[BizApplication], rec
             add("stalled", f"{app.stage_id}:{aware(app.stage_changed_at).isoformat()}",
                 aware(app.stage_changed_at) + timedelta(days=recipe.stalled_days))
         history = events[app.id]
+        for kind, source, deadline in offer_signals(history, recipe):
+            add(kind, source, deadline)
         answered = {e.data.get("question_id") for e in history if e.kind == "candidate_reply"}
         decisions = [aware(e.created_at) for e in history if e.kind == "hiring_decision"]
         for event in history:
@@ -137,6 +143,30 @@ async def signals(db: AsyncSession, job: BizJob, apps: list[BizApplication], rec
                 add("feedback", iv.id, aware(iv.chosen) + timedelta(minutes=iv.duration_min,
                     hours=recipe.feedback_hours))
     return result
+
+
+def offer_signals(history: list[BizEvent], recipe: Recipe) -> list[tuple[str, str, datetime]]:
+    """Inspect only the latest published offer. Expiry creates work, never an automatic withdrawal."""
+    published = [e for e in history if e.kind == "offer_published"]
+    if not published:
+        return []
+    latest = max(published, key=lambda e: (int(e.data.get("revision", 0)), aware(e.created_at), e.id))
+    updates = [e for e in history if e.data.get("offer_id") == latest.id]
+    if any(e.kind == "offer_withdrawn" for e in updates):
+        return []
+    response = next((e for e in updates if e.kind == "offer_response"), None)
+    if response:
+        if (response.data.get("response") == "accepted" and recipe.handoff_hours is not None
+                and not any(e.kind == "handoff_published" for e in history)):
+            return [("handoff", latest.id, aware(response.created_at) + timedelta(hours=recipe.handoff_hours))]
+        return []
+    if recipe.offer_hours is None:
+        return []
+    try:
+        deadline = aware(datetime.fromisoformat(latest.data["expires_at"]))
+    except (KeyError, ValueError, TypeError):
+        return []  # no invented deadline for malformed legacy records
+    return [("offer", latest.id, deadline - timedelta(hours=recipe.offer_hours))]
 
 
 async def reconcile(db: AsyncSession, company: BizCompany, job: BizJob, row: BizAutomation | None,

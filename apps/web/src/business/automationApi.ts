@@ -9,7 +9,7 @@ export const automationApi = {
     `${c(cid)}/jobs/${e(jid)}/automation`, { method: "PUT", body: JSON.stringify({ recipe, base_revision: revision }) }),
   preview: (cid: string, jid: string, recipe: H.BizAutomationRecipe) => {
     const params = new URLSearchParams();
-    for (const key of ["stalled_days", "question_hours", "feedback_hours", "assessment_hours", "scheduling_hours", "prep_hours"] as const) {
+    for (const key of ["stalled_days", "question_hours", "feedback_hours", "assessment_hours", "scheduling_hours", "prep_hours", "offer_hours", "handoff_hours"] as const) {
       const value = recipe[key];
       if (value !== null) params.set(key, String(value));
       else params.set(key, "0");

@@ -13,6 +13,7 @@ from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.business.hiring_schema import Contract
 from orbit_api.db import get_db
+from orbit_api.job_portal import playbooks
 from orbit_api.models import ApplicationPacket, JobApplication, JobContact, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.workflow_ai import preview
@@ -29,11 +30,16 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
     now = datetime.now(UTC)
     horizon = now + timedelta(days=7)
     items: list[dict[str, Any]] = []
+    playbook = await playbooks.settings(db, user.id)
+    reminders, truncated = await playbooks.followups(db, user.id, playbook["follow_up_days"], now)
+    items.extend(reminders)
     for job in await db.scalars(select(JobApplication).where(JobApplication.user_id == user.id,
             JobApplication.status.not_in(("rejected", "hired")), JobApplication.next_at <= horizon)
             .order_by(JobApplication.next_at, JobApplication.id).limit(101)):
         assert job.next_at is not None
         past = aware(job.next_at) < now
+        prep = bool(job.status == "interviewing" and not past and playbook["prep_hours"] is not None
+            and aware(job.next_at) <= now + timedelta(hours=playbook["prep_hours"]))
         items.append({"id": f"job:{job.id}", "kind": "interview" if job.status == "interviewing" else "follow_up",
             "title": f"{job.title} · {job.company}", "detail": (
                 "Record the outcome or update the next round." if past and job.status == "interviewing" else
@@ -41,6 +47,10 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
                 "Review your saved next step and update its date."),
             "due_at": aware(job.next_at).isoformat(), "overdue": past,
             "path": f"/jobs/mission/{job.id}"})
+        if prep:
+            items[-1].update(rule="interview_preparation", detail=(
+                f"Your {playbook['prep_hours']}-hour preparation window is open. "
+                "Review the role, the resume you sent and your interview practice plan."))
     for contact in await db.scalars(select(JobContact).where(JobContact.user_id == user.id,
             JobContact.follow_up_at <= horizon).order_by(JobContact.follow_up_at, JobContact.id).limit(101)):
         assert contact.follow_up_at is not None
@@ -61,8 +71,8 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
             "due_at": None, "overdue": False, "path": f"/jobs/applications?packet={packet.id}"})
     items.sort(key=lambda i: (i["due_at"] is None, i["due_at"] or "", i["id"]))
     # Include text and source dates in the revision; no stale briefing after any relevant source changes.
-    version = hashlib.sha256(json.dumps(items, sort_keys=True).encode()).hexdigest()
-    return {"version": version, "items": items[:100], "truncated": len(items) > 100,
+    version = hashlib.sha256(json.dumps({"items": items, "playbook": playbook}, sort_keys=True).encode()).hexdigest()
+    return {"version": version, "items": items[:100], "truncated": truncated or len(items) > 100,
             "as_of": now.isoformat(), "horizon_days": 7}
 
 
