@@ -1,5 +1,11 @@
 # V6 progress
 
+## Increment 7 — connected opportunity tools (base `ddc03794`)
+
+PR #443 is merged. **IMPLEMENTED / UNVERIFIED:** bounded owned return trail across learning/coding/library/session review; direct workshop continuation; purposeful stage-tool cards; combined AI/reply/calendar support; previous-round review inside Practice. Existing systems are connected without automatic artifact association, claim creation or submissions. No migration/dependency/new data writer.
+
+**DEFERRED BY OWNER:** all tests/build/lint/typecheck/browser validation. `[skip ci]` requests CI skipping; no workflows weakened or dispatch/rerun. `V6_CONNECTED_JOURNEY.md` documents limits and future checks. Full V6 and F10/F11 acceptance remain partial; draft PR for review, no merge/deployment.
+
 ## Increment 6 — requirement to reviewed practice (base `27cea82b`)
 
 PR #442 is merged. **IMPLEMENTED / UNVERIFIED:** F10 workshop inside Understand, four progressively disclosed stages, project/explanation/code formats, bounded historical source quotes, explicit clipboard brief, existing tool continuations and source-bound selected-requirement AI guidance using the existing coach/quota. No exercise becomes a claim automatically; no persistence/schema/dependency or worker change.

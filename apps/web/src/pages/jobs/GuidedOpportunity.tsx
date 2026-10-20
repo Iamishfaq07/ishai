@@ -22,9 +22,14 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
   const step = OPPORTUNITY_STEPS[index]!;
   const heading = useRef<HTMLHeadingElement>(null);
   const previous = useRef(`${entry.id}:${tab}`);
-  const [coach, setCoach] = useState(false);
-  const [messages, setMessages] = useState(false);
-  const [invitation, setInvitation] = useState(false);
+  const [support, setSupport] = useState(false);
+  const [supportKind, setSupportKind] = useState<"help" | "reply" | "invitation">("help");
+  const [visitedSupport, setVisitedSupport] = useState<string[]>([]);
+  const supportChoices: { id: "help" | "reply" | "invitation"; label: string }[] = [];
+  if (tab !== "plan") supportChoices.push({ id: "help", label: "AI guidance" });
+  if (index >= 2) supportChoices.push({ id: "reply", label: "Employer reply" });
+  if (index === 3) supportChoices.push({ id: "invitation", label: "Calendar invitation" });
+  const activeSupport = supportChoices.find((choice) => choice.id === supportKind)?.id ?? supportChoices[0]?.id;
   useEffect(() => {
     const next = `${entry.id}:${tab}`;
     if (previous.current === next) return;
@@ -49,13 +54,14 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
       })}</ol></nav>
       <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">Choose any step. Indicators describe saved records, not readiness or required completion.</p>
     </div>
-    {tab !== "plan" && <details onToggle={(event) => setCoach(event.currentTarget.open)} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
-      <summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Get help with this step</summary>
-      {coach && <OpportunityCoach key={revision} entryId={entry.id} focus={step.tool} />}
-    </details>}
-    {index >= 2 && <details onToggle={(event) => setMessages(event.currentTarget.open)} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Record an employer reply</summary><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Turn a pasted message into a reviewed stage or interview-date update.</p>{messages && <Suspense fallback={<p role="status">Opening message review…</p>}><Message key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense>}</details>}
-    {index === 3 && <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10" onToggle={(e) => setInvitation(e.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Import interview invitation</summary>{invitation && <Suspense fallback={<p role="status">Opening invitation review…</p>}><Calendar key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense>}</details>}
-    {tab === "resume" && mission.resume && <Link className={link} to={`/resume-ai/${mission.resume.id}?guide=1&job=${entry.id}`}>Edit this resume and return to this job <ArrowRight aria-hidden className="ml-2 h-4 w-4" /></Link>}
+    <details onToggle={(event) => { const opened = event.currentTarget.open; setSupport(opened); if (opened && activeSupport) setVisitedSupport((old) => old.includes(activeSupport) ? old : [...old, activeSupport]); }} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
+      <summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Help and updates for this job<span className="mt-1 block text-xs font-normal text-zinc-600 dark:text-zinc-400">{supportChoices.map((choice) => choice.label).join(" · ")}</span></summary>
+      <div hidden={!support} className="mt-3 space-y-3"><div role="group" aria-label="Choose help or update" className="flex flex-wrap gap-2">{supportChoices.map((choice) => <button key={choice.id} type="button" aria-pressed={activeSupport === choice.id} onClick={() => { setSupportKind(choice.id); setVisitedSupport((old) => old.includes(choice.id) ? old : [...old, choice.id]); }} className={cx("min-h-11 rounded-xl border px-3 py-2 text-sm motion-safe:transition-colors", activeSupport === choice.id ? "border-indigo-500 bg-indigo-500/5 font-semibold" : "border-zinc-200 dark:border-white/10", focusRing)}>{choice.label}</button>)}</div>
+        {support && activeSupport === "help" && <OpportunityCoach key={revision} entryId={entry.id} focus={step.tool} />}
+        <div hidden={activeSupport !== "reply"}>{visitedSupport.includes("reply") && <><p className="text-sm text-zinc-600 dark:text-zinc-400">Paste an employer reply, review the proposed stage or date, then confirm any change.</p><Suspense fallback={<p role="status">Opening reply review…</p>}><Message key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense></>}</div>
+        <div hidden={activeSupport !== "invitation"}>{visitedSupport.includes("invitation") && <><p className="text-sm text-zinc-600 dark:text-zinc-400">Review an interview calendar file before adding its date to this job.</p><Suspense fallback={<p role="status">Opening invitation review…</p>}><Calendar key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense></>}</div>
+      </div>
+    </details>
     {tab === "timeline" && <section aria-label="Application kit for this job" className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
       <h3 className="font-semibold">{mission.application ? packetGuidance(mission.application).label : "Your application materials"}</h3>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{mission.application ? packetGuidance(mission.application).detail : "No prepared application is linked to this job. You can apply on the employer site or prepare eligible materials through your application agent."}</p>
@@ -73,6 +79,19 @@ export function OpportunityNext({ tab, onSelect }: { tab: MissionTool; onSelect:
     <Button variant="secondary" disabled={index === 0} onClick={() => onSelect(OPPORTUNITY_STEPS[index - 1]!.tool)}>Previous step</Button>
     {index < 4 ? <Button onClick={() => onSelect(OPPORTUNITY_STEPS[index + 1]!.tool)}>Next: {OPPORTUNITY_STEPS[index + 1]!.label}<ArrowRight className="h-4 w-4" aria-hidden /></Button> : <Link className={link} to="/jobs">Back to career launchpad</Link>}
   </nav>;
+}
+
+export function OpportunityStepTools({ tab, onSelect }: { tab: MissionTool; onSelect: (tool: MissionTool) => void }) {
+  const stage = opportunityStep(tab);
+  const choices: { tool: MissionTool; title: string; detail: string }[] = stage === 1 ? [
+    { tool: "fit", title: "Requirements & practice", detail: "Review the role and build one real example." },
+    { tool: "company", title: "Company research", detail: "Understand the employer before you apply." },
+  ] : stage === 3 ? [
+    { tool: "interview", title: "Round & setup", detail: "Confirm the date and choose your materials." },
+    { tool: "plan", title: "Daily preparation", detail: "Pick one task and revisit earlier work." },
+    { tool: "practice", title: "Practise & review", detail: "Rehearse, then review your real sessions." },
+  ] : [];
+  return choices.length ? <nav aria-label="Tools for this opportunity step" className="mb-4"><ul className="grid min-w-0 gap-2 sm:grid-cols-3">{choices.map((choice) => <li key={choice.tool}><button type="button" aria-pressed={tab === choice.tool} onClick={() => onSelect(choice.tool)} className={cx("min-h-16 w-full rounded-xl border p-3 text-left motion-safe:transition-colors", tab === choice.tool ? "border-indigo-500 bg-indigo-500/5" : "border-zinc-200 dark:border-white/10", focusRing)}><span className="block text-sm font-semibold">{choice.title}</span><span className="mt-1 block text-xs text-zinc-600 dark:text-zinc-400">{choice.detail}</span></button></li>)}</ul></nav> : null;
 }
 
 export function OpportunityCoach({ entryId, focus, requirementKey, experimentKind = "project" }: { entryId: string; focus: string; requirementKey?: string; experimentKind?: "project" | "explanation" | "code" }) {

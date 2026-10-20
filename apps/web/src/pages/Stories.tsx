@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput } from "@orbit/types";
 import {
   Spot,
@@ -25,6 +25,8 @@ import { errorText } from "../lib/format";
 import { storyPracticeSession } from "../lib/storyPractice";
 import { useAsync } from "../lib/useAsync";
 import { RESUME_AI_HOME } from "./resume/paths";
+import { OpportunityReturn } from "../components/OpportunityReturn";
+import { opportunityReturnHref, opportunityTrail } from "../lib/opportunityTrail";
 import type { LiveLaunchState } from "./SessionSetup";
 
 /**
@@ -33,15 +35,17 @@ import type { LiveLaunchState } from "./SessionSetup";
  * to it, as a quiet line at the foot of each page (between the tabs and the page's title it read as a stray link).
  */
 export function LibraryTabs() {
+  const [params] = useSearchParams();
+  const trail = opportunityTrail(params);
   return (
     <p className="mt-10 flex flex-wrap items-center gap-x-1.5 border-t border-zinc-200 pt-4 text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-400">
       <Sparkles className="h-4 w-4 shrink-0" aria-hidden="true" />
       Making or improving a resume?
       <Link
-        to={RESUME_AI_HOME}
+        to={trail ? opportunityReturnHref(trail, "resume") : RESUME_AI_HOME}
         className={cx("group inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
       >
-        Open Resume
+        {trail ? "Review linked resume" : "Open Resume"}
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
       </Link>
     </p>
@@ -462,6 +466,7 @@ export function StoriesPage() {
         subtitle="Your real examples, in STAR form. When an interviewer asks “Tell me about a time…”, live answers use the story that fits."
         actions={actions}
       />
+      <OpportunityReturn />
 
       {notesOpen && (
         <Card className="mb-6">

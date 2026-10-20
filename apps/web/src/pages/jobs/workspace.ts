@@ -22,7 +22,7 @@ export const JOB_TOOLS: { group: JobWorkspace; to: string; label: string; descri
   { group: "today", to: "/jobs/weekly", label: "Weekly plan", description: "Set targets and review your recorded progress.", keywords: "weekly studio goals experiment" },
   { group: "find", to: JOBS_MATCHES, label: "Matches", description: "Discover jobs, check fit and save your shortlist.", keywords: "search listings openings" },
   { group: "find", to: JOBS_PROFILE, label: "Search preferences", description: "Choose your resume, roles, locations and job filters.", keywords: "profile settings skills" },
-  { group: "applications", to: JOBS_TRACKER, label: "Tracker", description: "Track jobs and open each job's resume, interview prep or offer.", keywords: "mission practice company evidence fit timeline" },
+  { group: "applications", to: JOBS_TRACKER, label: "Tracker", description: "Open one job's connected resume, requirements, practice, application and outcome steps.", keywords: "mission practice company evidence fit timeline learning workshop project story replay review rounds tools source" },
   { group: "applications", to: "/jobs/journey", label: "Auto-apply agent", description: "Prepare your shortlist and manage application automation.", keywords: "application agent hosted browser closed" },
   { group: "applications", to: JOBS_APPLICATIONS, label: "Review queue", description: "Find applications, review materials, check outcomes and resolve requests for your input.", keywords: "inbox search filter statuses receipts packets sent approval answers" },
   { group: "applications", to: JOBS_AUTO_APPLY, label: "Auto-apply settings", description: "Approve your facts, limits, consent and execution mode.", keywords: "setup resume answers bank permissions" },

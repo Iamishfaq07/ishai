@@ -2821,6 +2821,14 @@ export interface RequirementPractice {
     job_quote: string; candidate_quote: string }[];
 }
 
+/** Owned navigation context only; opening a library tool does not attach its records to this job. */
+export interface OpportunityContext {
+  entry_id: string;
+  title: string;
+  company: string;
+  evidence_enabled: boolean;
+}
+
 export interface JobMission {
   entry_id: string;
   /** Owned packet for the exact listing. Its presence does not establish submission. Optional for older APIs. */

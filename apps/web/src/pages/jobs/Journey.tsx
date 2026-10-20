@@ -5,6 +5,7 @@ import { Skeleton, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { shortDate } from "./model";
+import { careerToolHref } from "../../lib/opportunityTrail";
 
 const DOT: Record<JobTimelineEvent["kind"], string> = {
   saved: "bg-zinc-400",
@@ -23,7 +24,7 @@ const DOT: Record<JobTimelineEvent["kind"], string> = {
  * One tracked job's journey, oldest first: saved, fit checks, the tailored resume, people, applied, rounds with the
  * company, where it stands and what's next (GET /v1/jobs/tracker/{id}/timeline). Loads when opened.
  */
-export function Journey({ entryId }: { entryId: string }) {
+export function Journey({ entryId, roundsOnly = false }: { entryId: string; roundsOnly?: boolean }) {
   const [events, setEvents] = useState<JobTimelineEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
@@ -35,14 +36,17 @@ export function Journey({ entryId }: { entryId: string }) {
   }, [entryId]);
   if (error) return <p className="mt-2 text-xs text-rose-700 dark:text-rose-300">{error}</p>;
   if (!events) return <Skeleton variant="line" count={3} label="Loading the journey" className="mt-2" />;
+  const visible = roundsOnly ? events.filter((event) => event.kind === "round").slice().reverse() : events;
+  if (roundsOnly && !visible.length) return <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">No rounds appear for this job yet. Start with a practice session, then return here to review it.</p>;
+  const context = new URLSearchParams({ job: entryId, career_from: roundsOnly ? "practice" : "timeline" });
   return (
-    <ol aria-label="Journey" className="mt-3 space-y-2 border-l border-zinc-200 pl-4 dark:border-white/10">
-      {events.map((e, i) => (
+    <ol aria-label={roundsOnly ? "Rounds to review" : "Journey"} className="mt-3 space-y-2 border-l border-zinc-200 pl-4 dark:border-white/10">
+      {visible.map((e, i) => (
         <li key={`${e.kind}-${e.at}-${i}`} className="relative text-xs">
           <span aria-hidden="true" className={cx("absolute -left-[1.3rem] top-1 h-2 w-2 rounded-full", DOT[e.kind], e.upcoming && "ring-2 ring-emerald-400/40")} />
           <span className="font-medium text-zinc-800 dark:text-zinc-100">
             {e.link ? (
-              <Link to={e.link} className={cx("rounded hover:underline", focusRing)}>{e.title}</Link>
+              <Link to={e.kind === "round" ? careerToolHref(e.link, context) : e.link} className={cx("rounded hover:underline", focusRing)}>{e.title}{roundsOnly ? " · review" : ""}</Link>
             ) : (
               e.title
             )}
