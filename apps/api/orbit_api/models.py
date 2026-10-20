@@ -978,6 +978,16 @@ class JobFitCheck(TimestampMixin, Base):
 # ---- Contact (orbit_api/contact, admin/inbox.py) ----------------------------------------------------------------
 
 
+class CareerPlaybook(Base):
+    """Optional action-desk rules. Null disables a rule; dates and outcomes remain source records."""
+    __tablename__ = "career_playbooks"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    follow_up_days: Mapped[int | None] = mapped_column(Integer)
+    prep_hours: Mapped[int | None] = mapped_column(Integer)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
 class CareerWeeklyGoal(Base):
     """Account-owned targets; activity is derived from source records, never manually marked complete."""
     __tablename__ = "career_weekly_goals"

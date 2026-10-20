@@ -1,5 +1,8 @@
 # Enterprise hiring automations
 
+Offer deadline and accepted-offer joining-plan recipes are documented in
+[Outcome playbooks](OUTCOME_PLAYBOOKS.md#orbit-for-business).
+
 The Business **Automations** workspace turns outstanding hiring work into persistent, assigned tasks.
 It complements the hiring desk, interview studio, offers and joining plans. Personal Orbit is unchanged.
 

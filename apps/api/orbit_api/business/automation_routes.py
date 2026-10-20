@@ -140,12 +140,15 @@ async def preview(job_id: str, ctx: CompanyCtx, db: Db,
                   feedback_hours: Annotated[int | None, Query(ge=0, le=168)] = 24,
                   assessment_hours: Annotated[int | None, Query(ge=0, le=168)] = 24,
                   scheduling_hours: Annotated[int | None, Query(ge=0, le=168)] = 0,
-                  prep_hours: Annotated[int | None, Query(ge=0, le=168)] = 0) -> dict[str, Any]:
+                  prep_hours: Annotated[int | None, Query(ge=0, le=168)] = 0,
+                  offer_hours: Annotated[int | None, Query(ge=0, le=168)] = 0,
+                  handoff_hours: Annotated[int | None, Query(ge=0, le=168)] = 0) -> dict[str, Any]:
     ctx.require("move_applicants")
     job = await job_for(db, ctx, job_id)
     recipe = automation.Recipe(enabled=True, stalled_days=stalled_days or None, question_hours=question_hours or None,
         feedback_hours=feedback_hours or None, assessment_hours=assessment_hours or None,
-        scheduling_hours=scheduling_hours or None, prep_hours=prep_hours or None)
+        scheduling_hours=scheduling_hours or None, prep_hours=prep_hours or None,
+        offer_hours=offer_hours or None, handoff_hours=handoff_hours or None)
     counts = dict.fromkeys(automation.TITLES, 0)
     cursor = ""
     while True:

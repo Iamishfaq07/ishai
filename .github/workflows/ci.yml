@@ -64,6 +64,7 @@ jobs:
           tests/test_workflow_ai.py
           tests/test_career_weekly.py tests/test_business_control_room.py
           tests/test_application_agent.py
+          tests/test_career_playbooks.py tests/test_offer_automations.py
 
   frontend:
     runs-on: ubuntu-latest
