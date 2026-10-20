@@ -537,7 +537,7 @@ test("the server shows what was applied: tracker Applied (Orbit Apply), the quot
   expect(setup.executor_seen_at).toBeTruthy();
   const page = await context.newPage();
   await page.goto(`${WEB}/jobs/applications`);
-  await page.getByRole("button", { name: /^Applied/ }).click();
+  await page.getByLabel("Show applications", { exact: true }).selectOption("sent");
   await shot(page, "10-applications-applied");
   await page.goto(`${WEB}/jobs/tracker`);
   await page.getByText("Palantir").first().waitFor();
@@ -554,8 +554,9 @@ test("Pause in the popup pauses Orbit Apply on the server, and the web app shows
   expect((await apiGet<{ paused: boolean }>("/v1/apply/setup")).paused).toBe(true);
   const page = await context.newPage();
   await page.goto(`${WEB}/jobs/applications`);
+  await page.getByText("Auto-apply controls · Paused", { exact: true }).click();
   await expect(page.getByRole("button", { name: "Resume" })).toBeVisible();
-  await expect(page.getByText("Paused. Resume here or in the extension.")).toBeVisible();
+  await expect(page.getByText("Paused. Resume when you're ready.")).toBeVisible();
   await shot(page, "13-web-paused");
   // And back from the web: the popup follows.
   await page.getByRole("button", { name: "Resume" }).click();

@@ -20,7 +20,7 @@ export const JOB_TOOLS: { group: JobWorkspace; to: string; label: string; descri
   { group: "find", to: JOBS_PROFILE, label: "Search preferences", description: "Choose your resume, roles, locations and job filters.", keywords: "profile settings skills" },
   { group: "applications", to: JOBS_TRACKER, label: "Tracker", description: "Track jobs and open each job's resume, interview prep or offer.", keywords: "mission practice company evidence fit timeline" },
   { group: "applications", to: "/jobs/journey", label: "Auto-apply agent", description: "Prepare your shortlist and manage application automation.", keywords: "application agent hosted browser closed" },
-  { group: "applications", to: JOBS_APPLICATIONS, label: "Review queue", description: "Review prepared applications, receipts and requests for your input.", keywords: "packets sent approval answers" },
+  { group: "applications", to: JOBS_APPLICATIONS, label: "Review queue", description: "Find applications, review materials, check outcomes and resolve requests for your input.", keywords: "inbox search filter statuses receipts packets sent approval answers" },
   { group: "applications", to: JOBS_AUTO_APPLY, label: "Auto-apply settings", description: "Approve your facts, limits, consent and execution mode.", keywords: "setup resume answers bank permissions" },
   { group: "people", to: `${JOBS_OUTREACH}?network=1`, label: "Contact finder", description: "Research people at a company and review their source evidence.", keywords: "career ops recruiter referral hiring manager" },
   { group: "people", to: `${JOBS_OUTREACH}?view=messages`, label: "Messages & profiles", description: "Draft outreach, follow-ups and LinkedIn or Naukri profiles.", keywords: "outreach email thank you resume" },
