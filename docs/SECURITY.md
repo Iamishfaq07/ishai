@@ -2,6 +2,8 @@
 
 What protects what, and where it lives in the code.
 
+Personal interview calendar intake (`job_portal/calendar_intake.py`) is a bounded, read-only parser behind verified-account ownership and rate limits. It never follows embedded links, opens attachments, executes alarms or trusts organizer identity. Unsupported recurrence, cancellations, custom zones and ambiguous times require manual review. Saving reuses the tracker confirmation endpoint's owner filter, explicit confirmation and atomic version check; parsing does not grant authority to update a job. See `implementation/V6_INTERVIEW_INTAKE.md` for the supported subset and privacy limits.
+
 ## Reporting a vulnerability
 Write to the Orbit team privately through the [Contact page](https://orbitanswer.com/contact) (topic "Technical
 problem"). `/.well-known/security.txt` points there too. Say what you found and how to reproduce it, and please don't

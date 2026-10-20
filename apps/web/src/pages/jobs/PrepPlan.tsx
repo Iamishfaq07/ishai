@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry, PlanItem, PrepPlan } from "@orbit/types";
 import { ArrowRight, CalendarIcon, Check, LoadGate, cx, focusRing, toast } from "@orbit/ui";
@@ -9,23 +9,31 @@ import { useAsync } from "../../lib/useAsync";
 import { JOBS_TRACKER } from "./paths";
 import { dayLabel, localToday, planItemLink } from "./plan";
 
+const Coach = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityCoach })));
+
 /** The plan to the interview: a countdown, each day's tasks with a way to do them, and a tick for each. */
 /** `onOpenInterview`: in the Mission room, where the date is set on the Interview tab next to this one. */
 export function PrepPlanPanel({ entry, onOpenInterview }: { entry: JobTrackerEntry; onOpenInterview?: () => void }) {
   const plan = useAsync(() => api.prepPlan(entry.id), [entry.id, entry.next_at, entry.status], `prep-plan:${entry.id}`);
   const [busy, setBusy] = useState<string | null>(null);
+  const busyRef = useRef(false);
+  const seq = useRef(0);
+  const [coach, setCoach] = useState(false);
+  const cancel = useCallback(() => { seq.current++; }, []);
+  useEffect(() => { cancel(); busyRef.current = false; setBusy(null); setCoach(false); return cancel; }, [entry.id, entry.next_at, entry.status, cancel]);
   const today = localToday();
   const p = plan.data;
 
   const tick = async (item: PlanItem) => {
-    setBusy(item.key);
+    if (busyRef.current) return;
+    const request = ++seq.current; busyRef.current = true; setBusy(item.key);
     try {
       const next: PrepPlan = await api.tickPlanItem(entry.id, item.key, !item.done);
-      plan.setData(() => next);
+      if (request === seq.current) plan.setData(() => next);
     } catch (err) {
-      toast({ message: errorText(err), tone: "error" });
+      if (request === seq.current) toast({ message: errorText(err), tone: "error" });
     } finally {
-      setBusy(null);
+      if (request === seq.current) { busyRef.current = false; setBusy(null); }
     }
   };
 
@@ -73,6 +81,10 @@ export function PrepPlanPanel({ entry, onOpenInterview }: { entry: JobTrackerEnt
               {p.starts_on && p.starts_on > today && ` The plan starts on ${dayLabel(p.starts_on, 1, today)}.`}
             </p>
           </Card>
+          <details className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10" onToggle={(e) => setCoach(e.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Plan my interview preparation with AI</summary>
+            <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Optional guidance from this job’s recorded date and unchecked preparation tasks. The coach uses a UTC-date plan; the checklist below follows your browser’s day. It does not change your calendar, complete tasks or verify employer questions.</p>
+            {coach && <Suspense fallback={<p role="status">Opening preparation coach…</p>}><Coach key={JSON.stringify([entry.id, entry.next_at, p])} entryId={entry.id} focus="interview" /></Suspense>}
+          </details>
           <ol className="space-y-3">
             {p.days.map((day) => {
               const isToday = day.date === today;
@@ -93,7 +105,7 @@ export function PrepPlanPanel({ entry, onOpenInterview }: { entry: JobTrackerEnt
                               role="checkbox"
                               aria-checked={item.done}
                               aria-label={`${item.done ? "Untick" : "Tick off"}: ${item.title}`}
-                              disabled={busy === item.key}
+                              disabled={busy !== null}
                               onClick={() => void tick(item)}
                               className={cx(
                                 "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border transition-colors",

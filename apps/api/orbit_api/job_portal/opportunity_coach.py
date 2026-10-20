@@ -16,6 +16,7 @@ from orbit_api.workflow_advice import INSTRUCTION, Advice, AdviceIn, validate_ad
 from orbit_api.workflow_ai import preview
 
 from .action_priority import attention_packets
+from .plan import plan_for
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["opportunity coach"],
     dependencies=[Depends(limit_user("opportunity-coach", rate_per_s=1, burst=20))])
@@ -75,7 +76,19 @@ async def source(db: AsyncSession, user: User, entry_id: str) -> dict[str, Any]:
             facts.insert(2 + index, {"id": f"requirement_{index}", "label": "Requirement to explore",
                 "path": base + "fit", "text": f"A prior fit check lists this requirement: {requirement}. "
                 "Check the original job and current resume; this does not verify a candidate skill."})
-    material = {"entry": [entry.id, str(entry.updated_at), entry.status, str(entry.next_at), entry.resume_id],
+    prep = None
+    if entry.status == "interviewing" and entry.next_at:
+        prep = await plan_for(db, user, entry)
+        at = prep.interview_at.isoformat() if prep.interview_at else "not available"
+        interview = next(fact for fact in facts if fact["id"] == "interview")
+        interview["text"] = (f"The candidate records an interview at {at}. Verify the original invitation. "
+                             f"The current UTC-date preparation plan has {prep.done} of {prep.total} tasks checked.")
+        for index, task in enumerate([item for day in prep.days for item in day.items if not item.done][:3]):
+            facts.append({"id": f"prep_{index}", "label": "Preparation task", "path": base + "plan",
+                "text": f"An unchecked task in this job's UTC-date preparation plan is: {task.title[:220]}. "
+                        "Use truthful evidence. This is suggested practice, not verified employer interview content."})
+    material = {"prep": prep.model_dump(mode="json") if prep else None,
+        "entry": [entry.id, str(entry.updated_at), entry.status, str(entry.next_at), entry.resume_id],
         "resume": list(map(str, resume)) if resume else None,
         "fit": [fit.id, str(fit.created_at), fit.result] if fit else None,
         "snapshots": list(map(str, snapshots)), "offer": list(map(str, offer)) if offer else None,
@@ -99,7 +112,8 @@ async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(requir
     current = await source(db, user, entry_id)
     if current["version"] != body.version:
         raise HTTPException(409, "This opportunity changed. Refresh before requesting guidance.")
-    facts = sorted(current["facts"], key=lambda fact: fact["id"] != body.focus)
+    facts = sorted(current["facts"], key=lambda fact: (fact["id"] != body.focus,
+        body.focus == "interview" and not fact["id"].startswith("prep_")))
 
     def validate(raw: object) -> Advice:
         advice = validate_advice(raw, facts)
@@ -109,6 +123,8 @@ async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(requir
 
     result, provider = await preview(db, user, "opportunity_coach", INSTRUCTION +
         "Help a candidate with the selected opportunity step, explaining that fact first. "
+        "Preparation tasks are suggested practice from a UTC-date plan, not employer questions or a new schedule. "
+        "Do not propose tasks already checked or claim a task has been completed. "
         "Use only the recorded indicators supplied. Do not infer readiness, eligibility, interviews or hiring. "
         "Prior fit checks may use a different resume. Suggest checking source evidence, "
         "not claiming a skill is proved. For supplied requirements, propose truthful evidence to review "

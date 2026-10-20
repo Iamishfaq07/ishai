@@ -1,5 +1,12 @@
 # Implementation log
 
+## Personal Orbit V6: reviewed invitations and preparation guidance (2026-10-20)
+
+- Import a supported `.ics` invitation into a chosen saved job, review original/local times and explicitly confirm date/stage. Continue directly to existing preparation and saved-date actions. Multiple events require selection; duplicate choices, stale saves, unsupported time zones and recurrence are handled explicitly.
+- Existing opportunity coach now grounds interview help in the saved date and unchecked preparation tasks. Optional disclosure in the preparation plan; explicit model request, shared quota, source quotes, owned links and invalidation after completion. No automatic submissions, calendar sync or mailbox access.
+- Narrow layout, review focus, reduced motion and stale-result guards reuse the current UI. Preparation checks serialize while saving and discard responses after a job/date/stage change.
+- See [scope and limitations](implementation/V6_INTERVIEW_INTAKE.md), the current verification addendum and screenshots. No migration or new dependency.
+
 ## Orbit for Business: the job assistant (2026-10-19)
 
 - **"Orbit assistant" beside the job editor** (DECISIONS D85, PROTOCOL.md "Orbit for Business"): describe a job in a

@@ -1,6 +1,7 @@
 """Owned per-job guidance, factual boundaries, durable quotas and source invalidation."""
 import json
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -164,3 +165,57 @@ def test_prior_requirements_can_ground_practice_without_sending_resume_quotes(cl
     assert "does not verify" in fact["text"]
     assert "Private resume detail" not in json.dumps(current)
     assert current["version"] != before["version"]
+
+
+def test_interview_coach_uses_saved_tasks_and_invalidates_after_completion(client: TestClient) -> None:
+    user, entry = setup(client)
+    at = (datetime.now(UTC) + timedelta(days=2)).replace(microsecond=0).isoformat()
+    result = client.patch(f"/v1/jobs/tracker/{entry}", headers=auth(user),
+                          json={"status": "interviewing", "next_at": at})
+    assert result.status_code == 200, result.text
+    current = read(client, user, entry)
+    interview = next(f for f in current["facts"] if f["id"] == "interview")
+    assert at in interview["text"] and "UTC-date" in interview["text"]
+    prep = [f for f in current["facts"] if f["id"].startswith("prep_")]
+    assert prep and "Private" not in json.dumps(current)
+    assert all(f["path"] == f"/jobs/mission/{entry}?guide=1&tab=plan" for f in prep)
+    advice = client.post(f"/v1/jobs/tracker/{entry}/coach/plan", headers=auth(user),
+        json={"version": current["version"], "focus": "interview"})
+    assert advice.status_code == 200, advice.text
+    assert advice.json()["tips"][0]["fact_id"] == "interview"
+    assert advice.json()["tips"][1]["fact_id"].startswith("prep_")
+    plan = client.get(f"/v1/jobs/tracker/{entry}/plan", headers=auth(user)).json()
+    task = plan["days"][0]["items"][0]
+    done = client.put(f"/v1/jobs/tracker/{entry}/plan/checks/{task['key']}",
+                      headers=auth(user), json={"done": True})
+    assert done.status_code == 200, done.text
+    after = read(client, user, entry)
+    assert after["version"] != current["version"]
+    assert client.post(f"/v1/jobs/tracker/{entry}/coach/plan", headers=auth(user),
+        json={"version": current["version"], "focus": "interview"}).status_code == 409
+    assert client.patch(f"/v1/jobs/tracker/{entry}", headers=auth(user), json={"status": "hired"}).status_code == 200
+    assert not any(f["id"].startswith("prep_") for f in read(client, user, entry)["facts"])
+
+
+def test_preparation_completion_during_generation_rejects_stale_advice(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from orbit_api.models import JobPlanCheck
+
+    user, entry = setup(client)
+    at = (datetime.now(UTC) + timedelta(days=2)).replace(microsecond=0).isoformat()
+    assert client.patch(f"/v1/jobs/tracker/{entry}", headers=auth(user),
+        json={"status": "interviewing", "next_at": at}).status_code == 200
+    current = read(client, user, entry)
+    plan = client.get(f"/v1/jobs/tracker/{entry}/plan", headers=auth(user)).json()
+    key = plan["days"][0]["items"][0]["key"]
+    original = MockLLMProvider.generate
+    async def generate(self: MockLLMProvider, request: Any) -> Any:
+        async with sessionmaker()() as db:
+            db.add(JobPlanCheck(user_id=uid(user), application_id=entry, item_key=key))
+            await db.commit()
+        return await original(self, request)
+    monkeypatch.setattr(MockLLMProvider, "generate", generate)
+    result = client.post(f"/v1/jobs/tracker/{entry}/coach/plan", headers=auth(user),
+        json={"version": current["version"], "focus": "interview"})
+    assert result.status_code == 409, result.text

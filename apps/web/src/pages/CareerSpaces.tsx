@@ -13,6 +13,7 @@ export function CareerSpacesPage() {
   const jobs = tracker.data?.filter((j) => !["hired", "withdrawn", "rejected"].includes(j.status));
   const groups = prepare ? [
     { title: "Rehearse", items: [...(MOCK_INTERVIEW_ENABLED ? [["/mock", "Practice with Saba", "Choose role, format and duration for a simulated interview."], ["/interview", "Video interview", "Rehearse a conversation with the video interviewer."]] : []), ["/warmup", "Quick warm-up", "Practise a question before your interview."]] },
+    { title: "Bring an invitation", items: [["/jobs?work=updates&input=calendar", "Import interview invitation", "Review a calendar file, choose its job and confirm the time."]] },
     { title: "Build your answers", items: [["/documents/stories", "My stories", "Use your own projects and achievements."], ["/learn", "Learning", "Work on gaps without claiming an unfinished skill."], ["/code", "Coding practice", "Practise technical problems and explain your approach."]] },
     { title: "Permitted live assistance", items: [["/start", "Live interview copilot", "Use only where AI assistance is permitted. This is separate from rehearsal."]] },
   ] : [

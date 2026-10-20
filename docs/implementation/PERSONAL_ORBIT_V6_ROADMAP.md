@@ -13,6 +13,8 @@ Source brief: owner-supplied ORBIT_PERSONAL_V6_CODEX_MASTER_PROMPT_2026-10-20.md
 
 ## Subsequent gated slices
 
+Increment 2 (base `47bececf`) implements the supported reviewed ICS subset of item 1 and the saved-date/unchecked-task coach integration for item 2. See `V6_INTERVIEW_INTAKE.md`; broader acceptance remains partial. The original first-increment scope and blockers above are historical context.
+
 1. F04/F08 reviewed ICS invitation intake into an explicitly chosen owned job, with timezone, repeated-event and reschedule handling. Manual paste already exists. Do not add Gmail/Outlook scopes until token encryption/revoke/delete, provider verification and owner provisioning are ready.
 2. F05 prep-plan continuity across real rounds/reschedules, reusing persisted completed checks. Preserve completed work; support date-free rehearsal and optional notifications.
 3. F03/F06 evidence and artifact lineage: inspect existing immutable packet and snapshot flows; close demonstrated stale-source gaps before expanding claims. Gate on adversarial source changes and existing once-only billing tests.

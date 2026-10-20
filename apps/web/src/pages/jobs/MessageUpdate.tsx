@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input, Select, Textarea, cx, focusRing, dateTimeInput, fromDateTimeInput } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useJobsAi } from "./JobsAi";
+
+const Calendar = lazy(() => import("./CalendarIntake").then((m) => ({ default: m.CalendarIntake })));
 
 interface SavedJob { version: string; id: string; title: string; company: string; status: string; next_at: string | null; editable: boolean }
 interface Proposal { version: string; source: string; event: string; summary: string; source_quote: string; suggested_status: string | null; date: { value: string; source_quote: string } | null; editable: boolean }
@@ -15,12 +17,14 @@ export function MessageInbox() {
   const { tracker } = useJobsAi();
   const [params, setParams] = useSearchParams();
   const selected = params.get("job") ?? "";
+  const calendar = params.get("input") === "calendar";
   return <section aria-label="Employer message helper" className="min-w-0 space-y-4">
     <header><h2 className="font-display text-xl font-semibold">Turn a reply into your next step</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Choose the job, paste the relevant message and review changes before saving. Keep interviews and application progress together.</p></header>
     {tracker.error && <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>}
     {!tracker.data ? <p role="status">Opening your tracked jobs…</p> : !tracker.data.length ? <p className="text-sm">Add the job to your tracker first. <Link className={link} to="/jobs/tracker?add=1">Add a job</Link></p> : <>
       <Field htmlFor="message-job" label="1. Choose the job this message is about"><Select id="message-job" value={selected} onChange={(event) => { const query = new URLSearchParams(params); query.set("job", event.target.value); setParams(query); }}><option value="">Choose a tracked job</option>{tracker.data.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.company}</option>)}</Select></Field>
-      {selected && <MessageUpdate key={selected} entryId={selected} onSaved={tracker.reload} />}
+      <div role="group" aria-label="Update source" className="flex flex-wrap gap-2">{[false, true].map((value) => <Button key={String(value)} variant={calendar === value ? "primary" : "secondary"} aria-pressed={calendar === value} onClick={() => { const next = new URLSearchParams(params); if (value) next.set("input", "calendar"); else next.delete("input"); setParams(next); }}>{value ? "Calendar invitation" : "Employer message"}</Button>)}</div>
+      {selected && (calendar ? <Suspense fallback={<p role="status">Opening invitation review…</p>}><Calendar key={selected} entryId={selected} onSaved={tracker.reload} /></Suspense> : <MessageUpdate key={selected} entryId={selected} onSaved={tracker.reload} />)}
     </>}
   </section>;
 }

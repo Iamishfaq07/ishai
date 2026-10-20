@@ -4,6 +4,7 @@ What Orbit keeps, what it never keeps, and the controls you have. The code behin
 be checked.
 
 ## Never stored
+- **Personal interview calendar imports.** The `.ics` body, event title, organizer and raw UID are not persisted or sent to an AI provider (`job_portal/calendar_intake.py`). Only a candidate-confirmed tracker date and optional stage are saved through the existing tracker flow. Invitation text is transient and cleared after a successful save. Interview coach requests may include the saved date and suggested preparation-task text under the existing AI policy; importing an invitation itself makes no model call.
 - **Audio.** It streams to the API and is relayed to transcription. Nothing is written to disk.
 - **Screenshots.** They're sent to the AI model to answer, then discarded (`sessions/routes.py`).
 - **Uploaded files.** Only the extracted text is kept; the original PDF or DOCX bytes are dropped
