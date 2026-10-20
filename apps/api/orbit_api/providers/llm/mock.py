@@ -433,6 +433,11 @@ class MockLLMProvider(LLMProvider):
     def _response_for(self, request: LLMRequest) -> str:
         if self._script:
             return self._script.pop(0)
+        if request.request_type == "personal_form_agent":
+            body = request.messages[-1].content
+            data = json.loads(body[body.find("{"):body.rfind("}") + 1])
+            return json.dumps({"matches": [{"question_id": q["id"], "source": q["candidates"][0], "confidence": 0.99}
+                for q in data["questions"] if len(q["candidates"]) == 1]})
         if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader"):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])

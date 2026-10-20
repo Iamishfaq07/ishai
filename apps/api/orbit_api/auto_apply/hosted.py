@@ -222,12 +222,30 @@ async def answer_live_questions(packet_id: str, body: QuestionsIn,
     setup = await db.get(AutoApplySetup, user.id, populate_existing=True)
     now = datetime.now(UTC)
     if (p.status != "leased" or p.submission_started_at or (aware(p.lease_until) or now) <= now
-            or not await authorised(db, user, setup)):
+            or not await authorised(db, user, setup) or setup is None
+            or p.ats in await pacing.paused_sites(db, now)
+            or p.approval_fingerprint != planner.approval_fingerprint(setup, await planner.load_bank(db, user.id))):
         raise HTTPException(409, "This attempt is no longer allowed to prepare answers.")
     questions = [FormQuestion(id="live:" + hashlib.sha256(q.label.encode()).hexdigest()[:32], label=q.label,
         kind=q.kind, required=True, options=[Option(label=o, value=o) for o in q.options or []])
         for q in body.questions]
     answers, missing = await planner.answer_form(questions, await packets.context(db, user, p))
+    if missing and setup.agent_mode:
+        from orbit_api.auto_apply.form_agent import match_fields
+
+        missing_ids = {m.question_id for m in missing}
+        matched = await match_fields(db, user, p, body.token, [q for q in questions if q.id in missing_ids])
+        answers.extend(matched)
+        resolved = {a.question_id for a in matched}
+        missing = [m for m in missing if m.question_id not in resolved]
+        # match_fields releases the account lock for AI. Restore it before persisting the resolved answers.
+        p, user = await attempt(db, packet_id, body.token)
+        setup = await db.get(AutoApplySetup, user.id, populate_existing=True)
+        if (p.status != "leased" or p.submission_started_at or (aware(p.lease_until) or now) <= datetime.now(UTC)
+                or not await authorised(db, user, setup) or setup is None or not setup.agent_mode
+                or p.ats in await pacing.paused_sites(db, datetime.now(UTC))
+                or p.approval_fingerprint != planner.approval_fingerprint(setup, await planner.load_bank(db, user.id))):
+            raise HTTPException(409, "This attempt changed while preparing answers.")
     if not missing:
         labels = {q.label for q in questions}
         p.answers = [a for a in p.answers or [] if a.get("label") not in labels] + [a.model_dump() for a in answers]

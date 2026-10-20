@@ -9,6 +9,7 @@ import type {
   ApplyStatus,
 } from "@orbit/types";
 import { api } from "../../../lib/api";
+import type { ApplyAgentState } from "@orbit/types";
 
 /**
  * Orbit Apply's calls (`/v1/apply/...`, docs/PROTOCOL.md), kept in its own lazy chunk through the client's generic
@@ -20,6 +21,8 @@ const post = <T>(path: string, body?: unknown) =>
 const put = <T>(path: string, body: unknown) => api.call<T>(path, { method: "PUT", body: JSON.stringify(body) });
 
 export const applyApi = {
+  getAgent: () => api.call<ApplyAgentState>("/v1/apply/agent"),
+  setAgent: (enabled: boolean) => put<{ enabled: boolean }>("/v1/apply/agent", { enabled }),
   getApplySetup: () => api.call<ApplySetup>("/v1/apply/setup"),
   saveApplySetup: (input: ApplySetupInput) => put<ApplySetup>("/v1/apply/setup", input),
   getApplyBank: () => api.call<ApplyBankItem[]>("/v1/apply/bank"),

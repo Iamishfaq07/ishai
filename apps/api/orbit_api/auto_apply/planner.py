@@ -106,6 +106,9 @@ def approval_fingerprint(setup: AutoApplySetup, entries: dict[str, str]) -> str:
     Quiet hours and limits are checked live rather than requiring the candidate to rebuild the packet."""
     snapshot = {"resume": setup.resume_hash, "facts": setup.profile, "answers": entries, "filters": setup.filters,
                 "threshold": setup.threshold, "mode": setup.mode, "ai_line": setup.ai_line}
+    # Preserve legacy fingerprints while off. Revoking agent permission invalidates any agent-prepared lease.
+    if setup.agent_mode:
+        snapshot["agent_mode"] = True
     return hashlib.sha256(json.dumps(snapshot, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 

@@ -25,6 +25,8 @@ command.stamp(cfg, '36a8f2c9d7e1')
 command.upgrade(cfg, 'head')
 with engine.connect() as c:
     assert tuple(c.execute(text('SELECT execution,stop_when_hired FROM auto_apply_setups')).one()) == ('browser',1)
+    assert c.execute(text('SELECT agent_mode FROM auto_apply_setups')).scalar() == 0
+    assert c.execute(text('SELECT agent_decisions FROM application_packets')).scalar() is None
     assert c.execute(text('SELECT approval_fingerprint FROM application_packets')).scalar() is None
 assert 'apply_worker_heartbeats' in inspect(engine).get_table_names()
 command.downgrade(cfg, '36a8f2c9d7e1')

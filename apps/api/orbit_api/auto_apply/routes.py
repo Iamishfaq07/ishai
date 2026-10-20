@@ -26,7 +26,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,6 +49,7 @@ from orbit_api.models import (
     AutoApplySetup,
     BizApplication,
     JobApplication,
+    ProviderRequest,
     Resume,
     User,
 )
@@ -267,6 +268,7 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
             db.add(AuditLog(user_id=user.id, action="apply.hosted_consent", ip=_ip(request)))
     setup.execution = body.execution
     if not body.consent or body.execution == "browser":
+        setup.agent_mode = False
         if setup.hosted_consent_at is not None:
             db.add(AuditLog(user_id=user.id, action="apply.hosted_consent_withdrawn", ip=_ip(request)))
         setup.hosted_consent_at = None
@@ -286,6 +288,47 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
     await packets.refresh_waiting(db, user)
     await db.commit()
     return await _setup_out(db, user, setup)
+
+
+# ---- hosted AI form agent ----------------------------------------------------------------------------------------
+
+
+class AgentIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: StrictBool
+
+
+@router.get("/agent", dependencies=[read_limit])
+async def agent_state(user: Annotated[User, Depends(current_user)],
+                      db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    from orbit_api.auto_apply.form_agent import KIND
+
+    setup = await db.get(AutoApplySetup, user.id)
+    used = await db.scalar(select(func.count()).select_from(ProviderRequest).where(
+        ProviderRequest.user_id == user.id, ProviderRequest.request_type == KIND,
+        ProviderRequest.created_at >= datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)))
+    recent = (await db.scalars(select(ApplicationPacket).where(ApplicationPacket.user_id == user.id,
+        ApplicationPacket.agent_decisions.is_not(None)).order_by(ApplicationPacket.updated_at.desc()).limit(20))).all()
+    return {"enabled": bool(setup and setup.agent_mode), "used_today": used or 0, "daily_allowance": 5,
+        "applications": [{"id": p.id, "title": p.title, "company": p.company, "status": p.status,
+            "decisions": [{k: v for k, v in e.items() if k != "key"} for e in p.agent_decisions or []]}
+            for p in recent]}
+
+
+@router.put("/agent", dependencies=[write_limit])
+async def set_agent(body: AgentIn, user: Annotated[User, Depends(require_verified_email)],
+                    db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, bool]:
+    from orbit_api.auto_apply.hosted import authorised
+
+    await lock_account(db, user.id)
+    setup = await db.get(AutoApplySetup, user.id, populate_existing=True)
+    if body.enabled and not await authorised(db, user, setup):
+        raise HTTPException(409, "Configure hosted applying, approve your resume and resume applying first.")
+    if setup is not None and bool(setup.agent_mode) != body.enabled:
+        setup.agent_mode = body.enabled
+        db.add(AuditLog(user_id=user.id, action="apply.agent_enabled" if body.enabled else "apply.agent_disabled"))
+    await db.commit()
+    return {"enabled": body.enabled}
 
 
 # ---- the bank ----------------------------------------------------------------------------------------------------
