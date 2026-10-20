@@ -49,6 +49,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: info.outputPath(`personal-playbook-${viewport.name}.png`), fullPage: true });
     expect((await context.request.patch(`${API}/v1/jobs/tracker/${id}`, { data: { status: "interviewing", next_at: new Date(Date.now() + 12 * 3600000).toISOString() } })).ok()).toBe(true);
+    await page.getByText("Filters, refresh & calendar", { exact: true }).click();
     await page.getByRole("button", { name: "Refresh records", exact: true }).click();
     await expect(page.getByText("Your playbook · Interview preparation", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Demo AI brief", exact: true })).toHaveCount(0);

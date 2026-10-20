@@ -74,7 +74,7 @@ export function ApplicationsPage() {
     <>
       <PageHeader
         icon={Rocket}
-        title="Applications"
+        title="Application review"
         subtitle="What Orbit Apply prepared and sent with your approved answers, using hosted applying or your connected browser."
         actions={
           <Link to={JOBS_AUTO_APPLY} className={linkButton("secondary", "md")}>

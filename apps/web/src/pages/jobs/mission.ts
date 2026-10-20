@@ -1,6 +1,23 @@
 import type { JobMission, MissionStage } from "@orbit/types";
 import { safeLocal } from "@orbit/ui";
 
+export const MISSION_TOOLS = [
+  { id: "fit", label: "Evidence & fit", group: "job" },
+  { id: "resume", label: "Resume kit", group: "job" },
+  { id: "company", label: "Company", group: "job" },
+  { id: "interview", label: "Interview", group: "interview" },
+  { id: "plan", label: "Prep plan", group: "interview" },
+  { id: "practice", label: "Practice", group: "interview" },
+  { id: "timeline", label: "Timeline", group: "progress" },
+  { id: "offer", label: "Offer", group: "progress" },
+] as const;
+export type MissionTool = typeof MISSION_TOOLS[number]["id"];
+export const MISSION_GROUPS = [
+  { id: "job", label: "Job & resume", first: "fit" },
+  { id: "interview", label: "Interview", first: "interview" },
+  { id: "progress", label: "Progress & offer", first: "timeline" },
+] as const;
+
 /** The Mission Room's stages, in the order a job is won; each is done only on a record (job_portal/mission.py). */
 export const MISSION_STAGES: Array<{ id: MissionStage; label: string; done: string }> = [
   { id: "discover", label: "Discover", done: "Saved to your tracker" },

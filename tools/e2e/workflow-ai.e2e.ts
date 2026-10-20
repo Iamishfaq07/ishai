@@ -52,10 +52,11 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     } });
     expect(job.status(), await job.text()).toBe(201);
     await page.goto("/jobs/actions");
-    await expect(page.getByRole("heading", { name: "Action desk", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Alex Recruiter", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Build my AI brief", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Demo AI brief", exact: true })).toBeVisible();
+    await page.getByText("Filters, refresh & calendar", { exact: true }).click();
     await page.getByRole("button", { name: "Past due", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Platform engineer · Northstar", exact: true })).toHaveCount(0);
     await page.getByRole("button", { name: "All", exact: true }).click();

@@ -2,8 +2,6 @@ import {
   BookmarkCheck,
   Building2,
   Gauge,
-  LayoutGrid,
-  Rocket,
   Search,
   Send,
   SlidersHorizontal,
@@ -15,8 +13,6 @@ import {
   regionWords,
   type LucideIcon,
 } from "@orbit/ui";
-import { ProductTabs, type ProductSection } from "../../components/products";
-import { JOBS_AI_HOME, JOBS_APPLICATIONS, JOBS_MATCHES, JOBS_OUTREACH, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
 
 /**
  * Orbit Jobs AI, Orbit's third product next to the interview copilot and Resume AI: what it does (its home and the
@@ -106,25 +102,4 @@ export function jobsAiFeatures(country: string = INDIA): JobsAiFeature[] {
     }
     return f;
   });
-}
-
-/** Jobs AI's own pages, as tabs under its header. A job's own page counts as Matches. */
-export function jobsAiSections(tracked = 0): ProductSection[] {
-  return [
-    { to: JOBS_AI_HOME, label: "Overview", icon: LayoutGrid, end: true },
-    { to: "/jobs/journey", label: "Application agent", icon: Target },
-    { to: JOBS_MATCHES, label: "Matches", icon: Sparkles, also: /^\/jobs\/listing\// },
-    { to: JOBS_TRACKER, label: "Tracker", icon: BookmarkCheck, count: tracked },
-    { to: "/jobs/actions", label: "Action desk", icon: Gauge },
-    { to: "/jobs/weekly", label: "Weekly studio", icon: Target },
-    // Orbit Apply (D84): its setup counts as this tab too.
-    { to: JOBS_APPLICATIONS, label: "Applications", icon: Rocket, also: /^\/jobs\/auto-apply/ },
-    { to: JOBS_OUTREACH, label: "Outreach", icon: Send },
-    { to: JOBS_PROFILE, label: "Profile", icon: SlidersHorizontal },
-  ];
-}
-
-/** The tabs between Jobs AI's pages, with how many jobs are on the tracker. */
-export function JobsAiTabs({ tracked = 0 }: { tracked?: number }) {
-  return <ProductTabs label="Jobs AI" sections={jobsAiSections(tracked)} />;
 }

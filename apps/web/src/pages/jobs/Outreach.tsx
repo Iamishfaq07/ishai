@@ -16,7 +16,6 @@ import {
   type SavedKit,
   LoadGate,
   isIndia,
-  regionWords,
 } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Field, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -51,10 +50,10 @@ const PARTS: Array<{ id: Part; label: string; more?: string }> = [
  * keeps what was written, per resume (and messages per job), as last edited.
  */
 export function JobOutreachPage() {
-  const country = useCountry();
-  const india = isIndia(country);
   const [params, setParams] = useSearchParams();
-  const [networkOpen, setNetworkOpen] = useState(params.get("network") === "1");
+  const networkOpen = params.get("network") === "1";
+  const messagesOpen = params.get("view") === "messages" || (!params.has("view") && !networkOpen && (params.has("resume") || params.has("job")));
+  const [messagesVisited, setMessagesVisited] = useState(messagesOpen);
   const [peopleRevision, setPeopleRevision] = useState(0);
   const resumes = useAsync(() => api.listResumes(), [], "resumes");
   const allowance = useResumeAllowance();
@@ -73,26 +72,44 @@ export function JobOutreachPage() {
     <AllowanceContext.Provider value={allowance}>
       <PageHeader
         icon={Send}
-        title="Outreach"
-        subtitle={`Referral requests, ${regionWords(country).coldEmails}, follow-ups and thank-you notes, and your ${india ? "Naukri and LinkedIn profiles" : "LinkedIn profile"}.`}
+        title="People & messages"
+        subtitle="Keep your contacts, find someone at a company and write a thoughtful message—all in one place."
       />
       <Card className="my-5 p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Your job network</p>
         <h2 className="mt-2 text-xl font-semibold">Find the right person for a job</h2>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">Check saved contacts at the company, research public leads, capture a recruiter reply and draft a personal introduction—with source evidence and your company history together.</p>
-        <Button variant="secondary" className="mt-3" aria-expanded={networkOpen} onClick={() => setNetworkOpen(!networkOpen)}>{networkOpen ? "Close contact finder" : "Open contact finder"}</Button>
-        {networkOpen && <Suspense fallback={<p className="mt-4 text-sm">Opening contact finder…</p>}><ContactResearch listingId={params.get("job")} onSaved={() => setPeopleRevision((revision) => revision + 1)} /></Suspense>}
+        <Button variant="secondary" className="mt-3" aria-expanded={networkOpen} aria-controls="contact-finder-content" onClick={() => {
+          const next = new URLSearchParams(params);
+          if (networkOpen) {
+            next.delete("network");
+            if (!next.has("view")) next.set("view", "people");
+          } else next.set("network", "1");
+          setParams(next);
+        }}>{networkOpen ? "Close contact finder" : "Open contact finder"}</Button>
+        <div id="contact-finder-content">{networkOpen && <Suspense fallback={<p className="mt-4 text-sm">Opening contact finder…</p>}><ContactResearch listingId={params.get("job")} onSaved={() => setPeopleRevision((revision) => revision + 1)} /></Suspense>}</div>
       </Card>
-      <LoadGate loading={resumes.loading && !list} variant="card" count={2} label="Getting your resumes">
-      {resumes.error && !list ? (
-        <ErrorNote onRetry={resumes.reload}>{errorText(resumes.error)}</ErrorNote>
-      ) : list && !list.length ? (
-        <NoResumeYet />
-      ) : picked && list ? (
-        <ResumeOutreach key={picked.id} picked={picked} resumes={list} jobId={params.get("job")} onPick={pick} />
-      ) : null}
-      </LoadGate>
       <PeopleSection revision={peopleRevision} />
+      <section className="my-6 space-y-4" aria-label="Messages and profiles">
+        <div><h2 className="text-lg font-semibold">Messages & profiles</h2><p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Write a referral request or follow-up, or improve your job site profile using your resume.</p></div>
+        <Button variant="secondary" aria-expanded={messagesOpen} aria-controls="outreach-writing" onClick={() => {
+          setMessagesVisited(true);
+          const next = new URLSearchParams(params);
+          next.set("view", messagesOpen ? "people" : "messages");
+          setParams(next);
+        }}>{messagesOpen ? "Close writing tools" : "Open writing tools"}</Button>
+        <div id="outreach-writing" hidden={!messagesOpen}>
+          {(messagesVisited || messagesOpen) && <LoadGate loading={resumes.loading && !list} variant="card" count={2} label="Getting your resumes">
+            {resumes.error && !list ? (
+              <ErrorNote onRetry={resumes.reload}>{errorText(resumes.error)}</ErrorNote>
+            ) : list && !list.length ? (
+              <NoResumeYet />
+            ) : picked && list ? (
+              <ResumeOutreach key={picked.id} picked={picked} resumes={list} jobId={params.get("job")} onPick={pick} />
+            ) : null}
+          </LoadGate>}
+        </div>
+      </section>
     </AllowanceContext.Provider>
   );
 }

@@ -18,7 +18,7 @@ import {
 } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
 import { KashSecContext } from "../../components/KashSec";
-import { Button, Card, ErrorNote, IconButton, Input, Select } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, IconButton, Input, Select } from "../../components/ui";
 import { isSecurityRole } from "../../lib/security";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -32,23 +32,13 @@ import { CompanyPanel } from "./CompanyPanel";
 import { Journey } from "./Journey";
 import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
-import { MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone } from "./mission";
+import { MISSION_GROUPS, MISSION_TOOLS, MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone, type MissionTool } from "./mission";
 import { practiceLink } from "./model";
 import { StagePill } from "./StagePill";
 import { JOBS_TRACKER, jobPath } from "./paths";
 import { InterviewPrepPanel } from "./interview/InterviewPrep";
 
-type Tab = "interview" | "plan" | "fit" | "resume" | "company" | "practice" | "timeline" | "offer";
-const TABS: Array<{ id: Tab; label: string }> = [
-  { id: "interview", label: "Interview" },
-  { id: "plan", label: "Prep plan" },
-  { id: "fit", label: "Evidence & fit" },
-  { id: "resume", label: "Resume kit" },
-  { id: "company", label: "Company" },
-  { id: "practice", label: "Practice" },
-  { id: "timeline", label: "Timeline" },
-  { id: "offer", label: "Offer" },
-];
+type Tab = MissionTool;
 
 /**
  * Job Mission Room: one tracked job as a workspace. Its stages (each done only on a record), the next step with the
@@ -62,9 +52,15 @@ export function JobMissionPage() {
   const mission = useAsync(() => api.jobMission(entryId), [entryId], `job-mission:${entryId}`);
   // `?tab=` opens one (the tracker's "Prepare for interview" opens Interview); else an interview on the calendar
   // opens on its plan, and otherwise the fit.
-  const [params] = useSearchParams();
-  const asked = TABS.find((t) => t.id === params.get("tab"))?.id;
-  const [tab, setTab] = useState<Tab>(() => asked ?? (entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit"));
+  const [params, setParams] = useSearchParams();
+  const asked = MISSION_TOOLS.find((tool) => tool.id === params.get("tab"))?.id;
+  const tab: Tab = asked ?? (entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit");
+  const selected = MISSION_TOOLS.find((tool) => tool.id === tab)!;
+  const setTab = (value: Tab) => {
+    const next = new URLSearchParams(params);
+    next.set("tab", value);
+    setParams(next);
+  };
 
   if (tracker.data && !entry) {
     return (
@@ -98,19 +94,17 @@ export function JobMissionPage() {
             <Stages mission={m} />
             <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
               <div className="min-w-0">
-                <div role="tablist" aria-label="Mission" className="mb-4 flex gap-1 overflow-x-auto rounded-xl bg-zinc-500/5 p-1">
-                  {TABS.map((t) => (
+                <div role="group" aria-label="Job workspace areas" className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-zinc-500/5 p-1">
+                  {MISSION_GROUPS.map((t) => (
                     <button
                       key={t.id}
                       type="button"
-                      role="tab"
-                      id={`tab-${t.id}`}
-                      aria-selected={tab === t.id}
-                      aria-controls={`panel-${t.id}`}
-                      onClick={() => setTab(t.id)}
+                      aria-pressed={selected.group === t.id}
+                      aria-controls="mission-tool-panel"
+                      onClick={() => { if (selected.group !== t.id) setTab(t.first); }}
                       className={cx(
-                        "min-h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-colors",
-                        tab === t.id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                        "min-h-11 rounded-lg px-2 text-sm font-medium transition-colors motion-reduce:transition-none",
+                        selected.group === t.id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                         focusRing,
                       )}
                     >
@@ -118,7 +112,12 @@ export function JobMissionPage() {
                     </button>
                   ))}
                 </div>
-                <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
+                <div className="mb-4"><Field label="Workspace tool" htmlFor="mission-tool">
+                  <Select id="mission-tool" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>
+                    {MISSION_TOOLS.filter((tool) => tool.group === selected.group).map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}
+                  </Select>
+                </Field></div>
+                <section id="mission-tool-panel" aria-label={selected.label}>
                   {tab === "interview" && (
                     <InterviewPrepPanel
                       entry={entry}
@@ -140,7 +139,7 @@ export function JobMissionPage() {
                     </Card>
                   )}
                   {tab === "offer" && <OfferPanel mission={m} entry={entry} onMission={update} />}
-                </div>
+                </section>
               </div>
               <aside aria-label="Next step" className="order-first min-w-0 space-y-4 lg:order-none">
                 <NextStepCard

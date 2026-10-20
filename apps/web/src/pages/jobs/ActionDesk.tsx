@@ -58,27 +58,22 @@ export function JobActionDeskPage() {
     } catch (e) { setError(errorText(e)); }
   };
   return <div className="space-y-6">
-    <section className="grid items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900 md:grid-cols-2">
-      <div><p className="text-sm font-medium text-indigo-600 dark:text-indigo-300">Your next seven days</p>
-        <h2 className="mt-2 text-2xl font-semibold">Action desk</h2>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Interview dates, contact follow-ups and applications that need you, brought together automatically from your saved records.</p>
-        <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">Updates every minute while open and when you return. Completing or rescheduling the source updates this queue.</p></div>
-      <svg viewBox="0 0 360 120" role="img" aria-label="Saved records flow into a focused next step" className="w-full text-indigo-500">
-        <path d="M65 25 Q140 25 180 60 M65 60 H180 M65 95 Q140 95 180 60 H300" fill="none" stroke="currentColor" strokeWidth="2" opacity=".4" />
-        {[25, 60, 95].map((y) => <g key={y}><rect x="20" y={y - 12} width="75" height="24" rx="8" fill="currentColor" opacity=".12" /><path d={`M32 ${y}h45`} stroke="currentColor" strokeWidth="3" strokeLinecap="round" /></g>)}
-        <circle cx="180" cy="60" r="17" fill="currentColor" opacity=".15" className="motion-safe:animate-pulse" /><path d="m172 60 6 6 12-13" fill="none" stroke="currentColor" strokeWidth="3" />
-        <rect x="235" y="34" width="105" height="52" rx="14" fill="currentColor" opacity=".12" /><text x="287" y="65" textAnchor="middle" fill="currentColor" fontSize="14">Next step</text>
-      </svg>
-    </section>
-    <PlaybookEditor onChanged={(saved) => { setLoad((n) => n + 1); setBrief(null); setSavedRules(saved); }} />
+    <header><h2 className="text-lg font-semibold">Needs your attention</h2>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Interviews, follow-ups and applications to review in the next seven days. Updates every minute from your saved records.</p></header>
     {savedRules && <p role="status" className="text-sm">Follow-up rules saved.</p>}
     <div className="flex flex-wrap items-center gap-3">
       <Button onClick={() => void generate()} loading={busy} disabled={!queue?.items.length}><Sparkles className="h-4 w-4" /> Build my AI brief</Button>
-      <Button variant="secondary" disabled={busy} onClick={() => setLoad((n) => n + 1)}>Refresh records</Button>
-      <Button variant="secondary" disabled={!queue?.items.some((a) => a.due_at && new Date(a.due_at) > new Date())}
-        onClick={() => void exportCalendar()}>Export upcoming dates</Button>
-      <span className="text-xs text-zinc-500 dark:text-zinc-400">5 AI previews/day · resets at midnight UTC. Calendar export is a snapshot.</span>
+      <span className="text-xs text-zinc-500 dark:text-zinc-400">5 AI previews/day · resets at midnight UTC.</span>
     </div>
+    <details className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
+      <summary className={cx("cursor-pointer rounded text-sm font-medium", focusRing)}>Filters, refresh & calendar{filter !== "all" ? " · filter active" : ""}</summary>
+      <div className="mt-3 flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["contact", "Contacts"], ["application", "Applications"], ["playbook", "Playbook"]].map(([key, label]) =>
+        <Button key={key} size="sm" variant={filter === key ? "primary" : "secondary"} aria-pressed={filter === key} onClick={() => setFilter(key!)}>{label}</Button>)}</div>
+      <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" disabled={busy} onClick={() => setLoad((n) => n + 1)}>Refresh records</Button>
+        <Button variant="secondary" disabled={!queue?.items.some((a) => a.due_at && new Date(a.due_at) > new Date())}
+          onClick={() => void exportCalendar()}>Export upcoming dates</Button></div>
+      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Calendar export is a snapshot of upcoming dates.</p>
+    </details>
     <div aria-live="polite">{busy && <p className="text-sm">Reading your saved actions and preparing a focused brief…</p>}</div>
     {error && <Callout tone="error">{error}</Callout>}
     {brief && queue?.version === brief.version && <section aria-label="Your AI brief" className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 dark:border-white/10 dark:bg-zinc-900">
@@ -90,11 +85,9 @@ export function JobActionDeskPage() {
           <p className="mt-1 text-sm">{step.suggestion}</p><p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Source: “{step.source_quote}”</p></li>;
       })}</ol>
     </section>}
-    <div className="flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["contact", "Contacts"], ["application", "Applications"], ["playbook", "Playbook"]].map(([key, label]) =>
-      <Button key={key} size="sm" variant={filter === key ? "primary" : "secondary"} aria-pressed={filter === key} onClick={() => setFilter(key!)}>{label}</Button>)}</div>
     {!queue && !error && <p role="status">Loading your saved actions…</p>}
     {queue && !queue.items.length && !queue.truncated && <div className="rounded-xl border border-zinc-200 p-5 dark:border-white/10"><h3 className="font-medium">Room for your next opportunity</h3>
-      <p className="mt-2 text-sm">Add your next interview or follow-up date in the tracker, or a contact follow-up in Outreach. Actions appear here when they are due within seven days.</p>
+      <p className="mt-2 text-sm">Add your next interview or follow-up date in the tracker, or a contact follow-up in People. Actions appear here when they are due within seven days.</p>
       <Link to="/jobs/tracker" className={cx("mt-3 inline-flex items-center gap-2 rounded text-sm hover:underline", focusRing)}>Open tracker <ArrowRight className="h-4 w-4" /></Link></div>}
     {queue && queue.items.length > 0 && !visible.length && <p className="text-sm">No actions in this filter.</p>}
     <ul className="space-y-3">{visible.map((action) => <li key={action.id} className="rounded-xl border border-zinc-200 bg-white p-4 transition-colors motion-reduce:transition-none dark:border-white/10 dark:bg-zinc-900">
@@ -105,5 +98,6 @@ export function JobActionDeskPage() {
       <Link to={action.path} className={cx("mt-3 inline-flex items-center gap-2 rounded text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>Open workspace <ArrowRight className="h-4 w-4" /></Link>
     </li>)}</ul>
     {queue?.truncated && <Callout>This queue is bounded to 100 actions. Resolve or reschedule records, and review your tracker for the full list.</Callout>}
+    <PlaybookEditor onChanged={(saved) => { setLoad((n) => n + 1); setBrief(null); setSavedRules(saved); }} />
   </div>;
 }
