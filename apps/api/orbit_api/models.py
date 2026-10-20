@@ -1128,6 +1128,7 @@ class AutoApplySetup(TimestampMixin, Base):
     execution: Mapped[str] = mapped_column(String(12), default="browser", server_default="browser")
     hosted_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     hosted_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    agent_mode: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     stop_when_hired: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
     campaign_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
@@ -1208,6 +1209,7 @@ class ApplicationPacket(TimestampMixin, Base):
     result_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     reason: Mapped[str] = mapped_column(String(300), default="")  # why it's skipped / needs you, in plain words
     unknown_questions: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    agent_decisions: Mapped[list[dict[str, Any]] | None] = mapped_column(JSON(none_as_null=True))
     confirmation_text: Mapped[str | None] = mapped_column(Text)
     final_url: Mapped[str | None] = mapped_column(Text)
     submitted_payload: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))

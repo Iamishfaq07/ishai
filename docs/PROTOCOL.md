@@ -312,6 +312,14 @@ The web app's own routes (a full sign-in only): `GET/PUT /v1/apply/setup`, `GET/
 `POST /v1/apply/plan`, `GET /v1/apply/packets?group=prepared|applied|needs_you|skipped`, `GET /v1/apply/packets/{id}`
 (and its `/screenshot`, `/resume.pdf`), and `POST /v1/apply/packets/{id}/answers|approve|dont-apply|retry|done`,
 `POST /v1/apply/pause|resume`.
+
+Personal hosted agent mode: `GET /v1/apply/agent` returns `{enabled, used_today, daily_allowance, applications}`;
+applications contain owned packet summaries and bounded profile-matching observations. `PUT /v1/apply/agent` accepts
+only `{enabled: boolean}`; enabling requires a verified, authorised hosted setup. Both routes require a full sign-in,
+not an extension token. The private worker's existing `/questions` endpoint uses this permission after exact answers
+fail. AI may select an approved profile source for an eligible text field; it cannot author facts or browser actions.
+See [PERSONAL_FORM_AGENT.md](PERSONAL_FORM_AGENT.md) for limits, worker integration and deployment requirements.
+
 ## Orbit for Business (REST, D82)
 Not part of the live socket. TypeScript DTOs: `packages/types/src/business.ts`; source of truth
 `apps/api/orbit_api/business/`. A company is its own tenant on the same Orbit login. Every company route takes the

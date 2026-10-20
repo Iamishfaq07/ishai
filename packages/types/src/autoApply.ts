@@ -222,6 +222,22 @@ export interface ApplyCaps {
   free_trial: number;
 }
 
+export interface ApplyAgentState {
+  enabled: boolean;
+  used_today: number;
+  daily_allowance: number;
+  applications: Array<{
+    id: string; title: string; company: string; status: ApplyPacketStatus;
+    decisions: Array<{
+      at: string;
+      state: "observing" | "matched" | "needs_you" | "cancelled" | "allowance_used" | "unavailable";
+      questions: string[];
+      matches: Array<{ label: string; source: string }>;
+      provider: string | null;
+    }>;
+  }>;
+}
+
 export interface ApplySetup {
   stop_when_hired?: boolean;
   execution?: "browser" | "hosted";

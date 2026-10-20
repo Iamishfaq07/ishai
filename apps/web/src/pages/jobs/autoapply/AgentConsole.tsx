@@ -9,6 +9,7 @@ import { useJobsAi } from "../JobsAi";
 import { applyApi } from "./applyApi";
 import { ATS_LABEL } from "./model";
 import { PlanSummary } from "./Setup";
+import { FormAgent } from "./FormAgent";
 
 export function AgentConsole({ onChanged }: { onChanged: () => void }) {
   const setup = useAsync(() => applyApi.getApplySetup(), [], "apply-setup");
@@ -61,6 +62,7 @@ export function AgentConsole({ onChanged }: { onChanged: () => void }) {
       {setup.error && <ErrorNote onRetry={setup.reload}>{errorText(setup.error)}</ErrorNote>}
       {status.error && <ErrorNote onRetry={status.reload}>{errorText(status.error)}</ErrorNote>}
     </Card>
+    <FormAgent eligible={!!(ready && s?.execution === "hosted" && s.hosted_enabled)} onChanged={onChanged} />
     <Card className="p-5">
       <h2 className="text-lg font-semibold">Send your shortlist to the agent</h2>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Save jobs in Matches, then choose up to 20 here. Your approved filters, match threshold, freshness rules and application limits still apply. In automatic mode eligible packets can be sent; review mode waits for approval.</p>

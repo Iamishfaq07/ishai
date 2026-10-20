@@ -116,6 +116,21 @@ test("unknown required questions are handed off without clicking submit", async 
   assert.equal(p.calls.filter((c) => c.path.endsWith("/submit")).length, 0);
 });
 
+test("hosted agent field match is filled before a single fenced submission and employer confirmation", async () => {
+  const url = "https://example.wd5.myworkdayjobs.com/en-US/Careers/job/Engineer_R1/apply";
+  const label = "Share a link to your professional network";
+  const html = form({ unknown: true }).replace("Describe your security clearance", label);
+  const item = lease("workday", url);
+  const p = protocol({ answer: { missing: [], answers: [{ question_id: null, label, kind: "text",
+    value: "https://linkedin.com/in/asha", source: "profile", required: true }] } });
+  const result = await runLease(fixtureBrowser(html, new URL(url).origin), item, p.api, resume, { pageScript, pollMs: 20 });
+  assert.equal(result.status, "submitted", JSON.stringify(result));
+  assert.equal(result.submitted.answers.find((a) => a.label === label)?.value, "https://linkedin.com/in/asha");
+  assert.match(result.confirmation_text, /submitted/);
+  assert.equal(p.calls.filter((c) => c.path.endsWith("/questions")).length, 1);
+  assert.equal(p.calls.filter((c) => c.path.endsWith("/submit")).length, 1);
+});
+
 test("a paused attempt cannot click submit", async () => {
   const url = "https://apply.workable.com/example/j/ABC123/apply/", p = protocol({ allowed: false });
   const result = await runLease(fixtureBrowser(form(), new URL(url).origin), lease("workable", url), p.api, resume, { pageScript, pollMs: 20 });

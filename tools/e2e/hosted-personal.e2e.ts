@@ -26,6 +26,7 @@ async function candidate(context: BrowserContext) {
 
 for (const mobile of [false, true]) test(`personal hosted setup, explicit consent and runtime status (${mobile ? "mobile" : "desktop"})`, async ({ page, context }, info) => {
   await page.setViewportSize(mobile ? { width: 390, height: 844 } : { width: 1280, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await candidate(context);
   await page.goto("/jobs/auto-apply");
   await expect(page.getByRole("heading", { name: "Set up Orbit Apply" })).toBeVisible();
@@ -54,6 +55,17 @@ for (const mobile of [false, true]) test(`personal hosted setup, explicit consen
   await page.reload();
   await expect(page.getByTestId("hosted-state")).toContainText("Hosted applying is ready");
   await page.goto("/jobs/journey");
+  await expect(page.getByRole("heading", { name: "Agent mode", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Turn on agent mode", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Turn on agent mode", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Turn off agent mode", exact: true })).toHaveAttribute("aria-pressed", "true");
+  expect((await (await context.request.get(`${API}/v1/apply/agent`)).json()).enabled).toBe(true);
+  await expect(page.getByRole("list", { name: "How agent mode applies" })).toBeVisible();
+  expect((await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: info.outputPath(`personal-agent-${mobile ? "mobile" : "desktop"}.png`), fullPage: true });
+  await page.getByRole("button", { name: "Turn off agent mode", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Turn on agent mode", exact: true })).toHaveAttribute("aria-pressed", "false");
   await page.getByText(/^Your full career journey ·/).click();
   await expect(page.getByRole("heading", { name: "Choose where applications run" })).toBeVisible();
   await expect(page.getByText("Hosted worker online · supported applications can continue with your browser closed.", { exact: true })).toBeVisible();

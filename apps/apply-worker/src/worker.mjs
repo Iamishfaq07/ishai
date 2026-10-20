@@ -64,7 +64,8 @@ export async function runLease(browser, lease, api, resume, { pageScript = scrip
         out.unknown_questions = out.unknown_questions.slice(0, 50).map((q) => ({ ...q, label: q.label.slice(0, 2000) }));
         if (out.reason === "unknown_question" && out.unknown_questions.length) {
           // Workday and other wizards reveal questions only after earlier steps. Ask Orbit's existing truthful
-          // answer bank, including confirmed work authorisation, before bothering the candidate again.
+          // answer bank first. When opted in, the API's bounded profile-matching agent can resolve unfamiliar
+          // contact text fields. It returns approved values, never browser instructions or a submission decision.
           const response = await api(`/${packet.id}/questions`, { token: lease.token, questions: out.unknown_questions });
           if (response.ok) {
             const resolved = await response.json();
