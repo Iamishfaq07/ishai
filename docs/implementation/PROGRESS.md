@@ -12,6 +12,8 @@ PR #439 is merged. Earlier increment snapshots below remain historical.
 
 Local result: full API3771 passed/17 skipped; final continuity privacy suite5 passed; web597/UI595 passed; workspace typecheck/lint pass with the two existing warnings; build/prerender and22 budgets pass. Browser13 scenarios plus final focused disclosure/reuse-focus case pass. Screenshot manifest and migration tests are included. Remote CI/staging/Postgres/provider/hardware evidence remains separate.
 
+Review: implementation `d0f0f971`, [PR #440](https://github.com/Iamishfaq07/ishai/pull/440) OPEN, auto-merge disabled. CI run39478203285 did not start API/frontend checks because of GitHub account payments/spending limits. Exact annotations are in BASELINE.md. Operator billing/staging/Postgres verification remains OWNER ACTION; no remote pass or deployment is claimed.
+
 ## Increment 2 — reviewed invitations and preparation (base `47bececf`)
 
 PR #438 is merged. The first-increment snapshot below is historical; this section supersedes its invitation-intake deferral.
