@@ -15,6 +15,7 @@ export function jobWorkspace(path: string) {
 
 export const JOB_TOOLS: { group: JobWorkspace; to: string; label: string; description: string; keywords: string }[] = [
   { group: "today", to: JOBS_AI_HOME, label: "Career launchpad", description: "Start a resume, explore roles with AI and review your search setup.", keywords: "fresher graduate student first job entry level internship career change learning projects" },
+  { group: "today", to: "/jobs?work=updates", label: "Employer message helper", description: "Review pasted replies, then confirm stage or interview-date changes.", keywords: "email recruiter inbox reply classification messages updates received rejected offer interview" },
   { group: "today", to: "/jobs/actions", label: "Daily actions", description: "Due interviews, reminders and an AI brief from your saved activity.", keywords: "overview action desk calendar follow up" },
   { group: "today", to: "/jobs?work=resume", label: "Guided resume", description: "Add, import or edit your resume one section at a time.", keywords: "fresher student education projects skills builder editing" },
   { group: "today", to: "/jobs?work=plan", label: "Next-step companion", description: "Get an AI plan grounded in your saved career activity.", keywords: "coach automatic guidance resume progress hired journey" },
