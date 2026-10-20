@@ -83,6 +83,7 @@ from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contact_research import router as job_network_router
 from orbit_api.job_portal.contacts import router as job_contacts_router
 from orbit_api.job_portal.interview import router as job_interview_router
+from orbit_api.job_portal.launchpad import router as job_launchpad_router
 from orbit_api.job_portal.mission import router as job_mission_router
 from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.playbooks import router as job_playbook_router
@@ -414,6 +415,7 @@ def create_app() -> FastAPI:
     app.include_router(job_network_router)
     app.include_router(job_actions_router)
     app.include_router(job_weekly_router)
+    app.include_router(job_launchpad_router)
     app.include_router(job_playbook_router)
     app.include_router(business_control_router)
     app.include_router(business_plan_assist_router)

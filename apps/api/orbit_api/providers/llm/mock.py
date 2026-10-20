@@ -452,6 +452,15 @@ class MockLLMProvider(LLMProvider):
             return json.dumps({"subject": "[mock] A question about the role", "message":
                 "[mock] Hello, I'm interested in the role at your company. "
                 "Could you point me to the appropriate hiring contact?"})
+        if request.request_type == "career_launchpad":
+            body = request.messages[-1].content
+            data = json.loads(body[body.find("{"):body.rfind("}") + 1])
+            fact = data["facts"][0]
+            return json.dumps({"roles": [{"title": data.get("target") or "Graduate trainee",
+                "fact_id": fact["id"], "source_quote": fact["text"],
+                "reason": "[mock] This resume evidence is a starting point for exploring the role.",
+                "experiment": "[mock] Build one small example using this skill and document how it works.",
+                "check": "[mock] Explain your decisions and demonstrate the example to a peer."}]})
         if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader"):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])

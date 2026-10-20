@@ -79,6 +79,7 @@ from orbit_api.ratelimit import limit, limit_user
 from orbit_api.region import market_country
 from orbit_api.resumes.routes import MAX_JOB_TEXT, MAX_RESUMES
 from orbit_api.resumes.schema import ResumeData
+from orbit_api.transactions import lock_account
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/jobs", tags=["jobs"])
@@ -550,8 +551,9 @@ class ProfileIn(BaseModel):
 @router.put("/profile", response_model=ProfileOut, dependencies=[Depends(read_limit)])
 async def save_profile(request: Request, body: ProfileIn, user: Annotated[User, Depends(current_user)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> ProfileOut:
+    await lock_account(db, user.id)
     resume = await _owned_resume(db, body.resume_id, user) if body.resume_id else None
-    row = await db.get(JobSearchProfile, user.id)
+    row = await db.get(JobSearchProfile, user.id, populate_existing=True)
     if row is None:
         row = JobSearchProfile(user_id=user.id)
         db.add(row)
