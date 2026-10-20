@@ -30,3 +30,7 @@ Later smart/ICS/mailbox intake, new external transports, adaptive rounds, claim 
 ## Commit/test evidence
 
 The PR's implementation commit carries the exact code/config and these documents; the following documentation-only evidence commit can record its hash and remote status. BASELINE.md contains exact run results; SCREENSHOT_MANIFEST.md links reviewable artifacts. No generated production data or credentials are included.
+
+## Review snapshot
+
+Implementation commit: `f0dc41a83e47fbb959540377d93dcb6222fceea9`; review PR [#438](https://github.com/Iamishfaq07/ishai/pull/438), OPEN and not merged. Fresh GitHub CI run `39448349628` did not execute: API check `118716183300` and frontend check `118716183741` both explicitly report account payment/spending-limit failure. This is not a test-result failure from those runners. Workers Builds was IN_PROGRESS when observed; no passing deployment is claimed. No manual deployment or merge was performed.

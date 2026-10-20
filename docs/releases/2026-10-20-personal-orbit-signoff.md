@@ -23,3 +23,7 @@ Local highlights: API3734 passed/17 skipped; UI595/web597/desktop82/extension41 
 No migration, source data rewrite, new OAuth scope, raw-content analytics, third-party runtime, model-on-mount or employer action. Existing packet/consent state machines remain authoritative. Optional AI remains bounded, explicit and grounded. New nav/read projection is backwards compatible and needs no feature flag; preview boundary is a security fix, not an experiment. Revert UI/projection without migrating data; retain preview isolation.
 
 Primary risk: code-level checks cannot provision or certify isolated managed resources, remote CI, signing, backups, production capacity or live-provider/payment behavior. Operators must not substitute production aliases/secrets/domain for staging. No all-target GO until those gates have real evidence.
+
+## Review snapshot
+
+Implementation commit: `f0dc41a83e47fbb959540377d93dcb6222fceea9`; review PR [#438](https://github.com/Iamishfaq07/ishai/pull/438), OPEN and not merged. Fresh GitHub CI run `39448349628` did not execute: API check `118716183300` and frontend check `118716183741` both explicitly report account payment/spending-limit failure. This is not a test-result failure from those runners. Workers Builds was IN_PROGRESS when observed; no passing deployment is claimed. No manual deployment or merge was performed.
