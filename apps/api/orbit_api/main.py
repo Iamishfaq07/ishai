@@ -29,6 +29,7 @@ from orbit_api.auth.security import COOKIE_DOMAIN_HEADER, cookie_domain, share_c
 from orbit_api.auth.two_factor import router as two_factor_router
 from orbit_api.auto_apply.hosted import router as apply_worker_router
 from orbit_api.auto_apply.journey import router as apply_journey_router
+from orbit_api.auto_apply.review import router as apply_review_router
 from orbit_api.auto_apply.routes import admin_router as apply_admin_router
 from orbit_api.auto_apply.routes import router as apply_router
 from orbit_api.billing.monthly import monthly_plans as configured_monthly
@@ -401,6 +402,7 @@ def create_app() -> FastAPI:
     app.include_router(apply_router)
     app.include_router(apply_worker_router)
     app.include_router(apply_journey_router)
+    app.include_router(apply_review_router)
     app.include_router(apply_admin_router)
     app.include_router(job_mission_router)
     app.include_router(job_plan_router)

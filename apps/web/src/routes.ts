@@ -9,6 +9,7 @@ import { isResumeAiHome } from "./pages/resume/paths";
  */
 const loaders = {
   home: () => import("./pages/Home"),
+  tools: () => import("./pages/tools/ToolExplorer"),
   landing: () => import("./pages/Landing"),
   welcome: () => import("./pages/Welcome"),
   // The warm-up, which can also open a company's or a role's questions (pages/bank/WarmupRoute.tsx).
@@ -67,6 +68,7 @@ function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
 
 export const HomePage = page(loaders.home, (m) => m.HomePage);
 export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
+export const ToolExplorerPage = page(loaders.tools, (m) => m.ToolExplorerPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
 export const WarmupPage = page(loaders.warmup, (m) => m.WarmupRoute);
 export const CompaniesPage = page(loaders.bank, (m) => m.CompaniesPage);
@@ -136,6 +138,7 @@ type PageKey = keyof typeof loaders;
 
 const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/$/, "home"],
+  [/^\/tools\/?$/, "tools"],
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],
   [/^\/(companies|roles)(\/|$)/, "bank"],

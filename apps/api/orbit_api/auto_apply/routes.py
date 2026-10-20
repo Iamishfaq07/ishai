@@ -48,6 +48,7 @@ from orbit_api.models import (
     AuditLog,
     AutoApplySetup,
     BizApplication,
+    JobApplication,
     Resume,
     User,
 )
@@ -371,6 +372,26 @@ class PlanOut(BaseModel):
     skipped: list[SkipOut]
 
 
+class ShortlistIn(BaseModel):
+    listing_ids: list[str] = Field(min_length=1, max_length=20)
+
+
+@router.post("/plan-shortlist", response_model=PlanOut, dependencies=[plan_limit])
+async def plan_shortlist(body: ShortlistIn, user: Annotated[User, Depends(require_verified_email)],
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> PlanOut:
+    selected = set(body.listing_ids)
+    if any(len(i) > 36 for i in selected):
+        raise HTTPException(422, "Choose saved jobs from your tracker.")
+    saved = set(await db.scalars(select(JobApplication.listing_id).where(
+        JobApplication.user_id == user.id, JobApplication.status == "saved",
+        JobApplication.listing_id.in_(selected))))
+    if saved != selected:
+        raise HTTPException(404, "Some jobs are no longer in your saved shortlist. Refresh your tracker.")
+    report = await planner.plan_for_user(db, user, listing_ids=selected)
+    return PlanOut(created=report.created, considered=report.considered, blocked=report.blocked,
+                   skipped=[SkipOut(**vars(s)) for s in report.skipped])
+
+
 @router.post("/plan", response_model=PlanOut, dependencies=[plan_limit])
 async def plan_now(user: Annotated[User, Depends(require_verified_email)],
                    db: Annotated[AsyncSession, Depends(get_db)]) -> PlanOut:
@@ -401,6 +422,7 @@ class PacketSummary(BaseModel):
 
 
 class PacketDetail(PacketSummary):
+    posting_text: str | None = None
     submission_uncertain: bool = False
     employer_status_path: str | None
     resume_title: str
@@ -449,7 +471,7 @@ async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
         submission_uncertain=p.submission_started_at is not None and p.status not in ("submitted", "applied"),
         employer_status_path=status_path,
         **_summary(p, _has_proof(p, proof is not None)), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
-        cover_letter=p.cover_letter, fields=p.fields or {}, answers=p.answers or [],
+        cover_letter=p.cover_letter, posting_text=p.posting_text, fields=p.fields or {}, answers=p.answers or [],
         missing_questions=p.missing or [], unknown_questions=p.unknown_questions or [], form_source=p.form_source,
         result_status=p.result_status, result_reason=p.result_reason, confirmation_text=p.confirmation_text,
         final_url=p.final_url, submitted=p.submitted_payload,

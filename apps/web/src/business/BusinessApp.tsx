@@ -2,7 +2,7 @@
 // header and navigation, the same Orbit sign-in). Lazy-loaded as its own chunks: nothing here is in a candidate's
 // first download.
 import { Suspense, createContext, lazy, useContext, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
-import { Link, NavLink, Navigate, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { BizCompany, BizCompanySize, BizMe, BizNotification } from "@orbit/types";
 import {
   ArrowRight,
@@ -82,7 +82,7 @@ function Header({ company }: { company?: BizCompany | undefined }) {
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
         <Link to={APP_HOME} className={cx("flex shrink-0 items-center gap-2 rounded font-semibold", focusRing)}>
           <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-sm text-white">O</span>
-          <span>
+          <span className="sr-only sm:not-sr-only">
             Orbit <span className="font-normal text-zinc-500 dark:text-zinc-400">for Business</span>
           </span>
         </Link>
@@ -99,9 +99,8 @@ function Header({ company }: { company?: BizCompany | undefined }) {
             <Bell className="h-4 w-4" aria-hidden />
             {unread > 0 && <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-600" />}
           </Link>
-          <Link to="/" className={cx("hidden rounded text-xs text-zinc-600 hover:underline dark:text-zinc-400 sm:inline", focusRing)}>
-            Your own Orbit
-          </Link>
+          <WorkspaceSwitch />
+          <Link to="/tools?audience=business" className={cx("rounded text-xs hover:underline", focusRing)}>Tools</Link>
           <span className="hidden max-w-[12rem] truncate text-xs text-zinc-500 dark:text-zinc-400 md:inline" title={user?.email}>
             {user?.email}
           </span>
@@ -267,6 +266,9 @@ function CompanyLayout() {
 // ---- your companies -----------------------------------------------------------------------------------------------
 
 function CompaniesHome() {
+  const [search] = useSearchParams();
+  const wanted = search.get("tool") ?? "";
+  const tool = ["jobs", "jobs/new", "hiring-desk", "control-room", "automations", "team"].includes(wanted) ? wanted : "";
   const [me, setMe] = useState<BizMe | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [n, setN] = useState(0);
@@ -278,6 +280,7 @@ function CompaniesHome() {
       <Header />
       <Page>
         <PageTitle title="Your companies" subtitle="Hire with Orbit: a careers page, one-click applies and a pipeline your team shares." actions={<Link to={`${APP_HOME}/new`} className={buttonClass("primary")}>Add a company</Link>} />
+        {tool && <p className="mb-4 text-sm text-indigo-700 dark:text-indigo-300">Choose a company to open {tool.replaceAll("-", " ").replaceAll("/", " · ")}. Your company permissions apply.</p>}
         {error ? (
           <LoadError error={error} onRetry={() => setN((x) => x + 1)} />
         ) : !me ? (
@@ -309,7 +312,7 @@ function CompaniesHome() {
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {me.companies.map((c) => (
                   <li key={c.id}>
-                    <Link to={companyPath(c.id)} className={cx("flex items-center gap-3 rounded-2xl border border-zinc-200 p-4 hover:border-indigo-400 dark:border-white/10", focusRing)}>
+                    <Link to={companyPath(c.id, tool)} className={cx("flex items-center gap-3 rounded-2xl border border-zinc-200 p-4 hover:border-indigo-400 dark:border-white/10", focusRing)}>
                       {c.logo_url ? (
                         <img src={c.logo_url} alt="" width={40} height={40} className="h-10 w-10 rounded-lg border border-zinc-200 object-contain dark:border-white/10" />
                       ) : (
@@ -500,3 +503,4 @@ export function BusinessApp() {
   );
 }
 
+import { WorkspaceSwitch } from "../components/WorkspaceSwitch";

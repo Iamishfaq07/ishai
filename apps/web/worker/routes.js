@@ -9,7 +9,7 @@
 // Keep APP_ROUTES in step with the router (apps/web/src/App.tsx); seo.test.js checks the two still agree.
 
 /** The public pages the app draws (the Worker's PAGE_META pages, worker/meta.js). */
-export const PUBLIC_APP_PAGES = ["/", "/resume-ai", "/jobs", "/warmup", "/contact", "/technical", "/pricing", "/interview-copilot", "/mock-interview", "/linkedin-ai", "/business"];
+export const PUBLIC_APP_PAGES = ["/", "/resume-ai", "/jobs", "/warmup", "/contact", "/technical", "/pricing", "/interview-copilot", "/mock-interview", "/linkedin-ai", "/business", "/tools"];
 
 /** The policies: plain HTML files in public/, served at their address without ".html". */
 export const POLICY_PAGES = ["/privacy", "/terms", "/cookies", "/refund"];

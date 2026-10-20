@@ -433,10 +433,10 @@ class MockLLMProvider(LLMProvider):
     def _response_for(self, request: LLMRequest) -> str:
         if self._script:
             return self._script.pop(0)
-        if request.request_type in ("career_weekly_coach", "business_ops_brief"):
+        if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader"):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
-            return json.dumps({"tips": [{"fact_id": f["id"], "source_quote": f["text"],
+            return json.dumps({"tips": [{"fact_id": f["id"], "source_quote": f["text"][:300],
                 "suggestion": "[mock] Review this saved signal and choose one manageable improvement.",
                 "success_check": "[mock] Revisit the same metric after updating the original records."}
                 for f in data["facts"][:3]]})

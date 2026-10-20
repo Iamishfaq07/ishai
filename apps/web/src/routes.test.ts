@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { pageFor, publicPageFor } from "./routes";
 
 describe("pageFor (what the nav warms before a click)", () => {
+  it("warms the public tool explorer without a workspace", () => {
+    expect(pageFor("/tools")).toBe("tools");
+  });
   it("warms Resume AI's home and its editor", () => {
     expect(pageFor("/resume-ai")).toBe("resumes");
     expect(pageFor("/resume-ai/3f2a9c")).toBe("resumeEditor");

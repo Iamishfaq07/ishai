@@ -9,6 +9,10 @@
 
 /** @type {Record<string, { title: string; description: string }>} */
 export const PAGE_META = {
+  "/tools": {
+    title: "Explore Orbit tools: personal careers and business hiring",
+    description: "Find AI resume tools, hosted applications, interview practice and hiring automations. Explore Personal and Business workflows step by step.",
+  },
   "/": {
     title: "Orbit AI: practise interviews, fix your resume, find jobs",
     description:

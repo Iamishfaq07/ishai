@@ -119,6 +119,10 @@ export function HomePage() {
         </p>
       </header>
 
+      <Link to="/tools" className="flex items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-sm font-medium hover:bg-indigo-100 dark:border-indigo-500/20 dark:bg-indigo-500/5 dark:hover:bg-indigo-500/10">
+        <span>Find your next tool · Explore AI, applications, interviews and hiring</span><span aria-hidden="true">→</span>
+      </Link>
+
       {/* A change to how the account is signed in to, until "It was me" here (auth/alerts.py). */}
       <Suspense fallback={null}>
         <SecurityNotice />

@@ -164,6 +164,8 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
     { id: "do-contact", title: "Send us a message", hint: "Contact the Orbit team", group: "Actions", to: "/contact", keywords: ["contact us", "support", "complaint", "feedback", "report a job", "refund", "problem"] },
     { id: "do-theme", title: "Switch light or dark theme", group: "Actions", run: "theme", keywords: ["dark mode", "light mode", "appearance", "colour", "color"] },
     { id: "go-home", title: "Home", group: "Go to", to: "/", keywords: ["next step", "dashboard", "start", "checklist"] },
+    { id: "go-tools", title: "Explore all tools", group: "Go to", to: "/tools", keywords: ["features", "directory", "automation", "business", "personal"] },
+    { id: "go-agent", title: "Application agent", group: "Go to", to: "/jobs/journey", keywords: ["automatic", "apply", "hosted", "Workday", "shortlist", "no extension"] },
     ...(mockEnabled
       ? [{ id: "go-practice", title: "Practice", group: "Go to" as const, product: "practice" as const, to: "/mock", keywords: ["mock", "progress", "prep", "interview"] }]
       : []),

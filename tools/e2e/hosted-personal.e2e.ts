@@ -54,6 +54,7 @@ for (const mobile of [false, true]) test(`personal hosted setup, explicit consen
   await page.reload();
   await expect(page.getByTestId("hosted-state")).toContainText("Hosted applying is ready");
   await page.goto("/jobs/journey");
+  await page.getByText(/^Your full career journey ·/).click();
   await expect(page.getByRole("heading", { name: "Choose where applications run" })).toBeVisible();
   await expect(page.getByText("Hosted worker online · supported applications can continue with your browser closed.", { exact: true })).toBeVisible();
 });

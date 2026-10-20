@@ -65,7 +65,7 @@ const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
   const offer = isIndia(country) ? OFFER : OFFER_WORLD;
   return [
-    { label: null, items: [HOME] },
+    { label: null, items: [HOME, { id: "tools", to: "/tools", label: "Explore tools", icon: House, current: under("/tools") }] },
     { label: "Prepare", items: [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING] },
     { label: "Apply", items: [JOBS, LINKEDIN] },
     { label: "Interview & offer", items: [COPILOT, offer] },

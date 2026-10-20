@@ -348,6 +348,8 @@ export interface ApplyResumeChange {
 }
 
 export interface ApplyPacketDetail extends ApplyPacketSummary {
+  /** Exact cached description captured when these materials were prepared; null for legacy packets. */
+  posting_text?: string | null;
   submission_uncertain?: boolean;
   employer_status_path?: string | null;
   resume_title: string;
