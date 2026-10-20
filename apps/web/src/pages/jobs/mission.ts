@@ -1,5 +1,6 @@
 import type { JobMission, MissionStage } from "@orbit/types";
 import { safeLocal } from "@orbit/ui";
+export { missionPath } from "./paths";
 
 export const MISSION_TOOLS = [
   { id: "fit", label: "Evidence & fit", group: "job" },
@@ -27,10 +28,6 @@ export const MISSION_STAGES: Array<{ id: MissionStage; label: string; done: stri
   { id: "interview", label: "Interview", done: "Interviewing, or a live round with them" },
   { id: "negotiate", label: "Negotiate", done: "An offer" },
 ];
-
-export function missionPath(entryId: string): string {
-  return `/jobs/mission/${encodeURIComponent(entryId)}`;
-}
 
 /** "3 of 6": how many stages have a record (a count of facts, never a percentage of readiness). */
 export function stagesDone(m: Pick<JobMission, "stages">): number {

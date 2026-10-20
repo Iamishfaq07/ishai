@@ -8,7 +8,7 @@ import { practiceHref } from "../../../lib/onboarding";
 import { useAsync } from "../../../lib/useAsync";
 import { Sheet } from "../Sheet";
 import { linkButton, textLink } from "../links";
-import { JOBS_AUTO_APPLY, JOBS_TRACKER } from "../paths";
+import { JOBS_AUTO_APPLY, missionPath, outreachPath } from "../paths";
 import { applyApi } from "./applyApi";
 import { ExtensionNeeded } from "./ExtensionNeeded";
 import { ATS_LABEL, GROUPS, SOURCE_LABEL, STATUS_LABEL, WHY_NOT, actionsFor, answerText } from "./model";
@@ -282,13 +282,22 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
           {p.tracker_id && (
             <>
               {" · "}
-              <Link to={JOBS_TRACKER} className={textLink}>
-                On your tracker
+              <Link to={missionPath(p.tracker_id)} className={textLink}>
+                Open this job workspace
               </Link>
             </>
           )}
         </p>
       </div>
+
+      <nav aria-label="Tools for this application" className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
+        <p className="break-words text-xs text-zinc-600 dark:text-zinc-400">For {p.title} at {p.company}</p>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          {p.tracker_id && <Link to={`${missionPath(p.tracker_id)}?tab=plan`} className={cx(textLink, focusRing)}>Prepare for this role</Link>}
+          <Link to={`${outreachPath({ job: p.listing_id })}&network=1`} className={cx(textLink, focusRing)}>Find people at this company</Link>
+          <Link to={outreachPath({ job: p.listing_id })} className={cx(textLink, focusRing)}>Write a message for this job</Link>
+        </div>
+      </nav>
 
       <div aria-live="polite">{error && <ErrorNote>{error}</ErrorNote>}</div>
 

@@ -22,6 +22,11 @@ export function jobPath(id: string): string {
   return `${JOBS_AI_HOME}/listing/${encodeURIComponent(id)}`;
 }
 
+/** The workspace for a tracked job; does not import the mission UI or its state helpers. */
+export function missionPath(entryId: string): string {
+  return `${JOBS_AI_HOME}/mission/${encodeURIComponent(entryId)}`;
+}
+
 /** The matches for one resume: Jobs AI matches its feed to that resume first (Resume AI's "Find jobs" link). */
 export function jobsForResume(resumeId: string): string {
   return `${JOBS_MATCHES}?resume=${encodeURIComponent(resumeId)}`;
