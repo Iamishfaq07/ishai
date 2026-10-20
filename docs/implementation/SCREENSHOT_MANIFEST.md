@@ -33,3 +33,13 @@ Captured by `tools/e2e/calendar-intake.e2e.ts`, final local run: `16 passed (2.2
 - [Preparation guidance, 320 dark](screenshots/v6-preparation-narrow-dark.png): 247563 bytes, SHA256 `0b4ce7f335932005c932b07fdef15c320dad548e633f9307eeacbcde11dfbe30`.
 
 Desktop invitation, 360 preparation and 320 dark invitation were inspected visually: readable groups, wrapped labels, visible review fields and the single job context. Full-page fixed-nav capture caveat above applies. Opening optional AI expands the page; the checklist stays available below it. Images are review evidence, not automatically accepted pixel baselines.
+
+## Increment 3 — current day, reviewed reuse and rehearsal
+
+Captured by `tools/e2e/prep-continuity.e2e.ts` on2026-10-21 with synthetic owned jobs, mock AI and disposable SQLite. The final13-scenario run includes the calendar and existing guided-opportunity suites; new preparation flows cover1440 light,360 light,320 dark, OS reduced motion and explicit Motion Off. Rehearsal is also checked at390. Axe, no horizontal overflow, explicit-only AI, unchanged date on rehearsal entry, reviewed reuse and delayed completion/job-switch guards pass. Future days are hidden by default; showing/hiding them is independently exercised without AI or writes.
+
+- [Review matching earlier work, desktop](screenshots/v6-continuity-prep-reuse-desktop.png): 205871 bytes, SHA256 `5e93358289c14c7a63de9143410b95c5efd8982088b619302109cc8c18a13a24`.
+- [Review matching earlier work,320 dark](screenshots/v6-continuity-prep-reuse-narrow-dark.png): 180810 bytes, SHA256 `f87710f239fb4b68e50bfb890e1f942fbc151ff5e85790d30848d60f53fa735b`.
+- [Date-free rehearsal and grounded guidance,390](screenshots/v6-continuity-prep-rehearsal-mobile.png): 246777 bytes, SHA256 `b53c828664504e483539f85868d022a4cd84bc86b0be13d3e1aef0362ccc92f7`.
+
+Desktop/320 dark reuse captures were inspected visually: one next task, clear review checkbox, current checklist and a single control for upcoming days. The prior increment's preparation captures above show the earlier expanded daily list as context; fixtures differ, so this is not a controlled performance/scroll-distance benchmark. Full-page fixed-header capture caveat above still applies. No new pixel baseline is automatically approved, and no manual screenreader/hardware certification is claimed.

@@ -1,5 +1,12 @@
 # Implementation log
 
+## Personal Orbit V6: preparation continuity and a clearer next task (2026-10-21)
+
+- Preparation now starts with one suggested unchecked task and the current day. Upcoming days and history open on request, reducing long-page scrolling. A clearly labeled rehearsal path works before an interview is booked.
+- Completion details stay with the job after rescheduling. Review matching earlier research/requirement work before reusing it; fresh rounds keep their own warm-up, logistics and practice checks. Legacy records remain labeled history. Changed task content and same-day time changes cannot inherit unrelated checkmarks.
+- The existing AI coach now follows the checklist's browser offset and understands rehearsal/completion counts. Explicit requests, grounding, invalidation and shared quota remain in place. No autonomous sends/submissions/calendar changes.
+- Additive nullable completion metadata migration `d51e7c9a240b`; deploy backend before the web client. See [scope, privacy, rollback and remaining work](implementation/V6_PREP_CONTINUITY.md).
+
 ## Personal Orbit V6: reviewed invitations and preparation guidance (2026-10-20)
 
 - Import a supported `.ics` invitation into a chosen saved job, review original/local times and explicitly confirm date/stage. Continue directly to existing preparation and saved-date actions. Multiple events require selection; duplicate choices, stale saves, unsupported time zones and recurrence are handled explicitly.

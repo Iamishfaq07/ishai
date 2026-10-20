@@ -1,5 +1,7 @@
 # Launch sign-off — historical snapshot
 
+Latest Personal Orbit preparation review scope: [V6 increment3](implementation/V6_PREP_CONTINUITY.md), with exact tests and remote blockers in [BASELINE.md](implementation/BASELINE.md). This adds no deployment, production audit or whole-product launch approval.
+
 **Superseded for current deployment facts by [20 October verification](releases/2026-10-20-verification.md) and [Personal Orbit increment sign-off](releases/2026-10-20-personal-orbit-signoff.md).** The report below records its original date/environment; its hosting, deployment and proxy-secret statements must not be treated as today's status.
 
 # Launch sign-off — 16 October 2026

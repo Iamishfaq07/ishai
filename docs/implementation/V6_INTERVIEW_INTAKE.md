@@ -1,5 +1,7 @@
 # V6 increment 2 — invitation to interview preparation
 
+Historical scope: PR #439 is merged. Increment3 extends this flow with completion history/reuse, opt-in rehearsal, progressive daily disclosure and coach/checklist browser-offset alignment; see `V6_PREP_CONTINUITY.md`. Its changes supersede the UTC-only coach limitation below.
+
 Base: `47bececf` (PR #438 merged), 2026-10-20. Personal Orbit only. This is a bounded F04/F08 intake and F05 guidance integration, not completion of those entire specifications.
 
 ## Candidate journey

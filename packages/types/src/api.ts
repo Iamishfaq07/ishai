@@ -2793,16 +2793,29 @@ export interface PlanItem {
   title: string;
   detail: string;
   done: boolean;
+  prior_completion?: PrepCompletion | null;
+}
+
+export interface PrepCompletion {
+  id: string;
+  title: string;
+  kind: string;
+  completed_at: string;
+  scheduled_on: string | null;
+  interview_at: string | null;
+  legacy: boolean;
+  reused: boolean;
 }
 
 export interface PlanDay {
   date: string;
   /** 0 = the interview day. */
-  days_before: number;
+  days_before: number | null;
   items: PlanItem[];
 }
 
 export interface PrepPlan {
+  mode?: "scheduled" | "rehearsal" | "closed";
   interview_at: string | null;
   days_left: number | null;
   /** Later than today when the interview is more than two weeks away. */
@@ -2810,6 +2823,8 @@ export interface PrepPlan {
   days: PlanDay[];
   done: number;
   total: number;
+  completed?: PrepCompletion[];
+  completed_total?: number;
 }
 
 /** POST /v1/offers/{id}/scenario: the offer next to a what-if version (nothing saved). */

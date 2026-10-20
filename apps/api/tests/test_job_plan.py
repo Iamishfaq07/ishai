@@ -41,12 +41,16 @@ def _entry(client: TestClient, h: dict[str, str], days: int | None, status: str 
     return str(r.json()["id"])
 
 
-def test_no_date_no_plan(client: TestClient) -> None:
+def test_no_date_or_saved_followup_gets_rehearsal_without_a_fake_interview(client: TestClient) -> None:
     h = _register(client)
-    p = client.get(f"/v1/jobs/tracker/{_entry(client, h, None)}/plan", headers=h).json()
-    assert p["days"] == [] and p["interview_at"] is None
+    entry = _entry(client, h, None)
+    assert client.get(f"/v1/jobs/tracker/{entry}/plan", headers=h).json()["days"] == []
+    p = client.get(f"/v1/jobs/tracker/{entry}/plan?rehearsal=true", headers=h).json()
+    assert len(p["days"]) == 3 and p["interview_at"] is None and p["mode"] == "rehearsal"
+    assert all(day["days_before"] is None for day in p["days"])
     saved = _entry(client, h, 3, status="saved")  # a saved job's date is a follow-up, not an interview
-    assert client.get(f"/v1/jobs/tracker/{saved}/plan", headers=h).json()["days"] == []
+    rehearsal = client.get(f"/v1/jobs/tracker/{saved}/plan?rehearsal=true", headers=h).json()
+    assert rehearsal["mode"] == "rehearsal" and rehearsal["interview_at"] is None
 
 
 def test_ticking_off_and_a_moved_date(client: TestClient) -> None:
@@ -73,6 +77,7 @@ def test_ticking_off_and_a_moved_date(client: TestClient) -> None:
     plan = client.get(f"/v1/jobs/tracker/{eid}/plan", headers=h).json()
     assert plan["days_left"] in (10, 11) and plan["done"] == 0
     assert warmup["key"] not in {i["key"] for d in plan["days"] for i in d["items"]}
+    assert plan["completed_total"] == 1 and plan["completed"][0]["title"] == warmup["title"]
 
 
 def test_plans_are_private_and_exported(client: TestClient) -> None:

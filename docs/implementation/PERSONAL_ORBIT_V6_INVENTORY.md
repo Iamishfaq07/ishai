@@ -1,5 +1,7 @@
 # Personal Orbit V6 inventory
 
+Increment-3 delta against `822c7d49`: F05 adds owned completion snapshots/history and reviewed matching-work reuse in `job_portal/plan.py`, the nullable `JobPlanCheck.task_data` column (migration `d51e7c9a240b`), opt-in rehearsal and progressive disclosure in `PrepPlanPanel`. `opportunity_coach.source` now uses the checklist's browser offset and rehearsal/completion context. Same scheduling/coach/worker systems, with no new dependency or tool dashboard. Full F05 acceptance remains PARTIAL; see `V6_PREP_CONTINUITY.md`.
+
 Increment-2 delta against `47bececf`: F04/F08 now include `job_portal/calendar_intake.py:events_from/calendar_preview` and `pages/jobs/CalendarIntake.tsx`, integrated into the existing message review hub and guided interview step. F05 reuses `plan_for` in `opportunity_coach.source` and the existing coach in `PrepPlanPanel`. No parallel dashboard, coach engine, database, worker or calendar sync. Classification remains PARTIAL for full F04/F05/F08 acceptance; the initial inventory below is retained as base evidence. See `V6_INTERVIEW_INTAKE.md`.
 
 Inspected 2026-10-20 on Windows; source base `9c39e601` (PR #437 merged). The supplied ZIP is not in this workspace; current GitHub main is the code source. No archived counts are adopted.

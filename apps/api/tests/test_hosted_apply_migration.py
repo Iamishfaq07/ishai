@@ -15,6 +15,7 @@ from alembic.config import Config
 engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''))
 with engine.begin() as c:
     c.execute(text('CREATE TABLE auto_apply_setups (user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
+    c.execute(text('CREATE TABLE job_plan_checks (id VARCHAR(36) PRIMARY KEY)'))
     c.execute(text('CREATE TABLE application_packets '
                    '(id VARCHAR(36) PRIMARY KEY, user_id VARCHAR(36), status VARCHAR(16))'))
     c.execute(text("INSERT INTO auto_apply_setups (user_id) VALUES ('existing-candidate')"))

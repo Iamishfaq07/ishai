@@ -67,6 +67,7 @@ jobs:
           tests/test_application_agent.py
           tests/test_career_playbooks.py tests/test_offer_automations.py tests/test_job_mission.py
           tests/test_calendar_intake.py tests/test_message_updates.py tests/test_opportunity_coach.py tests/test_job_plan.py
+          tests/test_prep_continuity.py
 
   frontend:
     runs-on: ubuntu-latest

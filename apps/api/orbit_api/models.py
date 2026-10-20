@@ -950,8 +950,7 @@ class UserSession(TimestampMixin, Base):
 
 
 class JobPlanCheck(TimestampMixin, Base):
-    """One item of a tracked job's interview prep plan (job_portal/plan.py) ticked off by the user. The key names the
-    day and the task, so moving the interview date makes a new plan instead of carrying old ticks to new days."""
+    """Candidate-recorded preparation. Snapshot new completions so reschedules retain reviewable work history."""
 
     __tablename__ = "job_plan_checks"
     __table_args__ = (UniqueConstraint("application_id", "item_key", name="uq_job_plan_checks_item"),)
@@ -959,6 +958,7 @@ class JobPlanCheck(TimestampMixin, Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"), index=True)
     item_key: Mapped[str] = mapped_column(String(64))
+    task_data: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
 
 class JobFitCheck(TimestampMixin, Base):

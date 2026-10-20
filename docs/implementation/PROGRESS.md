@@ -1,4 +1,16 @@
-# V6 progress — first review increment
+# V6 progress
+
+## Increment 3 — preparation continuity (base `822c7d49`)
+
+PR #439 is merged. Earlier increment snapshots below remain historical.
+
+**DONE in this slice:** completion snapshots on existing checks; history after rescheduling; explicitly reviewed reuse of matching research/gap work; content-and-schedule-bound keys; opt-in date-free rehearsal for new clients; one suggested task with current day first and future days hidden on request; same browser-offset grounding in existing AI coach; export/delete coverage; nullable additive migration and preserved legacy checkmarks.
+
+**PARTIAL:** F05 now preserves recorded work and supports rehearsal/date changes. It does not automatically equate previous work with a new round. Legacy checks have unknown original task text. New reminders, offline sync, explicit round entities and per-item snooze/rejection remain deferred. Readiness/probability scores, hidden interview AI and autonomous submissions are not introduced.
+
+**Verification/sign-off:** exact results and remote check snapshot belong in the increment3 addendum in BASELINE.md. `V6_PREP_CONTINUITY.md` describes backend-first rollout, rollback limits and privacy. No merge/manual deployment or whole-V6 completion claim.
+
+Local result: full API3771 passed/17 skipped; final continuity privacy suite5 passed; web597/UI595 passed; workspace typecheck/lint pass with the two existing warnings; build/prerender and22 budgets pass. Browser13 scenarios plus final focused disclosure/reuse-focus case pass. Screenshot manifest and migration tests are included. Remote CI/staging/Postgres/provider/hardware evidence remains separate.
 
 ## Increment 2 — reviewed invitations and preparation (base `47bececf`)
 
