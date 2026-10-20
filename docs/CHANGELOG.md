@@ -3515,3 +3515,12 @@ cost with cache hits (1,408 of 1,602 input tokens) and charged each screenshot o
 **Not verified here:** the migration against Postgres (no local Postgres; runs on the next Render deploy, where a
 failure rolls back and the old deploy keeps serving). The loopback fix changes code that only runs on real
 per-app capture: it needs a desktop release to reach users.
+
+## Personal Orbit V6 continuity — 20 October 2026 (review branch)
+
+- Today is the signed-in operational home, with one saved priority and an optional grounded AI plan.
+- Five career tasks plus contextual Prepare/My Career collect existing tools and preserve old routes.
+- Guided Application opens this job's exact owned kit and explains uncertain/manual/submission state without changing it.
+- Preview REST/live/proxy and employer rendering cannot use the canonical production API; independent staging remains operator setup.
+- Correct current release documentation; repair existing motion-contract and incomplete migration-fixture baseline failures.
+- No migration, new transport, automatic submission, provider call on mount or third-party runtime dependency.

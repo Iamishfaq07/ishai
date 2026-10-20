@@ -35,15 +35,15 @@ export function JobsAiSection() {
   const setData = profile.setData;
   const setProfile = useCallback((p: JobProfile) => setData(() => p), [setData]);
 
-  // "Find jobs that match this resume" (Resume) asks for ?resume=<id>: the feed is matched to that resume, read by
-  // the AI the way a first profile is. Otherwise, the first visit with a resume lets the AI read it (free, cached per
-  // resume; past today's reads it's worked out from the resume as written).
+  // An explicit "Find jobs that match this resume" link asks for ?resume=<id> and permits a profile read.
+  // Merely visiting Discover, the tracker or another job tool must not consume a model allowance.
+  // Their GET profile already has a deterministic fallback; the Profile page offers an explicit AI action.
   // (On Outreach, ?resume= is the resume it writes from: the feed stays matched to the profile's.)
   const wanted = isOutreach(pathname) ? null : params.get("resume");
   const ran = useRef(false);
   const p = profile.data;
   useEffect(() => {
-    if (!p || ran.current || (params.get("start") === "1" || (!wanted && /^\/jobs\/?$/.test(pathname)))) return;
+    if (!p || ran.current || !wanted || params.get("start") === "1") return;
     // Not checked against `p.resumes`: that may be the list from before the resume was made. The server checks it.
     const switchTo = wanted && wanted !== p.resume?.id ? wanted : null;
     if (wanted) {

@@ -1,9 +1,14 @@
 """Job Mission Room: stages from records only, the next step, linking a resume and an offer, freezing the resume
 that was sent, and that none of it reaches another account."""
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.job_portal.mission import Facts, next_step, stages_for
+from orbit_api.models import ApplicationPacket, JobApplication
+from tests.business_helpers import db_call
 from tests.test_api import _register
 from tests.test_offers import OFFER
 from tests.test_resumes import strong_resume
@@ -181,3 +186,63 @@ def test_today_and_tomorrow_are_the_persons_own_days(client: TestClient) -> None
     assert "It's today" in client.portal.call(why, 330)  # type: ignore[union-attr]
     assert client.get(f"/v1/jobs/tracker/{eid}/mission?tz_offset=330", headers=h).status_code == 200
     assert client.get(f"/v1/jobs/tracker/{eid}/mission?tz_offset=9999", headers=h).status_code == 422
+
+
+def test_application_kit_is_an_owned_exact_listing_projection(client: TestClient) -> None:
+    a, b = _register(client), _register(client)
+    eid, other = _entry(client, a), _entry(client, b)
+
+    async def seed(db: AsyncSession) -> str:
+        entry = await db.get(JobApplication, eid)
+        foreign = await db.get(JobApplication, other)
+        assert entry and foreign
+        foreign.listing_id = entry.listing_id
+        for user_id in (entry.user_id, foreign.user_id):
+            db.add(ApplicationPacket(user_id=user_id, listing_id=entry.listing_id,
+                status="review", ats="lever", company="Example", company_key="example", title="Engineer",
+                url="https://example.test/job", apply_url="https://example.test/apply",
+                expires_at=datetime.now(UTC) + timedelta(days=1), resume_data={"private": "never project me"},
+                answers=[{"private": "never project answers"}]))
+        await db.flush()
+        return entry.listing_id
+    db_call(client, seed)
+    base = f"/v1/jobs/tracker/{eid}/mission"
+    response = client.get(base, headers=a)
+    assert response.status_code == 200, response.text
+    mine = response.json()["application"]
+    theirs = client.get(f"/v1/jobs/tracker/{other}/mission", headers=b).json()["application"]
+    assert mine["id"] != theirs["id"]
+    assert set(mine) == {"id", "status", "submission_uncertain", "updated_at"}
+    assert mine["status"] == "review" and mine["submission_uncertain"] is False
+    assert response.json()["stages"]["apply"] is False
+    assert client.get(base, headers=b).status_code == 404
+
+    async def ambiguous(db: AsyncSession) -> None:
+        packet = await db.get(ApplicationPacket, mine["id"])
+        assert packet
+        packet.status = "failed"
+        packet.submission_started_at = datetime.now(UTC)
+    db_call(client, ambiguous)
+    uncertain = client.get(base, headers=a).json()["application"]
+    assert uncertain["status"] == "failed" and uncertain["submission_uncertain"] is True
+
+    async def confirmed(db: AsyncSession) -> None:
+        packet = await db.get(ApplicationPacket, mine["id"])
+        assert packet
+        packet.status = "submitted"
+    db_call(client, confirmed)
+    assert client.get(base, headers=a).json()["application"]["submission_uncertain"] is False
+
+
+def test_application_projection_does_not_guess_a_different_job_link(client: TestClient) -> None:
+    h = _register(client)
+    eid, conflicting = _entry(client, h), _entry(client, h, "Different employer")
+    async def seed(db: AsyncSession) -> None:
+        entry = await db.get(JobApplication, eid)
+        assert entry
+        db.add(ApplicationPacket(user_id=entry.user_id, listing_id=entry.listing_id, application_id=conflicting,
+            status="review", ats="lever", company="Example", company_key="example", title="Engineer",
+            url="https://example.test/job", apply_url="https://example.test/apply",
+            expires_at=datetime.now(UTC) + timedelta(days=1)))
+    db_call(client, seed)
+    assert client.get(f"/v1/jobs/tracker/{eid}/mission", headers=h).json()["application"] is None

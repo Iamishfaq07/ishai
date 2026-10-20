@@ -2,6 +2,10 @@ import { describe, expect, it } from "vitest";
 import { pageFor, publicPageFor } from "./routes";
 
 describe("pageFor (what the nav warms before a click)", () => {
+  it("warms both contextual personal task spaces", () => {
+    expect(pageFor("/career")).toBe("careerSpaces"); expect(pageFor("/prepare")).toBe("careerSpaces");
+    expect(publicPageFor("/career")).toBeNull(); expect(publicPageFor("/prepare")).toBeNull();
+  });
   it("warms the public tool explorer without a workspace", () => {
     expect(pageFor("/tools")).toBe("tools");
   });

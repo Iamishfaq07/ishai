@@ -2770,6 +2770,8 @@ export interface MissionNextStep {
 
 export interface JobMission {
   entry_id: string;
+  /** Owned packet for the exact listing. Its presence does not establish submission. Optional for older APIs. */
+  application?: { id: string; status: import("./autoApply").ApplyPacketStatus; submission_uncertain: boolean; updated_at: string } | null;
   stages: Record<MissionStage, boolean>;
   fit: MissionFit | null;
   resume: MissionResume | null;

@@ -5,6 +5,8 @@ import { ArrowRight, Button, ErrorNote, FileText, Search, Send, Sparkles, Bookma
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import type { MissionTool } from "./mission";
+import { applicationPath } from "./paths";
+import { packetGuidance } from "./autoapply/inbox";
 import { OPPORTUNITY_STEPS, opportunityStep } from "./opportunity";
 
 const Message = lazy(() => import("./MessageUpdate").then((m) => ({ default: m.MessageUpdate })));
@@ -51,7 +53,13 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
     </details>
     {index >= 2 && <details onToggle={(event) => setMessages(event.currentTarget.open)} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 font-semibold", focusRing)}>Record an employer reply</summary><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Turn a pasted message into a reviewed stage or interview-date update.</p>{messages && <Suspense fallback={<p role="status">Opening message review…</p>}><Message key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense>}</details>}
     {tab === "resume" && mission.resume && <Link className={link} to={`/resume-ai/${mission.resume.id}?guide=1&job=${entry.id}`}>Edit this resume and return to this job <ArrowRight aria-hidden className="ml-2 h-4 w-4" /></Link>}
-    {tab === "timeline" && <div className="flex flex-wrap gap-x-4"><Link className={link} to="/jobs/applications">Review prepared applications</Link><Link className={link} to="/jobs/journey">Set up application automation</Link></div>}
+    {tab === "timeline" && <section aria-label="Application kit for this job" className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
+      <h3 className="font-semibold">{mission.application ? packetGuidance(mission.application).label : "Your application materials"}</h3>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{mission.application ? packetGuidance(mission.application).detail : "No prepared application is linked to this job. You can apply on the employer site or prepare eligible materials through your application agent."}</p>
+      {mission.application && <Link className={link} to={applicationPath(mission.application.id)}>Open this job’s application kit</Link>}
+      <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Your tracker stage and the application’s delivery status are separate records. Prepared materials do not mean an application was sent.</p>
+      <details className="mt-2"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-medium", focusRing)}>Other application tools</summary><div className="flex flex-wrap gap-x-4"><Link className={link} to="/jobs/applications">All prepared applications</Link><Link className={link} to="/jobs/journey">Application agent and permissions</Link></div></details>
+    </section>}
     {tab === "offer" && <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10"><p>Your recorded stage: <strong>{entry.status}</strong>. Keep offer details only if useful; you can also record a different outcome.</p><Link className={link} to="/jobs/tracker">Update outcome in tracker</Link></div>}
   </section>;
 }

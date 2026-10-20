@@ -31,7 +31,7 @@ function StageBar({ stages }: { stages: Record<JobStatus, number> }) {
 }
 
 /** Applications by stage: the bar, then four counts (each a link into the tracker), each stage's colour by its name. */
-export function Pipeline({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }) {
+export function Pipeline({ tracker, compact = false }: { tracker: AsyncState<JobTrackerEntry[]>; compact?: boolean }) {
   const entries = tracker.data ?? [];
   const { stages, total } = pipeline(entries);
   const shown = PIPELINE_STAGES.reduce((a, s) => a + stages[s], 0);
@@ -55,7 +55,7 @@ export function Pipeline({ tracker }: { tracker: AsyncState<JobTrackerEntry[]> }
         ) : (
           <>
             {shown > 0 && <StageBar stages={stages} />}
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <ul className={cx("grid grid-cols-2 gap-2", !compact && "sm:grid-cols-4")}>
               {PIPELINE_STAGES.map((s) => (
                 <li key={s}>
                   <Link

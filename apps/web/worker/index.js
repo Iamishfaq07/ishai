@@ -13,6 +13,7 @@
 // The cron below: a host that sleeps when idle (free tiers do) would land its 30–60 s cold start on whoever opens the
 // app. /health never touches the DB, so pinging it keeps the API process warm without keeping the (separately
 // metered) Neon compute awake.
+import { isolatedApi, unavailable } from "./environment.js";
 import { metaFor, withPageMeta } from "./meta.js";
 import { pageRequest } from "./prerendered.js";
 import { withSeo } from "./seo.js";
@@ -49,7 +50,13 @@ async function proxyToApi(request, env, url) {
   }
   // Never follow the API's redirects here (Google sign-in, installer downloads): the browser must get them, and a
   // followed one would carry the proxy secret to whatever host it points at.
-  return fetch(proxied, { redirect: "manual" });
+  const response = await fetch(proxied, { redirect: "manual" });
+  const redirect = response.headers.get("location");
+  if (redirect && new URL(target).hostname.replace(/\.+$/, "") !== "api.orbitanswer.com") {
+    const destination = new URL(redirect, target);
+    if (destination.hostname.replace(/\.+$/, "") === "api.orbitanswer.com") return unavailable();
+  }
+  return response;
 }
 
 const FORWARDING_HEADERS = ["forwarded", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-port",
@@ -59,6 +66,7 @@ const handlers = {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === API_PREFIX || url.pathname.startsWith(`${API_PREFIX}/`)) {
+      if (!isolatedApi(env, request.url)) return unavailable();
       return proxyToApi(request, env, url);
     }
     // The public pages people share get their own link preview (meta.js) and their built HTML (prerendered.js), so
@@ -75,6 +83,7 @@ const handlers = {
     return env.ASSETS.fetch(request);
   },
   async scheduled(_event, env, ctx) {
+    if (!isolatedApi(env, "https://orbitanswer.com")) return;
     ctx.waitUntil(fetch(`${env.API_URL}/health`, { headers: { "user-agent": "orbit-keep-warm" } }));
   },
 };
@@ -82,6 +91,13 @@ const handlers = {
 // Around every page: one address per page, real 404s, noindex for the app's own pages, robots.txt and the head tags
 // search engines read (seo.js, DECISIONS D67). The API proxy passes straight through.
 export default {
-  fetch: (request, env) => withSeo(request, env, new URL(request.url), (req) => handlers.fetch(req, env)),
+  fetch: (request, env) => {
+    if (!isolatedApi(env, request.url)) {
+      const url = new URL(request.url);
+      if (url.pathname === API_PREFIX || url.pathname.startsWith(`${API_PREFIX}/`) || /^\/company\//.test(url.pathname)) return unavailable();
+      env = { ...env, API_URL: "" };
+    }
+    return withSeo(request, env, new URL(request.url), (req) => handlers.fetch(req, env));
+  },
   scheduled: (event, env, ctx) => handlers.scheduled(event, env, ctx),
 };

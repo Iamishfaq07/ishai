@@ -27,3 +27,13 @@ The launchpad progress API reads the same action queue as Daily actions. Grounde
 5. Use the five step buttons with keyboard and phone layouts. Check focus and header clearance.
 6. Open Automate my reminders. Check that the settings open without enabling rules.
 7. Open existing `/resume-ai`, `/learn`, `/linkedin`, `/offers` URLs and check simplified labels.
+
+## V6 task navigation — 20 October 2026
+
+- **Today** (`/`): one current saved next action; optional AI plan only after pressing its button. Failed progress has Retry rather than an invented task.
+- **Discover** (`/jobs/matches`): existing search, filters and match details. Search setup remains at `/jobs?start=1`.
+- **Applications** (`/jobs/tracker`): tracked jobs and their workrooms. The guided Application step opens that job's exact prepared kit when one exists; preparing is not submission.
+- **Prepare** (`/prepare`): choose a saved job's plan, or general Saba/video/story/coding practice. Live assistance remains separately labelled and only for permitted scenarios.
+- **My Career** (`/career`, **Me** on phones): resume, documents, stories, preferences, contacts, offers and account privacy. Specialist routes and bookmarks remain available.
+
+On phones, **More tools and account** is in the header; Escape closes the sheet and restores focus. Use global search for specialist tools. Opening Today or the new task spaces does not enable automation, submit an application or call a model. The mission/kit API extension stores no duplicate career data.

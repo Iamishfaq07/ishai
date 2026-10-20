@@ -51,14 +51,13 @@ test("mobile target context survives a reload and a trip through Home", async ({
   await expect(page).toHaveURL(/role=Platform/);
   await expect(page.getByLabel("Company (optional)", { exact: true })).toHaveValue("Acme");
   await expect(page.getByLabel("Interview stage", { exact: true })).toHaveValue("Staff panel");
-  // Signed-in Home is the Mission Dashboard (the career loop is on the signed-out front page). Its Practise link
-  // is a plain /mock; the target comes back from this tab's saved context.
+  // Today routes through the contextual Prepare space. Its plain /mock link restores this tab's target.
   await page.goto("/");
-  const tools = page.getByRole("region", { name: "Your tools" });
-  await expect(tools).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("mobile-home.png"), fullPage: true });
-  await tools.getByRole("link", { name: "Practise", exact: true }).click();
+  await page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Prepare", exact: true }).click();
+  await page.getByRole("link", { name: /^Practice with Saba/ }).click();
   await expect(page).toHaveURL(/\/mock\?.*company=Acme/);
   await expect(page.getByLabel("Company (optional)", { exact: true })).toHaveValue("Acme");
 });

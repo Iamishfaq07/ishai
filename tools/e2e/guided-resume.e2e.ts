@@ -99,11 +99,11 @@ test("A delayed save does not pull the candidate back after navigation", async (
   });
   await page.getByRole("button", { name: "Save & continue to jobs", exact: true }).click();
   await started;
-  await page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Career launchpad", exact: true }).click();
+  await page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Discover", exact: true }).click();
   const completed = page.waitForResponse((response) => response.url().endsWith(`/v1/resumes/${resume.id}`) && response.request().method() === "PUT");
   release(); await completed;
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-  await expect(page).toHaveURL(/\/jobs$/);
+  await expect(page).toHaveURL(/\/jobs\/matches$/);
 });
 
 test("Guided creation remains an explicit candidate action", async ({ page, context }) => {

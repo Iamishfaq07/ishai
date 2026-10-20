@@ -1517,3 +1517,7 @@ refines changed only their fields; about $0.0006 and 3.7 s per call (1,400 token
 Rejected: generating straight into a saved draft (the person reviews first), letting the model set pay from "market
 rates" (an invented figure on a public job post, and Google shows it), knock-outs from anything the model infers, and
 a chat-style transcript (the form is the record; the panel keeps a one-line history).
+
+## Personal Orbit V6 first integration increment — 20 October 2026
+
+Use existing grounded priority and packet execution systems. Replace the operational home with Today and five candidate tasks, preserve specialist/bookmarked URLs, and project exact owned application identity into the mission rather than introducing a second dossier database. No new dependency, migration, permission or automatic model request. Preview guards cover direct REST/live builds as well as proxy/public employer rendering; empty staging configuration fails closed. Rejected: unrestricted browser agent replacement, production-connected previews, mailbox transport without provider/token lifecycle work, and a new UI kit.

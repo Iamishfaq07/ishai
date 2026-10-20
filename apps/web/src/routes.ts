@@ -9,6 +9,7 @@ import { isResumeAiHome } from "./pages/resume/paths";
  */
 const loaders = {
   home: () => import("./pages/Home"),
+  careerSpaces: () => import("./pages/CareerSpaces"),
   tools: () => import("./pages/tools/ToolExplorer"),
   landing: () => import("./pages/Landing"),
   welcome: () => import("./pages/Welcome"),
@@ -66,6 +67,7 @@ function page<M>(load: () => Promise<M>, pick: (m: M) => ComponentType) {
   return lazy(async () => ({ default: pick(await load()) }));
 }
 
+export const CareerSpacesPage = page(loaders.careerSpaces, (m) => m.CareerSpacesPage);
 export const HomePage = page(loaders.home, (m) => m.HomePage);
 export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
 export const ToolExplorerPage = page(loaders.tools, (m) => m.ToolExplorerPage);
@@ -138,6 +140,7 @@ type PageKey = keyof typeof loaders;
 
 const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/$/, "home"],
+  [/^\/(career|prepare)\/?$/, "careerSpaces"],
   [/^\/tools\/?$/, "tools"],
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],

@@ -163,7 +163,9 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
     { id: "do-help", title: "Support", group: "Actions", run: "help", keywords: ["help", "support", "contact", "whatsapp", "email", "faq", "question", "glossary"] },
     { id: "do-contact", title: "Send us a message", hint: "Contact the Orbit team", group: "Actions", to: "/contact", keywords: ["contact us", "support", "complaint", "feedback", "report a job", "refund", "problem"] },
     { id: "do-theme", title: "Switch light or dark theme", group: "Actions", run: "theme", keywords: ["dark mode", "light mode", "appearance", "colour", "color"] },
-    { id: "go-home", title: "Home", group: "Go to", to: "/", keywords: ["next step", "dashboard", "start", "checklist"] },
+    { id: "go-home", title: "Today", group: "Go to", to: "/", keywords: ["next step", "dashboard", "start", "checklist"] },
+    { id: "go-career", title: "My Career", group: "Go to", to: "/career", keywords: ["profile", "my documents", "resume", "privacy"] },
+    { id: "go-prepare", title: "Prepare", group: "Go to", to: "/prepare", keywords: ["interview", "rehearsal", "practice", "saba"] },
     { id: "go-tools", title: "Explore all tools", group: "Go to", to: "/tools", keywords: ["features", "directory", "automation", "business", "personal"] },
     { id: "go-agent", title: "Application agent", group: "Go to", to: "/jobs/journey", keywords: ["automatic", "apply", "hosted", "Workday", "shortlist", "no extension"] },
     ...(mockEnabled

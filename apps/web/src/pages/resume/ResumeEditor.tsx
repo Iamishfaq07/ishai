@@ -1066,7 +1066,7 @@ function SaveState({
         ) : (
           <span className="save-dot h-1.5 w-1.5 rounded-full bg-current" aria-hidden="true" />
         )}
-        {saved ? <>Saved{revision ? <span className="opacity-70"> • v{revision}</span> : null}</> : "Saving…"}
+        {saved ? <>Saved{revision ? <span> • v{revision}</span> : null}</> : "Saving…"}
       </span>
     );
   }

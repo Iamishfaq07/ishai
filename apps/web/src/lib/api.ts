@@ -1,25 +1,16 @@
-import { createApiClient, safeLocal, trimTrailingSlashes } from "@orbit/ui";
+import { createApiClient, safeLocal } from "@orbit/ui";
 import { watchForOutOfCredits } from "./outOfCredits";
 
-/** Absolute URL for a configured base, which may be relative to this site (e.g. "/api", the Worker's proxy). */
-function absolute(base: string): string {
-  return trimTrailingSlashes(new URL(base, window.location.origin).toString());
-}
+import { endpointBases } from "./endpoints";
 
-// REST base. In production this is the same-origin "/api" proxy, so the session cookie is first-party — a cookie
-// set by a different site is dropped by browsers that block third-party cookies (all of iOS), and signing in would
-// bounce straight back to the login page.
-export const API_URL: string = absolute(import.meta.env.VITE_API_URL ?? "http://localhost:8000");
-
-/** Live-session WebSocket base. Auth there is a single-use ticket, not the cookie, so it can go direct to the API. */
-export const LIVE_URL: string = import.meta.env.VITE_LIVE_URL ? absolute(import.meta.env.VITE_LIVE_URL) : API_URL;
-
-/**
- * The API's own address on this site's domain (api.orbitanswer.com), which most calls use once the API says its
- * cookies are shared with it (D80): through the proxy, Cloudflare's free plan sends visitors in India via London or
- * Seattle, a second or more each call. Same site, so the cookie is still first-party.
- */
-export const DIRECT_URL: string | null = import.meta.env.VITE_API_DIRECT_URL ? absolute(import.meta.env.VITE_API_DIRECT_URL) : null;
+const bases = endpointBases(window.location.origin, {
+  api: import.meta.env.VITE_API_URL ?? "http://localhost:8000",
+  live: import.meta.env.VITE_LIVE_URL,
+  direct: import.meta.env.VITE_API_DIRECT_URL,
+});
+export const API_URL = bases.api;
+export const LIVE_URL = bases.live;
+export const DIRECT_URL = bases.direct;
 
 /**
  * Still through the proxy: what's priced or worded by the visitor's country, which the edge states only there

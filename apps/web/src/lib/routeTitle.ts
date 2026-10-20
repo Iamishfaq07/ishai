@@ -2,7 +2,9 @@ import { guideTitle } from "../pages/bank/names";
 
 /** The browser tab's title for each page ("Sessions · Orbit"). First match wins, so deeper paths come first. */
 const ROUTE_TITLES: Array<[RegExp, string]> = [
-  [/^\/$/, "Home"],
+  [/^\/$/, "Today"],
+  [/^\/career\/?$/, "My Career"],
+  [/^\/prepare\/?$/, "Prepare"],
   [/^\/tools(\/|$)/, "Explore Orbit tools"],
   [/^\/jobs\/journey/, "Application agent"],
   [/^\/welcome/, "Welcome"],

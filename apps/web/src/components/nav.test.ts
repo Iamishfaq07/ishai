@@ -2,30 +2,31 @@ import { describe, expect, it } from "vitest";
 import { allNavItems, exploreItems, navGroups, phoneTabs, sidebarCollapsed } from "./nav";
 
 describe("app navigation", () => {
-  it("groups the tools by task, every tool once", () => {
-    expect(navGroups(true).map((g) => g.label)).toEqual([null, "Prepare", "Interview & offer"]);
+  it("has five task destinations with specialist tools behind More", () => {
+    expect(navGroups(true)[0]!.items.map((i) => i.label)).toEqual(["Today", "Discover", "Applications", "Prepare", "My Career"]);
     const ids = allNavItems(true).map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(["home", "jobs", "tools", "practice", "video", "resume", "learning", "linkedin", "copilot", "offer"]);
+    expect(ids).toContain("resume"); expect(ids).toContain("copilot");
   });
-
-  it("gives phones five destinations: four tabs and Explore with the rest", () => {
-    expect(phoneTabs(true).map((t) => t.id)).toEqual(["home", "jobs", "resume", "practice"]);
-    expect(exploreItems(true).map((t) => t.id)).toEqual(["tools", "video", "learning", "linkedin", "copilot", "offer"]);
-    // Mock interviews off: the copilot takes Practice's tab, and nothing is lost.
-    expect(phoneTabs(false).map((t) => t.id)).toEqual(["home", "jobs", "resume", "copilot"]);
+  it("uses the same five phone tasks with every specialist available in More", () => {
+    expect(phoneTabs(true).map((t) => t.id)).toEqual(["home", "jobs", "applications", "prepare", "career"]);
+    expect(phoneTabs(false).map((t) => t.id)).toEqual(phoneTabs(true).map((t) => t.id));
+    expect(exploreItems(true).map((t) => t.id)).toContain("resume");
+    expect(exploreItems(false).map((t) => t.id)).not.toContain("practice");
     expect([...phoneTabs(false), ...exploreItems(false)].length).toBe(allNavItems(false).length);
   });
-
-  it("marks the right item current, deep links included", () => {
-    const current = (p: string) => allNavItems(true).filter((i) => i.current(p)).map((i) => i.id);
+  it("highlights exactly one primary task for contextual deep links", () => {
+    const current = (p: string) => navGroups(true)[0]!.items.filter((i) => i.current(p)).map((i) => i.id);
     expect(current("/")).toEqual(["home"]);
-    expect(current("/documents/stories")).toEqual(["copilot"]);
-    expect(current("/code/two-sum")).toEqual(["learning"]);
-    expect(current("/mock")).toEqual(["practice"]);
-    expect(current("/interview")).toEqual(["video"]);
+    expect(current("/jobs/listing/example")).toEqual(["jobs"]);
+    expect(current("/jobs/mission/example")).toEqual(["applications"]);
+    expect(current("/jobs/applications")).toEqual(["applications"]);
+    expect(current("/code/two-sum")).toEqual(["prepare"]);
+    expect(current("/mock")).toEqual(["prepare"]);
+    expect(current("/interview")).toEqual(["prepare"]);
+    expect(current("/resume-ai/example")).toEqual(["career"]);
+    expect(current("/offers/example")).toEqual(["career"]);
   });
-
   it("remembers the sidebar choice, otherwise collapses on narrower screens", () => {
     expect(sidebarCollapsed(null, 1024)).toBe(true);
     expect(sidebarCollapsed(null, 1440)).toBe(false);

@@ -24,7 +24,7 @@ describe("routeTitle", () => {
   it("picks the deeper page first", () => {
     expect(routeTitle("/sessions/abc")).toBe("Session");
     expect(routeTitle("/sessions")).toBe("Sessions");
-    expect(routeTitle("/")).toBe("Home");
+    expect(routeTitle("/")).toBe("Today");
   });
 
   it("names the admin console's pages", () => {
@@ -41,7 +41,7 @@ describe("routeTitle", () => {
 
   it("says what Orbit is on the front page, and Home once signed in", () => {
     expect(routeTitle("/", true)).toBe("Practise interviews, fix your resume, find jobs");
-    expect(routeTitle("/", false)).toBe("Home");
+    expect(routeTitle("/", false)).toBe("Today");
     expect(routeTitle("/sessions", true)).toBe("Sessions");
   });
 

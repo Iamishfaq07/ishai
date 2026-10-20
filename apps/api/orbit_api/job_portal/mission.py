@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
 from orbit_api.job_portal.timeline import timeline
-from orbit_api.models import JobApplication, JobFitCheck, JobOffer, Resume, ResumeSnapshot, User
+from orbit_api.models import ApplicationPacket, JobApplication, JobFitCheck, JobOffer, Resume, ResumeSnapshot, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
@@ -88,8 +88,16 @@ class NextStep(BaseModel):
     to: str
 
 
+class ApplicationRef(BaseModel):
+    id: str
+    status: str
+    submission_uncertain: bool
+    updated_at: datetime
+
+
 class MissionOut(BaseModel):
     entry_id: str
+    application: ApplicationRef | None = None
     stages: dict[str, bool]
     fit: FitSummary | None
     resume: LinkedResume | None
@@ -233,11 +241,22 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
     if entry.next_at and (_aware(entry.next_at) + shift).date() >= today:
         upcoming = ((_aware(entry.next_at) + shift).date() - today).days
 
+    # Project only status and identity, not the stored resume, answers, contact values or worker credentials.
+    # user/listing is unique; an explicit conflicting tracker link must never silently attach elsewhere.
+    packet = (await db.execute(select(ApplicationPacket.id, ApplicationPacket.status,
+                                      ApplicationPacket.submission_started_at, ApplicationPacket.updated_at)
+        .where(ApplicationPacket.user_id == user.id, ApplicationPacket.listing_id == entry.listing_id,
+               (ApplicationPacket.application_id.is_(None)) | (ApplicationPacket.application_id == entry.id))
+        .limit(1))).first()
+    application = ApplicationRef(id=packet.id, status=packet.status,
+        submission_uncertain=packet.submission_started_at is not None and packet.status not in ("submitted", "applied"),
+        updated_at=_aware(packet.updated_at)) if packet else None
     facts = Facts(status=entry.status, fit=fit is not None, resume=resume is not None, snapshot=bool(snaps),
                   applied=entry.applied_at is not None, practice_rounds=practice, live_rounds=len(rounds) - practice,
                   offer=linked is not None, upcoming_days=upcoming, prep_doc=entry.document_id is not None)
     return MissionOut(
-        entry_id=entry.id, stages=stages_for(facts), fit=fit, resume=resume, resume_missing=missing,
+        entry_id=entry.id, application=application, stages=stages_for(facts), fit=fit,
+        resume=resume, resume_missing=missing,
         snapshots=[SnapshotOut(id=s.id, title=s.title, score=s.score, note=s.note, resume_id=s.resume_id,
                                created_at=_aware(s.created_at)) for s in snaps],
         offer=_offer_ref(linked) if linked else None,
