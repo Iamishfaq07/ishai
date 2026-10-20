@@ -8,6 +8,8 @@ describe("prep plan helpers", () => {
     expect(dayLabel("2026-10-20", 0, "2026-10-16")).toBe("Interview day");
     expect(dayLabel("2026-10-16", 4, "2026-10-16")).toBe("Today");
     expect(dayLabel("2026-10-17", 3, "2026-10-16")).toBe("Tomorrow");
+    expect(dayLabel("2026-10-16", null, "2026-10-16")).toBe("Today");
+    expect(dayLabel("2026-10-17", null, "2026-10-16")).toBe("Tomorrow");
   });
   it("sends each task where it's done", () => {
     expect(planItemLink("queue", entry)).toBe("/mock");

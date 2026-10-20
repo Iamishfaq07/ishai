@@ -919,11 +919,11 @@ export function createApiClient(options: ApiClientOptions) {
       json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/offer${localDays()}`, { method: "PUT", body: body({ offer_id: offerId }) }),
     /** The interview prep plan for a tracked job (minutes east of UTC, so the days are the person's own). */
     prepPlan: (id: string, tzOffset = -new Date().getTimezoneOffset()) =>
-      json<PrepPlan>(`/v1/jobs/tracker/${encodeURIComponent(id)}/plan${queryString({ tz_offset: tzOffset })}`),
-    tickPlanItem: (id: string, key: string, done: boolean, tzOffset = -new Date().getTimezoneOffset()) =>
+      json<PrepPlan>(`/v1/jobs/tracker/${encodeURIComponent(id)}/plan${queryString({ tz_offset: tzOffset, rehearsal: true })}`),
+    tickPlanItem: (id: string, key: string, done: boolean, tzOffset = -new Date().getTimezoneOffset(), reuseFrom?: string) =>
       json<PrepPlan>(
-        `/v1/jobs/tracker/${encodeURIComponent(id)}/plan/checks/${encodeURIComponent(key)}${queryString({ tz_offset: tzOffset })}`,
-        { method: "PUT", body: body({ done }) },
+        `/v1/jobs/tracker/${encodeURIComponent(id)}/plan/checks/${encodeURIComponent(key)}${queryString({ tz_offset: tzOffset, rehearsal: true })}`,
+        { method: "PUT", body: body({ done, ...(reuseFrom ? { reuse_from: reuseFrom } : {}) }) },
       ),
     /** One tracked job's journey, oldest first. */
     trackerTimeline: (id: string) => json<JobTimelineEvent[]>(`/v1/jobs/tracker/${encodeURIComponent(id)}/timeline`),

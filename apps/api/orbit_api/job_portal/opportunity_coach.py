@@ -4,6 +4,7 @@ import json
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +24,7 @@ router = APIRouter(prefix="/v1/jobs/tracker", tags=["opportunity coach"],
 Focus = Literal["resume", "fit", "timeline", "interview", "offer"]
 
 
-async def source(db: AsyncSession, user: User, entry_id: str) -> dict[str, Any]:
+async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0) -> dict[str, Any]:
     entry = await db.scalar(select(JobApplication).where(JobApplication.id == entry_id,
         JobApplication.user_id == user.id).execution_options(populate_existing=True))
     if entry is None:
@@ -77,17 +78,22 @@ async def source(db: AsyncSession, user: User, entry_id: str) -> dict[str, Any]:
                 "path": base + "fit", "text": f"A prior fit check lists this requirement: {requirement}. "
                 "Check the original job and current resume; this does not verify a candidate skill."})
     prep = None
-    if entry.status == "interviewing" and entry.next_at:
-        prep = await plan_for(db, user, entry)
+    if entry.status in ("saved", "applied", "interviewing"):
+        prep = await plan_for(db, user, entry, tz_offset=tz_offset)
         at = prep.interview_at.isoformat() if prep.interview_at else "not available"
         interview = next(fact for fact in facts if fact["id"] == "interview")
-        interview["text"] = (f"The candidate records an interview at {at}. Verify the original invitation. "
-                             f"The current UTC-date preparation plan has {prep.done} of {prep.total} tasks checked.")
+        interview["text"] = (
+            f"The candidate records a next date at {at}. Verify the original invitation. "
+            if prep.mode == "scheduled" else
+            "No upcoming interview is assumed. This is a three-day rehearsal plan, not an employer appointment. ")
+        interview["text"] += (f"The current browser-day plan (UTC offset {tz_offset} minutes) has "
+            f"{prep.done} of {prep.total} tasks checked. {prep.completed_total} completion records remain in this "
+            "job's history; earlier preparation is not automatically completed for a new date.")
         for index, task in enumerate([item for day in prep.days for item in day.items if not item.done][:3]):
             facts.append({"id": f"prep_{index}", "label": "Preparation task", "path": base + "plan",
-                "text": f"An unchecked task in this job's UTC-date preparation plan is: {task.title[:220]}. "
+                "text": f"An unchecked task in this job's browser-day preparation plan is: {task.title[:220]}. "
                         "Use truthful evidence. This is suggested practice, not verified employer interview content."})
-    material = {"prep": prep.model_dump(mode="json") if prep else None,
+    material = {"prep": prep.model_dump(mode="json") if prep else None, "tz_offset": tz_offset,
         "entry": [entry.id, str(entry.updated_at), entry.status, str(entry.next_at), entry.resume_id],
         "resume": list(map(str, resume)) if resume else None,
         "fit": [fit.id, str(fit.created_at), fit.result] if fit else None,
@@ -98,18 +104,19 @@ async def source(db: AsyncSession, user: User, entry_id: str) -> dict[str, Any]:
 
 @router.get("/{entry_id}/coach")
 async def get_source(entry_id: str, user: Annotated[User, Depends(current_user)],
-                     db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
-    return await source(db, user, entry_id)
+                     db: Annotated[AsyncSession, Depends(get_db)], tz_offset: int = 0) -> dict[str, Any]:
+    return await source(db, user, entry_id, max(-720, min(840, tz_offset)))
 
 
 class PlanIn(AdviceIn):
     focus: Focus
+    tz_offset: int = Field(0, ge=-720, le=840)
 
 
 @router.post("/{entry_id}/coach/plan")
 async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(require_verified_email)],
                db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
-    current = await source(db, user, entry_id)
+    current = await source(db, user, entry_id, body.tz_offset)
     if current["version"] != body.version:
         raise HTTPException(409, "This opportunity changed. Refresh before requesting guidance.")
     facts = sorted(current["facts"], key=lambda fact: (fact["id"] != body.focus,
@@ -123,7 +130,9 @@ async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(requir
 
     result, provider = await preview(db, user, "opportunity_coach", INSTRUCTION +
         "Help a candidate with the selected opportunity step, explaining that fact first. "
-        "Preparation tasks are suggested practice from a UTC-date plan, not employer questions or a new schedule. "
+        "Preparation tasks are suggested practice from the supplied browser-day plan, not employer questions. "
+        "A rehearsal plan does not imply an interview date. Completion history is candidate-recorded, not proof "
+        "of competence. Suggest reviewing matching earlier work; never mark it complete or claim employer approval. "
         "Do not propose tasks already checked or claim a task has been completed. "
         "Use only the recorded indicators supplied. Do not infer readiness, eligibility, interviews or hiring. "
         "Prior fit checks may use a different resume. Suggest checking source evidence, "
@@ -134,7 +143,7 @@ async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(requir
         "For hired, rejected or withdrawn records, suggest reflection or recording the outcome, not further applying. "
         "Never instruct bypassing employer checks or automatically enabling applications.",
         json.dumps({"focus": body.focus, "facts": facts}), validate)
-    if (await source(db, user, entry_id))["version"] != body.version:
+    if (await source(db, user, entry_id, body.tz_offset))["version"] != body.version:
         raise HTTPException(409, "This opportunity changed while guidance was prepared. Refresh to continue.")
     by_id = {fact["id"]: fact for fact in facts}
     return {"version": body.version, "source": provider, "tips": [

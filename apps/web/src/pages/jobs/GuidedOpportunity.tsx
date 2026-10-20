@@ -83,13 +83,14 @@ export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: s
   const seq = useRef(0);
   const busyRef = useRef(true);
   const base = `/v1/jobs/tracker/${encodeURIComponent(entryId)}/coach`;
+  const tzOffset = -new Date().getTimezoneOffset();
   const refresh = useCallback(async (quiet = false) => {
     const request = ++seq.current; busyRef.current = true; setBusy(true);
     if (!quiet) { setSource(null); setPlan(null); } setError(null);
-    try { const next = await api.call<Source>(base); if (request === seq.current) { setSource(next); setPlan((old) => old?.version === next.version ? old : null); } }
+    try { const next = await api.call<Source>(`${base}?tz_offset=${tzOffset}`); if (request === seq.current) { setSource(next); setPlan((old) => old?.version === next.version ? old : null); } }
     catch (e) { if (request === seq.current) { setSource(null); setPlan(null); setError(errorText(e)); } }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(false); } }
-  }, [base]);
+  }, [base, tzOffset]);
   const cancel = useCallback(() => { seq.current++; }, []);
   useEffect(() => { void refresh(); return cancel; }, [refresh, cancel]);
   useEffect(() => {
@@ -102,7 +103,7 @@ export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: s
     if (!source || busyRef.current) return;
     const request = ++seq.current; busyRef.current = true; setBusy(true); setPlan(null); setError(null);
     try {
-      const next = await api.call<Plan>(`${base}/plan`, { method: "POST", timeoutMs: 70_000, body: JSON.stringify({ version: source.version, focus }) });
+      const next = await api.call<Plan>(`${base}/plan`, { method: "POST", timeoutMs: 70_000, body: JSON.stringify({ version: source.version, focus, tz_offset: tzOffset }) });
       if (request === seq.current) setPlan(next);
     } catch (e) { if (request === seq.current) setError(errorText(e)); }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(false); } }

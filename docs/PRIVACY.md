@@ -13,6 +13,9 @@ be checked.
   Sentry (opt-in) sends no bodies or PII.
 
 ## Stored, and why
+
+**Personal preparation completions:** `job_plan_checks.task_data` retains the task text, kind, planned day, recorded interview time and optional earlier-completion reference when you check/reuse a task. This preserves your work across date changes; it is candidate-recorded activity, not verified skills. Legacy checks have no invented task details. The latest50 appear in the job history; all participate in account export and job/account deletion. The AI preparation coach receives counts and current unchecked task text, not historical completion bodies. Unchecking a current task removes that completion; a separately reviewed reuse record remains independent. See `implementation/V6_PREP_CONTINUITY.md`.
+
 | Data | Why | Where |
 |---|---|---|
 | Account (email, name, password hash) | sign-in | `users` |

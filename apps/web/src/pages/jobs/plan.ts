@@ -22,7 +22,7 @@ export function planItemLink(kind: PlanItemKind, entry: Pick<JobTrackerEntry, "d
 }
 
 /** "Today", "Tomorrow", "Thu 22 Oct" for a plan day (a date without a time, read as the person's own day). */
-export function dayLabel(iso: string, daysBefore: number, todayIso: string): string {
+export function dayLabel(iso: string, daysBefore: number | null, todayIso: string): string {
   if (daysBefore === 0) return "Interview day";
   if (iso === todayIso) return "Today";
   const d = new Date(`${iso}T12:00:00`);

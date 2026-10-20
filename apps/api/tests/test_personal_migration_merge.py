@@ -16,7 +16,7 @@ from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 cfg = Config('alembic.ini')
-assert ScriptDirectory.from_config(cfg).get_heads() == ['c407e21a6d93']
+assert ScriptDirectory.from_config(cfg).get_heads() == ['d51e7c9a240b']
 command.upgrade(cfg, os.environ['ORBIT_MERGE_FIRST'])
 engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''))
 with engine.connect() as db:
@@ -27,7 +27,7 @@ def check():
     assert 'agent_mode' in {c['name'] for c in inspect(engine).get_columns('auto_apply_setups')}
     assert 'agent_decisions' in {c['name'] for c in inspect(engine).get_columns('application_packets')}
     with engine.connect() as db:
-        assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == ['c407e21a6d93']
+        assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == ['d51e7c9a240b']
 check()
 command.downgrade(cfg, '7fc84a231d90')
 assert 'career_playbooks' not in inspect(engine).get_table_names()

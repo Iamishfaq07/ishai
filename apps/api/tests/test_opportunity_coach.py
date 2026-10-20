@@ -38,7 +38,8 @@ def test_read_is_owned_private_and_does_not_create_application_or_provider_activ
     other, _ = setup(client)
     current = read(client, user, entry)
     assert "Private" not in json.dumps(current)
-    assert {fact["id"] for fact in current["facts"]} == {"resume", "fit", "timeline", "interview", "offer"}
+    assert {"resume", "fit", "timeline", "interview", "offer"}.issubset({f["id"] for f in current["facts"]})
+    assert any(f["id"].startswith("prep_") for f in current["facts"])
     assert all(fact["path"].startswith(f"/jobs/mission/{entry}?guide=1&tab=") for fact in current["facts"])
     assert client.get(f"/v1/jobs/tracker/{entry}/coach", headers=auth(other)).status_code == 404
     assert client.get(f"/v1/jobs/tracker/{entry}/coach").status_code == 401
@@ -175,7 +176,7 @@ def test_interview_coach_uses_saved_tasks_and_invalidates_after_completion(clien
     assert result.status_code == 200, result.text
     current = read(client, user, entry)
     interview = next(f for f in current["facts"] if f["id"] == "interview")
-    assert at in interview["text"] and "UTC-date" in interview["text"]
+    assert at in interview["text"] and "browser-day" in interview["text"]
     prep = [f for f in current["facts"] if f["id"].startswith("prep_")]
     assert prep and "Private" not in json.dumps(current)
     assert all(f["path"] == f"/jobs/mission/{entry}?guide=1&tab=plan" for f in prep)
@@ -219,3 +220,17 @@ def test_preparation_completion_during_generation_rejects_stale_advice(
     result = client.post(f"/v1/jobs/tracker/{entry}/coach/plan", headers=auth(user),
         json={"version": current["version"], "focus": "interview"})
     assert result.status_code == 409, result.text
+
+
+def test_rehearsal_coach_uses_same_offset_and_never_invents_a_booked_interview(client: TestClient) -> None:
+    user, entry = setup(client)
+    current = client.get(f"/v1/jobs/tracker/{entry}/coach?tz_offset=330", headers=auth(user)).json()
+    fact = next(f for f in current["facts"] if f["id"] == "interview")
+    assert "three-day rehearsal" in fact["text"] and "UTC offset 330" in fact["text"]
+    assert current["version"] != read(client, user, entry)["version"]
+    result = client.post(f"/v1/jobs/tracker/{entry}/coach/plan", headers=auth(user),
+        json={"version": current["version"], "focus": "interview", "tz_offset": 330})
+    assert result.status_code == 200, result.text
+    assert "rehearsal" in result.json()["tips"][0]["source_quote"]
+    assert client.post(f"/v1/jobs/tracker/{entry}/coach/plan", headers=auth(user),
+        json={"version": current["version"], "focus": "interview"}).status_code == 409

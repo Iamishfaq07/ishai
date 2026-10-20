@@ -1,4 +1,27 @@
-# V6 baseline and verification — 20 October 2026
+# V6 baseline and verification — 20–21 October 2026
+
+## Increment 3 — preparation continuity, 21 October
+
+Base `822c7d49`, PR #439 confirmed merged before branching. Windows/PowerShell, pinned Corepack pnpm9.12.0 and API Python3.12 environment described below. This section is the current increment; earlier snapshots are historical.
+
+- Full API: **3771 passed,17 skipped**,928.06s (15m28s). Command: `.venv/Scripts/pytest.exe -q --tb=short`; log in Windows TEMP `orbit-v6-prep-api-full.log`. SQLite/mock-provider environment; skipped scenarios are not certified. The account-completion export/delete case added after this run's collection passed in the separate final continuity run below. Production API code was unchanged during the full run.
+- Focused API/migrations: **29 passed**, 52.88s, across `test_job_plan.py`, `test_prep_continuity.py`, `test_opportunity_coach.py`, `test_personal_migration_merge.py`, `test_prep_continuity_migration.py`, `test_business_automation_migration.py`, `test_career_weekly_migration.py`, `test_hosted_apply_migration.py`. The final continuity suite also ran separately: **5 passed**, 10.46s, including an account-export/delete case added after full-suite collection. These runs overlap; counts are not additive.
+- API `ruff check .`: PASS; `mypy orbit_api`: PASS,285 source files. One Alembic head `d51e7c9a240b` (nullable completion JSON), parent `c407e21a6d93`. SQLite upgrade/downgrade/re-upgrade preserves old checkmark rows; both full migration graph branches converge. The new isolated migration test and updated old-stamp fixture prerequisite tables keep real upgrade paths under test.
+- Pinned `pnpm -r typecheck` and `pnpm -r lint`: PASS across the workspace. Only the existing SupportChat/SessionSetup hook warnings remain. Final changed-panel lint also passes after focus handling.
+- Web tests: **597 passed**,89 files; UI package: **595 passed**,54 files. Rehearsal day labels additionally checked with `pnpm --filter @orbit/web exec vitest run src/pages/jobs/plan.test.ts` (**2 passed**). No desktop/Rust/extension/apply-worker runtime changes were made; their suites were not rerun for this increment, while workspace typecheck/lint includes those packages.
+- Final web production/prerender build: PASS,151 pages. All **22 bundle budgets pass**; entry171.6/172 kB gzip, CSS32.4/32.6, JobsAiPages277.7/280. No limit raised. Existing mixed static/dynamic api.ts import warning remains. Build log: TEMP `orbit-v6-prep-build.log`.
+- Browser command: `pnpm exec playwright test --config tools/e2e/business-automation.config.ts prep-continuity.e2e.ts calendar-intake.e2e.ts opportunity-guide.e2e.ts --output test-results/v6-prep-final`: **13 passed (1.3m)**. New flows cover1440 light/360 light/320 dark, rehearsal390, reduced motion/Motion Off, Axe, no overflow, exact reviewed reuse, preserved history, explicit-only AI, same-offset guidance, no date write during rehearsal and delayed job switching. Existing calendar/guide regressions pass.
+- Final targeted browser follow-up: `prep-continuity.e2e.ts --grep desktop --output test-results/v6-prep-focus-final`: **1 passed (15.1s)**. This also verifies upcoming days can be shown/hidden without writes or AI, and focus moves to the next suggested task when the reuse review disappears. Committed screenshots are in SCREENSHOT_MANIFEST.md; captures of unchanged review/rehearsal views precede this focus-only adjustment.
+- Initial targeted API run found a test comparing equivalent `Z`/`+00:00` timestamp strings. It now compares instants; no timestamp parsing/writer rule was relaxed. Final checks above follow that fixture correction. Existing Starlette/httpx deprecation warning remains.
+- New completion snapshots participate in existing export and deletion, with an explicit final privacy test. Historical bodies stay out of coach grounding input; current unchecked tasks/counts and browser offset are versioned. Migration rollout and rollback limits are in `V6_PREP_CONTINUITY.md`.
+
+**Outside local evidence:** Docker/Postgres is unavailable on this host. CI keeps its Postgres full migration roundtrip and now includes `test_prep_continuity.py` in lifecycle tests; the existing browser matrix includes the new suite through its testMatch. Actual remote execution, isolated staging, live providers/payments, backup/restore and hardware remain independent gates. No whole-product launch GO, real application send, manual deployment or merge is claimed. Remote PR status will be checked after publication.
+
+### Increment 3 review snapshot
+
+Implementation `d0f0f971132aeb8f938c990984b8fd09cd0ca701`; [PR #440](https://github.com/Iamishfaq07/ishai/pull/440), OPEN, auto-merge disabled. CI [run39478203285](https://github.com/Iamishfaq07/ishai/actions/runs/39478203285) did not start the API/frontend jobs. Check annotations `118819590211` and `118819589875` both explicitly report failed account payments or an insufficient spending limit. This is an account execution blocker; it supplies no remote test or Postgres result. No deployment result is asserted. The following evidence-only commit records this snapshot; implementation code is unchanged after verification. No merge or manual deployment was performed.
+
+## Earlier verification history
 
 Source base: `9c39e601`; Windows, PowerShell, Node24.21.0, pinned pnpm9.12.0 through Corepack, Python3.12.13, uv0.11.28, cargo1.98.1. Installed global pnpm11 is not the repository version; use Corepack. Cargo was found at the user's .cargo/bin after checking PATH. No provider key, database credential or payment secret is recorded here.
 

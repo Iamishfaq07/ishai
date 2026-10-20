@@ -1,5 +1,7 @@
 # F-02 · Interview prep plan with countdown
 
+**V6 update, 2026-10-21:** the initial specification below is historical. Current task keys also bind content and schedule; completion snapshots survive date changes in owned history. Matching research/requirement preparation can be explicitly reviewed and reused; repeated practice/logistics remain fresh. New web clients opt into a date-free rehearsal plan with `rehearsal=true`. The existing AI coach uses the checklist's browser offset. See `../implementation/V6_PREP_CONTINUITY.md` for exact scope, additive migration, rollout and remaining F05 work.
+
 **Job to be done:** "My interview is on Tuesday. What do I do each day until then?"
 
 ## Scope
