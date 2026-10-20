@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
@@ -38,6 +38,9 @@ import { StagePill } from "./StagePill";
 import { JOBS_TRACKER, jobPath } from "./paths";
 import { InterviewPrepPanel } from "./interview/InterviewPrep";
 
+import { opportunityStart } from "./opportunity";
+const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
+const GuideNext = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityNext })));
 type Tab = MissionTool;
 
 /**
@@ -54,12 +57,30 @@ export function JobMissionPage() {
   // opens on its plan, and otherwise the fit.
   const [params, setParams] = useSearchParams();
   const asked = MISSION_TOOLS.find((tool) => tool.id === params.get("tab"))?.id;
-  const tab: Tab = asked ?? (entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit");
+  const guided = params.get("guide") === "1" || (!params.has("guide") && !asked);
+  const tab: Tab = asked ?? (guided ? opportunityStart(entry?.status ?? "saved", mission.data) : entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit");
   const selected = MISSION_TOOLS.find((tool) => tool.id === tab)!;
   const setTab = (value: Tab) => {
     const next = new URLSearchParams(params);
     next.set("tab", value);
+    if (guided) next.set("guide", "1");
     setParams(next);
+  };
+
+  useEffect(() => {
+    if (!guided || asked || !mission.data || !entry) return;
+    const next = new URLSearchParams(params); next.set("tab", tab); next.set("guide", "1");
+    setParams(next, { replace: true });
+  }, [guided, asked, mission.data, entry, params, setParams, tab]);
+  const reloadMission = mission.reload;
+  const reloadTracker = tracker.reload;
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") { reloadMission(); reloadTracker(); } };
+    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
+    return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, [entryId, reloadMission, reloadTracker]);
+  const toggleGuide = () => {
+    const next = new URLSearchParams(params); next.set("guide", guided ? "0" : "1"); next.set("tab", tab); setParams(next);
   };
 
   if (tracker.data && !entry) {
@@ -91,10 +112,11 @@ export function JobMissionPage() {
           <ErrorNote onRetry={mission.reload}>{errorText(mission.error)}</ErrorNote>
         ) : m && entry ? (
           <>
-            <Stages mission={m} />
-            <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-zinc-600 dark:text-zinc-400">{guided ? "One job, one step at a time." : "All tools for this opportunity."}</p><Button variant="secondary" onClick={toggleGuide}>{guided ? "Open all job tools" : "Follow guided steps"}</Button></div>
+            {guided ? <Suspense fallback={<p role="status">Opening guided steps…</p>}><Guided entry={entry} mission={m} tab={tab} onSelect={setTab} /></Suspense> : <Stages mission={m} />}
+            <div className={cx("grid grid-cols-[minmax(0,1fr)] gap-6", !guided && "lg:grid-cols-[minmax(0,1fr)_20rem]")}>
               <div className="min-w-0">
-                <div role="group" aria-label="Job workspace areas" className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-zinc-500/5 p-1">
+                {!guided && <><div role="group" aria-label="Job workspace areas" className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-zinc-500/5 p-1">
                   {MISSION_GROUPS.map((t) => (
                     <button
                       key={t.id}
@@ -116,7 +138,8 @@ export function JobMissionPage() {
                   <Select id="mission-tool" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>
                     {MISSION_TOOLS.filter((tool) => tool.group === selected.group).map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}
                   </Select>
-                </Field></div>
+                </Field></div></>}
+                {guided && ["fit", "interview", "plan", "practice", "company"].includes(tab) && <div className="mb-4"><Field label="Tools for this step" htmlFor="guided-step-tool"><Select id="guided-step-tool" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>{MISSION_TOOLS.filter((tool) => tool.group === selected.group && tool.id !== "resume").map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}</Select></Field></div>}
                 <section id="mission-tool-panel" aria-label={selected.label}>
                   {tab === "interview" && (
                     <InterviewPrepPanel
@@ -140,8 +163,10 @@ export function JobMissionPage() {
                   )}
                   {tab === "offer" && <OfferPanel mission={m} entry={entry} onMission={update} />}
                 </section>
+                {guided && <Suspense><GuideNext tab={tab} onSelect={setTab} /></Suspense>}
               </div>
-              <aside aria-label="Next step" className="order-first min-w-0 space-y-4 lg:order-none">
+              <aside aria-label="Next step" className={cx("min-w-0 space-y-4", guided ? "order-none" : "order-first lg:order-none")}>
+                <details open={!guided || tab === "timeline" || undefined}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-medium", focusRing)}>More actions for this opportunity</summary>
                 <NextStepCard
                   step={m.next}
                   entry={entry}
@@ -151,6 +176,7 @@ export function JobMissionPage() {
                     mission.reload();
                   }}
                 />
+                </details>
                 {isSecurityRole(entry.title) && <KashSecContext placement="mission" />}
               </aside>
             </div>
@@ -333,8 +359,9 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
         )}
         <div className="mt-4 flex flex-wrap items-end gap-2">
           <label className="min-w-0 flex-1 text-sm">
-            <span className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">{r ? "Change it" : "Link a resume"}</span>
+            <span className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">{r ? "Change linked resume" : "Link a resume"}</span>
             <Select
+              aria-label={r ? "Change linked resume" : "Link a resume"}
               value={r?.id ?? ""}
               disabled={busy || !resumes.data}
               onChange={(e) => void run(() => api.linkMissionResume(entry.id, e.target.value || null), e.target.value ? "Resume linked" : "Unlinked")}
@@ -496,7 +523,7 @@ function OfferPanel({ mission, entry, onMission }: { mission: JobMission; entry:
 
 /** The first gap, with the reason in words; "Not now" hides it for three days on this device. */
 function NextStepCard({
-  step,
+  step: sourceStep,
   entry,
   onTab,
   onEntry,
@@ -509,11 +536,15 @@ function NextStepCard({
   const { user } = useAuth();
   const [, rerender] = useState(0);
   const [busy, setBusy] = useState(false);
+  const step = sourceStep?.key === "fit" && !entry.live ? {
+    ...sourceStep, title: "Review this job’s requirements", action: "Open job details", to: "interview",
+    why: "This job has no live post in Orbit. Open its saved details or paste the description, then compare the requirements with your real evidence.",
+  } : sourceStep;
   if (!step) {
     return (
       <Card>
         <h2 className="font-display text-base font-semibold">Nothing pressing</h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Every stage that can be done now has a record. Add a date in the tracker for a follow-up.</p>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">No next action is suggested from these saved records. Review your tracker when something changes.</p>
       </Card>
     );
   }

@@ -86,6 +86,7 @@ from orbit_api.job_portal.contacts import router as job_contacts_router
 from orbit_api.job_portal.interview import router as job_interview_router
 from orbit_api.job_portal.launchpad import router as job_launchpad_router
 from orbit_api.job_portal.mission import router as job_mission_router
+from orbit_api.job_portal.opportunity_coach import router as opportunity_coach_router
 from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.playbooks import router as job_playbook_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
@@ -409,6 +410,7 @@ def create_app() -> FastAPI:
     app.include_router(apply_review_router)
     app.include_router(apply_admin_router)
     app.include_router(job_mission_router)
+    app.include_router(opportunity_coach_router)
     app.include_router(job_plan_router)
     app.include_router(job_interview_router)
     app.include_router(jobs_router)

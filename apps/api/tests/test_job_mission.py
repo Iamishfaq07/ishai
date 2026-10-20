@@ -37,6 +37,7 @@ def test_the_next_step_is_the_first_gap_with_a_reason() -> None:
     assert next_step(_facts(status="offer"), path).to == "link_offer"  # type: ignore[union-attr]
     done = _facts(fit=True, resume=True, applied=True, snapshot=True, status="applied", practice_rounds=1)
     assert next_step(done, path) is None
+    assert next_step(_facts(status="hired"), path) is None
 
 
 def _entry(client: TestClient, h: dict[str, str], company: str = "Hooli") -> str:
