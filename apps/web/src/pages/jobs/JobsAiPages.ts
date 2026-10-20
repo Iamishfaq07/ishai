@@ -4,9 +4,9 @@ import { createElement, lazy } from "react";
 const Weekly = lazy(async () => ({ default: (await import("./WeeklyStudio")).WeeklyStudioPage }));
 export function WeeklyStudioPage() { return createElement(Weekly); }
 export { JobsAiSection } from "./JobsAi";
-const Actions = lazy(async () => ({ default: (await import("./ActionDesk")).JobActionDeskPage }));
+const Actions = lazy(async () => ({ default: (await import("./Today")).JobsTodayPage }));
 export function JobActionDeskPage() { return createElement(Actions); }
-export { JobsAiHomePage } from "./Overview";
+export function JobsAiHomePage() { return createElement(Actions); }
 export { JobMatchesPage } from "./Matches";
 export { JobDetailPage } from "./JobDetail";
 export { JobTrackerPage } from "./Tracker";

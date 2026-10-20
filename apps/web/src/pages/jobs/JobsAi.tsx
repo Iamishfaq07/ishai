@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 import { useAsync, type AsyncState } from "../../lib/useAsync";
 import { profileStamp } from "./model";
 import { isOutreach } from "./paths";
-import { JobsAiTabs } from "./product";
+import { JobsWorkspaceNav } from "./WorkspaceNav";
 import { jobProfileWasSuggested, markJobProfileSuggested } from "../../lib/jobsSession";
 
 /**
@@ -65,7 +65,7 @@ export function JobsAiSection() {
   const value: JobsAi = { profile, tracker, suggesting, setProfile };
   return (
     <>
-      <JobsAiTabs tracked={tracker.data?.length ?? 0} />
+      <JobsWorkspaceNav />
       {/* Here, not the layout's: the tabs stay put while a page's code arrives. */}
       <Suspense fallback={<Skeleton variant="job-card" count={2} label="Opening Jobs AI" />}>
         <Outlet context={value} />

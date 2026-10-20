@@ -76,6 +76,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     expect(manual.status(), await manual.text()).toBe(201);
     await page.goto("/jobs/actions");
     const file = page.waitForEvent("download");
+    await page.getByText("Filters, refresh & calendar", { exact: true }).click();
     await page.getByRole("button", { name: "Export upcoming dates", exact: true }).click();
     expect((await file).suggestedFilename()).toBe("orbit-next-seven-days.ics");
   });
