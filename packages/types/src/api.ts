@@ -2810,6 +2810,17 @@ export interface JobSourceReview {
   attribution: { label: string; url: string; large: boolean } | null;
 }
 
+/** Practice ideas from a prior owned fit check; no exercise is evidence of a completed achievement. */
+export interface RequirementPractice {
+  entry_id: string;
+  check_id: string | null;
+  checked_at: string | null;
+  version: string;
+  evidence_enabled: boolean;
+  requirements: { key: string; title: string; status: "met" | "partial" | "unclear" | "missing" | "unknown";
+    job_quote: string; candidate_quote: string }[];
+}
+
 export interface JobMission {
   entry_id: string;
   /** Owned packet for the exact listing. Its presence does not establish submission. Optional for older APIs. */

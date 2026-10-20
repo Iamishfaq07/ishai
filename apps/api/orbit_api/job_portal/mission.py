@@ -20,6 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.job_portal.timeline import timeline
 from orbit_api.models import ApplicationPacket, JobApplication, JobFitCheck, JobOffer, Resume, ResumeSnapshot, User
@@ -27,6 +28,7 @@ from orbit_api.ratelimit import limit_user
 from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 
+from .requirement_practice import RequirementPractice, practice_source
 from .resume_lineage import VersionComparison, comparison
 from .source_review import SourceReview, review as review_source
 
@@ -210,7 +212,7 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
     now = now or datetime.now(UTC)
     fit_row = (await db.scalars(select(JobFitCheck).where(JobFitCheck.user_id == user.id,
                                                           JobFitCheck.listing_id == entry.listing_id)
-                                .order_by(JobFitCheck.created_at.desc()).limit(1))).first()
+                                .order_by(JobFitCheck.created_at.desc(), JobFitCheck.id).limit(1))).first()
     fit = None
     if fit_row is not None and isinstance(fit_row.result, dict):
         r = fit_row.result
@@ -279,6 +281,17 @@ async def get_mission(entry_id: str, user: Annotated[User, Depends(current_user)
 async def get_source_review(entry_id: str, user: Annotated[User, Depends(current_user)],
                             db: Annotated[AsyncSession, Depends(get_db)]) -> SourceReview:
     return await review_source(db, await _entry(db, entry_id, user))
+
+
+@router.get("/{entry_id}/mission/practice", response_model=RequirementPractice, dependencies=[read_limit])
+async def get_requirement_practice(entry_id: str, user: Annotated[User, Depends(current_user)],
+                                   db: Annotated[AsyncSession, Depends(get_db)]) -> RequirementPractice:
+    entry = await _entry(db, entry_id, user)
+    fit = await db.scalar(select(JobFitCheck).where(JobFitCheck.user_id == user.id,
+        JobFitCheck.listing_id == entry.listing_id).order_by(JobFitCheck.created_at.desc(), JobFitCheck.id)
+        .limit(1).execution_options(populate_existing=True))
+    return practice_source(entry.id, fit.id if fit else None, fit.created_at if fit else None,
+                           fit.result if fit else None, get_settings().evidence_vault)
 
 
 class LinkResumeIn(BaseModel):
