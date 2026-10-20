@@ -1171,6 +1171,7 @@ class ApplicationPacket(TimestampMixin, Base):
     resume_title: Mapped[str] = mapped_column(String(160), default="")
     resume_data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # the tailored copy
     resume_diff: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    posting_text: Mapped[str | None] = mapped_column(Text)  # description captured with these prepared materials
     cover_letter: Mapped[str | None] = mapped_column(Text)
     generated: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)  # "why_company", for answering again
     fields: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)

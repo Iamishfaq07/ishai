@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { ApplyGroup, ApplyPacketDetail, ApplyPacketSummary, ApplyPlanReport } from "@orbit/types";
 import { Copy, ExternalLink, FileText, LoadGate, Pause, Play, Rocket, SlidersHorizontal, cx, focusRing, useCopy } from "@orbit/ui";
@@ -13,6 +13,8 @@ import { applyApi } from "./applyApi";
 import { ExtensionNeeded } from "./ExtensionNeeded";
 import { ATS_LABEL, GROUPS, SOURCE_LABEL, STATUS_LABEL, WHY_NOT, actionsFor, answerText } from "./model";
 import { PlanSummary } from "./Setup";
+
+const ApplicationReview = lazy(() => import("./ApplicationReview"));
 
 /** Jobs AI → Applications: what Orbit Apply prepared, sent, and needs you for, each with exactly what was sent. */
 export function ApplicationsPage() {
@@ -73,7 +75,7 @@ export function ApplicationsPage() {
       <PageHeader
         icon={Rocket}
         title="Applications"
-        subtitle="What Orbit Apply prepared and sent for you, from your browser, with the answers you approved."
+        subtitle="What Orbit Apply prepared and sent with your approved answers, using hosted applying or your connected browser."
         actions={
           <Link to={JOBS_AUTO_APPLY} className={linkButton("secondary", "md")}>
             <SlidersHorizontal className="h-4 w-4" aria-hidden /> Setup
@@ -115,7 +117,7 @@ export function ApplicationsPage() {
                   <div>
                     <dt className="text-zinc-500 dark:text-zinc-400">Next</dt>
                     <dd className="font-semibold">
-                      {!s ? "…" : s.why_not ? WHY_NOT[s.why_not] : s.next_due_at ? new Date(s.next_due_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "When your browser asks"}
+                      {!s ? "…" : s.why_not ? WHY_NOT[s.why_not] : s.next_due_at ? new Date(s.next_due_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : setup.data?.execution === "hosted" ? "When the hosted worker is ready" : "When your browser asks"}
                     </dd>
                   </div>
                 </dl>
@@ -228,6 +230,7 @@ function useBlobUrl(path: string | null): string | null {
 }
 
 function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) {
+  const [showReview, setShowReview] = useState(false);
   const [confirmedFor, setConfirmedFor] = useState<string | null>(null);
   const detail = useAsync(() => applyApi.applyPacket(id), [id], `apply-packet|${id}`);
   const [busy, setBusy] = useState<string | null>(null);
@@ -288,6 +291,14 @@ function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) 
       </div>
 
       <div aria-live="polite">{error && <ErrorNote>{error}</ErrorNote>}</div>
+
+      <details className="rounded-xl border border-zinc-200 p-3 text-sm dark:border-white/10">
+        <summary className={cx("cursor-pointer rounded font-semibold", focusRing)}>Job posting captured with this application</summary>
+        <p className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap text-zinc-600 dark:text-zinc-400">{p.posting_text ?? "No posting archive was captured for this older application. Open the employer’s current post to check its requirements."}</p>
+      </details>
+
+      {showReview ? <Suspense fallback={<p className="text-sm">Opening application reviewer…</p>}><ApplicationReview key={p.id} id={p.id} revision={p.updated_at} /></Suspense>
+        : <Button variant="secondary" onClick={() => setShowReview(true)}>Open AI second reader</Button>}
 
       {p.missing_questions.length > 0 && <MissingForm packet={p} busy={busy === "answers"} onSubmit={(answers) => void act("answers", () => applyApi.answerApplyPacket(p.id, answers))} />}
 

@@ -323,6 +323,20 @@ any other URL):
   `C:/Program Files/Git/api`, the built app's API calls all fail, and a page measures without anything the server
   says (that hid the hero's CLS until 18 Oct 2026). `grep -l "Program Files" dist/assets/*.js` should find nothing.
 
+## Application agent and discovery (20 October 2026)
+
+The workspace switch, Tools navigation and route map add about 0.4 kB gzip to the common entry (171.5 kB;
+the 172 kB limit stays). Explorer, agent and AI reviewer load on demand. The Action desk now also loads on demand,
+reducing core Jobs first load from 280.7 to about 279 kB despite navigation additions. New budgets cover
+ToolExplorer (181.1 kB measured, limit 187) and Journey (202.3 kB measured, limit 210). SVG needs no image download
+or animation library.
+
+Existing limits change narrowly: CSS 32.25 → 32.6 kB (32.4 measured), Home 212 → 213 (212.1 measured),
+Landing 207 → 208 (207.6 measured), Live 248 → 249 (248.1 measured). Live imports no new tools; its increase is
+shared navigation/preload data. Apply 193 → 194 (193.1 measured) covers the captured posting disclosure and lazy
+reviewer entry point. Jobs, entry and other limits stay. These are gzip first-load measurements,
+not Lighthouse timing claims.
+
 ## Left to do (expected gains)
 - **Live page animations**: pause the idle orb after a few seconds of listening, or draw it at 30 fps, and make
   Gentle the default on phones: ~10% of a desktop core and much more of a phone's while a session only listens.

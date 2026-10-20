@@ -3,6 +3,8 @@ import { guideTitle } from "../pages/bank/names";
 /** The browser tab's title for each page ("Sessions · Orbit"). First match wins, so deeper paths come first. */
 const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/$/, "Home"],
+  [/^\/tools(\/|$)/, "Explore Orbit tools"],
+  [/^\/jobs\/journey/, "Application agent"],
   [/^\/welcome/, "Welcome"],
   [/^\/warmup/, "Interview warm-up"],
   [/^\/companies(\/|$)/, "Company interview guides"],
@@ -63,6 +65,7 @@ export function routeTitle(pathname: string, signedOut = false): string | null {
 
 /** Descriptions for the pages people share or land on. Other pages keep whatever is already in the document. */
 const ROUTE_DESCRIPTIONS: Array<[RegExp, string]> = [
+  [/^\/tools(\/|$)/, "Find AI resume tools, hosted applications, interview practice and hiring automations. Explore Personal and Business workflows step by step."],
   [/^\/$/, "Interview practice and live help, a resume checker with an ATS score, and new jobs that fit you. One free account. No subscription."],
   [/^\/resume-ai\/?$/, "An ATS score out of 100, what's missing for the job you want, and AI rewrites that keep your own numbers. Editing, the score and downloads are free."],
   [/^\/jobs\/?$/, "The latest openings from companies' careers pages, matched to your resume, with a tracker and free AI fit checks."],

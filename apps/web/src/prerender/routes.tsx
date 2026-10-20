@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { companies as companyCards, roles as roleCards } from "virtual:question-bank/cards";
 import { ContactPage } from "../pages/Contact";
 import { LandingPage } from "../pages/Landing";
+import { ToolExplorerPage } from "../pages/tools/ToolExplorer";
 import { TechnicalPage } from "../pages/Technical";
 import { PricingPage } from "../pages/Pricing";
 import { CopilotPublicPage } from "../pages/CopilotPublic";
@@ -53,6 +54,7 @@ const WORKER_PAGES: Record<string, () => ReactNode> = {
   "/mock-interview": () => <PracticePublicPage />,
   "/linkedin-ai": () => <LinkedInPublicPage />,
   "/business": () => <BusinessLandingPage />,
+  "/tools": () => <ToolExplorerPage />,
 };
 
 /** Where the Worker finds a PAGE_META page's built copy (worker/prerendered.js `prerenderedAsset`). */

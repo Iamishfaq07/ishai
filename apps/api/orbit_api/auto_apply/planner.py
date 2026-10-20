@@ -256,7 +256,7 @@ async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobL
         url=row.url, apply_url=target.apply_url or row.apply_url or row.url, dedupe_key=row.dedupe_key,
         match_score=match.score, match_reason=_reason(match, setup.threshold), resume_title=resume_title,
         resume_data=tailored.data.model_dump(mode="json"), approval_fingerprint=approval_fingerprint(setup, entries),
-        resume_diff=[c.model_dump() for c in tailored.changes],
+        resume_diff=[c.model_dump() for c in tailored.changes], posting_text=row.description,
         cover_letter=letter, generated=dict(ctx.generated), fields=_fields(facts), answers=answer_dicts,
         questions=[q.model_dump() for q in questions], missing=[m.model_dump() for m in missing],
         form_source=form_source, not_before=now, expires_at=now + rules.PACKET_TTL,
@@ -297,7 +297,8 @@ async def rebuild_packet(db: AsyncSession, user: User, setup: AutoApplySetup, pa
         return
     fresh = await prepare(db, user, setup, listing, from_listing(listing), matches[0], master, resume.title,
                           now=datetime.now(UTC), generate=None, transport=None, persist=False)
-    for key in ("resume_data", "resume_diff", "resume_title", "approval_fingerprint", "cover_letter", "generated",
+    for key in ("resume_data", "resume_diff", "resume_title", "approval_fingerprint", "posting_text",
+                "cover_letter", "generated",
                 "fields", "answers", "questions", "missing", "form_source", "expires_at", "not_before",
                 "ats", "tenant", "job_ref", "apply_url", "url", "match_score", "match_reason"):
         setattr(packet, key, getattr(fresh, key))
@@ -332,14 +333,14 @@ async def _prefs(db: AsyncSession, user: User, master: ResumeData) -> JobPrefs:
 
 async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = None,
                         generate: Generate | None = None, transport: httpx.AsyncBaseTransport | None = None,
-                        use_ai: bool = True) -> PlanReport:
+                        use_ai: bool = True, listing_ids: set[str] | None = None) -> PlanReport:
     """Prepare packets for one candidate, up to what their daily limit keeps ahead. Commits."""
     from orbit_api.job_portal.routes import _generate, _matches
 
     now = now or datetime.now(UTC)
     report = PlanReport()
     setup = await db.get(AutoApplySetup, user.id)
-    if setup is None or setup.consent_at is None:
+    if setup is None or setup.consent_at is None or setup.consent_version != rules.CONSENT_VERSION:
         report.blocked = "Finish the Orbit Apply setup and give your consent first."
         return report
     if await pause_if_hired(db, setup):
@@ -361,8 +362,11 @@ async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = 
     open_count = await db.scalar(select(func.count()).select_from(ApplicationPacket).where(
         ApplicationPacket.user_id == user.id, ApplicationPacket.status.in_(OPEN))) or 0
     budget = daily_limit(setup) * rules.PREPARED_AHEAD - int(open_count)
-    setup.last_planned_at = now
+    # An explicit shortlist must not postpone the regular whole-feed sweep.
+    if listing_ids is None:
+        setup.last_planned_at = now
     if budget <= 0:
+        report.blocked = "Your prepared queue is full. Review existing applications before preparing more."
         await db.commit()
         return report
     if generate is None and use_ai:
@@ -379,8 +383,10 @@ async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = 
     applied_ids = {lid for lid, _, _, st in tracked if st != "saved"}
     applied_jobs = [(c, t.lower()) for _, c, t, st in tracked if st != "saved"]
     excluded = filters.exclude_companies
+    prepared_ids: set[str] = set()
     for search in _searches(user, prefs, filters, facts):
-        matches = [m for m in await _matches(db, user, search, master, "best") if m.score >= threshold]
+        matches = [m for m in await _matches(db, user, search, master, "best") if m.score >= threshold
+                   and (listing_ids is None or m.id in listing_ids)]
         ids = [m.id for m in matches[:MAX_CONSIDERED]]
         rows = {r.id: r for r in (await db.scalars(select(JobListing).where(JobListing.id.in_(ids)))).all()}
         for m in matches[:MAX_CONSIDERED]:
@@ -452,6 +458,12 @@ async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = 
             # Another source in this pass must not prepare the same company/title twice.
             applied_jobs.append((row.company, row.title.lower()))
             report.created += 1
+            prepared_ids |= {row.id, apply_row.id}
+    if listing_ids is not None:
+        for row in await db.scalars(select(JobListing).where(JobListing.id.in_(listing_ids))):
+            if row.id not in prepared_ids and not any(s.listing_id == row.id for s in report.skipped):
+                report.skip(row, "Already prepared or applied." if row.id in seen_ids or row.id in applied_ids else
+                            "Not prepared: check your threshold, search rules, freshness and queue capacity.")
     await db.commit()
     await direct.run_ready(db, user)
     return report

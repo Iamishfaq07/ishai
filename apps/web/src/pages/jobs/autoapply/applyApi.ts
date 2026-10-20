@@ -26,6 +26,9 @@ export const applyApi = {
   saveApplyBank: (items: Array<{ norm: string; value: string; label?: string }>) => put<ApplyBankItem[]>("/v1/apply/bank", items),
   /** Planning reads forms and writes letters: it can take a while. */
   planApplications: () => api.call<ApplyPlanReport>("/v1/apply/plan", { method: "POST", timeoutMs: 120_000 }),
+  planShortlist: (listing_ids: string[]) => api.call<ApplyPlanReport>("/v1/apply/plan-shortlist", {
+    method: "POST", body: JSON.stringify({ listing_ids }), timeoutMs: 120_000,
+  }),
   applyPackets: (group?: ApplyGroup) =>
     api.call<ApplyPacketSummary[]>(`/v1/apply/packets${group ? `?group=${enc(group)}` : ""}`),
   applyPacket: (id: string) => api.call<ApplyPacketDetail>(`/v1/apply/packets/${enc(id)}`),

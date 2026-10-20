@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, ChevronDown, Menu, X, buttonClass, cx, floatingClass, focusRing, lockScroll, useDismiss, useFocusTrap } from "@orbit/ui";
 import { useAuth } from "../lib/auth";
+import { WorkspaceSwitch } from "../components/WorkspaceSwitch";
 import { useIndia } from "../lib/country";
 import { BrandLogo } from "./BrandLogo";
 import { PRODUCT_TILE, SITE_LINKS, siteProducts, type SiteProduct } from "./catalog";
@@ -50,7 +51,7 @@ export function PublicHeader({ authState, context, actions }: { authState?: { fr
       )}
     >
       <Container className="relative flex h-16 items-center gap-2">
-        <Link to="/" className={cx("-ml-1 shrink-0 rounded-lg p-1", focusRing)} aria-label="Orbit home">
+        <Link to="/" className={cx("-ml-1 w-9 shrink-0 overflow-hidden rounded-lg p-1 sm:w-auto sm:overflow-visible", focusRing)} aria-label="Orbit home">
           <BrandLogo height={26} decorative />
         </Link>
         {context && (
@@ -59,7 +60,7 @@ export function PublicHeader({ authState, context, actions }: { authState?: { fr
             <span className="hidden truncate text-sm font-medium text-zinc-700 sm:block dark:text-zinc-200">{context}</span>
           </>
         )}
-        <nav aria-label="Main" className="ml-6 hidden items-center gap-0.5 text-sm md:flex">
+        <nav aria-label="Main" className="ml-6 hidden items-center gap-0.5 text-sm lg:flex">
           <ProductsMenu />
           <NavLink to={SITE_LINKS.companies} also={/^\/roles(\/|$)/} className="hidden lg:inline-flex">
             Interview guides
@@ -69,8 +70,10 @@ export function PublicHeader({ authState, context, actions }: { authState?: { fr
             Security
           </NavLink>
           <NavLink to="/contact">Contact</NavLink>
+          <NavLink to="/tools">Tools</NavLink>
         </nav>
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <WorkspaceSwitch />
           {account}
           <MobileMenu authState={authState} />
         </div>
@@ -231,14 +234,14 @@ export function MobileMenu({ authState, className }: { authState?: { from: strin
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className={cx("grid h-10 w-10 place-items-center rounded-lg text-zinc-700 hover:bg-zinc-900/[0.04] md:hidden dark:text-zinc-200 dark:hover:bg-white/10", focusRing, className)}
+        className={cx("grid h-10 w-10 place-items-center rounded-lg text-zinc-700 hover:bg-zinc-900/[0.04] lg:hidden dark:text-zinc-200 dark:hover:bg-white/10", focusRing, className)}
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
       {open &&
         createPortal(
-          <div ref={trap} role="dialog" aria-modal="true" aria-label="Site menu" className="mk-drawer fixed inset-0 z-50 flex flex-col mk-canvas md:hidden">
+          <div ref={trap} role="dialog" aria-modal="true" aria-label="Site menu" className="mk-drawer fixed inset-0 z-50 flex flex-col mk-canvas lg:hidden">
             <div className="flex h-16 shrink-0 items-center justify-between border-b mk-line px-5">
               <Link to="/" onClick={close} className={cx("-ml-1 rounded-lg p-1", focusRing)} aria-label="Orbit home">
                 <BrandLogo height={26} decorative />
@@ -266,6 +269,7 @@ export function MobileMenu({ authState, className }: { authState?: { from: strin
                   [SITE_LINKS.security, "Security and privacy"],
                   [SITE_LINKS.howItWorks, "How Orbit works"],
                   ["/contact", "Contact"],
+                  ["/tools", "Explore all tools"],
                 ].map(([to, label]) => (
                   <li key={to}>
                     <Link to={to!} onClick={close} className={link}>

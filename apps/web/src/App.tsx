@@ -29,6 +29,7 @@ import {
   CompanionPage,
   DocumentsPage,
   HomePage,
+  ToolExplorerPage,
   LandingPage,
   WelcomePage,
   WarmupPage,
@@ -245,6 +246,7 @@ export function App() {
       <Route path="/warmup" element={<Prerendered><WarmupPage /></Prerendered>} />
       {/* Public: the Contact page's form, signed in or out (its messages wait in the admin's Inbox). */}
       <Route path="/contact" element={<Prerendered><ContactPage /></Prerendered>} />
+      <Route path="/tools" element={<Prerendered><ToolExplorerPage /></Prerendered>} />
       {/* Public: live latency, the answer pipeline, the desktop app's protections. */}
       <Route path="/technical" element={<Prerendered><TechnicalPage /></Prerendered>} />
       {/* Public: the prices in rupees and dollars, and the copilot's and Practice's product pages (D73). */}

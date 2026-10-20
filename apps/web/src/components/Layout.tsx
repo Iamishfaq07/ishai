@@ -251,6 +251,7 @@ export function Layout() {
               <Kbd className="hidden md:inline-flex">{shortcut}</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1 md:ml-auto">
+              <WorkspaceSwitch />
               <WaitingForAccess admin={admin} />
               <NewMenu onNavigate={navigate} />
               <div className="hidden md:block">
@@ -881,3 +882,4 @@ function WaitingForAccess({ admin }: { admin: boolean }) {
     </>
   );
 }
+import { WorkspaceSwitch } from "./WorkspaceSwitch";

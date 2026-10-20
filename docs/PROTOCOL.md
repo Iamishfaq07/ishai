@@ -240,8 +240,11 @@ apps: loopback redirect) with PKCE (RFC 7636, S256), on top of the web's server-
    - `403` for a suspended account or one no longer on a private server's allowlist; `429` when rate-limited.
 
 ## Orbit Apply: the executor contract (REST, D84)
-The server plans each application; the candidate's own device submits it (the browser extension today, the Windows
-app later). Types: `packages/types/src/autoApply.ts`; the extension's copy is `apps/extension/src/lib/autoApply/contract.ts`.
+The server plans each application. External forms run in the hosted worker or a connected browser; Orbit Direct
+uses its server submission path. Hosted execution is documented in [HOSTED_APPLY.md](HOSTED_APPLY.md).
+Selected shortlist planning, captured postings and the advisory AI second reader are documented in
+[APPLICATION_AGENT_DISCOVERY.md](APPLICATION_AGENT_DISCOVERY.md#api-and-data).
+Types: `packages/types/src/autoApply.ts`; the extension's copy is `apps/extension/src/lib/autoApply/contract.ts`.
 All routes take a Bearer token. An extension-scoped token (`POST /v1/extension/connect`) reaches these three and
 `POST /v1/apply/pause|resume`, and nothing else of Orbit Apply (auth/security.py `SCOPED_PATHS` and `SCOPED_PATTERNS`); a
 full sign-in works too. A bearer-token call to `/next` or `/status` records `executor_seen_at` (at most once a minute),

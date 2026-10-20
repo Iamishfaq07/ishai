@@ -75,7 +75,7 @@ function inputOf(s: ApplySetup): ApplySetupInput {
     quiet_hours: s.quiet_hours,
     tz_offset_min: -new Date().getTimezoneOffset(),
     consent: s.configured,
-    execution: s.execution ?? "browser",
+    execution: !s.consent_at && s.hosted_enabled ? "hosted" : s.execution ?? "browser",
     hosted_consent: !!s.hosted_consent_at,
     stop_when_hired: s.stop_when_hired ?? true,
   };
@@ -153,7 +153,7 @@ function Wizard({
                   "rounded-full border px-3 py-1 text-sm",
                   focusRing,
                   i === step
-                    ? "border-indigo-600 bg-indigo-600 text-white"
+                    ? "border-indigo-700 bg-indigo-700 text-white"
                     : "border-zinc-200 text-zinc-700 hover:border-zinc-300 dark:border-white/10 dark:text-zinc-200",
                 )}
               >
