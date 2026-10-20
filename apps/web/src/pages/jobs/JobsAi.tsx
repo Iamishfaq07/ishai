@@ -43,7 +43,7 @@ export function JobsAiSection() {
   const ran = useRef(false);
   const p = profile.data;
   useEffect(() => {
-    if (!p || ran.current) return;
+    if (!p || ran.current || params.get("start") === "1") return;
     // Not checked against `p.resumes`: that may be the list from before the resume was made. The server checks it.
     const switchTo = wanted && wanted !== p.resume?.id ? wanted : null;
     if (wanted) {

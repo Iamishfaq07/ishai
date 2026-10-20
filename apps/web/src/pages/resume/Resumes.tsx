@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { ResumeData, ResumeInput, ResumeSummary } from "@orbit/types";
 import {
   ArrowLeft,
@@ -59,7 +59,8 @@ export function ResumeAiHomePage() {
     refreshAllowance();
   }, [reloadList, refreshAllowance]);
   // Which way of starting is open: the list of sources, or straight to importing a file.
-  const [creating, setCreating] = useState<"new" | "import" | null>(null);
+  const [start] = useSearchParams();
+  const [creating, setCreating] = useState<"new" | "import" | null>(() => start.get("start") === "import" ? "import" : start.get("start") === "new" ? "new" : null);
   const [copying, setCopying] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   // A resume made on the free signed-out maker, still in this browser: offered once, then kept or dropped.
