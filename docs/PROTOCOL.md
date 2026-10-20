@@ -320,6 +320,13 @@ not an extension token. The private worker's existing `/questions` endpoint uses
 fail. AI may select an approved profile source for an eligible text field; it cannot author facts or browser actions.
 See [PERSONAL_FORM_AGENT.md](PERSONAL_FORM_AGENT.md) for limits, worker integration and deployment requirements.
 
+Personal job networking: `GET /v1/jobs/network/{application_id}` returns same-company saved contacts, own recorded
+company history, manual search links and a snapshot version. `POST /research` at that path uses the version plus
+optional public-page/reply text and a live-search choice; it returns source-grounded leads for review. `POST /capture`
+saves an explicitly reviewed lead to the owned contact book; `POST /draft` prepares role-specific outreach for an
+owned contact at the job's company. These full-session routes never send messages or mark an interaction completed.
+See [CAREER_OPS_INTEGRATION.md](CAREER_OPS_INTEGRATION.md) for the API shapes and optional search-provider setup.
+
 ## Orbit for Business (REST, D82)
 Not part of the live socket. TypeScript DTOs: `packages/types/src/business.ts`; source of truth
 `apps/api/orbit_api/business/`. A company is its own tenant on the same Orbit login. Every company route takes the

@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from html import unescape
 from html.parser import HTMLParser
 from typing import Any
-from urllib.parse import urljoin, urlsplit
+from urllib.parse import unquote, urljoin, urlsplit
 
 import httpx
 
@@ -137,6 +137,16 @@ async def fetch_job_posting(url: str, *, resolve: Resolver = _resolve,
         raise JobLinkError("That page took too long to load. Paste the job description text instead.") from e
 
 
+async def fetch_reference_page(url: str, *, resolve: Resolver = _resolve,
+                               transport: httpx.AsyncBaseTransport | None = None) -> JobPosting:
+    """Public contact research uses the same pinned-DNS/redirect/size protections as job import."""
+    try:
+        async with asyncio.timeout(TOTAL_TIMEOUT_S):
+            return await _fetch(url, resolve, transport, reference=True)
+    except TimeoutError as e:
+        raise JobLinkError("That page took too long to load. Paste the relevant public text instead.") from e
+
+
 async def _read_capped(resp: httpx.Response) -> bytes:
     """The body, decompressed by hand to at most MAX_BYTES: only identity or one gzip layer is accepted."""
     encoding = resp.headers.get("content-encoding", "").strip().lower()
@@ -164,7 +174,8 @@ async def _read_capped(resp: httpx.Response) -> bytes:
     return bytes(body[:MAX_BYTES])
 
 
-async def _fetch(url: str, resolve: Resolver, transport: httpx.AsyncBaseTransport | None) -> JobPosting:
+async def _fetch(url: str, resolve: Resolver, transport: httpx.AsyncBaseTransport | None,
+                 *, reference: bool = False) -> JobPosting:
     current = url.strip()
     async with httpx.AsyncClient(transport=transport, timeout=TIMEOUT_S, trust_env=False,
                                  follow_redirects=False) as client:
@@ -194,7 +205,8 @@ async def _fetch(url: str, resolve: Resolver, transport: httpx.AsyncBaseTranspor
             except httpx.HTTPError as e:
                 raise JobLinkError("Couldn't reach that page. Check the link, or paste the text instead.") from e
             # Parsing up to 2 MB of HTML is CPU work: a thread, so it doesn't stall the event loop.
-            posting = await asyncio.to_thread(extract_posting, raw, plain="text/plain" in ctype)
+            extractor = extract_reference if reference else extract_posting
+            posting = await asyncio.to_thread(extractor, raw, plain="text/plain" in ctype)
             posting.url = current
             return posting
     raise JobLinkError("That link redirects too many times.")
@@ -269,6 +281,28 @@ class _Page(HTMLParser):
         self.parts.append(s)
         if self.in_main and self.main_parts is not None:
             self.main_parts.append(s)
+
+
+class _ContactPage(_Page):
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        super().handle_starttag(tag, attrs)
+        if tag == "a" and not self.skip:
+            href = dict(attrs).get("href") or ""
+            # Preserve published contact links in their surrounding text, never executable/link-login actions.
+            if href.lower().startswith("mailto:"):
+                self._emit(" " + unquote(href.split("?", 1)[0])[:500] + " ")
+            elif re.match(r"https://(?:[\w-]+\.)?linkedin\.com/in/", href, re.I):
+                self._emit(" " + href[:500] + " ")
+
+
+def extract_reference(raw: str, *, plain: bool = False) -> JobPosting:
+    page = _ContactPage()
+    if not plain:
+        page.feed(raw)
+    content = _tidy(raw if plain else "".join(page.main_parts or page.parts))
+    if not content:
+        raise JobLinkError("No public text could be read. Paste the relevant text instead.")
+    return JobPosting(url="", title=None, company=None, text=content)
 
 
 def _tidy(text: str) -> str:

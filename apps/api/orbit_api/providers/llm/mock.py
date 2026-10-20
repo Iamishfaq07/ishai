@@ -438,6 +438,20 @@ class MockLLMProvider(LLMProvider):
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
             return json.dumps({"matches": [{"question_id": q["id"], "source": q["candidates"][0], "confidence": 0.99}
                 for q in data["questions"] if len(q["candidates"]) == 1]})
+        if request.request_type == "career_contact_research":
+            body = request.messages[-1].content
+            data = json.loads(body[body.find("{"):body.rfind("}") + 1])
+            people = []
+            for source in data["sources"]:
+                match = re.search(r"From:\s*([^<>\n]+)\s*<([^<>\n]+)>\s*\nTitle:\s*([^\n]+)", source["text"])
+                if match:
+                    people.append({"source_id": source["id"], "name": match[1].strip(), "email": match[2],
+                        "title": match[3].strip(), "linkedin_url": None, "quote": match[0]})
+            return json.dumps({"people": people[:3]})
+        if request.request_type == "career_contact_draft":
+            return json.dumps({"subject": "[mock] A question about the role", "message":
+                "[mock] Hello, I'm interested in the role at your company. "
+                "Could you point me to the appropriate hiring contact?"})
         if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader"):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])

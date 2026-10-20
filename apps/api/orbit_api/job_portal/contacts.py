@@ -18,6 +18,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
 from orbit_api.models import JobApplication, JobContact, User
 from orbit_api.ratelimit import limit_user
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/jobs/contacts", tags=["jobs"])
 contacts_limit = limit_user("jobs-contacts", rate_per_s=3, burst=60)
@@ -219,6 +220,7 @@ async def list_contacts(user: Annotated[User, Depends(current_user)], db: Annota
 @router.post("", response_model=ContactOut, status_code=201, dependencies=[Depends(contacts_limit)])
 async def add_contact(body: ContactIn, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)]) -> ContactOut:
+    await lock_account(db, user.id)
     count = await db.scalar(select(func.count()).select_from(JobContact).where(JobContact.user_id == user.id))
     if (count or 0) >= MAX_CONTACTS:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_CONTACTS} contacts.")

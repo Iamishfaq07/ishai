@@ -254,6 +254,7 @@ class Settings(BaseSettings):
     adzuna_app_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_ADZUNA_APP_KEY"))
     jsearch_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_JSEARCH_KEY"))
     jsearch_monthly_budget: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_JSEARCH_MONTHLY_BUDGET"))
+    contact_search_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_CONTACT_SEARCH_KEY"))
 
     # The Contact page (contact/routes.py): at most this many messages a rolling day from everyone together (each
     # network also has its own limits), so a flood can't bury the Inbox. Messages the admin marked done or spam are

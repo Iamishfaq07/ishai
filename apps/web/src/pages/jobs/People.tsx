@@ -40,8 +40,8 @@ const EMPTY: JobContactInput = { name: "", company: "", title: "", relation: "re
  * follow up with each (orbit_api/job_portal/contacts.py). Whoever is due comes first; "I got in touch" sets the next
  * follow-up a week out.
  */
-export function PeopleSection() {
-  const contacts = useAsync(() => api.jobContacts(), [], "job-contacts");
+export function PeopleSection({ revision = 0 }: { revision?: number }) {
+  const contacts = useAsync(() => api.jobContacts(), [revision], "job-contacts");
   const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
   const [editing, setEditing] = useState<{ id: string | null; initial: JobContactInput } | null>(null);
   const [error, setError] = useState<string | null>(null);
