@@ -135,3 +135,9 @@ Separate channels (mic → candidate, system → interviewer) instead of diariza
 | 4 AI quality | detector overhaul, ambiguous-band classifier, grounding labels | ✅ #56 |
 | 5 UX features | preflight + workspaces, key points, coding answers, mock interviewer | ✅ #57–#60 |
 | 6 Polish | text scale + in-app dialogs, accessibility, icon library, installer lifecycle, docs | ✅ #62–#66 |
+
+## Personal career navigation (20 October 2026)
+
+Signed-in `/` is Today, using the existing launchpad progress/action projection, not a new recommendation engine. Five primary tasks route to Today, Discover (`/jobs/matches`), Applications (`/jobs/tracker`), Prepare (`/prepare`) and My Career (`/career`). The last two organize existing tools; legacy deep links stay intact. The first-use launchpad remains at `/jobs?start=1`.
+
+The existing mission read model now projects the exact owned listing's application identity/status only. Guided Application opens that packet's reviewed kit; packet and tracker statuses remain independent. See [lineage](implementation/SECURITY_AND_DATA_LINEAGE.md).

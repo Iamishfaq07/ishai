@@ -351,3 +351,7 @@ not Lighthouse timing claims.
   103 Early Hints; neither is needed for the 2.5 s budget now (1.5 to 1.8 s).
 - **The admin cost report** (357 ms): aggregate in SQL instead of reading every call of the month into Python.
 - **Desktop**: lazy-load its heavier screens (main chunk 533 kB parsed at every start).
+
+## V6 continuity measurement — 20 October 2026
+
+Home's existing 213 kB ceiling is retained. CareerSpaces (a new lazy contextual tool index) receives that same ceiling; no existing budget is increased. First measurement after integration: Home 187.7 kB gzip, CareerSpaces 173.6, entry 171.6/172, CSS32.4/32.6, JobsAiPages276.1/280, ResumeEditor252.6/255. Full output is recorded in implementation/BASELINE.md after the final build. These are bundle measurements, not production Core Web Vitals. The mission adds one fixed projection query using the existing unique user/listing index.

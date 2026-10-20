@@ -278,3 +278,7 @@ The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](S
     counters. A Playwright run with Chromium's virtual authenticator covers the browser side.
   - The desktop app keeps password, Google and two-step sign-in. Passkeys are on the website only, because the
     app's webview origin isn't the site's.
+
+## Preview data boundary
+
+Canonical production API access is refused from previews at both Worker and browser endpoint selection, including production artifacts accidentally served on a preview host. Staging requires independent infrastructure/secrets/domain; configuration guards cannot identify every private production alias. See [STAGING.md](STAGING.md) and [verification limits](implementation/SECURITY_AND_DATA_LINEAGE.md).

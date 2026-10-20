@@ -1,0 +1,72 @@
+[
+  {
+    "repo": "career-ops-hq/career-ops",
+    "sha": "35b485148708a2e9e0456af78afe69aed4b62c5a",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-20T14:39:10Z"
+  },
+  {
+    "repo": "reactive-resume/reactive-resume",
+    "sha": "fa8014e95e1b4b32f61a3d295feb024c8504b2e6",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-20T09:58:51Z"
+  },
+  {
+    "repo": "srbhr/Resume-Matcher",
+    "sha": "ff5b370372d39b6cb6b56fd0dad88a2fe5c3abce",
+    "license": "Apache-2.0",
+    "archived": false,
+    "pushed_at": "2026-10-17T04:54:13Z"
+  },
+  {
+    "repo": "semirturgay/ai-career-os",
+    "sha": "cc3fce2a1b7a1d6c86de75c09ab6fc0ad03a2dd8",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-08-12T17:46:20Z"
+  },
+  {
+    "repo": "speedyapply/JobSpy",
+    "sha": "8dd83cdd194b6e27f6487eb09b2b2a10117d9a1c",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-20T00:15:43Z"
+  },
+  {
+    "repo": "browser-use/browser-use",
+    "sha": "aa093a843da5edbf323c0b4145c9b6a0db3ecde8",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-20T06:00:24Z"
+  },
+  {
+    "repo": "langchain-ai/langgraph",
+    "sha": "a24fc97778fca67cfac4cd3fc63e508ee1d29f59",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-20T10:09:29Z"
+  },
+  {
+    "repo": "motiondivision/motion",
+    "sha": "2076db7678196f82fb4fc5482bd7bb568f622a35",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-20T14:55:22Z"
+  },
+  {
+    "repo": "xyflow/xyflow",
+    "sha": "654ba5a5e04f3404bc4db2eee88bfa15866d203d",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-20T13:40:13Z"
+  },
+  {
+    "repo": "shadcn-ui/ui",
+    "sha": "ba1503c64472b82256d9de95e2e62c5901a38e8b",
+    "license": "MIT",
+    "archived": false,
+    "pushed_at": "2026-10-19T09:28:57Z"
+  }
+]

@@ -50,6 +50,7 @@ jobs:
         run: |
           uv run alembic upgrade head
           uv run alembic downgrade base
+          uv run alembic upgrade head
       # The tests whose point is locking and unique constraints (one support ticket per chat under a burst of
       # requests, account deletion taking the chat's Inbox copy), on Postgres as well as SQLite.
       - name: Race and lifecycle tests on Postgres
@@ -64,7 +65,7 @@ jobs:
           tests/test_workflow_ai.py
           tests/test_career_weekly.py tests/test_business_control_room.py
           tests/test_application_agent.py
-          tests/test_career_playbooks.py tests/test_offer_automations.py
+          tests/test_career_playbooks.py tests/test_offer_automations.py tests/test_job_mission.py
 
   frontend:
     runs-on: ubuntu-latest

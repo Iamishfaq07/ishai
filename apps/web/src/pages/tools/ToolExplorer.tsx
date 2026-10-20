@@ -9,7 +9,7 @@ import { filterTools, STAGES, type Stage, type Audience } from "./catalog";
 function FlowGraphic({ stage }: { stage: number }) {
   return <svg viewBox="0 0 360 100" role="img" aria-label={`Career workflow, step ${stage + 1} selected`} className="h-24 w-full max-w-md">
     <path d="M45 50H315" stroke="currentColor" strokeWidth="2" className="text-indigo-200 dark:text-indigo-800" />
-    {[45, 135, 225, 315].map((x, i) => <g key={x} className="motion-safe:transition-opacity motion-safe:duration-300" opacity={i === stage ? 1 : 0.45}>
+    {[45, 135, 225, 315].map((x, i) => <g key={x} className="motion-safe:transition-opacity motion-safe:duration-quick" opacity={i === stage ? 1 : 0.45}>
       <circle cx={x} cy="50" r="26" className={i === stage ? "fill-indigo-600 motion-safe:animate-pulse" : "fill-indigo-100 dark:fill-indigo-900"} />
       <rect x={x - 9} y="37" width="18" height="26" rx="3" fill="none" stroke={i === stage ? "white" : "#818cf8"} strokeWidth="2" />
       <path d={`M${x - 4} 46h8m-8 6h8m-8 6h4`} stroke={i === stage ? "white" : "#818cf8"} strokeWidth="2" />

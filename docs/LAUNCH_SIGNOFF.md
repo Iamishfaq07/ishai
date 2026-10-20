@@ -1,3 +1,7 @@
+# Launch sign-off — historical snapshot
+
+**Superseded for current deployment facts by [20 October verification](releases/2026-10-20-verification.md) and [Personal Orbit increment sign-off](releases/2026-10-20-personal-orbit-signoff.md).** The report below records its original date/environment; its hosting, deployment and proxy-secret statements must not be treated as today's status.
+
 # Launch sign-off — 16 October 2026
 
 Against the enterprise launch brief of 16 October 2026. This records what was checked here and what wasn't. Nothing

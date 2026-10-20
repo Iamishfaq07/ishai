@@ -46,11 +46,15 @@
   //   "GOOGLE_SITE_VERIFICATION", "BING_SITE_VERIFICATION", "YANDEX_VERIFICATION", "NAVER_SITE_VERIFICATION",
   //   "SEZNAM_VERIFICATION" (each the code alone, not the whole tag). AI_TRAINING_CRAWLERS: "allow" (the default) or
   //   "block" (DECISIONS D67).
-  "vars": { "API_URL": "https://api.orbitanswer.com" },
-  // Builds of branches other than main run `wrangler preview` (Cloudflare's non-production deploy command), which
-  // needs its own vars. Previews talk to the same API: the web app holds no data of its own, and without the
-  // PROXY_SECRET secret (production only) the API treats a preview like any outside caller for rate limits.
-  "previews": { "vars": { "API_URL": "https://api.orbitanswer.com" } }
-  // Secret (not a var): `wrangler secret put PROXY_SECRET` with the API's ORBIT_PROXY_SECRET, so the API can trust
-  // the client IP this Worker forwards (apps/web/worker/index.js).
+  "vars": { "API_URL": "https://api.orbitanswer.com", "DEPLOYMENT_ENV": "production" },
+  // Unconfigured previews fail closed. Provision independent staging resources before adding a URL.
+  "previews": { "vars": { "API_URL": "", "DEPLOYMENT_ENV": "preview" } },
+  "env": {
+    "staging": {
+      "name": "orbit-staging",
+      "vars": { "API_URL": "", "DEPLOYMENT_ENV": "staging" },
+      "triggers": { "crons": [] }
+    }
+  }
+  // Production PROXY_SECRET = production ORBIT_PROXY_SECRET. Staging needs a distinct secret.
 }

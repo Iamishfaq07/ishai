@@ -98,7 +98,6 @@ const NEW_ACTIONS: Array<{ to: string; label: string; icon: LucideIcon }> = [
   { to: OFFERS_HOME, label: "Offer to compare", icon: CreditCard },
 ];
 
-const EXPLORE_PATH = /^\/(billing|settings|admin)(\/|$)/;
 
 function initials(name: string | null | undefined, email: string | undefined): string {
   const source = name?.trim() || email?.split("@")[0] || "?";
@@ -142,7 +141,6 @@ function useSidebar(): [boolean, () => void] {
 
 export function Layout() {
   const { user, logout, setUser } = useAuth();
-  const explore = useExploreItems();
   // Only nag when this server actually locks paid features behind verification.
   const [verificationRequired, setVerificationRequired] = useState(false);
   useEffect(() => {
@@ -204,7 +202,6 @@ export function Layout() {
 
   const copilot = COPILOT_PATH.test(pathname);
   const learning = LEARNING_PATH.test(pathname);
-  const exploreActive = EXPLORE_PATH.test(pathname) || explore.some((t) => t.current(pathname));
   const shortcut = isMacPlatform() ? "⌘K" : "Ctrl K";
 
   return (
@@ -251,6 +248,7 @@ export function Layout() {
               <Kbd className="hidden md:inline-flex">{shortcut}</Kbd>
             </button>
             <div className="flex shrink-0 items-center gap-1 md:ml-auto">
+              <button type="button" onClick={() => setExploreOpen(true)} aria-label="More tools and account" aria-haspopup="dialog" aria-expanded={exploreOpen} className={cx("grid h-11 w-11 place-items-center rounded-xl md:hidden", focusRing)}><Compass className="h-5 w-5" aria-hidden /></button>
               <WorkspaceSwitch />
               <WaitingForAccess admin={admin} />
               <NewMenu onNavigate={navigate} />
@@ -369,7 +367,7 @@ export function Layout() {
         </footer>
       </div>
 
-      {/* Phones: five destinations in thumb reach (four tabs and Explore). Solid, so page text never scrolls under the
+      {/* Phones: five career tasks in thumb reach. More tools and account controls are in the header. Solid, so page text never scrolls under the
           labels. */}
       <nav
         aria-label="Main"
@@ -383,7 +381,7 @@ export function Layout() {
               <li key={to} className="min-w-0">
                 <Link
                   to={to}
-                  aria-label={name !== label ? label : undefined}
+                  aria-label={name !== label ? `${name}: ${label}` : undefined}
                   aria-current={active ? "page" : undefined}
                   onTouchStart={() => prefetchRoute(to)}
                   className={tabClass(active)}
@@ -394,23 +392,10 @@ export function Layout() {
               </li>
             );
           })}
-          <li className="min-w-0">
-            <button
-              type="button"
-              onClick={() => setExploreOpen(true)}
-              aria-haspopup="dialog"
-              aria-expanded={exploreOpen}
-              aria-label={`Explore: ${explore.map((t) => t.label).join(", ")}, plan, settings, support and sign out`}
-              className={cx(tabClass(exploreActive || exploreOpen), "w-full")}
-            >
-              <TabIcon icon={Compass} active={exploreActive || exploreOpen} />
-              Explore
-            </button>
-          </li>
         </ul>
       </nav>
 
-      <Sheet open={exploreOpen} onClose={() => setExploreOpen(false)} title="Explore" titleId="explore-title">
+      <Sheet open={exploreOpen} onClose={() => setExploreOpen(false)} title="More tools and account" titleId="explore-title">
         <ExploreMenu
           name={user?.name ?? null}
           email={user?.email ?? ""}

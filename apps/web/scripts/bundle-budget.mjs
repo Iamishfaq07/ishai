@@ -23,7 +23,8 @@ export const BUDGETS = {
     // +1 kB on the signed-in pages for D82 (docs/PERFORMANCE.md): Orbit for Business's routes and its one loader in
     // the entry (+0.3 kB), and the table's sort arrow became a chunk of its own, shared with the business app. The
     // business app itself is lazy and in nobody's first load.
-    Home: 213, // shared workspace switch and discovery link; see docs/PERFORMANCE.md
+    Home: 213,
+    CareerSpaces: 213, // shared workspace switch and discovery link; see docs/PERFORMANCE.md
     // The front page, signed out. +1 kB for SameBox (0.5 kB): its free line keeps its room until the server answers
     // (CLS 0; docs/PERFORMANCE.md).
     Landing: 208, // public workspace switch and tools navigation

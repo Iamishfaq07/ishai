@@ -13,9 +13,15 @@ from alembic import command
 from alembic.config import Config
 engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''))
 with engine.begin() as c:
-    for name in ('biz_companies', 'biz_jobs', 'biz_applications'):
+    for name in ('users', 'biz_companies', 'biz_jobs', 'biz_applications'):
         c.execute(text('CREATE TABLE ' + name + ' (id VARCHAR(36) PRIMARY KEY)'))
         c.execute(text('INSERT INTO ' + name + " (id) VALUES ('existing-row')"))
+# These focused fixtures stamp an old revision. Include the pre-existing apply tables too:
+# later migrations now alter them while the test still upgrades to the real head.
+with engine.begin() as c:
+    c.execute(text('CREATE TABLE application_packets (id VARCHAR(36) PRIMARY KEY)'))
+    c.execute(text('CREATE TABLE auto_apply_setups (user_id VARCHAR(36) PRIMARY KEY)'))
+    c.execute(text("INSERT INTO application_packets (id) VALUES ('retained-packet')"))
 cfg = Config('alembic.ini')
 command.stamp(cfg, '47b9e3d0a6f2')
 command.upgrade(cfg, 'head')
@@ -28,6 +34,7 @@ assert 'biz_hiring_tasks' not in inspect(engine).get_table_names()
 command.upgrade(cfg, 'head')
 with engine.connect() as c:
     assert c.execute(text('SELECT id FROM biz_applications')).scalar() == 'existing-row'
+    assert c.execute(text('SELECT id FROM application_packets')).scalar() == 'retained-packet'
 engine.dispose()
 """
     database = tmp_path / "automation-migration.db"

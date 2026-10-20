@@ -173,3 +173,7 @@ day (reset at midnight UTC, 10 ms CPU each); past that, every address the Worker
 reset, so the whole site (pages and API) would be down, not just the API. The API calls are most of the count (a
 signed-in visit makes dozens; a page load adds one, a crawler's fetch one). Watch Workers & Pages → orbit → Metrics,
 and move to Workers Paid ($5 a month, 10 million requests included) before daily requests pass about 50,000.
+
+## Preview isolation (20 October 2026)
+
+See [STAGING.md](STAGING.md). Branch previews no longer point at the production API and fail closed until an independent API is provisioned. Both direct browser REST/live URLs and the Worker proxy need isolation. Production defaults stay unchanged. Current read-only deployment observations are in [release verification](releases/2026-10-20-verification.md); the older Render launch snapshot is historical.

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Button, ErrorNote, Field, Select, cx, focusRing } from "@orbit/ui";
+import { Button, ErrorNote, Field, Select, buttonClass, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 
@@ -54,7 +54,7 @@ export function CareerCompanion({ mode, resumeId, onSelect }: { mode: "resume" |
   };
   return <section aria-labelledby="companion-title" className="min-w-0 space-y-4 break-words">
     <header className="rounded-2xl bg-indigo-950 p-5 text-white"><h2 id="companion-title" className="text-xl font-semibold">{mode === "resume" ? "Your resume, step by step" : mode === "home" ? "Continue your journey" : "Your next-step companion"}</h2>
-      <p className="mt-2 text-sm text-indigo-100">{mode === "resume" ? "Start, import or edit a resume. Use your real education and projects; work experience is optional when you are starting out." : "Review your saved resume and application signals, then ask AI for a small plan you can act on."}</p></header>
+      <p className="mt-2 text-sm text-indigo-100">{mode === "resume" ? "Start, import or edit a resume. Use your real education and projects; work experience is optional when you are starting out." : "Your resume, opportunities and application updates, connected in one place. Saved activity determines the next step."}</p></header>
     {error && <ErrorNote onRetry={() => void refresh()}>{error}</ErrorNote>}
     {!source ? <p role="status">{busy ? "Opening your saved career information…" : "Refresh to load your saved information."}</p> : <>
       {mode !== "home" && <div className="space-y-4 rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
@@ -67,7 +67,7 @@ export function CareerCompanion({ mode, resumeId, onSelect }: { mode: "resume" |
           <ul className="grid gap-2 sm:grid-cols-2">{source.checks.map((check) => <li key={check.id}><Link to={check.path} className={cx("flex min-h-14 items-center justify-between gap-3 rounded-xl border border-zinc-200 p-3 text-sm hover:border-indigo-400 dark:border-white/15", focusRing)}><span className="font-medium">{check.label}</span><span className="text-xs">{check.present ? "Review / edit" : "Add details"}</span></Link></li>)}</ul>
         </>}
       </div>}
-      <section aria-label="Suggested next action" className="rounded-2xl bg-indigo-500/10 p-4"><h3 className="font-semibold">{source.next_step.action}</h3><p className="mt-2 text-sm">{source.next_step.text}</p><Link className={link} to={source.next_step.path}>Open next step</Link>
+      <section aria-label="Suggested next action" className="rounded-2xl bg-indigo-500/10 p-4"><h3 className="font-semibold">{source.next_step.action}</h3><p className="mt-2 text-sm">{source.next_step.text}</p><Link className={mode === "home" ? buttonClass("primary", "md", "mt-3 min-h-11") : link} to={source.next_step.path}>Open next step</Link>
         {mode === "home" && <><p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">{source.activity.truncated ? "At least " : ""}{source.activity.count} saved {source.activity.count === 1 ? "action" : "actions"} in your seven-day queue. Updates every minute while this page is visible.</p>
           {source.activity.next_at && <p className="mt-1 text-xs">Saved date: {new Date(source.activity.next_at).toLocaleString()}</p>}
           <div className="mt-2 flex flex-wrap gap-x-4"><Link className={link} to="/jobs/actions">All daily actions</Link><Link className={link} to="/jobs/actions#follow-up-rules">Automate my reminders</Link></div></>}

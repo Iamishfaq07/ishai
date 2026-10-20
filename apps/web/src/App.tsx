@@ -29,6 +29,7 @@ import {
   CompanionPage,
   DocumentsPage,
   HomePage,
+  CareerSpacesPage,
   ToolExplorerPage,
   LandingPage,
   WelcomePage,
@@ -300,6 +301,8 @@ export function App() {
         }
       >
         <Route index element={<HomePage />} />
+        <Route path="career" element={<CareerSpacesPage />} />
+        <Route path="prepare" element={<CareerSpacesPage />} />
         <Route path="start" element={<SessionSetupPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="sessions/:sessionId" element={<SessionDetailPage />} />

@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, Banknote, GraduationCap, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, Video, isIndia, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, Banknote, GraduationCap, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -7,9 +7,8 @@ import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { PRODUCTS, type ProductId } from "./products";
 
 /**
- * The signed-in app's navigation ("Career Mission Control"), in one place for the desktop sidebar, the phone tab bar
- * and the phone's Explore sheet. Grouped by the job to be done: prepare, apply, then interview and the offer. The
- * addresses are the ones the products always had, so no link or bookmark changes.
+ * Five career tasks shared by the desktop sidebar and phone tab bar. Existing specialist routes remain
+ * accessible through the More sheet and search; Prepare/My Career collect them in context.
  */
 export interface NavItem {
   id: string;
@@ -34,7 +33,7 @@ const under = (home: string) => (p: string) => p === home || p.startsWith(`${hom
 export const COPILOT_PATH = /^\/(sessions|documents|start)(\/|$)/;
 export const LEARNING_PATH = /^\/(learn|code)(\/|$)/;
 
-const HOME: NavItem = { id: "home", to: "/", label: "Home", icon: House, current: (p) => p === "/" };
+const HOME: NavItem = { id: "home", to: "/", label: "Today", icon: House, current: (p) => p === "/" };
 const PRACTICE: NavItem = {
   id: "practice", to: "/mock", label: "Practice", icon: PRODUCTS.practice.icon, product: "practice",
   current: (p) => /^\/mock(\/|$)/.test(p),
@@ -59,26 +58,29 @@ const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offers", icon: Ba
 // Outside India, the offer tool's mark is money in general, not the rupee.
 const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 
-/** The sidebar, top to bottom. Practice only when mock interviews are switched on. `country`: where the user applies. */
-export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
-  const offer = isIndia(country) ? OFFER : OFFER_WORLD;
-  return [
-    { label: null, items: [HOME, JOBS, { id: "tools", to: "/tools", label: "Explore tools", icon: House, current: under("/tools") }] },
-    { label: "Prepare", items: [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING, LINKEDIN] },
-    { label: "Interview & offer", items: [COPILOT, offer] },
-  ];
-}
+const DISCOVER: NavItem = { ...JOBS, label: "Discover", tab: "Discover", to: "/jobs/matches", icon: Search,
+  current: (p) => /^\/jobs(?:\/(?:matches|profile|listing(?:\/[^/]+)?))?\/?$/.test(p) };
+const APPLICATIONS: NavItem = { id: "applications", label: "Applications", tab: "Apply", to: "/jobs/tracker", icon: PRODUCTS.jobs.icon,
+  current: (p) => /^\/jobs\/(tracker|mission|applications|journey|auto-apply|outreach)(\/|$)/.test(p) };
+const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
+  current: (p) => /^\/(prepare|mock|interview|learn|code)(\/|$)/.test(p) };
+const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: IdCard,
+  current: (p) => /^\/(career|resume-ai|linkedin|offers)(\/|$)/.test(p) };
+const TOOLS: NavItem = { id: "tools", to: "/tools", label: "All tools", icon: House, current: under("/tools") };
 
+/** Five task destinations; specialist tools remain available through More and search. */
+export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, _country: string = INDIA): NavGroup[] {
+  return [{ label: null, items: [HOME, DISCOVER, APPLICATIONS, PREPARE, CAREER] }, { label: "More", items: [COPILOT, TOOLS] }];
+}
 export function allNavItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
-  return navGroups(mock, country).flatMap((g) => g.items);
+  return [...navGroups(mock, country).flatMap((g) => g.items), ...specialists(mock, country)];
 }
-
-/** Phones: four tabs and Explore (five destinations). Practice is the fourth, or the copilot when mock is off. */
-export function phoneTabs(mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
-  return [HOME, JOBS, RESUME, mock ? PRACTICE : COPILOT];
+function specialists(mock: boolean, country: string): NavItem[] {
+  return [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING, LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD];
 }
-
-/** Everything else, in the Explore sheet (in the sidebar's order). */
+export function phoneTabs(_mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
+  return [HOME, DISCOVER, APPLICATIONS, PREPARE, CAREER];
+}
 export function exploreItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
   const tabs = new Set(phoneTabs(mock).map((t) => t.id));
   return allNavItems(mock, country).filter((i) => !tabs.has(i.id));

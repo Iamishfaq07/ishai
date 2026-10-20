@@ -136,3 +136,7 @@ natural sound. Those questions are generated practice questions, not your answer
 *Test audio* measures levels on your device and sends nothing to the server. *Copy diagnostics* puts a report on
 your clipboard for you to share if you choose. It holds measurements, device names (with personal names such as
 "Sam's AirPods" redacted), the app version and the Windows version: no audio, transcripts, account details or keys.
+
+## Personal career continuity
+
+Today, Prepare and My Career reuse the signed-in account's existing records. The per-job application link projects packet identity and delivery state, without another resume/answer store. This navigation update introduces no new analytics content, OAuth permission or retention period. Optional AI plans still require a deliberate request. Existing source records remain covered by account export/delete.

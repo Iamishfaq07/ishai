@@ -68,7 +68,7 @@ export function WeeklyStudioPage() {
         <h3 className="text-sm font-medium">{metric.label}</h3><p className="text-3xl font-semibold tabular-nums">{metric.count}<span className="text-sm font-normal text-zinc-500 dark:text-zinc-400"> / {metric.target === 0 ? "paused" : metric.target}</span></p>
         <div role="progressbar" aria-label={metric.label} aria-valuemin={0} aria-valuemax={Math.max(metric.count, metric.target, 1)} aria-valuenow={metric.count}
           aria-valuetext={metric.target ? `${metric.count} recorded, target ${metric.target}` : `${metric.count} recorded, goal paused`}
-          className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10"><div className="h-full rounded-full bg-indigo-600 transition-all motion-reduce:transition-none" style={{ width: `${metric.target ? Math.min(100, metric.count / metric.target * 100) : 0}%` }} /></div>
+          className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10"><div className="h-full rounded-full bg-indigo-600 transition-[width] motion-reduce:transition-none" style={{ width: `${metric.target ? Math.min(100, metric.count / metric.target * 100) : 0}%` }} /></div>
         <Link to={metric.path} className={cx("inline-block rounded text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>Open workspace</Link>
       </section>)}</div>
       <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900" aria-label="Weekly activity rhythm">

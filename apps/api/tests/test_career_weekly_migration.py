@@ -16,6 +16,12 @@ with engine.begin() as c:
     c.execute(text('PRAGMA foreign_keys=ON'))
     c.execute(text('CREATE TABLE users (id VARCHAR(36) PRIMARY KEY)'))
     c.execute(text("INSERT INTO users (id) VALUES ('existing-user')"))
+# These focused fixtures stamp an old revision. Include the pre-existing apply tables too:
+# later migrations now alter them while the test still upgrades to the real head.
+with engine.begin() as c:
+    c.execute(text('CREATE TABLE application_packets (id VARCHAR(36) PRIMARY KEY)'))
+    c.execute(text('CREATE TABLE auto_apply_setups (user_id VARCHAR(36) PRIMARY KEY)'))
+    c.execute(text("INSERT INTO application_packets (id) VALUES ('retained-packet')"))
 cfg = Config('alembic.ini')
 command.stamp(cfg, '58ca94f2d7e3')
 command.upgrade(cfg, 'head')
@@ -31,6 +37,8 @@ assert 'career_weekly_goals' not in inspect(engine).get_table_names()
 with engine.connect() as c:
     assert c.execute(text('SELECT id FROM users')).scalar() == 'retained-user'
 command.upgrade(cfg, 'head')
+with engine.connect() as c:
+    assert c.execute(text('SELECT id FROM application_packets')).scalar() == 'retained-packet'
 engine.dispose()
 """
     database = tmp_path / "weekly-migration.db"

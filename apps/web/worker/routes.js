@@ -28,7 +28,7 @@ export const CAREERS_ROUTES = [/^\/company\/[a-z0-9-]+$/, /^\/company\/[a-z0-9-]
  */
 export const APP_ROUTES = [
   /^\/(?:login|register|forgot-password|reset-password|verify-email|confirm-email-change|companion|welcome)$/,
-  /^\/(?:start|sessions|documents|mock|interview|billing|settings|linkedin|learn|code|offers)$/,
+  /^\/(?:career|prepare|start|sessions|documents|mock|interview|billing|settings|linkedin|learn|code|offers)$/,
   /^\/live\/[^/]+$/,
   /^\/sessions\/[^/]+$/,
   /^\/documents\/(?:stories|evidence|answers)$/,
@@ -55,6 +55,8 @@ export const REFERRAL_ROUTE = /^\/r\/[^/]+$/;
  * Each entry is written as "/x$" and "/x?" (seo.js), so "/mock" never blocks "/mock-interview"; subtrees are below.
  */
 export const ROBOTS_DISALLOW_EXACT = [
+  "/career",
+  "/prepare",
   "/start",
   "/sessions",
   "/documents",

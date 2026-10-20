@@ -26,10 +26,10 @@ Three products in one account:
 - **Before and after.** A preflight checklist (mic, interviewer audio, AI, transcription, minutes) before you start.
   Saved setups per job ("workspaces"). Session history, reports, transcript, and Markdown export.
 - **A good citizen.** A compact always-on-top window with adjustable transparency, a system tray, rebindable global
-  shortcuts, and signed auto-updates. Accessible (WCAG AA) in light and dark themes.
+  shortcuts, and signed update metadata (the installer remains Beta until Authenticode signing is verified). Accessible (WCAG AA) in light and dark themes.
 
-Download the Windows app from [orbit-downloads.ishfaq.workers.dev](https://orbit-downloads.ishfaq.workers.dev) (free, no
-sign-in; also on [Releases](https://github.com/Iamishfaq07/ishai/releases/latest)). It updates itself.
+Download the **Windows Beta** app from [orbit-downloads.ishfaq.workers.dev](https://orbit-downloads.ishfaq.workers.dev) (the current default in `apps/web/src/lib/desktop.ts`; `VITE_DESKTOP_DOWNLOAD_URL` may override it; no
+sign-in; also on [Releases](https://github.com/Iamishfaq07/ishai/releases/latest)). Updater signature verification and Windows publisher code signing are separate; see [Windows release status](docs/WINDOWS_RELEASE.md).
 
 ## Orbit Resume AI
 
