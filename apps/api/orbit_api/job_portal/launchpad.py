@@ -56,6 +56,7 @@ async def snapshot(db: AsyncSession, user: User, resume_id: str | None) -> dict[
                 "resume_id": selected.id if selected else None, "data": selected.data if selected else None}
     return {"version": hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest(),
             "prefs": material["prefs"], "resume_id": material["resume_id"],
+            "profile_resume_id": material["profile_resume"],
             "resumes": [{"id": r.id, "title": r.title} for r in resumes],
             "facts": resume_facts(selected.data or {}) if selected else []}
 

@@ -79,6 +79,7 @@ from orbit_api.extension.routes import router as extension_router
 from orbit_api.geo import router as region_router
 from orbit_api.job_portal.actions import router as job_actions_router
 from orbit_api.job_portal.alerts import router as job_alerts_router
+from orbit_api.job_portal.career_progress import router as career_progress_router
 from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contact_research import router as job_network_router
 from orbit_api.job_portal.contacts import router as job_contacts_router
@@ -416,6 +417,7 @@ def create_app() -> FastAPI:
     app.include_router(job_actions_router)
     app.include_router(job_weekly_router)
     app.include_router(job_launchpad_router)
+    app.include_router(career_progress_router)
     app.include_router(job_playbook_router)
     app.include_router(business_control_router)
     app.include_router(business_plan_assist_router)

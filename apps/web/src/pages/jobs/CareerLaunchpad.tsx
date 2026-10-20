@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { JobPrefs, JobProfile } from "@orbit/types";
 import { Button, Callout, Field, Input, Select, Sparkles, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
@@ -25,6 +25,8 @@ const muted = "text-sm text-zinc-600 dark:text-zinc-400";
 /** One guided start, nested in Today. No extra primary tab and no background AI or application consent changes. */
 export function CareerLaunchpad() {
   const { setProfile } = useJobsAi();
+  const [params] = useSearchParams();
+  const requestedResume = params.get("resume_id") ?? undefined;
   const [context, setContext] = useState<Context | null>(null);
   const [stage, setStage] = useState<Stage>("fresher");
   const [title, setTitle] = useState("");
@@ -61,7 +63,7 @@ export function CareerLaunchpad() {
     finally { if (id === request.current) setBusy(null); }
   }, []);
   const cancelPending = useCallback(() => { request.current++; }, []);
-  useEffect(() => { void load(); return cancelPending; }, [load, cancelPending]);
+  useEffect(() => { void load(requestedResume); return cancelPending; }, [load, cancelPending, requestedResume]);
   const payload = () => ({ version: context!.version, resume_id: context!.resume_id, stage });
   const explore = async () => {
     if (!context) return;
@@ -119,8 +121,8 @@ export function CareerLaunchpad() {
         </fieldset>
         <p className={cx("mt-3", muted)}>{context.resumes.length ? "Use real details from your education, projects and work. You can browse jobs without AI." : "No resume yet? Start with the student / fresher layout, or bring an existing resume. You can also choose a job title below and browse now."}</p>
         <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold">
-          <Link className={cx("rounded text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing)} to={context.resume_id ? `/resume-ai/${context.resume_id}` : "/resume-ai?start=new"}>{context.resume_id ? "Edit this resume" : "Build a resume"}</Link>
-          <Link className={cx("rounded underline underline-offset-4", focusRing)} to="/resume-ai?start=import">Import a resume</Link>
+          <Link className={cx("rounded text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing)} to={context.resume_id ? `/resume-ai/${context.resume_id}?guide=1` : "/resume-ai?start=new&guide=1"}>{context.resume_id ? "Edit this resume" : "Build a resume"}</Link>
+          <Link className={cx("rounded underline underline-offset-4", focusRing)} to="/resume-ai?start=import&guide=1">Import a resume</Link>
           <Button variant="ghost" disabled={Boolean(busy)} onClick={() => void load(context.resume_id ?? undefined)}>Refresh resumes</Button>
         </div>
         <Button className="mt-4" disabled={Boolean(busy)} onClick={() => move(1)}>Continue to role ideas</Button>

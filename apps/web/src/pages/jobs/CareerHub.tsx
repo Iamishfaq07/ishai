@@ -4,16 +4,19 @@ import { ArrowRight, BookmarkCheck, FileText, Search, Sparkles, Users, cx, focus
 import { ErrorNote } from "../../components/ui";
 import { useJobsAi } from "./JobsAi";
 
+const Companion = lazy(() => import("./CareerCompanion").then((m) => ({ default: m.CareerCompanion })));
 const Setup = lazy(() => import("./CareerLaunchpad").then((m) => ({ default: m.CareerLaunchpad })));
 const link = cx("inline-flex min-h-11 items-center rounded py-2 text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
 
 /** A single front door, organized by the candidate's journey. Tools keep their existing routes and saved work. */
 export function CareerHub() {
   const { profile, tracker } = useJobsAi();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const work = params.get("work");
+  const resumeId = params.get("resume_id") ?? undefined;
   const setup = params.get("start") === "1";
   const navigationType = useNavigationType();
-  useEffect(() => { if (navigationType !== "POP") window.scrollTo(0, 0); }, [setup, navigationType]);
+  useEffect(() => { if (navigationType !== "POP") window.scrollTo(0, 0); }, [setup, work, navigationType]);
   const resumes = profile.data?.resumes.length;
   const entries = tracker.data;
   const active = entries?.filter((entry) => !["rejected", "withdrawn", "hired"].includes(entry.status)).length;
@@ -22,7 +25,7 @@ export function CareerHub() {
   const stages = [
     { title: "Resume & direction", icon: FileText, detail: "Turn your education, projects and experience into a clear starting point.",
       status: profile.error ? "Resume count unavailable" : resumes === undefined ? "Loading resumes…" : `${resumes} saved resume${resumes === 1 ? "" : "s"}`,
-      to: "/jobs?start=1", action: "Set up my search", tools: [["/resume-ai", "My resumes"], ["/resume-ai?start=import", "Import resume"], ["/learn", "Build skills"]] },
+      to: "/jobs?work=resume", action: "Add or edit a resume", tools: [["/jobs?start=1", "Search setup"], ["/resume-ai", "All resumes"], ["/learn", "Build skills"]] },
     { title: "Find the right jobs", icon: Search, detail: "Explore matches, check requirements and save roles that interest you.",
       status: profile.data?.saved ? "Uses your saved search preferences" : "You can browse before completing setup",
       to: "/jobs/matches", action: "Find jobs", tools: [["/jobs/profile", "Search preferences"], ["/linkedin", "Professional profiles"]] },
@@ -43,7 +46,10 @@ export function CareerHub() {
         <p className="mt-2 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">From your first resume to your next offer. Follow the steps or jump straight to the tool you need.</p></div>
     </header>
     {(profile.error || tracker.error) && <ErrorNote onRetry={() => { profile.reload(); tracker.reload(); }}>Some saved information could not load. You can still open your tools, or retry.</ErrorNote>}
-    {setup ? <>
+    {work === "resume" || work === "plan" ? <>
+      <Link to="/jobs" className={link}>← Back to all career steps</Link>
+      <Suspense fallback={<p role="status">Opening your career companion…</p>}><Companion mode={work} resumeId={resumeId} onSelect={(id) => { const query = new URLSearchParams(params); query.set("resume_id", id); setParams(query); }} /></Suspense>
+    </> : setup ? <>
       <Link to="/jobs" className={link}>← Back to all career steps</Link>
       <Suspense fallback={<p role="status">Opening search setup…</p>}><Setup /></Suspense>
     </> : <>
@@ -53,6 +59,7 @@ export function CareerHub() {
         <Link className={cx("inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-indigo-950", focusRing)}
           to={!profile.data?.saved ? "/jobs?start=1" : entries?.length ? "/jobs/actions" : "/jobs/matches"}>{!profile.data?.saved ? "Start guided setup" : entries?.length ? "Open daily actions" : "Find matching jobs"} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
       </section>
+      <Link to="/jobs?work=plan" className={link}>Help me choose my next step with AI</Link>
       <nav aria-label="Your career steps"><ol className="grid gap-4 lg:grid-cols-2">{stages.map((stage, index) => <li key={stage.title} className="min-w-0 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900">
         <div className="flex items-start gap-3"><span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"><stage.icon className="h-5 w-5" /></span>
           <div><p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Step {index + 1}</p><h2 className="mt-1 font-semibold">{stage.title}</h2></div></div>

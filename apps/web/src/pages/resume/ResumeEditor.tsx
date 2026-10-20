@@ -1,6 +1,6 @@
-import { memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AtsCheck, AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   Callout,
@@ -56,7 +56,6 @@ import { downloadText, errorText, isNotFound } from "../../lib/format";
 import { announceOutOfCredits } from "../../lib/outOfCredits";
 import { jobsForResume, outreachPath } from "../jobs/paths";
 import { ContentForm } from "./ContentForm";
-import { toJsonResume } from "./jsonResume";
 import { paintKeywords } from "./previewKeywords";
 import { atsReading, type Reading } from "./atsReading";
 import { ATS_80, ats80Step } from "./atsMilestone";
@@ -73,6 +72,8 @@ import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./R
 import { scoreTone } from "./Resumes";
 import { SaveToDocuments } from "./SaveToDocuments";
 import { ResumeCareerActions } from "./ResumeCareerActions";
+
+const Guided = lazy(() => import("./GuidedResume").then((m) => ({ default: m.GuidedResume })));
 
 type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
 
@@ -131,6 +132,8 @@ function ResumeEditor() {
   const backend = useBackend();
   const { resumeId = "" } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  const guided = new URLSearchParams(location.search).get("guide") === "1";
   const [resume, setResume] = useState<Resume | null>(null);
   const [loadError, setLoadError] = useState<{ text: string; missing: boolean } | null>(null);
   const [tab, setTab] = useState<Tab>("content");
@@ -171,6 +174,8 @@ function ResumeEditor() {
     };
   }, [vault, userId]);
   const saving = useRef(false);
+  const present = useRef(false);
+  useEffect(() => { present.current = true; return () => { present.current = false; }; }, []);
   const [flush, setFlush] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   // Edits this browser kept because the server never confirmed them (a failed save, a tab closed mid-save).
@@ -355,6 +360,30 @@ function ResumeEditor() {
     // goes through the queue, after any autosave of it still in flight; the draft stays until the server confirms.
     flushResume(leaving);
   }, [backend, resumeId]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function saveAndContinue() {
+    const current = latest.current;
+    if (!current || current.id !== resumeId) throw new Error("Wait for your resume to finish opening.");
+    const startingPath = window.location.pathname + window.location.search;
+    const payload = payloadOf(current);
+    drafts.keep(userId, current.id, payload, saves.revision(current.id));
+    try { await saves.save(current.id, payload); }
+    catch (error) { setSave({ state: error instanceof ApiError && error.status === 409 ? "conflict" : "error", error: errorText(error) }); throw error; }
+    if (!present.current || routeId.current !== current.id
+        || window.location.pathname + window.location.search !== startingPath) return;
+    if (!latest.current || latest.current.id !== current.id || !sameText(payloadOf(latest.current), payload)) {
+      setSave({ state: "dirty" });
+      throw new Error("Your resume changed while saving. Review the latest edits and continue again.");
+    }
+    drafts.clear(userId, current.id);
+    setSave({ state: "saved" });
+    navigate(`/jobs?start=1&resume_id=${encodeURIComponent(current.id)}`);
+  }
+  function setGuided(next: boolean) {
+    const query = new URLSearchParams(location.search);
+    if (next) query.set("guide", "1"); else { query.delete("guide"); query.delete("section"); }
+    navigate({ pathname: location.pathname, search: query.toString() }, { replace: true });
+    setTab("content");
+  }
   function flushResume(r: Resume) {
     const payload = payloadOf(r);
     drafts.keep(userId, r.id, payload, saves.revision(r.id));
@@ -461,6 +490,7 @@ function ResumeEditor() {
       setTab("design");
       return;
     }
+    if (guided) setGuided(false);
     setTab("content");
     setFocusTarget(target);
   };
@@ -665,6 +695,9 @@ function ResumeEditor() {
     );
   }
 
+  const editorForm = <ContentForm data={resume.data} update={update}
+    onRewrite={(path) => void askAi("improve", undefined, path)} issues={report?.issues ?? []}
+    scored={scored} evidence={evidence} checks={report?.checks ?? []} />;
   return (
     <AllowanceContext.Provider value={allowance}>
     <div>
@@ -715,7 +748,7 @@ function ResumeEditor() {
             variant="ghost"
             title="Download as JSON Resume (jsonresume.org): take your resume to other tools, or bring it back here exactly"
             aria-label="Download as JSON Resume"
-            onClick={() => downloadText(`${fileName(resume)}.json`, JSON.stringify(toJsonResume(resume.data), null, 2), "application/json")}
+            onClick={() => { void import("./jsonResume").then(({ toJsonResume }) => downloadText(`${fileName(resume)}.json`, JSON.stringify(toJsonResume(resume.data), null, 2), "application/json")).catch((error: unknown) => setNotice(errorText(error))); }}
           >
             <Code2 className="h-4 w-4" /> JSON
           </Button>
@@ -748,7 +781,12 @@ function ResumeEditor() {
           </Callout>
         </div>
       )}
-      <ResumeCareerActions resume={resume} />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Button variant="secondary" onClick={() => setGuided(!guided)}>{guided ? "Full editor" : "Edit step by step"}</Button>
+        {guided && tab !== "content" && <Button variant="secondary" onClick={() => setTab("content")}>Back to guided steps</Button>}
+        {guided && <p className="text-xs text-zinc-600 dark:text-zinc-400">Your existing resume and autosave, one section at a time.</p>}
+      </div>
+      {!guided && <ResumeCareerActions resume={resume} />}
       {notice && (
         <div role="status" className="mb-4">
           <Callout tone="info" onDismiss={() => setNotice(null)}>
@@ -759,7 +797,7 @@ function ResumeEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
+          {(!guided || tab !== "content") && <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
             <div role="tablist" aria-label="Resume editor" className="flex min-w-0 flex-1 flex-wrap gap-1">
               {TABS.map(({ id, label, short, icon: Icon }) => (
                 <button
@@ -799,22 +837,14 @@ function ResumeEditor() {
               <span className="hidden sm:inline">Outreach</span>
               <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
             </Link>
-          </div>
+          </div>}
 
           {tab === "content" && (
             <div
               onFocus={(e) => setEditing((e.target as HTMLElement).closest("[data-path]")?.getAttribute("data-path") ?? null)}
               onBlur={() => setEditing(null)}
             >
-              <ContentForm
-                data={resume.data}
-                update={update}
-                onRewrite={(path) => void askAi("improve", undefined, path)}
-                issues={report?.issues ?? []}
-                scored={scored}
-                evidence={evidence}
-                checks={report?.checks ?? []}
-              />
+              {guided ? <Suspense fallback={<p role="status">Opening guided editing…</p>}><Guided data={resume.data} saveState={save.state} onContinue={saveAndContinue} onReview={() => setTab("score")}>{editorForm}</Guided></Suspense> : editorForm}
             </div>
           )}
           {tab === "score" && (

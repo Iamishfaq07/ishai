@@ -38,7 +38,7 @@ import { guestResume } from "./backend";
 import { fresherResume, newId, newResume } from "./model";
 import { resumePath } from "./paths";
 import { ResumeAiTabs, resumeAiFeatures, scoreTone } from "./product";
-import { fromJsonResume } from "./jsonResume";
+import type { fromJsonResume } from "./jsonResume";
 import { TailorQueue } from "./TailorQueue";
 export { scoreTone };
 
@@ -342,6 +342,7 @@ function BusyNote({ onCancel }: { onCancel: () => void }) {
 /** The ways to start a resume; `initial` opens one of them straight away ("Import my resume"). */
 export function NewResume({ onClose, initial = null }: { onClose?: () => void; initial?: Source | null }) {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const tools = api;
   const country = useCountry();
   // The student resume, as it's called where the user applies (campus placements in India).
@@ -363,7 +364,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
 
   const open = async (input: ResumeInput, imported: boolean) => {
     const r = await api.createResume(input);
-    navigate(resumePath(r.id), { state: { imported } });
+    navigate(resumePath(r.id) + (params.get("guide") === "1" ? "?guide=1" : ""), { state: { imported } });
   };
   const create = (title: string, data?: ResumeData) => open(newResume(title, data, country), Boolean(data));
 
@@ -393,7 +394,8 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
         if (file.size > MAX_FILE_BYTES) throw new Error("That file is over 5 MB.");
         let parsed: ReturnType<typeof fromJsonResume>;
         try {
-          parsed = fromJsonResume(JSON.parse(await file.text()));
+          const { fromJsonResume: readJsonResume } = await import("./jsonResume");
+          parsed = readJsonResume(JSON.parse(await file.text()));
         } catch {
           throw new Error("That isn't a JSON Resume file. Export one from Orbit or another resume tool (jsonresume.org).");
         }
