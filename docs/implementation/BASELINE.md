@@ -1,5 +1,11 @@
 # V6 baseline and verification — 20–21 October 2026
 
+## Increment 5 — job source review, verification deferred by owner
+
+Base `018abd43`, PR #441 confirmed merged. **No tests, builds, lint, typecheck, browser checks, screenshots or validation scripts were run.** The owner repeated the no-tests instruction. Source inspection and Git operations only; no tests added or modified. Earlier passing results do not apply to this increment. Commits request `[skip ci]` without changing workflows/protection rules; no workflow dispatch/rerun.
+
+Scope and deferred checks: `V6_SOURCE_REVIEW.md`. Read-only tracker/cache comparison, observation-age states, possible duplicates and derived source facts in the existing coach. Implemented/unverified; draft review only, no launch sign-off or deployment.
+
 ## Increment 4 — resume version lineage, verification deferred by owner
 
 Base `03d8ce37`, PR #440 merged. The owner explicitly requested the next phase **without any tests; testing will happen later**. For this increment no tests, builds, lint, typecheck, browser checks, screenshots or validation scripts were executed. Source inspection and Git operations only. No tests were added or modified. Earlier pass counts below do not apply to this code. `[skip ci]` commit messages request skipping automatic GitHub Actions without changing workflows or protection rules. No CI rerun/dispatch is requested.

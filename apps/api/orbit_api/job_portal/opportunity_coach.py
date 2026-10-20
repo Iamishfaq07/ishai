@@ -19,6 +19,7 @@ from orbit_api.workflow_ai import preview
 from .action_priority import attention_packets
 from .plan import plan_for
 from .resume_lineage import digest, parts, summary as lineage_summary
+from .source_review import coach_fact, review as review_source
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["opportunity coach"],
     dependencies=[Depends(limit_user("opportunity-coach", rate_per_s=1, burst=20))])
@@ -30,6 +31,7 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
         JobApplication.user_id == user.id).execution_options(populate_existing=True))
     if entry is None:
         raise HTTPException(404, "Not in your tracker")
+    source_review = await review_source(db, entry)
     resume = await db.scalar(select(Resume).where(Resume.id == entry.resume_id, Resume.user_id == user.id)
         .execution_options(populate_existing=True)) if entry.resume_id else None
     fit = (await db.execute(select(JobFitCheck.id, JobFitCheck.created_at, JobFitCheck.result).where(
@@ -85,6 +87,8 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
             fact["text"] += (f" The latest saved copy differs from the linked resume in "
                              f"{len(lineage['changed_sections'])} stored sections. Review the comparison before sharing.")
         fact["text"] += " A saved copy is not proof of submission, delivery, verified skills or employer receipt."
+    facts.append({"id": "job_source", "label": "Job source review", "path": base + "fit&source=1",
+                  "text": coach_fact(source_review)})
     # Requirements are explicitly labelled as prior check material, never as verified candidate skills.
     requirements = fit.result.get("requirements", []) if fit and isinstance(fit.result, dict) else []
     for index, row in enumerate(requirements[:3] if isinstance(requirements, list) else []):
@@ -110,6 +114,7 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
                 "text": f"An unchecked task in this job's browser-day preparation plan is: {task.title[:220]}. "
                         "Use truthful evidence. This is suggested practice, not verified employer interview content."})
     material = {"prep": prep.model_dump(mode="json") if prep else None, "tz_offset": tz_offset, "lineage": lineage,
+        "job_source": source_review.version,
         "entry": [entry.id, str(entry.updated_at), entry.status, str(entry.next_at), entry.resume_id],
         "resume": [resume.id, str(resume.updated_at), digest(parts(resume))] if resume else None,
         "fit": [fit.id, str(fit.created_at), fit.result] if fit else None,
@@ -148,6 +153,8 @@ async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(requir
         "Help a candidate with the selected opportunity step, explaining that fact first. "
         "When saved and current resume versions differ, suggest reviewing the comparison. "
         "You do not have their changed text and must not invent edits or attest to delivery or factual accuracy. "
+        "Job source facts describe cached observations only. Missing or stale listings do not prove closure, "
+        "fraud or ghost jobs. Matching duplicate keys are suggestions for review, not established reposts. "
         "Preparation tasks are suggested practice from the supplied browser-day plan, not employer questions. "
         "A rehearsal plan does not imply an interview date. Completion history is candidate-recorded, not proof "
         "of competence. Suggest reviewing matching earlier work; never mark it complete or claim employer approval. "

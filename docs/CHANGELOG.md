@@ -1,5 +1,11 @@
 # Implementation log
 
+## Personal Orbit V6: job source review (2026-10-21, unverified)
+
+- Review saved versus cached role, company, location and links inside Understand/Apply. Show observation dates and explicit recent/older/unknown/missing/manual states without claiming employer availability.
+- Review possible duplicate posts using the existing normalized key, with source credit and no automatic merge. Existing AI guidance gets derived source facts and cache-bound versions; opening the review makes no model or provider call.
+- **All verification deferred by owner request.** No tests/build/lint/typecheck/browser validation run; no test changes, migration or dependency. See `implementation/V6_SOURCE_REVIEW.md`. Draft PR only; no merge or deployment.
+
 ## Personal Orbit V6: saved resume comparison (2026-10-21, unverified)
 
 - Compare a job's saved resume version with its current linked resume: section changes, design/visibility/target-text differences, missing/replaced source states and bounded excerpts. The comparison makes no edits or model calls.

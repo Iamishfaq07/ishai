@@ -1,5 +1,11 @@
 # V6 progress
 
+## Increment 5 — job source review (base `018abd43`)
+
+PR #441 is merged. **IMPLEMENTED / UNVERIFIED:** source review inside Understand/Apply; five saved-versus-cached job fields; explicit recent/older/unknown/missing/manual states; possible duplicate review using the existing key; attribution; derived source-status facts and cache-bound source invalidation in the existing coach. No automatic changes, external fetch, new writer/schema/dependency or tool tab. One remaining interview snapshot timestamp now says Saved.
+
+**DEFERRED BY OWNER:** all tests/build/lint/typecheck/browser validation. No test files changed. `[skip ci]` requests automatic CI skipping; no workflows weakened or CI dispatch/rerun. See `V6_SOURCE_REVIEW.md` for limitations, future checks and rollback. Full F09 watch/history/alerts and F03/F06 write-path acceptance remain outstanding. Draft PR for review; no merge or deployment.
+
 ## Increment 4 — resume version lineage (base `03d8ce37`)
 
 PR #440 is merged. **IMPLEMENTED / UNVERIFIED:** read-only saved/current resume comparison inside the existing opportunity; bounded section excerpts and photo fingerprints; editor return-to-job links; saved-versus-sent wording corrections; prior-fit source disclaimers; latest-version facts and content-bound source invalidation in the existing coach. No new schema, dependency, tool dashboard or worker permission.

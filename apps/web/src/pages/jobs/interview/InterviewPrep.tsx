@@ -352,7 +352,7 @@ function ResumeCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Int
               )}
             </p>
             <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-              {r.kind === "snapshot" ? `Sent ${formatDate(r.at)}${r.note ? ` · ${r.note}` : ""}` : `As it is now · edited ${formatDate(r.at)}`}
+              {r.kind === "snapshot" ? `Saved ${formatDate(r.at)}${r.note ? ` · ${r.note}` : ""}` : `As it is now · edited ${formatDate(r.at)}`}
             </p>
           </div>
         </div>
