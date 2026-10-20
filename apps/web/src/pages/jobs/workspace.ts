@@ -1,7 +1,7 @@
 import { JOBS_AI_HOME, JOBS_APPLICATIONS, JOBS_AUTO_APPLY, JOBS_MATCHES, JOBS_OUTREACH, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
 
 export const JOB_WORKSPACES = [
-  { id: "today", label: "Today", to: JOBS_AI_HOME, paths: /^\/jobs(?:\/(?:actions|weekly))?\/?$/ },
+  { id: "today", label: "Launchpad", to: JOBS_AI_HOME, paths: /^\/jobs(?:\/(?:actions|weekly))?\/?$/ },
   { id: "find", label: "Find jobs", to: JOBS_MATCHES, paths: /^\/jobs\/(?:matches|profile|listing(?:\/[^/]+)?)\/?$/ },
   { id: "applications", label: "Applications", to: JOBS_TRACKER, paths: /^\/jobs\/(?:tracker|applications|auto-apply|journey|mission(?:\/[^/]+)?)\/?$/ },
   { id: "people", label: "People", to: JOBS_OUTREACH, paths: /^\/jobs\/outreach\/?$/ },
@@ -14,8 +14,8 @@ export function jobWorkspace(path: string) {
 }
 
 export const JOB_TOOLS: { group: JobWorkspace; to: string; label: string; description: string; keywords: string }[] = [
-  { group: "today", to: JOBS_AI_HOME, label: "Daily actions", description: "Due interviews, reminders and an AI brief from your saved activity.", keywords: "overview action desk calendar follow up" },
-  { group: "today", to: "/jobs?start=1", label: "Career launchpad", description: "Start a resume, explore roles with AI and review your search setup.", keywords: "fresher graduate student first job entry level internship career change learning projects" },
+  { group: "today", to: JOBS_AI_HOME, label: "Career launchpad", description: "Start a resume, explore roles with AI and review your search setup.", keywords: "fresher graduate student first job entry level internship career change learning projects" },
+  { group: "today", to: "/jobs/actions", label: "Daily actions", description: "Due interviews, reminders and an AI brief from your saved activity.", keywords: "overview action desk calendar follow up" },
   { group: "today", to: "/jobs/weekly", label: "Weekly plan", description: "Set targets and review your recorded progress.", keywords: "weekly studio goals experiment" },
   { group: "find", to: JOBS_MATCHES, label: "Matches", description: "Discover jobs, check fit and save your shortlist.", keywords: "search listings openings" },
   { group: "find", to: JOBS_PROFILE, label: "Search preferences", description: "Choose your resume, roles, locations and job filters.", keywords: "profile settings skills" },
@@ -35,12 +35,11 @@ export function findJobTools(query: string) {
 
 /** Secondary navigation contains only the frequent tools for the current area. */
 export function workspaceTools(group: JobWorkspace) {
-  return JOB_TOOLS.filter((tool) => tool.group === group && ![JOBS_AUTO_APPLY, JOBS_OUTREACH].includes(tool.to) && !tool.to.includes("?"));
+  return JOB_TOOLS.filter((tool) => tool.group === group && ![JOBS_AI_HOME, JOBS_AUTO_APPLY, JOBS_OUTREACH].includes(tool.to) && !tool.to.includes("?"));
 }
 
 export function currentJobTool(pathname: string) {
   const path = pathname.replace(/\/+$/, "");
-  if (path === "/jobs/actions") return JOBS_AI_HOME;
   if (path.startsWith("/jobs/mission/")) return JOBS_TRACKER;
   if (path.startsWith("/jobs/listing/")) return JOBS_MATCHES;
   if (path === JOBS_AUTO_APPLY) return "/jobs/journey";

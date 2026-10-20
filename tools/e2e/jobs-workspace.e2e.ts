@@ -8,18 +8,18 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
     await seed(context);
     await page.goto("/jobs");
-    await expect(page.getByRole("navigation", { name: "Choose your next step", exact: true }).getByRole("link")).toHaveCount(3);
+    await expect(page.getByRole("navigation", { name: "Your career steps", exact: true }).getByRole("listitem")).toHaveCount(5);
     const created = await context.request.post(`${API}/v1/jobs/tracker/manual`, { data: {
       title: "Platform Engineer", company: "Northstar Personal", status: "interviewing",
       next_at: new Date(Date.now() + 86_400_000).toISOString(),
     } });
     expect(created.status(), await created.text()).toBe(201);
     const job = await created.json();
-    await page.goto("/jobs");
+    await page.goto("/jobs/actions");
     const nav = page.getByRole("navigation", { name: "Jobs AI", exact: true });
     await expect(nav.getByRole("link")).toHaveCount(4);
-    await expect(nav.locator('[aria-current="page"]')).toHaveText("Today");
-    await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
+    await expect(nav.locator('[aria-current="page"]')).toHaveText("Launchpad");
+    await expect(page.getByRole("heading", { name: "Daily actions", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Platform Engineer · Northstar Personal", exact: true })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Choose your next step", exact: true })).toHaveCount(0);
     expect(await nav.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
@@ -32,7 +32,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await expect(finder.getByRole("link")).toHaveCount(1);
     await finder.getByRole("link", { name: /Weekly plan/ }).click();
     await expect(page).toHaveURL(/\/jobs\/weekly$/);
-    await expect(nav.locator('[aria-current="page"]')).toHaveText("Today");
+    await expect(nav.locator('[aria-current="page"]')).toHaveText("Launchpad");
     await expect(page.getByRole("button", { name: "Set my weekly targets", exact: true })).toBeVisible();
     await expect(finder).toHaveCount(0);
 

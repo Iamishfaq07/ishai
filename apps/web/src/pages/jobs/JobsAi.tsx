@@ -43,7 +43,7 @@ export function JobsAiSection() {
   const ran = useRef(false);
   const p = profile.data;
   useEffect(() => {
-    if (!p || ran.current || params.get("start") === "1") return;
+    if (!p || ran.current || (params.get("start") === "1" || (!wanted && /^\/jobs\/?$/.test(pathname)))) return;
     // Not checked against `p.resumes`: that may be the list from before the resume was made. The server checks it.
     const switchTo = wanted && wanted !== p.resume?.id ? wanted : null;
     if (wanted) {
@@ -60,7 +60,7 @@ export function JobsAiSection() {
       .then(setProfile)
       .catch(() => undefined) // the profile worked out from the resume stays; the Profile page can try again
       .finally(() => setSuggesting(false));
-  }, [p, wanted, params, setParams, setProfile]);
+  }, [p, wanted, params, setParams, setProfile, pathname]);
 
   const value: JobsAi = { profile, tracker, suggesting, setProfile };
   return (

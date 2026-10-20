@@ -2,9 +2,18 @@
 
 ## Candidate workflow
 
-Open **Jobs AI → Today → Open career launchpad**, or search for fresher, student,
-internship or career change in **Find a tool**. The launchpad lives inside Today;
-the four main workspaces stay the same.
+Open **Career launchpad** from Home or the main navigation. `/jobs` is the career
+home, grouping Resume & direction, Find jobs, Apply & connect, Interviews and Offers
+in order. Each stage has a primary action and a disclosure for its related tools.
+Saved resume/application counts come from owned records. Missing records are not
+readiness scores or prerequisites for opening other tools.
+
+**Set up my search** opens a three-step setup: resume, roles and review. Each step
+can be revisited; only the visible step is shown. Next/Back focus its heading and
+scroll it into view above the phone navigation. Query-only transitions into setup
+open at the top; Back/Forward keeps native scroll behavior. The first workspace
+is now **Launchpad**; existing bookmarks remain valid and `/jobs/actions` retains
+the daily action desk. Both the hub and Find a tool keep specialist tools reachable.
 
 1. Choose student / fresher, changing careers, or next career move.
 2. Choose an owned resume, edit it, open the existing student resume starter, or
@@ -64,7 +73,7 @@ replace preferences through the existing profile editor or its explicit AI-read 
 Frontend requests use a sequence guard so responses from a previous selection or an
 unmounted launchpad cannot replace the current screen. Refreshing stale settings keeps
 the candidate's draft title, city and stage, but clears AI suggestions for the old source.
-The first automatic Jobs AI profile read is suppressed while this reviewed setup is open.
+The first automatic Jobs AI profile read is suppressed on the career home and while this reviewed setup is open.
 
 ## GitHub research, 20 October 2026
 

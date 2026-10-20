@@ -1,0 +1,15 @@
+use_default_settings: true
+general:
+  instance_name: Orbit private search
+search:
+  formats: [json]
+  safe_search: 1
+server:
+  # Private service only; Orbit enforces candidate ownership, research quotas and rate limits.
+  public_instance: false
+  limiter: false
+  bind_address: 0.0.0.0
+  port: 8080
+outgoing:
+  request_timeout: 5.0
+  max_request_timeout: 8.0

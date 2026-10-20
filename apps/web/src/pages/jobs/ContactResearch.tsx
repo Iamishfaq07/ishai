@@ -85,7 +85,8 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
       </div>
       <div className="mt-3"><Field label="Recruiter reply or public profile text (optional)" htmlFor={`${inputId}-paste`}><Textarea id={`${inputId}-paste`} value={paste} onChange={(e) => setPaste(e.target.value)} rows={5} maxLength={10000} placeholder={"From: Alex Rivera <alex@company.com>\nTitle: Talent Acquisition Partner\n\nPaste only relevant contact details and context."} /></Field></div>
       <label className="mt-3 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={searchWeb} disabled={!data.web_search_enabled || busy} onChange={(e) => setSearchWeb(e.target.checked)} />Search the public web for this company and role (one query)</label>
-      {!data.web_search_enabled && <p className="text-xs text-zinc-500">Automatic web search is not configured on this server. Public page research, pasted replies and the search links are available.</p>}
+      {!data.web_search_enabled && <p className="text-xs text-zinc-500">Web search is unavailable here. Use a public company page, paste a reply, or open the search links.</p>}
+      {data.web_search_provider === "searxng" && <p className="text-xs text-zinc-500">Open-source web search · no search API key. Review each result’s source before saving a contact.</p>}
       <Button className="mt-3" loading={busy} onClick={() => void find()}>Find contacts with AI</Button>
       <p className="mt-2 text-xs text-zinc-500">Up to 5 research runs per UTC day; failed runs count. Nothing is saved or sent until you choose a lead. Public roles and snippets may be outdated—review the source.</p>
       {error && <ErrorNote onRetry={reload}>{error}</ErrorNote>}

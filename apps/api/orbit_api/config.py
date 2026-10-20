@@ -1,6 +1,7 @@
 import re
 from functools import lru_cache
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -255,6 +256,26 @@ class Settings(BaseSettings):
     jsearch_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_JSEARCH_KEY"))
     jsearch_monthly_budget: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_JSEARCH_MONTHLY_BUDGET"))
     contact_search_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_CONTACT_SEARCH_KEY"))
+    contact_searxng_url: str | None = Field(None, max_length=1000,
+        validation_alias=AliasChoices("ORBIT_CONTACT_SEARXNG_URL"))
+
+    @field_validator("contact_searxng_url", mode="before")
+    @classmethod
+    def search_service(cls, value: object) -> str | None:
+        if value is None or value == "":
+            return None
+        if not isinstance(value, str):
+            raise ValueError("Search service must be a URL.")
+        value = value.strip().rstrip("/")
+        if not value:
+            return None
+        parts = urlsplit(value)
+        if (parts.scheme not in ("http", "https") or not parts.hostname or parts.username or parts.password
+                or parts.query or parts.fragment or re.search(r"[\s\x00-\x1f]", value)):
+            raise ValueError("Use the operator-managed SearXNG base URL without credentials, query or fragment.")
+        # Only server configuration can set this URL. Private service DNS is intentional; candidate inputs never set it.
+        _ = parts.port
+        return value
 
     # The Contact page (contact/routes.py): at most this many messages a rolling day from everyone together (each
     # network also has its own limits), so a flood can't bury the Inbox. Messages the admin marked done or spam are
