@@ -580,7 +580,7 @@ class ActivityOut(BaseModel):
 
 _REASON = {"welcome": "Welcome credits", "purchase": "Pack bought", GIVEN: "Given by you", REMOVED: "Removed by you",
            "referral": "Invite reward", "referral_back": "Invite reward taken back (refund)",
-           "resume_ai": "Resume AI"}
+           "resume_ai": "Resume"}
 
 
 def credit_text(entry: CreditEntry) -> str:

@@ -364,7 +364,7 @@ function ResumeCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Int
             <>
               {" "}
               <Link to={RESUME_AI_HOME} className={textLink}>
-                Make one in Resume AI
+                Make one in Resume
               </Link>
             </>
           )}
@@ -409,7 +409,7 @@ function creditLine(a: ResumeAiAllowance | null): string {
 }
 
 /**
- * The questions likely for this job (Resume AI's interview prep, one credit), kept on the job so they're paid for
+ * The questions likely for this job (Resume's interview prep, one credit), kept on the job so they're paid for
  * once; Regenerate is another credit, and says so. Then a mock round on the ones picked.
  */
 function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGenerated: () => void }) {

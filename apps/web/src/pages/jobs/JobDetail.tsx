@@ -62,7 +62,7 @@ import { missionPath } from "./mission";
 import { interviewPrepPath } from "./interview/links";
 
 /**
- * Jobs AI → one job: everything Orbit may show about it (the post's summary, its key facts, where it's from, the
+ * Jobs → one job: everything Orbit may show about it (the post's summary, its key facts, where it's from, the
  * original post), how it matches the resume, the AI fit check, its place on the tracker, and every action.
  */
 export function JobDetailPage() {
@@ -338,7 +338,7 @@ function TrackerPanel({
     if (!shown) return;
     const ok = await confirmDialog({
       title: `Remove “${title}” from your tracker?`,
-      body: "It comes off your tracker with its notes. A resume you tailored for it stays in Resume AI.",
+      body: "It comes off your tracker with its notes. A resume you tailored for it stays in Resume.",
       confirmLabel: "Remove",
       danger: true,
     });

@@ -23,7 +23,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
 
 def test_lookup_knows_the_packs() -> None:
     assert "₹499" in (lookup("how much is the mini pack") or "")
-    assert "25 Resume AI credits" in (lookup("how much is the mini pack") or "")
+    assert "25 Resume credits" in (lookup("how much is the mini pack") or "")
     assert lookup("hello")
     assert lookup("what is the weather in srinagar") is None
     # A payment that didn't land is not the price list.
@@ -47,7 +47,7 @@ def test_bot_then_a_person(client: TestClient) -> None:
     assert asked.status_code == 200, asked.text
     body = asked.json()
     assert "₹499" in body["messages"][-1]["text"]
-    assert "25 Resume AI credits" in body["messages"][-1]["text"]
+    assert "25 Resume credits" in body["messages"][-1]["text"]
     assert any(item["id"] == "human" for item in body["suggestions"])
 
     unknown = client.post(
@@ -106,7 +106,7 @@ def test_signed_in_sees_their_balance_and_last_payment(client: TestClient) -> No
     assert asked.status_code == 200, asked.text
     text = asked.json()["messages"][-1]["text"]
     assert "20 interview minutes" in text
-    assert "1 Resume AI credit" in text
+    assert "1 Resume credit" in text
 
     anon = client.post("/v1/support/threads")
     assert anon.status_code == 201, anon.text
@@ -160,16 +160,16 @@ def test_prices_and_payments_are_in_the_visitors_currency(client: TestClient,
 
     india, _chips = respond("", "prices")
     assert india == (
-        "Start free: a new account gets 20 interview minutes and 1 Resume AI credit. Then either buy credits "
+        "Start free: a new account gets 20 interview minutes and 1 Resume credit. Then either buy credits "
         "(1 interview credit = 1 hour, they never expire): 1 credit ₹1,649, 3 credits ₹2,599, 8 credits ₹5,199, "
-        "15 credits ₹7,749, or AI credits ₹499 for Resume AI alone. Or go unlimited: ₹3,499 a week, "
+        "15 credits ₹7,749, or AI credits ₹499 for Resume alone. Or go unlimited: ₹3,499 a week, "
         "₹6,599 a month or ₹26,499 a year. Nothing renews automatically.")
     usa, chips = respond("", "prices", "USD")
     # The dollar prices are the ones from before the rupee cut (D60).
     assert usa == (
-        "Start free: a new account gets 20 interview minutes and 1 Resume AI credit. Then either buy credits "
+        "Start free: a new account gets 20 interview minutes and 1 Resume credit. Then either buy credits "
         "(1 interview credit = 1 hour, they never expire): 1 credit $33.99, 3 credits $53.99, 8 credits $106.99, "
-        "15 credits $161.99, or AI credits $7.99 for Resume AI alone. Or go unlimited: $70.99 a week, "
+        "15 credits $161.99, or AI credits $7.99 for Resume alone. Or go unlimited: $70.99 a week, "
         "$135.99 a month or $531.99 a year. Nothing renews automatically.")
     assert ("mini", "AI credits $7.99") in chips
     assert {"razorpay", "upi", "utr"} <= {i for i, _ in options_for("buy")}
@@ -344,6 +344,6 @@ def test_the_balance_is_said_in_whole_minutes_and_names_a_running_plan(client: T
     client.portal.call(grant, "premium")  # type: ignore[union-attr]
     text = ask()
     assert text.startswith("You're on Premium until ") and "3,000 interview minutes left in this month's" in text
-    assert "kept for after it: 20 interview minutes and 1 Resume AI credit" in text
+    assert "kept for after it: 20 interview minutes and 1 Resume credit" in text
     client.portal.call(grant, "unlimited")  # type: ignore[union-attr]
     assert "with no limit on interview minutes" in ask()

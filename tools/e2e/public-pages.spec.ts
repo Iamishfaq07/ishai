@@ -39,7 +39,7 @@ test("the phone menu opens as a dialog, keeps focus inside, and closes on Escape
   await page.getByRole("button", { name: "Open menu" }).click();
   const menu = page.getByRole("dialog", { name: "Site menu" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("link", { name: /Resume AI/ })).toBeVisible();
+  await expect(menu.getByRole("link", { name: /Resume/ })).toBeVisible();
   for (let i = 0; i < 20; i++) await page.keyboard.press("Tab");
   expect(await menu.evaluate((el) => el.contains(document.activeElement))).toBe(true);
   await page.keyboard.press("Escape");
@@ -52,7 +52,7 @@ test("the Products menu lists every tool and closes on Escape", async ({ page })
   const button = page.getByRole("button", { name: "Products" });
   await button.click();
   await expect(button).toHaveAttribute("aria-expanded", "true");
-  for (const name of ["Interview copilot", "Practice", "Resume AI", "Jobs AI", "LinkedIn AI", "Code AI", "Offer AI", "Learning AI"]) {
+  for (const name of ["Interview copilot", "Practice", "Resume", "Jobs", "LinkedIn", "Coding practice", "Offers", "Learning"]) {
     await expect(page.getByRole("link", { name: new RegExp(`^${name}`) }).first()).toBeVisible();
   }
   await page.keyboard.press("Escape");

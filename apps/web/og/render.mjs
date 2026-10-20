@@ -24,15 +24,15 @@ const DOT = { orbit: "#8666FF", copilot: "#8666FF", practice: "#FB923C", resume:
 
 /** page: [file, chip, dot, headline lines, sub lines, screen, crop [x y w h] in the 2560 x 1600 capture]. */
 const PAGES = [
-  ["home", "One account", "orbit", ["Interview-ready,", "from resume to offer."], ["Practice, Resume AI, Jobs AI and a live", "interview copilot, in one free account."], "copilot", [130, 80, 1580, 1000]],
-  ["resume-ai", "Resume AI", "resume", ["Your resume, ready", "for every job."], ["An ATS score out of 100, and AI rewrites", "that keep your own numbers."], "resume", [500, 180, 2060, 1420]],
-  ["jobs", "Jobs AI", "jobs", ["Find jobs that fit", "your resume."], ["New openings from companies' own careers", "pages, ranked by how well you fit."], "jobs", [500, 300, 2060, 1300]],
+  ["home", "One account", "orbit", ["Interview-ready,", "from resume to offer."], ["Practice, Resume, Jobs and a live", "interview copilot, in one free account."], "copilot", [130, 80, 1580, 1000]],
+  ["resume-ai", "Resume", "resume", ["Your resume, ready", "for every job."], ["An ATS score out of 100, and AI rewrites", "that keep your own numbers."], "resume", [500, 180, 2060, 1420]],
+  ["jobs", "Jobs", "jobs", ["Find jobs that fit", "your resume."], ["New openings from companies' own careers", "pages, ranked by how well you fit."], "jobs", [500, 300, 2060, 1300]],
   ["warmup", "Free practice", "practice", ["Answer one interview", "question, free."], ["Type or speak your answer and see what", "to improve. No account needed."], "practice", [500, 300, 2060, 1300]],
   ["technical", "How Orbit works", "copilot", ["How Orbit answers", "in real time."], ["Measured answer speed, the live pipeline", "and the desktop app's protections."], "copilot", [130, 80, 1580, 1000]],
-  // The product pages of D79 (the section kit): the copilot's, Practice's and LinkedIn AI's own cards.
+  // The product pages of D79 (the section kit): the copilot's, Practice's and LinkedIn's own cards.
   ["interview-copilot", "Interview copilot", "copilot", ["Live answers, from", "your own resume."], ["Where AI help is allowed: an answer built", "from your resume, as the question is asked."], "copilot", [130, 80, 1580, 1000]],
   ["mock-interview", "Mock interviews", "practice", ["Mock interviews", "that listen back."], ["An AI interviewer that follows up on what", "you said, then scores every answer."], "practice", [500, 300, 2060, 1300]],
-  ["linkedin-ai", "LinkedIn AI", "orbit", ["See your profile", "as recruiters do."], ["A score out of 100, the fixes to paste in,", "and how a recruiter's search shows you."], "draw:linkedin", null],
+  ["linkedin-ai", "LinkedIn", "orbit", ["See your profile", "as recruiters do."], ["A score out of 100, the fixes to paste in,", "and how a recruiter's search shows you."], "draw:linkedin", null],
   ["contact", "Contact", "orbit", ["Talk to the", "Orbit team."], ["Questions, payments or a job that looks", "wrong: a person reads every message."], null, null],
   // The question bank: one card for the companies list and every company guide, one for the roles.
   ["companies", "Interview guides", "practice", ["How companies", "interview, free."], ["The rounds, what interviewers listen for", "and practice questions, company by company."], "draw:company", null],
@@ -88,7 +88,7 @@ function guidePicture(kind) {
   </g>`;
 }
 
-/** LinkedIn AI, drawn in Orbit's own style (never LinkedIn's look or logo): a profile's score and its sections, the
+/** LinkedIn, drawn in Orbit's own style (never LinkedIn's look or logo): a profile's score and its sections, the
  *  sample profile's real scores from the public page (pages/linkedin/publicArt.tsx). */
 function linkedinPicture() {
   const rows = [["Headline", 20, 20], ["About", 17, 20], ["Experience", 21, 21], ["Skills", 12, 15], ["Search keywords", 10, 10]];

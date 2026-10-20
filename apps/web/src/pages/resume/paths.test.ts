@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isResumeAiHome, movedResumePath, resumePath, shouldFlushResume } from "./paths";
 
-describe("Resume AI's addresses", () => {
+describe("Resume's addresses", () => {
   it("opens a resume under /resume-ai, its id kept safe in the address", () => {
     expect(resumePath("3f2a9c")).toBe("/resume-ai/3f2a9c");
     expect(resumePath("a/b c")).toBe("/resume-ai/a%2Fb%20c");
@@ -25,7 +25,7 @@ describe("Resume AI's addresses", () => {
 });
 
 describe("the resume maker's old addresses", () => {
-  it("go to the same place in Resume AI", () => {
+  it("go to the same place in Resume", () => {
     expect(movedResumePath("/documents/resumes")).toBe("/resume-ai");
     expect(movedResumePath("/documents/resumes/")).toBe("/resume-ai");
     expect(movedResumePath("/documents/resumes/3f2a9c")).toBe("/resume-ai/3f2a9c");

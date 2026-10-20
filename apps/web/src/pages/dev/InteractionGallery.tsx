@@ -183,7 +183,7 @@ function Selection() {
           </summary>
           <div className="space-y-2 px-4 pb-4 text-sm text-zinc-600 dark:text-zinc-300">
             <p>One interview credit is one hour of live or mock interviews, used a minute at a time.</p>
-            <p>Resume AI credits come with every pack. Credits never expire.</p>
+            <p>Resume credits come with every pack. Credits never expire.</p>
           </div>
         </details>
       </Row>
@@ -210,7 +210,7 @@ function Progression() {
         </Button>
       </Row>
       <Row label="Progress">
-        <ProgressBar className="w-64" label="Resume AI credits" value={step} max={STEPS.length} valueText={`${step} of ${STEPS.length}`} />
+        <ProgressBar className="w-64" label="Resume credits" value={step} max={STEPS.length} valueText={`${step} of ${STEPS.length}`} />
       </Row>
       <Row label="Count-up">
         <span className="stat-value font-display text-2xl font-semibold">

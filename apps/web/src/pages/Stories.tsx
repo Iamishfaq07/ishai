@@ -29,7 +29,7 @@ import type { LiveLaunchState } from "./SessionSetup";
 
 /**
  * Documents and Story bank are one "your materials" area: both feed every session. The tabs between them are the
- * interview copilot's tabs (Layout); making a resume is Resume AI's (it used to be a tab here), so there's a pointer
+ * interview copilot's tabs (Layout); making a resume is Resume's (it used to be a tab here), so there's a pointer
  * to it, as a quiet line at the foot of each page (between the tabs and the page's title it read as a stray link).
  */
 export function LibraryTabs() {
@@ -41,7 +41,7 @@ export function LibraryTabs() {
         to={RESUME_AI_HOME}
         className={cx("group inline-flex items-center gap-1 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
       >
-        Open Resume AI
+        Open Resume
         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
       </Link>
     </p>

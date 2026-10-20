@@ -107,7 +107,7 @@ export function PageLoading() {
 
 /**
  * Signed out, a page asks you to sign in first, except one with a public face (`publicPage`): "/" shows the front
- * page, and Resume AI's and Jobs AI's homes their product pages.
+ * page, and Resume's and Jobs's homes their product pages.
  */
 export function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
   const { user, loading, unreachable, recheck } = useAuth();
@@ -179,13 +179,13 @@ const publicProductPage = (pathname: string): ReactNode => {
   return key ? PUBLIC_PAGES[key] : null;
 };
 
-/** An old resume maker address (Documents → Resume maker, /resume-maker): the same place in Resume AI. */
+/** An old resume maker address (Documents → Resume maker, /resume-maker): the same place in Resume. */
 function MovedResume() {
   const { pathname, search, hash } = useLocation();
   return <Navigate to={{ pathname: movedResumePath(pathname) ?? RESUME_AI_HOME, search, hash }} replace />;
 }
 
-/** An address from when Jobs was a tab of Resume AI (/resume-ai/jobs…): the same page in Jobs AI. */
+/** An address from when Jobs was a tab of Resume (/resume-ai/jobs…): the same page in Jobs. */
 function MovedJobs() {
   const { pathname, search, hash } = useLocation();
   const to = movedJobsPath(pathname, search) ?? { pathname: JOBS_AI_HOME, search: "" };
@@ -253,7 +253,7 @@ export function App() {
       <Route path="/pricing" element={<Prerendered><PricingPage /></Prerendered>} />
       <Route path="/interview-copilot" element={<Prerendered><CopilotPublicPage /></Prerendered>} />
       <Route path="/mock-interview" element={<Prerendered><PracticePublicPage /></Prerendered>} />
-      {/* LinkedIn AI's product page (D79): the tool itself is /linkedin, signed in. */}
+      {/* LinkedIn's product page (D79): the tool itself is /linkedin, signed in. */}
       <Route path="/linkedin-ai" element={<Prerendered><LinkedInPublicPage /></Prerendered>} />
       {/* Public: the question bank, how companies interview and what interviews for a job test (pages/bank). Built
           as HTML too (src/prerender), like the pages above, so it reads without JavaScript. */}
@@ -279,9 +279,9 @@ export function App() {
           </RequireAuth>
         }
       />
-      {/* The old signed-out resume maker: Resume AI's home, which is its product page when signed out. */}
+      {/* The old signed-out resume maker: Resume's home, which is its product page when signed out. */}
       <Route path="/resume-maker" element={<MovedResume />} />
-      {/* Jobs was a tab of Resume AI: its old addresses go to the same page in Jobs AI (signed out, through sign-in
+      {/* Jobs was a tab of Resume: its old addresses go to the same page in Jobs (signed out, through sign-in
           there). A route of its own, so "jobs" is never opened as a resume by "resume-ai/:resumeId". */}
       <Route path="/resume-ai/jobs/*" element={<MovedJobs />} />
       <Route
@@ -307,12 +307,12 @@ export function App() {
         <Route path="documents/stories" element={<StoriesPage />} />
         <Route path="documents/evidence" element={<FlagGate flag="evidence_vault" fallback="/documents"><EvidencePage /></FlagGate>} />
         <Route path="documents/answers" element={<AnswersPage />} />
-        {/* Resume AI used to be Documents → Resume maker. Signed out, these go through sign-in first, as before. */}
+        {/* Resume used to be Documents → Resume maker. Signed out, these go through sign-in first, as before. */}
         <Route path="documents/resumes" element={<MovedResume />} />
         <Route path="documents/resumes/:resumeId" element={<MovedResume />} />
         <Route path="resume-ai" element={<ResumeAiHomePage />} />
         <Route path="resume-ai/:resumeId" element={<ResumeEditorPage />} />
-        {/* Orbit Jobs AI: its pages share the tabs, the search profile and the tracker (pages/jobs/JobsAi.tsx). */}
+        {/* Orbit Jobs: its pages share the tabs, the search profile and the tracker (pages/jobs/JobsAi.tsx). */}
         <Route path="jobs" element={<JobsAiSection />}>
           <Route index element={<JobsAiHomePage />} />
           <Route path="matches" element={<JobMatchesPage />} />

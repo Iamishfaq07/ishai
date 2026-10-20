@@ -176,11 +176,11 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
         cta={signedIn ? { label: onFree ? "Your current plan" : "Included", disabled: true } : { label: "Start free", to: "/register" }}
       >
         {welcome?.interview_minutes ? <Feature>{welcome.interview_minutes} interview minutes to start</Feature> : null}
-        {welcome?.resume_credits ? <Feature>{welcome.resume_credits} Resume AI credit{welcome.resume_credits === 1 ? "" : "s"} to start</Feature> : null}
+        {welcome?.resume_credits ? <Feature>{welcome.resume_credits} Resume credit{welcome.resume_credits === 1 ? "" : "s"} to start</Feature> : null}
         <Feature>Resume editor, ATS score, PDF and Word downloads</Feature>
         <Feature>Job matches, AI fit checks and the tracker</Feature>
         <Feature>More AI and minutes with credit packs, whenever you need them</Feature>
-        <Feature off>Unlimited Resume AI</Feature>
+        <Feature off>Unlimited Resume</Feature>
       </Tier>
       {plans.map((m) => {
         const mine = current?.plan === m.plan && Boolean(current?.until);
@@ -206,7 +206,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
                   : "Billed once. Never auto-renews."
             }
           >
-            {m.resume_ai && <Feature><strong className="font-semibold">Unlimited Resume AI</strong>: fixes, rewrites, tailoring, cover letters</Feature>}
+            {m.resume_ai && <Feature><strong className="font-semibold">Unlimited Resume</strong>: fixes, rewrites, tailoring, cover letters</Feature>}
             <Feature>{time(m.live_minutes)} of live interview help{span}</Feature>
             <Feature>{time(m.mock_minutes)} of mock and video interviews{span}</Feature>
             <Feature>{n(m.screenshots)} screenshot answers</Feature>
@@ -223,8 +223,8 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
           <h3 className="font-display text-lg font-semibold">Enterprise</h3>
           <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
             {india
-              ? "For colleges, placement cells, bootcamps and teams: access for a whole batch, interview time and limits sized to your group, unlimited Resume AI for everyone, and one payment arranged with us."
-              : "For universities, career services, bootcamps and teams: access for a whole cohort, interview time and limits sized to your group, unlimited Resume AI for everyone, and one payment arranged with us."}
+              ? "For colleges, placement cells, bootcamps and teams: access for a whole batch, interview time and limits sized to your group, unlimited Resume for everyone, and one payment arranged with us."
+              : "For universities, career services, bootcamps and teams: access for a whole cohort, interview time and limits sized to your group, unlimited Resume for everyone, and one payment arranged with us."}
           </p>
         </div>
         <Link to={contactHref({ topic: "business", from: "/pricing" })}
@@ -250,7 +250,7 @@ export function PlanComparison({ monthly }: { monthly: MonthlyPlan[] | null }) {
     ["Per month", zero, ...plans.map((m) => (m.days < 30 ? "—" : (m.per_month_text ?? rupees(m.per_month_inr ?? m.price_inr)))), "Custom"],
     ["Resume editor, ATS score, downloads", yes, ...plans.map(() => yes), yes],
     ["Job matches, fit checks, tracker", yes, ...plans.map(() => yes), yes],
-    ["Resume AI", "1 credit per action (a fix: 1/5)", ...plans.map((m) => (m.resume_ai ? "Unlimited" : "Credits")), "Unlimited"],
+    ["Resume", "1 credit per action (a fix: 1/5)", ...plans.map((m) => (m.resume_ai ? "Unlimited" : "Credits")), "Unlimited"],
     ["Live interview help", "From credits", ...plans.map((m) => `${time(m.live_minutes)} ${per(m)}`), "Custom"],
     ["Mock and video interviews", "From credits", ...plans.map((m) => `${time(m.mock_minutes)} ${per(m)}`), "Custom"],
     ["Screenshot answers", free ? `${n(free.screenshots)} / month` : "Limited", ...plans.map((m) => (m.screenshots === null ? "Unlimited" : `${n(m.screenshots)} ${per(m)}`)), "Custom"],
@@ -298,7 +298,7 @@ function hours(minutes: number): number {
 
 /**
  * Credit packs the way interview copilots sell them: interview credits (1 credit = 1 hour, live or mock), bigger packs
- * with free credits on top and a lower price an hour, Resume AI credits included; and an AI-credits pack for Resume AI
+ * with free credits on top and a lower price an hour, Resume credits included; and an AI-credits pack for Resume
  * alone. Signed out, the buttons lead to sign-up; signed in, they buy.
  */
 export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPack[] | null; onBuy?: (p: CreditPack) => void; busy?: boolean }) {
@@ -341,7 +341,7 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
               <CtaButton cta={cta} />
               <ul className="mt-5 space-y-2 border-t border-zinc-900/5 pt-5 text-sm text-zinc-700 dark:border-white/5 dark:text-zinc-300">
                 <Feature>{hours(total)} hour{hours(total) === 1 ? "" : "s"} of live or mock interviews</Feature>
-                {p.resume_credits > 0 && <Feature>{p.resume_credits} Resume AI credits</Feature>}
+                {p.resume_credits > 0 && <Feature>{p.resume_credits} Resume credits</Feature>}
                 <Feature>Never expire</Feature>
               </ul>
             </li>
@@ -355,10 +355,10 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold">
-              {p.label}: {p.resume_credits} Resume AI credits · {priceOf(p)}
+              {p.label}: {p.resume_credits} Resume credits · {priceOf(p)}
             </p>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Only need Resume AI? Imports, tailoring and cover letters use 1 credit; a single AI fix uses a fifth. Never expire.
+              Only need Resume? Imports, tailoring and cover letters use 1 credit; a single AI fix uses a fifth. Never expire.
             </p>
           </div>
           <div className="sm:w-48 [&>*]:mt-0">

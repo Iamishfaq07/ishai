@@ -70,21 +70,21 @@ const loadPalette = () => import("./CommandPalette");
 const CommandPalette = lazy(loadPalette);
 
 const TABS = phoneTabs();
-// The sidebar's groups and the Explore sheet's items: the same everywhere but for Offer AI's mark (the rupee in India).
+// The sidebar's groups and the Explore sheet's items: the same everywhere but for the offer tool's mark (the rupee in India).
 const useNavGroups = () => navGroups(MOCK_INTERVIEW_ENABLED, useCountry());
 const useExploreItems = () => exploreItems(MOCK_INTERVIEW_ENABLED, useCountry());
 
-/** The tabs between the interview copilot's pages (as Resume AI and Jobs AI have theirs). */
+/** The tabs between the interview copilot's pages (as Resume and Jobs have theirs). */
 const COPILOT_SECTIONS: ProductSection[] = [
   { to: "/sessions", label: "Sessions", icon: HistoryIcon },
   { to: "/documents", label: "Documents", icon: FolderOpen, end: true },
   { to: "/documents/stories", label: "Story bank", icon: BookOpen },
   { to: "/documents/answers", label: "My answers", icon: MessageSquareQuote },
 ];
-/** Learning AI's tabs: its overview and Code AI; KashSec, another site, is a link beside them. */
+/** Learning's tabs: its overview and Coding practice; KashSec, another site, is a link beside them. */
 const LEARN_SECTIONS: ProductSection[] = [
   { to: LEARN_HOME, label: "Overview", icon: GraduationCap, end: true },
-  { to: CODE_HOME, label: "Code AI", icon: Code2 },
+  { to: CODE_HOME, label: "Coding practice", icon: Code2 },
 ];
 /** Shown when the deployment has the Career Evidence Vault switched on (the account says so). */
 const EVIDENCE_SECTION: ProductSection = { to: "/documents/evidence", label: "Evidence", icon: ShieldCheck };
@@ -298,7 +298,7 @@ export function Layout() {
         <main id="main" className="mx-auto min-h-[100dvh] w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           {learning && (
             <ProductTabs
-              label="Learning AI"
+              label="Learning"
               sections={LEARN_SECTIONS}
               action={
                 pathname !== LEARN_HOME && (
@@ -550,7 +550,7 @@ function sideClass(active: boolean, collapsed: boolean): string {
 }
 
 function SideLink({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
-  // One colour for every icon (the accent marks the page you're on), and each tool by its whole name ("Resume AI"):
+  // One colour for every icon (the accent marks the page you're on), and each tool by its whole name ("Resume"):
   // a different colour and an AI badge per item read as noise in a list people scan all day.
   const { to, label, icon: Icon } = item;
   return (

@@ -203,7 +203,7 @@ export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () 
               {info.tracked ? (
                 <span className="font-medium text-amber-800 dark:text-amber-200">Already on your tracker ({STATUS_LABEL[info.tracked.status]}).</span>
               ) : info.listing_id ? (
-                <span className="text-zinc-600 dark:text-zinc-300">This job is in your Jobs AI feed: it's saved with its page.</span>
+                <span className="text-zinc-600 dark:text-zinc-300">This job is in your Jobs feed: it's saved with its page.</span>
               ) : info.title || info.company ? (
                 <span className="text-zinc-600 dark:text-zinc-300">Filled in from the link: check it below.</span>
               ) : (

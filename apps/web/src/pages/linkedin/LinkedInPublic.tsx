@@ -14,11 +14,11 @@ import { AboutArt, FixCardArt, FreeFixesArt, KeywordsArt, LinkedInHeroArt, PROFI
 import { ScoreTrail } from "./ScorePanel";
 import { SearchPreview } from "./SearchPreview";
 
-/** Sign-up and sign-in from here come back to LinkedIn AI. */
+/** Sign-up and sign-in from here come back to LinkedIn. */
 const BACK_HERE = { from: LINKEDIN_HOME };
 
 /**
- * /linkedin-ai: LinkedIn AI for signed-out visitors (the tool itself is /linkedin, signed in), built with the product
+ * /linkedin-ai: LinkedIn for signed-out visitors (the tool itself is /linkedin, signed in), built with the product
  * pages' section kit (DECISIONS D79): a sample profile's real score climbing as its fixes go in, the facts, three
  * steps, the fixes as working pieces, the real recruiter-search preview (switch it between before and after), the
  * questions, what comes next and one last action. Orbit's own drawing of everything, never LinkedIn's look or logo.
@@ -27,11 +27,11 @@ export function LinkedInPublicPage() {
   const heroCtas = useRef<HTMLDivElement>(null);
   const finalCta = useRef<HTMLElement>(null);
   return (
-    <PublicLayout authState={BACK_HERE} context="LinkedIn AI">
+    <PublicLayout authState={BACK_HERE} context="LinkedIn">
       <HeroShowcase
-        product={{ id: "linkedin", name: "LinkedIn AI", icon: IdCard }}
+        product={{ id: "linkedin", name: "LinkedIn", icon: IdCard }}
         title={["See your profile", "as recruiters do."]}
-        lead="LinkedIn AI scores your LinkedIn profile out of 100 for the role you want, section by section, and writes the fixes to paste in: the headline, the About, your latest roles, your skills and a clean URL. It keeps your numbers and never makes one up."
+        lead="LinkedIn scores your LinkedIn profile out of 100 for the role you want, section by section, and writes the fixes to paste in: the headline, the About, your latest roles, your skills and a clean URL. It keeps your numbers and never makes one up."
         ctas={heroCtas}
         actions={
           <>
@@ -46,14 +46,14 @@ export function LinkedInPublicPage() {
         note={
           <p>
             <strong className="font-medium text-zinc-900 dark:text-white">The score and the free fixes cost nothing.</strong> An AI fix uses a fifth of a
-            resume credit. LinkedIn AI is part of Orbit and isn't made by or connected to LinkedIn.
+            resume credit. LinkedIn is part of Orbit and isn't made by or connected to LinkedIn.
           </p>
         }
         visual={<LinkedInHeroArt />}
       />
 
       <FactsBand
-        label="LinkedIn AI in numbers"
+        label="LinkedIn in numbers"
         facts={[
           { value: 100, label: "points, scored section by section" },
           { value: 7, label: "sections scored from LinkedIn's PDF of your profile" },
@@ -119,10 +119,10 @@ export function LinkedInPublicPage() {
         id="next-title"
         eyebrow="The same account"
         title="A profile that's found, a resume that's read."
-        lead="LinkedIn AI writes from the same resume Resume AI scores, and the jobs Jobs AI finds are the roles it tunes your profile for."
+        lead="LinkedIn writes from the same resume Resume scores, and the jobs Jobs finds are the roles it tunes your profile for."
         items={[
-          { product: { id: "resume", name: "Resume AI", icon: FileText }, title: "The resume behind the profile", text: "An ATS score out of 100 and a copy tailored for every job, every change shown.", to: RESUME_AI_HOME, cta: "See Resume AI" },
-          { product: { id: "jobs", name: "Jobs AI", icon: Briefcase }, title: "Jobs for the role you're aiming at", text: "New openings from companies' careers pages, matched to your resume, with a tracker.", to: JOBS_AI_HOME, cta: "See Jobs AI" },
+          { product: { id: "resume", name: "Resume", icon: FileText }, title: "The resume behind the profile", text: "An ATS score out of 100 and a copy tailored for every job, every change shown.", to: RESUME_AI_HOME, cta: "See Resume" },
+          { product: { id: "jobs", name: "Jobs", icon: Briefcase }, title: "Jobs for the role you're aiming at", text: "New openings from companies' careers pages, matched to your resume, with a tracker.", to: JOBS_AI_HOME, cta: "See Jobs" },
           { product: { id: "practice", name: "Practice", icon: Target }, title: "Ready when a recruiter calls", text: "A mock interview with an AI interviewer, then a score for every answer.", to: PRACTICE_PAGE, cta: "See mock interviews" },
         ]}
       />

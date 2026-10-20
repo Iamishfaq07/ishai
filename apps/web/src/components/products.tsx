@@ -4,8 +4,8 @@ import { AudioLines, Briefcase, FileText, Target, cx, focusRing, type LucideIcon
 import type { ProductId } from "../lib/onboarding";
 
 /**
- * What Orbit's products share in the app: each one's name, mark and colour, the "AI" pill after their name
- * (Resume AI, Jobs AI) and the tabs between a product's own pages. Light on purpose: the main nav, Home and the
+ * What Orbit's products share in the app: each one's name, mark and colour,
+ * and the tabs between a product's own pages. Light on purpose: the main nav, Home and the
  * sign-in screens import it.
  */
 
@@ -13,7 +13,7 @@ export type { ProductId };
 
 /**
  * Each product's one fixed colour, for its mark and tag only (the user's accent stays for UI state): the interview
- * copilot is the accent, Practice orange (a hue none of the seven accents uses), Resume AI emerald, Jobs AI sky. -700/-800 text on the light tints and -200/-300 on the dark
+ * copilot is the accent, Practice orange (a hue none of the seven accents uses), Resume emerald, Jobs sky. -700/-800 text on the light tints and -200/-300 on the dark
  * ones keep small labels at AA contrast.
  */
 export const PRODUCTS: Record<ProductId, { name: string; short: string; icon: LucideIcon; tile: string; text: string; soft: string }> = {
@@ -34,7 +34,7 @@ export const PRODUCTS: Record<ProductId, { name: string; short: string; icon: Lu
     soft: "bg-orange-500/[0.06] ring-orange-600/20 dark:bg-orange-400/[0.06] dark:ring-orange-300/15",
   },
   resume: {
-    name: "Resume AI",
+    name: "Resume",
     short: "Resume",
     icon: FileText,
     tile: "bg-emerald-500/15 text-emerald-800 ring-emerald-600/25 dark:bg-emerald-400/15 dark:text-emerald-200 dark:ring-emerald-300/20",
@@ -42,7 +42,7 @@ export const PRODUCTS: Record<ProductId, { name: string; short: string; icon: Lu
     soft: "bg-emerald-500/[0.06] ring-emerald-600/20 dark:bg-emerald-400/[0.06] dark:ring-emerald-300/15",
   },
   jobs: {
-    name: "Jobs AI",
+    name: "Jobs",
     short: "Jobs",
     icon: Briefcase,
     tile: "bg-sky-500/15 text-sky-800 ring-sky-600/25 dark:bg-sky-400/15 dark:text-sky-200 dark:ring-sky-300/20",
@@ -67,20 +67,6 @@ export function ProductMark({ product, size = "md", className }: { product: Prod
       )}
     >
       <Icon className={size === "sm" ? "h-4 w-4" : size === "md" ? "h-5 w-5" : "h-6 w-6"} />
-    </span>
-  );
-}
-
-/** The small gradient "AI" tag after "Resume" and "Jobs" in the nav and on the products' cards and headings. */
-export function AiPill({ className }: { className?: string }) {
-  return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-[5px] bg-indigo-600 px-1 py-px text-[0.625rem] font-bold leading-[0.875rem] tracking-wide text-white",
-        className,
-      )}
-    >
-      AI
     </span>
   );
 }
@@ -163,7 +149,7 @@ export function ProductTabs({ label, sections, action }: { label: string; sectio
         )}
         {sections.map(({ to, label: name, icon: Icon, end, also, count }) => {
           const current = isCurrent(pathname, to, end) || Boolean(also?.test(pathname));
-          // Phones: a size smaller and tighter, and no count under 380 px, so Jobs AI's five tabs fit a 360 px screen.
+          // Phones: a size smaller and tighter, and no count under 380 px, so Jobs's five tabs fit a 360 px screen.
           return (
             <Link
               key={to}

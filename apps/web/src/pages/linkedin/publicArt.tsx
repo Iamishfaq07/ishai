@@ -5,11 +5,11 @@ import { HEADLINE_SHOWN, scoreWord } from "./model";
 import { ScoreRing, SectionBars } from "./ScorePanel";
 
 /**
- * LinkedIn AI's public page, drawn with LinkedIn AI itself (DECISIONS D79): the real score ring and section bars
+ * LinkedIn's public page, drawn with LinkedIn itself (DECISIONS D79): the real score ring and section bars
  * (ScorePanel), the real recruiter-search preview (SearchPreview, on the page), and a fix card in SuggestionCard's
  * look. The sample profile is made up; its scores are the real audit's (orbit_api/linkedin/audit.py, run on it with
  * the role "Data Analyst"): 47 as read, then 61, 73, 80, 91 and 94 as the headline, the About, the latest role, the
- * skills and the custom URL are fixed. Orbit's own drawing, never LinkedIn's look or logo (DESIGN.md, LinkedIn AI).
+ * skills and the custom URL are fixed. Orbit's own drawing, never LinkedIn's look or logo (DESIGN.md, LinkedIn).
  */
 
 type Row = [LinkedInSectionScore["id"], string, number];
@@ -81,7 +81,7 @@ export function LinkedInHeroArt() {
         ref={p.ref}
         {...p.attrs}
         role="img"
-        aria-label={`A sample LinkedIn profile scored by LinkedIn AI: 47 out of 100 as read, then 94 after five fixes: ${FIXES.map((f) => `${f.label.toLowerCase()}, plus ${f.gain}`).join("; ")}.`}
+        aria-label={`A sample LinkedIn profile scored by LinkedIn: 47 out of 100 as read, then 94 after five fixes: ${FIXES.map((f) => `${f.label.toLowerCase()}, plus ${f.gain}`).join("; ")}.`}
         className="kp relative pb-44 sm:pb-36"
       >
         <div aria-hidden="true" inert className="mk-float rounded-2xl mk-surface p-5">
@@ -104,7 +104,7 @@ export function LinkedInHeroArt() {
           <TickRows className="mt-2.5" times={times} rows={FIXES.map((f) => ({ label: f.label, note: f.note, meta: `+${f.gain}` }))} />
         </div>
       </div>
-      <figcaption className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">A made-up profile, scored by LinkedIn AI's own check.</figcaption>
+      <figcaption className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">A made-up profile, scored by LinkedIn's own check.</figcaption>
     </figure>
   );
 }

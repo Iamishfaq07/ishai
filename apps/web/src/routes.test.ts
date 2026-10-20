@@ -5,19 +5,19 @@ describe("pageFor (what the nav warms before a click)", () => {
   it("warms the public tool explorer without a workspace", () => {
     expect(pageFor("/tools")).toBe("tools");
   });
-  it("warms Resume AI's home and its editor", () => {
+  it("warms Resume's home and its editor", () => {
     expect(pageFor("/resume-ai")).toBe("resumes");
     expect(pageFor("/resume-ai/3f2a9c")).toBe("resumeEditor");
   });
 
-  it("warms Jobs AI for every one of its pages", () => {
+  it("warms Jobs for every one of its pages", () => {
     for (const path of ["/jobs", "/jobs/", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/outreach", "/jobs/profile"]) {
       expect(pageFor(path)).toBe("jobs");
     }
     expect(pageFor("/jobsearch")).toBeNull();
   });
 
-  it("warms Jobs AI for Jobs' old addresses in Resume AI, never the resume editor", () => {
+  it("warms Jobs for Jobs' old addresses in Resume, never the resume editor", () => {
     expect(pageFor("/resume-ai/jobs")).toBe("jobs");
     expect(pageFor("/resume-ai/jobs/tracker")).toBe("jobs");
     expect(pageFor("/resume-ai/jobsearch")).toBe("resumeEditor");
@@ -74,7 +74,7 @@ describe("the public pricing and product pages (D73)", () => {
     expect(pageFor("/pricings")).toBeNull();
   });
 
-  it("gives LinkedIn AI's product page its own code, apart from the signed-in tool (D79)", () => {
+  it("gives LinkedIn's product page its own code, apart from the signed-in tool (D79)", () => {
     expect(pageFor("/linkedin-ai")).toBe("linkedinPublic");
     expect(pageFor("/linkedin")).toBe("linkedin");
   });

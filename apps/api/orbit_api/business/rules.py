@@ -419,7 +419,7 @@ def notice_text(company: str, retention_months: int) -> str:
     return (
         f"What happens to your application: {company} receives what you send here (your name, email, phone if given, "
         "your resume and your answers). If you apply with your Orbit account, only the resume you choose is shared; "
-        "nothing else from your Orbit account (practice, interview help, LinkedIn AI, other documents) is ever shown "
+        "nothing else from your Orbit account (practice, interview help, LinkedIn, other documents) is ever shown "
         f"to {company}. Orbit's AI reads your resume to sort applications and to explain how it matches the job's "
         "requirements; it doesn't use your name, age, gender, photo or other personal traits, and it never rejects "
         f"anyone. A person at {company} reviews every application and makes every decision. If you aren't selected, "

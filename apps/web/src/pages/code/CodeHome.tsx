@@ -22,7 +22,7 @@ const PATTERN_SPOT: Record<string, SpotKind> = {
 export const DIFFICULTY_TONE = { easy: "success", medium: "warning", hard: "danger" } as const;
 
 /**
- * Code AI: coding-round practice by pattern (the way the prep guides recommend: learn the patterns, not hundreds of
+ * Coding practice: coding-round practice by pattern (the way the prep guides recommend: learn the patterns, not hundreds of
  * problems). Each problem runs its tests in your browser, gives hints that don't give it away, and an AI interviewer
  * reviews your code and how you explained it.
  */
@@ -32,7 +32,7 @@ export function CodeHomePage() {
   const solved = d?.problems.filter((p) => p.solved).length ?? 0;
   return (
     <>
-      <PageHeader icon={Code2} title="Code AI" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<CodeScene />} />
+      <PageHeader icon={Code2} title="Coding practice" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<CodeScene />} />
       <LoadGate loading={data.loading && !d} variant="card" count={3} label="Getting the problems">
         {data.error && !d ? (
           <ErrorNote onRetry={data.reload}>{errorText(data.error)}</ErrorNote>

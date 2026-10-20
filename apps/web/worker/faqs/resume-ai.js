@@ -3,7 +3,7 @@
 /** @type {ReadonlyArray<readonly [string, string]>} */
 export const RESUME_AI_FAQ = [
   [
-    "Is Resume AI free?",
+    "Is Resume free?",
     "Writing and editing your resume, its ATS score, and Word and PDF downloads are free. AI actions use AI credits: an import, a tailored copy, a whole-resume rewrite or a cover letter is one credit, and a single AI fix (one check, one section or one line) is a fifth of one. If an AI action fails, its credit comes back.",
   ],
   [
@@ -28,6 +28,6 @@ export const RESUME_AI_FAQ = [
   ],
   [
     "Does it work on my phone?",
-    "Yes. Resume AI works in any modern browser, on a phone or a laptop: edit, see the score and download your resume.",
+    "Yes. Resume works in any modern browser, on a phone or a laptop: edit, see the score and download your resume.",
   ],
   ];

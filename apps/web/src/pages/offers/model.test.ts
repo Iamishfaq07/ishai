@@ -10,7 +10,7 @@ function rec(over: Partial<JobOfferRecord>): JobOfferRecord {
   };
 }
 
-describe("Offer AI model", () => {
+describe("Offers model", () => {
   it("writes money the way offers do", () => {
     expect(money("INR", 2_400_000)).toBe("₹24L");
     expect(money("INR", 2_450_000)).toBe("₹24.5L");

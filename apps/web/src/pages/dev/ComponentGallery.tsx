@@ -463,9 +463,9 @@ function Data() {
       </Table>
       <Card className="space-y-5">
         <Pagination page={page} pageSize={20} total={132} onPage={setPage} />
-        <ProgressBar label="Resume AI credits" value={7} max={10} valueText="7 of 10" />
+        <ProgressBar label="Resume credits" value={7} max={10} valueText="7 of 10" />
         <Stepper steps={["Discover", "Prove", "Prepare", "Apply", "Interview"]} current={2} />
-        <Breadcrumbs>{["Jobs AI", "Tracker", "Stripe"]}</Breadcrumbs>
+        <Breadcrumbs>{["Jobs", "Tracker", "Stripe"]}</Breadcrumbs>
         <div className="flex items-center gap-3">
           <IconTile icon={LayoutGrid} />
           <IconTile icon={LayoutGrid} size="sm" />
@@ -510,9 +510,9 @@ const SCENES: Array<[string, ReactNode]> = [
   ["Offline", <OfflineScene key="f" />],
   ["Nothing heard", <CopilotScene key="q" quiet />],
   ["Success", <CelebrationScene key="cs" />],
-  ["LinkedIn AI", <LinkedInScene key="li" />],
-  ["Code AI", <CodeScene key="co" />],
-  ["Learning AI", <LearningScene key="le" />],
+  ["LinkedIn", <LinkedInScene key="li" />],
+  ["Coding practice", <CodeScene key="co" />],
+  ["Learning", <LearningScene key="le" />],
   ["Video interview", <VideoScene key="v" />],
   ["Plan & credits", <BillingScene key="b" />],
   ["Security", <SecurityScene key="se" />],

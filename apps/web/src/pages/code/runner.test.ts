@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { callText, failingText, sameAnswer, workerSource } from "./runner";
 
-describe("Code AI runner", () => {
+describe("Coding practice runner", () => {
   it("compares answers as data", () => {
     expect(sameAnswer([2, 3], [2, 3])).toBe(true);
     expect(sameAnswer([3, 2], [2, 3])).toBe(false);

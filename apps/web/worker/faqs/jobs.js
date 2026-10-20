@@ -7,8 +7,8 @@ export const JOBS_AI_FAQ = [
     "From companies' own careers pages (their Greenhouse, Lever, Ashby and SmartRecruiters job boards) and remote job boards that allow it. Every job says where it came from, and Apply opens the original post.",
   ],
   [
-    "Does Jobs AI copy LinkedIn or Naukri listings?",
-    "No. LinkedIn, Naukri, Indeed and the other large sites don't allow their listings to be copied, so Jobs AI opens their own search instead, filled in from your profile.",
+    "Does Jobs copy LinkedIn or Naukri listings?",
+    "No. LinkedIn, Naukri, Indeed and the other large sites don't allow their listings to be copied, so Jobs opens their own search instead, filled in from your profile.",
   ],
   [
     "How is the match worked out?",
@@ -16,7 +16,7 @@ export const JOBS_AI_FAQ = [
   ],
   [
     "How fresh are the jobs?",
-    "Companies' job boards are read again every few hours while people are using Jobs AI, and posts older than 30 days are dropped.",
+    "Companies' job boards are read again every few hours while people are using Jobs, and posts older than 30 days are dropped.",
   ],
   [
     "Does Orbit apply for me?",

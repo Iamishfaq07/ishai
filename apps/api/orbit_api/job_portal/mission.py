@@ -138,7 +138,7 @@ def next_step(f: Facts, listing_path: str) -> NextStep | None:
                         why="This one closed. A line on what they asked and what you'd change helps the next one.",
                         to="notes")
     if f.status == "offer" and not f.offer:
-        return NextStep(key="offer", title="Add the offer to Offer AI", action="Add the offer",
+        return NextStep(key="offer", title="Add the offer to Offers", action="Add the offer",
                         why="See what it pays each month, compare it with the market and plan what to ask for.",
                         to="link_offer")
     if f.upcoming_days == 0 and f.status == "interviewing":

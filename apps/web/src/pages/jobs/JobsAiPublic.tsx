@@ -14,7 +14,7 @@ import { RESUME_AI_HOME } from "../resume/paths";
 import { JOBS_AI_HOME } from "./paths";
 import { InterviewDayArt, JobsHeroArt, MatchesStepArt, MissionArt, OutreachArt, ProfileStepArt, SourcesArt, TrackStepArt, TrackerArt } from "./publicArt";
 
-/** Sign-up and sign-in from here come back to Jobs AI. */
+/** Sign-up and sign-in from here come back to Jobs. */
 const BACK_HERE = { from: JOBS_AI_HOME };
 
 /** The big job sites Orbit links to (their own search, filled in), never reads. */
@@ -40,7 +40,7 @@ function freeNote(stats: Daily | null) {
       {stats
         ? `and each day you get ${stats.fit_daily} AI fit checks and ${stats.profile_daily} AI reads of your resume, free.`
         : "and a few AI fit checks a day are free."}{" "}
-      Outreach uses resume credits, and so do AI rewrites when you tailor a resume in Resume AI.
+      Outreach uses resume credits, and so do AI rewrites when you tailor a resume in Resume.
     </p>
   );
 }
@@ -64,7 +64,7 @@ function jobFacts(stats: JobStats | null, country: string): Fact[] {
 }
 
 /**
- * Jobs AI for signed-out visitors (at /jobs, where a signed-in person gets their overview), built with the product
+ * Jobs for signed-out visitors (at /jobs, where a signed-in person gets their overview), built with the product
  * pages' section kit (DECISIONS D79): an example match being scored and checked, the facts, three steps, the toolkit
  * as working pieces of the product, where the jobs come from, the questions, what comes next and one last action.
  * The only calls are the public numbers (GET /v1/jobs/stats) and the free allowance; nothing here calls the AI.
@@ -77,9 +77,9 @@ export function JobsAiPublicPage() {
   const heroCtas = useRef<HTMLDivElement>(null);
   const finalCta = useRef<HTMLElement>(null);
   return (
-    <PublicLayout authState={BACK_HERE} context="Jobs AI">
+    <PublicLayout authState={BACK_HERE} context="Jobs">
       <HeroShowcase
-        product={{ id: "jobs", name: "Jobs AI", icon: Briefcase }}
+        product={{ id: "jobs", name: "Jobs", icon: Briefcase }}
         title={["Find jobs that", "fit your resume."]}
         lead="The latest openings from companies' own careers pages and remote job boards, ranked by how well they match you, with a free AI fit check for each one. You apply on the company's own site."
         ctas={heroCtas}
@@ -97,14 +97,14 @@ export function JobsAiPublicPage() {
         visual={<JobsHeroArt />}
       />
 
-      <FactsBand label="Jobs AI in numbers" facts={jobFacts(stats, country)} />
+      <FactsBand label="Jobs in numbers" facts={jobFacts(stats, country)} />
 
       <StepsWithUI
         id="steps-title"
         eyebrow="How it works"
         title="From resume to matches in a minute or two."
         steps={[
-          { title: "Add your resume", text: "Import the one you have (PDF, Word or LinkedIn's PDF), or make one in Resume AI. The AI reads it into a search profile you can change.", ui: <ProfileStepArt /> },
+          { title: "Add your resume", text: "Import the one you have (PDF, Word or LinkedIn's PDF), or make one in Resume. The AI reads it into a search profile you can change.", ui: <ProfileStepArt /> },
           { title: "See your matches", text: "Every new job is scored against your profile, best first, with the skills you have and the ones it asks for that you don't show.", ui: <MatchesStepArt /> },
           { title: "Apply and keep track", text: "Check your fit, ask for a referral, apply on the company's site, and move each application along your tracker.", ui: <TrackStepArt /> },
         ]}
@@ -128,7 +128,7 @@ export function JobsAiPublicPage() {
       <Section labelledBy="sources-title">
         <div className="grid gap-14 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-5">
-            <SectionIntro id="sources-title" eyebrow="Where the jobs come from" title="The original post, every time." lead="Jobs AI reads only what's published to be read, and links you to the employer to apply." />
+            <SectionIntro id="sources-title" eyebrow="Where the jobs come from" title="The original post, every time." lead="Jobs reads only what's published to be read, and links you to the employer to apply." />
           </div>
           <div className="rounded-2xl border mk-line mk-surface p-6 sm:p-8 lg:col-span-7">
             <h3 className="flex items-center gap-3 text-lg font-semibold text-zinc-950 dark:text-white">
@@ -145,7 +145,7 @@ export function JobsAiPublicPage() {
               {india ? "LinkedIn, Naukri" : "LinkedIn, Indeed"} and the other large sites don't allow their listings to be copied, so Orbit doesn't. It opens their own search
               instead, filled in from your profile:
             </p>
-            <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Sites Jobs AI searches for you">
+            <ul className="mt-4 flex flex-wrap gap-1.5" aria-label="Sites Jobs searches for you">
               {(india ? PORTALS : WORLD_PORTALS).map((p) => (
                 <li key={p} className="rounded-full border mk-line px-2.5 py-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
                   {p}
@@ -162,9 +162,9 @@ export function JobsAiPublicPage() {
         id="next-title"
         eyebrow="The same account"
         title="Then, the interview."
-        lead="The resume Jobs AI matches is the one Resume AI scores, Practice asks about and the copilot answers from."
+        lead="The resume Jobs matches is the one Resume scores, Practice asks about and the copilot answers from."
         items={[
-          { product: { id: "resume", name: "Resume AI", icon: FileText }, title: "A resume tailored for the job", text: "An ATS score out of 100, the job post's keywords and a copy aimed at each job, every change shown.", to: RESUME_AI_HOME, cta: "See Resume AI" },
+          { product: { id: "resume", name: "Resume", icon: FileText }, title: "A resume tailored for the job", text: "An ATS score out of 100, the job post's keywords and a copy aimed at each job, every change shown.", to: RESUME_AI_HOME, cta: "See Resume" },
           { product: { id: "practice", name: "Practice", icon: Target }, title: "Practise for that interview", text: "A mock interview on the job post, in the company's style, then a score for every answer.", to: PRACTICE_PAGE, cta: "See mock interviews" },
           { product: { id: "copilot", name: "Interview copilot", icon: AudioLines }, title: "Live answers from your resume", text: "In calls where AI help is allowed, a suggested answer as the question is asked.", to: COPILOT_PAGE, cta: "See the copilot" },
         ]}
@@ -180,7 +180,7 @@ export function JobsAiPublicPage() {
           <>
             Resume not ready yet?{" "}
             <Link to={RESUME_AI_HOME} className={cx("rounded font-medium text-white underline underline-offset-2", focusRing)}>
-              Resume AI
+              Resume
             </Link>{" "}
             scores it the way screening software reads it, and helps you fix it.
           </>

@@ -82,7 +82,7 @@ export function desktopApp() {
   };
 }
 
-/** One product of the web app (Orbit itself at "/", or Resume AI, Jobs AI, the warm-up at their own pages). */
+/** One product of the web app (Orbit itself at "/", or Resume, Jobs, the warm-up at their own pages). */
 export function webApp({ id, name, path, description, category = "BusinessApplication" }) {
   return {
     "@type": "WebApplication",
@@ -112,7 +112,7 @@ export function webPage({ path, name, description, type = "WebPage", extra = {} 
   };
 }
 
-/** Breadcrumbs from [name, path] pairs, home first: [["Home", "/"], ["Resume AI", "/resume-ai"]]. */
+/** Breadcrumbs from [name, path] pairs, home first: [["Home", "/"], ["Resume", "/resume-ai"]]. */
 export function breadcrumbs(items) {
   return {
     "@type": "BreadcrumbList",
@@ -159,28 +159,28 @@ const PRODUCT_PAGES = {
     },
   },
   "/resume-ai": {
-    crumb: "Resume AI",
+    crumb: "Resume",
     app: {
       id: "resume-ai",
-      name: "Orbit Resume AI",
+      name: "Orbit Resume",
       description:
         "A resume builder and checker: an ATS score out of 100, what's missing for the job you want, and AI rewrites that keep your own numbers. Editing, the score and Word/PDF downloads are free.",
     },
   },
   "/linkedin-ai": {
-    crumb: "LinkedIn AI",
+    crumb: "LinkedIn",
     app: {
       id: "linkedin-ai",
-      name: "Orbit LinkedIn AI",
+      name: "Orbit LinkedIn",
       description:
         "A LinkedIn profile checker: a score out of 100, section by section, the fixes to paste in (headline, About, roles, skills, the custom URL) and a preview of how a recruiter's search shows the profile. Not made by LinkedIn.",
     },
   },
   "/jobs": {
-    crumb: "Jobs AI",
+    crumb: "Jobs",
     app: {
       id: "jobs-ai",
-      name: "Orbit Jobs AI",
+      name: "Orbit Jobs",
       description:
         "New openings from companies' own careers pages, matched to your resume, with a job tracker and AI fit checks. Apply opens the original post.",
     },

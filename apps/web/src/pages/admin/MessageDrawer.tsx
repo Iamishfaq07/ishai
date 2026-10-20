@@ -218,7 +218,7 @@ export function MessageDrawer({
                             </a>
                           ) : r.to ? (
                             <Link to={r.to} className={cx("text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
-                              Open in Jobs AI
+                              Open in Jobs
                             </Link>
                           ) : (
                             r.value

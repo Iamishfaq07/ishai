@@ -19,8 +19,6 @@ export interface NavItem {
   tab?: string;
   icon: LucideIcon;
   product?: ProductId;
-  /** An AI tool: shown with the AI mark at its top right. */
-  ai?: true;
   /** Which addresses it's current on. */
   current: (pathname: string) => boolean;
 }
@@ -38,27 +36,27 @@ export const LEARNING_PATH = /^\/(learn|code)(\/|$)/;
 
 const HOME: NavItem = { id: "home", to: "/", label: "Home", icon: House, current: (p) => p === "/" };
 const PRACTICE: NavItem = {
-  id: "practice", to: "/mock", label: "Practice", icon: PRODUCTS.practice.icon, product: "practice", ai: true,
+  id: "practice", to: "/mock", label: "Practice", icon: PRODUCTS.practice.icon, product: "practice",
   current: (p) => /^\/mock(\/|$)/.test(p),
 };
 // The AI video interview: a face-to-face practice call with the AI interviewer (pages/VideoInterview.tsx).
-const VIDEO: NavItem = { id: "video", to: "/interview", label: "Video interview", icon: Video, ai: true, current: (p) => p === "/interview" };
+const VIDEO: NavItem = { id: "video", to: "/interview", label: "Video interview", icon: Video, current: (p) => p === "/interview" };
 const RESUME: NavItem = {
-  id: "resume", to: RESUME_AI_HOME, label: "Resume AI", tab: "Resume", icon: PRODUCTS.resume.icon, product: "resume", ai: true,
+  id: "resume", to: RESUME_AI_HOME, label: "Resume", tab: "Resume", icon: PRODUCTS.resume.icon, product: "resume",
   current: under(RESUME_AI_HOME),
 };
-const LEARNING: NavItem = { id: "learning", to: LEARN_HOME, label: "Learning AI", icon: GraduationCap, ai: true, current: (p) => LEARNING_PATH.test(p) };
+const LEARNING: NavItem = { id: "learning", to: LEARN_HOME, label: "Learning", icon: GraduationCap, current: (p) => LEARNING_PATH.test(p) };
 const JOBS: NavItem = {
-  id: "jobs", to: JOBS_AI_HOME, label: "Career launchpad", tab: "Career", icon: PRODUCTS.jobs.icon, product: "jobs", ai: true,
+  id: "jobs", to: JOBS_AI_HOME, label: "Career launchpad", tab: "Career", icon: PRODUCTS.jobs.icon, product: "jobs",
   current: under(JOBS_AI_HOME),
 };
-const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn AI", icon: IdCard, ai: true, current: under(LINKEDIN_HOME) };
+const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn", icon: IdCard, current: under(LINKEDIN_HOME) };
 const COPILOT: NavItem = {
-  id: "copilot", to: "/sessions", label: "Copilot AI", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview", ai: true,
+  id: "copilot", to: "/sessions", label: "Copilot", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview",
   current: (p) => COPILOT_PATH.test(p),
 };
-const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offer AI", icon: BadgeIndianRupee, ai: true, current: under(OFFERS_HOME) };
-// Outside India, Offer AI's mark is money in general, not the rupee.
+const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offers", icon: BadgeIndianRupee, current: under(OFFERS_HOME) };
+// Outside India, the offer tool's mark is money in general, not the rupee.
 const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 
 /** The sidebar, top to bottom. Practice only when mock interviews are switched on. `country`: where the user applies. */

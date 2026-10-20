@@ -15,7 +15,7 @@ import { JOBS_MATCHES } from "./paths";
 import { OnThisPage, type PageSection } from "../../components/OnThisPage";
 import { AlertsSection } from "./AlertsSection";
 
-/** Jobs AI → Profile: what the feed looks for, filled in by the AI from the resume, every part of it the user's. */
+/** Jobs → Profile: what the feed looks for, filled in by the AI from the resume, every part of it the user's. */
 export function JobProfilePage() {
   const { profile, suggesting, setProfile } = useJobsAi();
   return (
@@ -23,7 +23,7 @@ export function JobProfilePage() {
       <PageHeader
         icon={SlidersHorizontal}
         title="Your search profile"
-        subtitle="What Jobs AI looks for. The AI fills it in from your resume; change anything, and your matches follow."
+        subtitle="What Jobs looks for. The AI fills it in from your resume; change anything, and your matches follow."
       />
       <LoadGate loading={profile.loading && !profile.data} variant="card" count={3} label="Getting your job profile">
       {profile.error && !profile.data ? (
@@ -143,7 +143,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
                 </span>
                 {resumeId && (
                   <Link to={resumePath(resumeId)} className={cx(textLink, "ml-auto text-xs")}>
-                    Open it in Resume AI
+                    Open it in Resume
                   </Link>
                 )}
               </div>
@@ -153,7 +153,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
             <p className="text-sm">
               You don't have a resume yet.{" "}
               <Link to={RESUME_AI_HOME} className={textLink}>
-                Make one in Resume AI
+                Make one in Resume
               </Link>{" "}
               and the AI fills this in from it.
             </p>

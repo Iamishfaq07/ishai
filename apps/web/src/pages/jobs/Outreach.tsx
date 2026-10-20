@@ -43,9 +43,9 @@ const PARTS: Array<{ id: Part; label: string; more?: string }> = [
 ];
 
 /**
- * Orbit Jobs AI → Outreach (`/jobs/outreach`; it was Resume AI's "Profiles & outreach" tab): the messages a job hunt
+ * Orbit Jobs → Outreach (`/jobs/outreach`; it was Resume's "Profiles & outreach" tab): the messages a job hunt
  * runs on (referral requests, emails to HR, follow-ups, thank-you notes) and the Naukri and LinkedIn profiles, written
- * from one of your resumes. `?resume=` picks the resume (else the one edited last) and `?job=` a job from Jobs AI to
+ * from one of your resumes. `?resume=` picks the resume (else the one edited last) and `?job=` a job from Jobs to
  * write for (a job's page and the tracker open it that way). Each one written uses a resume credit; this browser
  * keeps what was written, per resume (and messages per job), as last edited.
  */
@@ -119,17 +119,17 @@ function NoResumeYet() {
     <EmptyState
       icon={FileText}
       title="Make a resume first"
-      body="Outreach is written from your resume: your experience, results and skills, and nothing it doesn't say. Make one in Resume AI, or import the one you have, then come back here."
+      body="Outreach is written from your resume: your experience, results and skills, and nothing it doesn't say. Make one in Resume, or import the one you have, then come back here."
       action={
         <Link to={RESUME_AI_HOME} className={linkButton("primary")}>
-          <FileText className="h-4 w-4" aria-hidden /> Open Resume AI
+          <FileText className="h-4 w-4" aria-hidden /> Open Resume
         </Link>
       }
     />
   );
 }
 
-/** The job `?job=` names: its page in Jobs AI, else its copy on the tracker once the post has left the feed. */
+/** The job `?job=` names: its page in Jobs, else its copy on the tracker once the post has left the feed. */
 function useOutreachJob(jobId: string | null) {
   const { tracker } = useJobsAi();
   const detail = useAsync(() => (jobId ? api.jobListing(jobId) : Promise.resolve(null)), [jobId], jobId ? `job|${jobId}` : undefined);
@@ -257,7 +257,7 @@ function ResumePicker({ picked, resumes, onPick }: { picked: ResumeSummary; resu
       <p className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
         <span>Edited {shortDate(picked.updated_at)}</span>
         <Link to={resumePath(picked.id)} className={cx(textLink, "inline-flex items-center gap-0.5")}>
-          Open in Resume AI <ArrowUpRight className="h-3 w-3" aria-hidden />
+          Open in Resume <ArrowUpRight className="h-3 w-3" aria-hidden />
         </Link>
       </p>
     </>

@@ -1,4 +1,4 @@
-// Jobs AI's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, the small
+// Jobs's plain logic (no React): labels, "posted 3h ago", the match colours, the tracker's columns, the small
 // list edits the profile page makes, and which message Outreach starts on. Kept here so it's unit-tested (model.test.ts).
 import { INDIA, countryInSentence, isIndia, regionWords } from "@orbit/ui";
 import type {
@@ -585,7 +585,7 @@ export function nextDateIcs(e: JobTrackerEntry, now: Date = new Date()): string 
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//Orbit//Jobs AI//EN",
+    "PRODID:-//Orbit//Jobs//EN",
     "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
     `UID:${e.id}-next@orbit`,

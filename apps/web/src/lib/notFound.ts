@@ -9,8 +9,8 @@ export interface Recovery {
 
 const RULES: Array<[RegExp, Recovery]> = [
   [/^(practice|practise|mock|mocks|warmup)$/, { label: "Start a practice interview", to: "/mock" }],
-  [/^(jobs?|careers?|matches|openings)$/, { label: "Explore matching roles in Jobs AI", to: "/jobs/matches" }],
-  [/^(resumes?|resume-ai|resume-maker|cv|ats)$/, { label: "Open Resume AI", to: "/resume-ai" }],
+  [/^(jobs?|careers?|matches|openings)$/, { label: "Explore matching roles in Jobs", to: "/jobs/matches" }],
+  [/^(resumes?|resume-ai|resume-maker|cv|ats)$/, { label: "Open Resume", to: "/resume-ai" }],
   [/^(sessions?|live|history|transcripts?)$/, { label: "Open your sessions", to: "/sessions" }],
   [/^(start|copilot|interview|interviews|new)$/, { label: "Start a live interview session", to: "/start" }],
   [/^(docs?|documents?|stories|answers)$/, { label: "Open your documents", to: "/documents" }],

@@ -86,7 +86,7 @@ export interface ContextRow {
   value: string;
   /** Outside link (the job post), http(s) only. */
   href?: string;
-  /** In-app link (the job in Jobs AI). */
+  /** In-app link (the job in Jobs). */
   to?: string;
 }
 
@@ -95,11 +95,11 @@ export function contextRows(ctx: ContactContext | null): ContextRow[] {
   if (!ctx) return [];
   const rows: ContextRow[] = [];
   if (ctx.listing_id || ctx.listing_title) {
-    const what = ctx.listing_title ? `${ctx.listing_title}${ctx.listing_company ? ` at ${ctx.listing_company}` : ""}` : "A job from Jobs AI";
+    const what = ctx.listing_title ? `${ctx.listing_title}${ctx.listing_company ? ` at ${ctx.listing_company}` : ""}` : "A job from Jobs";
     const href = safeHttpUrl(ctx.listing_url);
     rows.push({ label: "Job", value: what, ...(href ? { href } : {}) });
     if (ctx.listing_id && /^[A-Za-z0-9_-]+$/.test(ctx.listing_id)) {
-      rows.push({ label: "In Jobs AI", value: ctx.listing_id, to: `/jobs/listing/${encodeURIComponent(ctx.listing_id)}` });
+      rows.push({ label: "In Jobs", value: ctx.listing_id, to: `/jobs/listing/${encodeURIComponent(ctx.listing_id)}` });
     }
   }
   if (ctx.reason) rows.push({ label: "What's wrong", value: ctx.reason });

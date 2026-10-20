@@ -168,11 +168,11 @@ export function CopilotPublicPage() {
         id="next-title"
         eyebrow="Before the real one"
         title="Practise with the same answers first."
-        lead="One account has the copilot, mock interviews, Resume AI and Jobs AI, all working from the same resume."
+        lead="One account has the copilot, mock interviews, Resume and Jobs, all working from the same resume."
         items={[
           { product: { id: "practice", name: "Practice", icon: Target }, title: "A mock interview first", text: "An AI interviewer that asks out loud and follows up, then a score for every answer.", to: PRACTICE_PAGE, cta: "See mock interviews" },
-          { product: { id: "resume", name: "Resume AI", icon: FileText }, title: "The resume it answers from", text: "An ATS score out of 100 and the fixes, so the lines it quotes are your best ones.", to: RESUME_AI_HOME, cta: "See Resume AI" },
-          { product: { id: "jobs", name: "Jobs AI", icon: Briefcase }, title: "The interviews to get", text: "New jobs that fit your resume, from companies' own careers pages, with a tracker.", to: JOBS_AI_HOME, cta: "See Jobs AI" },
+          { product: { id: "resume", name: "Resume", icon: FileText }, title: "The resume it answers from", text: "An ATS score out of 100 and the fixes, so the lines it quotes are your best ones.", to: RESUME_AI_HOME, cta: "See Resume" },
+          { product: { id: "jobs", name: "Jobs", icon: Briefcase }, title: "The interviews to get", text: "New jobs that fit your resume, from companies' own careers pages, with a tracker.", to: JOBS_AI_HOME, cta: "See Jobs" },
         ]}
       />
 

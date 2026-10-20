@@ -15,11 +15,11 @@ import {
 } from "@orbit/ui";
 
 /**
- * Orbit Jobs AI, Orbit's third product next to the interview copilot and Resume AI: what it does (its home and the
+ * Orbit Jobs, Orbit's third product next to the interview copilot and Resume: what it does (its home and the
  * public page list the same things) and its own pages. Light on purpose: Home imports it.
  */
 
-/** One thing Jobs AI does: `short` for the chips on its home, `text` for the public page. */
+/** One thing Jobs does: `short` for the chips on its home, `text` for the public page. */
 export interface JobsAiFeature {
   icon: LucideIcon;
   short: string;
@@ -27,7 +27,7 @@ export interface JobsAiFeature {
   text: string;
 }
 
-/** Only what Jobs AI really does today, in the order people need it (as written for India; jobsAiFeatures words it for
+/** Only what Jobs really does today, in the order people need it (as written for India; jobsAiFeatures words it for
  *  everywhere else). */
 export const JOBS_AI_FEATURES: JobsAiFeature[] = [
   {
@@ -70,7 +70,7 @@ export const JOBS_AI_FEATURES: JobsAiFeature[] = [
     icon: Wand2,
     short: "Tailor your resume per job",
     title: "Tailor your resume for a job",
-    text: "A copy of your resume aimed at the job, opened in Resume AI, where you see every change before you keep it.",
+    text: "A copy of your resume aimed at the job, opened in Resume, where you see every change before you keep it.",
   },
   {
     icon: Send,
@@ -86,7 +86,7 @@ export const JOBS_AI_FEATURES: JobsAiFeature[] = [
   },
 ];
 
-/** What Jobs AI does, for where the user applies: Naukri is India's, and outside India outreach writes to recruiters. */
+/** What Jobs does, for where the user applies: Naukri is India's, and outside India outreach writes to recruiters. */
 export function jobsAiFeatures(country: string = INDIA): JobsAiFeature[] {
   if (isIndia(country)) return JOBS_AI_FEATURES;
   return JOBS_AI_FEATURES.map((f) => {

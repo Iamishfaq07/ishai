@@ -6,13 +6,13 @@ import { INDIA, isIndia, regionWords, safeLocal } from "@orbit/ui";
  * First run: the three welcome questions (what you're here for, your experience and role, where you want to work), and
  * what Home suggests next from those answers and what the account already has. Pure, apart from the small storage
  * helpers, so the choices are unit-tested (onboarding.test.ts). No migration: the answers stay in this browser (per
- * account), and the role and city also go to the Jobs AI search profile, whose `prefs` is JSON already.
+ * account), and the role and city also go to the Jobs search profile, whose `prefs` is JSON already.
  */
 
 export type Goal = "interview" | "resume" | "jobs";
 export type Experience = "fresher" | "early" | "experienced";
 /** The products the nav shows, each with its colour and mark (components/products.tsx): the interview copilot (live
- *  help, with its documents and story bank), Practice (mock interviews), Resume AI and Jobs AI. The welcome question's
+ *  help, with its documents and story bank), Practice (mock interviews), Resume and Jobs. The welcome question's
  *  goals stay three: "interview" covers practising and live help. */
 export type ProductId = "interview" | "practice" | "resume" | "jobs";
 
@@ -29,7 +29,7 @@ export interface WelcomeAnswers {
 }
 
 export const REMOTE = "Remote";
-/** The Jobs AI profile's "anywhere in India" (job_portal/profile.py ANYWHERE_IN_INDIA). */
+/** The Jobs profile's "anywhere in India" (job_portal/profile.py ANYWHERE_IN_INDIA). */
 export const ANYWHERE_IN_INDIA = "India";
 /** Its "anywhere in the country" everywhere else (job_portal/profile.py ANYWHERE). */
 export const ANYWHERE = "Anywhere";
@@ -67,7 +67,7 @@ export function roleIdeas(experience: Experience, country: string = INDIA): stri
   return isIndia(country) ? ideas : ideas.map((r) => WORLD_ROLE[r] ?? r);
 }
 
-/** The cities most jobs are in (canonical names, as Jobs AI's profile spells them). */
+/** The cities most jobs are in (canonical names, as Jobs's profile spells them). */
 export const PLACE_IDEAS = ["Bengaluru", "Hyderabad", "Pune", "Chennai", "Mumbai", "Delhi", "Gurugram", "Noida", "Kolkata"];
 
 const LEVEL: Record<Experience, JobLevel> = { fresher: "fresher", early: "junior", experienced: "mid" };
@@ -91,7 +91,7 @@ export function practiceHref(opts: { preset?: string; role?: string; company?: s
   return s ? `/mock?${s}` : "/mock";
 }
 
-/** Where someone was headed when they signed up says what they came for (Resume AI's "Start free" → resume). */
+/** Where someone was headed when they signed up says what they came for (Resume's "Start free" → resume). */
 export function goalFromPath(path: string | null | undefined): Goal | null {
   if (!path) return null;
   if (/^\/resume-ai(\/|$)/.test(path)) return "resume";
@@ -100,7 +100,7 @@ export function goalFromPath(path: string | null | undefined): Goal | null {
   return null;
 }
 
-/** The Jobs AI search profile with the welcome answers in it: the role first among the titles, and the place. */
+/** The Jobs search profile with the welcome answers in it: the role first among the titles, and the place. */
 export function prefsFromAnswers(base: JobPrefs, answers: WelcomeAnswers): JobPrefs {
   const next: JobPrefs = { ...base };
   const role = answers.role.trim().replace(/\s+/g, " ").slice(0, 80);
@@ -135,7 +135,7 @@ export type TrackedJob = Pick<JobTrackerEntry, "id" | "company" | "title" | "sta
 };
 
 export interface HomeFacts {
-  /** Resume AI resumes, with the best one's score and id. */
+  /** Resume resumes, with the best one's score and id. */
   resumes: number;
   bestResume: { id: string; score: number } | null;
   /** Resumes uploaded to Documents (they count as having a resume). */
@@ -273,7 +273,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
       id: "improve-resume",
       product: "resume",
       title: `Raise your ATS score from ${facts.bestResume.score}`,
-      body: "Resume AI shows what screening software misses in your resume and helps you fix it, one change at a time.",
+      body: "Resume shows what screening software misses in your resume and helps you fix it, one change at a time.",
       cta: "Improve my resume",
       to: `/resume-ai/${encodeURIComponent(facts.bestResume.id)}`,
       done: facts.bestResume.score >= 80,
@@ -303,7 +303,7 @@ function catalogue(answers: WelcomeAnswers | null, facts: HomeFacts, now: Date):
   steps.push({
     id: "job-profile",
     product: "jobs",
-    title: "Tell Jobs AI what you're looking for",
+    title: "Tell Jobs what you're looking for",
     body: "Your role, city and experience, so the feed shows jobs you'd actually apply to.",
     cta: "Set up my search",
     to: "/jobs/profile",

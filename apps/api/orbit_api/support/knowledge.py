@@ -43,9 +43,9 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "prices",
         "Prices",
-        "Start free: a new account gets 20 interview minutes and 1 Resume AI credit. Then either buy credits "
+        "Start free: a new account gets 20 interview minutes and 1 Resume credit. Then either buy credits "
         "(1 interview credit = 1 hour, they never expire): 1 credit {single}, 3 credits {starter}, 8 credits {plus}, "
-        "15 credits {pro}, or AI credits {mini} for Resume AI alone. Or go unlimited: {week} a week, "
+        "15 credits {pro}, or AI credits {mini} for Resume alone. Or go unlimited: {week} a week, "
         "{month} a month or {year} a year. Nothing renews automatically.",
         ("price", "prices", "how much", "pack", "rupee", "₹", "dollar", "$", "cost", "plan", "unlimited"),
         ("welcome", "mini", "starter", "plus", "pro", "unlimited", "what_spends"),
@@ -54,7 +54,7 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "welcome",
         "New account",
-        "A new account gets 20 interview minutes and 1 Resume AI credit. They never expire. "
+        "A new account gets 20 interview minutes and 1 Resume credit. They never expire. "
         "One welcome per network every 30 days, so a second account on the same internet connection can start at "
         "zero. It can still buy credits.",
         ("welcome", "new account", "free account", "20 interview", "20 minutes"),
@@ -63,7 +63,7 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "mini",
         "AI credits {mini}",
-        "AI credits is {mini} for 25 Resume AI credits (a single AI fix uses a fifth of one). No interview time. They "
+        "AI credits is {mini} for 25 Resume credits (a single AI fix uses a fifth of one). No interview time. They "
         "never expire and nothing renews.",
         ("ai credits", "mini", "₹499", "7.99"),
         ("starter", "what_spends", "buy"),
@@ -71,15 +71,15 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "starter",
         "1 or 3 credits",
-        "1 interview credit is 1 hour of live or mock interviews. 1 credit is {single} (with 10 Resume AI credits); 3 "
-        "credits are {starter} (with 30 Resume AI credits). They never expire and nothing renews.",
+        "1 interview credit is 1 hour of live or mock interviews. 1 credit is {single} (with 10 Resume credits); 3 "
+        "credits are {starter} (with 30 Resume credits). They never expire and nothing renews.",
         ("starter", "3 credits", "1 credit", "₹2,599", "2599", "₹1,649", "1649", "33.99", "53.99"),
         ("mini", "plus", "buy"),
     ),
     Topic(
         "plus",
         "8 credits {plus}",
-        "8 credits are {plus}: 6 interview credits plus 2 free, so 8 hours of interviews, and 80 Resume AI credits. "
+        "8 credits are {plus}: 6 interview credits plus 2 free, so 8 hours of interviews, and 80 Resume credits. "
         "They never expire and nothing renews.",
         ("plus pack", "8 credits", "₹5,199", "5199", "5,199", "106.99"),
         ("starter", "pro", "buy"),
@@ -87,7 +87,7 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "pro",
         "15 credits {pro}",
-        "15 credits are {pro}: 9 interview credits plus 6 free, so 15 hours of interviews, and 150 Resume AI "
+        "15 credits are {pro}: 9 interview credits plus 6 free, so 15 hours of interviews, and 150 Resume "
         "credits. They never expire and nothing renews.",
         ("pro pack", "15 credits", "₹7,749", "7749", "7,749", "161.99"),
         ("plus", "unlimited", "buy"),
@@ -96,7 +96,7 @@ _TOPICS: tuple[Topic, ...] = (
         "unlimited",
         "Unlimited plans",
         "Unlimited is {week} for a week, {month} for a month or {year} for a year, paid once (it never renews by "
-        "itself). It includes unlimited Resume AI and, every 30 days, up to 50 hours of live interview help and 25 "
+        "itself). It includes unlimited Resume and, every 30 days, up to 50 hours of live interview help and 25 "
         "hours of mock and video interviews (fair use), with unlimited screenshots and documents.",
         ("unlimited", "weekly", "monthly", "yearly", "subscription", "₹6,599", "₹26,499", "₹3,499"),
         ("prices", "pro", "buy"),
@@ -208,25 +208,25 @@ _TOPICS: tuple[Topic, ...] = (
         "windows",
         "Windows app",
         "The live copilot is the Windows app. While signed in, open Me, then Windows app, and download it. "
-        "The website is for Resume AI, Jobs AI, practice, and your account. Sign in to the app with the same email.",
+        "The website is for Resume, Jobs, practice, and your account. Sign in to the app with the same email.",
         ("windows", "desktop", "windows app", "download the app"),
         ("practice", "signin"),
         True,
     ),
     Topic(
         "resume",
-        "Resume AI",
-        "Resume AI scores how well screening software can read your resume, and can tailor a copy to one job. "
+        "Resume",
+        "Resume scores how well screening software can read your resume, and can tailor a copy to one job. "
         "You see every change before it is kept. Typing and the ATS score are free. "
-        "Import, rewrite, tailor, and cover letters each use 1 Resume AI credit.",
+        "Import, rewrite, tailor, and cover letters each use 1 Resume credit.",
         ("resume", "ats", "tailor", "cover letter"),
         ("what_spends", "jobs", "prices"),
         True,
     ),
     Topic(
         "jobs",
-        "Jobs AI",
-        "Jobs AI matches roles to your profile, checks fit against your resume, and keeps a tracker. "
+        "Jobs",
+        "Jobs matches roles to your profile, checks fit against your resume, and keeps a tracker. "
         "Fit checks are free up to a daily limit. Outreach writes one note for a job you choose.",
         ("jobs", "job tracker", "outreach", "fit check"),
         ("resume", "practice"),

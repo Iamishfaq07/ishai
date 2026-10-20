@@ -507,7 +507,7 @@ function ResumeRow({ resumes }: { resumes: { id: string; title: string; score: n
       }
     >
       <Link to={RESUME_AI_HOME} className={secondaryLink}>
-        {best ? "Open Resume AI" : "Add my resume"}
+        {best ? "Open Resume" : "Add my resume"}
       </Link>
     </ProductRow>
   );
@@ -531,7 +531,7 @@ function JobsRow({ tracker }: { tracker: JobTrackerEntry[] | null }) {
       }
     >
       <Link to={entries.length ? JOBS_AI_HOME : JOBS_MATCHES} className={secondaryLink}>
-        {entries.length ? "Open Jobs AI" : "See my matches"}
+        {entries.length ? "Open Jobs" : "See my matches"}
       </Link>
     </ProductRow>
   );

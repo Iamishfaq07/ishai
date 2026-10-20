@@ -823,11 +823,11 @@ function ResumeEditor() {
                 </button>
               ))}
             </div>
-            {/* Where the "Profiles & outreach" tab was: it's Jobs AI's Outreach page now, opened on this resume. */}
+            {/* Where the "Profiles & outreach" tab was: it's Jobs's Outreach page now, opened on this resume. */}
             <Link
               to={outreachPath({ resume: resume.id })}
-              aria-label="Outreach is now in Jobs AI: open it for this resume"
-              title="Outreach is now in Jobs AI"
+              aria-label="Outreach is now in Jobs: open it for this resume"
+              title="Outreach is now in Jobs"
               className={cx(
                 "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                 focusRing,
@@ -1586,7 +1586,7 @@ function ScorePanel({
             <Link to={jobsForResume(resume.id)} className={cx("inline-flex items-center gap-1 font-medium text-indigo-600 hover:underline dark:text-indigo-400", focusRing)}>
               <Briefcase className="h-3.5 w-3.5" aria-hidden /> Find jobs that match this resume
             </Link>{" "}
-            in Jobs AI.
+            in Jobs.
           </p>
         )}
         {report.keywords && (

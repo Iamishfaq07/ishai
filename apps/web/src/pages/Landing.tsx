@@ -55,7 +55,7 @@ import { StickyCta } from "../marketing/StickyCta";
  * the honest line about where AI help may be used. Nothing here needs an account; the warm-up question is the free try.
  */
 
-/** Below this the live count isn't worth saying (a new server still fetching its first jobs). Same as Jobs AI's page. */
+/** Below this the live count isn't worth saying (a new server still fetching its first jobs). Same as Jobs's page. */
 const SHOW_COUNTS_FROM = 50;
 
 function usePublic<T>(load: () => Promise<T>): T | null {
@@ -208,11 +208,11 @@ function Shot({ name, alt }: { name: ShotName; alt: string }) {
   return <ProductShot name={name} alt={alt} />;
 }
 
-/** Jobs AI's two screens: the matches, with the tracker's Mission room laid over a corner on wide screens. */
+/** Jobs's two screens: the matches, with the tracker's Mission room laid over a corner on wide screens. */
 function JobsVisual() {
   return (
     <div className="relative">
-      <Shot name="jobs" alt="Jobs AI's matches: new jobs from companies' careers pages, each with how well it fits the resume." />
+      <Shot name="jobs" alt="Jobs's matches: new jobs from companies' careers pages, each with how well it fits the resume." />
       <div className="absolute -bottom-14 -left-10 hidden w-[46%] xl:block">
         <ProductShot name="mission" alt="The tracker's Mission room: an application's stage, its next step and the prep for it." />
       </div>
@@ -240,7 +240,7 @@ function MoreTools({ products }: { products: SiteProduct[] }) {
             <h3 className="mk-h3 mt-5 text-zinc-950 dark:text-white">{p.name}</h3>
             <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{p.line}</p>
             <div className="mt-5 flex flex-col items-start gap-1">
-              {/* A tool with a page of its own (LinkedIn AI, D79) links there; the others start in the account. */}
+              {/* A tool with a page of its own (LinkedIn, D79) links there; the others start in the account. */}
               {p.href.startsWith("/#") ? (
                 <ArrowLink to="/register" state={{ from: app[p.id] }}>
                   Use {p.name}
@@ -318,14 +318,14 @@ function WhyOrbit({ india }: { india: boolean }) {
     [ShieldCheck, "Honest about where it's allowed", "Built for practice, and for interviews and calls where notes or AI help are allowed. Orbit doesn't claim to be undetectable, and isn't hidden from Task Manager or anyone who can see your screen."],
     [CalendarCheck, "Nothing to cancel", "Plans are paid once and never renew on their own. Credits never expire. If an AI action fails, its credit comes back."],
     [Wallet, "Priced for where you are", india ? "Prices in rupees, paid with UPI, a card or netbanking. Outside India, prices are in US dollars through PayPal." : "Prices in US dollars, paid through PayPal or a card where PayPal offers it. In India, prices are in rupees with UPI."],
-    [MonitorSmartphone, "On your laptop and your phone", "Resume AI, Jobs AI and practice work in any browser. Live help works in Chrome and Edge, or in any call app with the Windows app (beta)."],
+    [MonitorSmartphone, "On your laptop and your phone", "Resume, Jobs and practice work in any browser. Live help works in Chrome and Edge, or in any call app with the Windows app (beta)."],
   ];
   const stages: Array<[string, string, string]> = [
-    ["Prepare", "Practice, Code AI, Learning AI", "Mock and video interviews, coding rounds, the skills they test"],
-    ["Get noticed", "Resume AI, LinkedIn AI", "An ATS score, a tailored resume per job, a profile recruiters find"],
-    ["Apply", "Jobs AI", "Matches from companies' own careers pages, the tracker, referral messages"],
+    ["Prepare", "Practice, Coding practice, Learning", "Mock and video interviews, coding rounds, the skills they test"],
+    ["Get noticed", "Resume, LinkedIn", "An ATS score, a tailored resume per job, a profile recruiters find"],
+    ["Apply", "Jobs", "Matches from companies' own careers pages, the tracker, referral messages"],
     ["Interview", "Interview copilot", "Live answers from your resume, where AI help is allowed"],
-    ["Decide", "Offer AI", india ? "What the offer pays each month, the market, how to ask for more" : "What the offer is worth, the market, how to ask for more"],
+    ["Decide", "Offers", india ? "What the offer pays each month, the market, how to ask for more" : "What the offer is worth, the market, how to ask for more"],
   ];
   return (
     <Section id="why" labelledBy="why-title">
@@ -512,7 +512,7 @@ function Faq({ welcome, stats, cards = false, abroad = false, paypal = false, lo
     [
       "Does it work on my phone?",
       <p>
-        Yes. Resume AI, Jobs AI and practice work in your phone's browser. For help during a call, open Orbit on a
+        Yes. Resume, Jobs and practice work in your phone's browser. For help during a call, open Orbit on a
         laptop: Chrome and Edge can listen to a meeting tab, and the Orbit app for Windows (beta) can listen to any call app.
       </p>,
     ],
@@ -673,15 +673,15 @@ export function LandingPage() {
         product={byId.resume}
         band
         title="See your resume the way screening software does."
-        lead="Most companies' software reads a resume before a person does. Resume AI scores yours out of 100, shows what's missing for the job you want, and fixes it with you. It keeps your numbers and never makes one up."
+        lead="Most companies' software reads a resume before a person does. Resume scores yours out of 100, shows what's missing for the job you want, and fixes it with you. It keeps your numbers and never makes one up."
         points={[
           "Import your resume, or start from a template",
           "A copy tailored for each job, with every change shown",
           "Word and PDF downloads, and cover letters",
         ]}
         free="Editing, the ATS score and downloads are free. AI rewrites use AI credits."
-        links={<ArrowLink to={RESUME_AI_HOME}>See Resume AI</ArrowLink>}
-        visual={<Shot name="resume" alt="The Resume AI editor: a resume, its ATS score out of 100 and the fixes it suggests." />}
+        links={<ArrowLink to={RESUME_AI_HOME}>See Resume</ArrowLink>}
+        visual={<Shot name="resume" alt="The Resume editor: a resume, its ATS score out of 100 and the fixes it suggests." />}
       />
 
       <FeatureSection
@@ -700,7 +700,7 @@ export function LandingPage() {
           "Messages that ask for a referral, written from your resume",
         ]}
         free="Matches and the tracker are free, and so are a few AI fit checks a day."
-        links={<ArrowLink to={JOBS_AI_HOME}>See Jobs AI</ArrowLink>}
+        links={<ArrowLink to={JOBS_AI_HOME}>See Jobs</ArrowLink>}
         visual={<JobsVisual />}
       />
 

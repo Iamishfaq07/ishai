@@ -74,7 +74,7 @@ import { SafetyCard } from "./SafetyCard";
 import { interviewPrepPath } from "./interview/links";
 
 /**
- * Jobs AI → Tracker: every job saved or applied to, and how far along each one is, including ones found elsewhere
+ * Jobs → Tracker: every job saved or applied to, and how far along each one is, including ones found elsewhere
  * (Naukri, LinkedIn, a campus portal): "Add a job" (`?add=1` opens it, so Home's follow-ups can link straight here).
  */
 export function JobTrackerPage() {
@@ -172,7 +172,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
     try {
       const saved = await api.updateTrackedJob(entry.id, patch);
       tracker.setData((prev) => prev?.map((e) => (e.id === entry.id ? saved : e)) ?? null);
-      if (patch.status === "offer") celebrate("first-offer", { message: `An offer from ${entry.company}. Add it to Offer AI to see what it's worth.` });
+      if (patch.status === "offer") celebrate("first-offer", { message: `An offer from ${entry.company}. Add it to Offers to see what it's worth.` });
       return true;
     } catch (err) {
       tracker.setData(() => before);
@@ -184,7 +184,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   const remove = async (entry: JobTrackerEntry) => {
     const ok = await confirmDialog({
       title: `Remove “${entry.title}”?`,
-      body: "It comes off your tracker with its notes. A resume you tailored for it stays in Resume AI.",
+      body: "It comes off your tracker with its notes. A resume you tailored for it stays in Resume.",
       confirmLabel: "Remove",
       danger: true,
     });

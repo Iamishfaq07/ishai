@@ -376,7 +376,7 @@ function Applied({ result }: { result: BizApplyResult }) {
       )}
       {result.tracker_id && (
         <p className="mt-1">
-          It's in your <Link to="/jobs/tracker" className="font-medium underline">Jobs AI tracker</Link>, and moves as the company moves it.
+          It's in your <Link to="/jobs/tracker" className="font-medium underline">Jobs tracker</Link>, and moves as the company moves it.
         </p>
       )}
     </Callout>
@@ -433,7 +433,7 @@ function OneClickApply({ job }: { job: BizPublicJob }) {
       <div className="mt-3 space-y-3 text-sm">
         <p>Applying in one click shares one of your Orbit resumes, and you have none yet.</p>
         <Link to="/resume-ai" state={{ from: location.pathname }} className={buttonClass("secondary")}>
-          Make a resume in Resume AI
+          Make a resume in Resume
         </Link>
       </div>
     );

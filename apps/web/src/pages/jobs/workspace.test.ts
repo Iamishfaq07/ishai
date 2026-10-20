@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { currentJobTool, findJobTools, JOB_TOOLS, JOB_WORKSPACES, jobWorkspace, workspaceTools } from "./workspace";
 import { MISSION_GROUPS, MISSION_TOOLS } from "./mission";
 
-describe("Jobs AI task navigation", () => {
+describe("Jobs task navigation", () => {
   it.each([
     ["/jobs", "today"], ["/jobs/actions/", "today"], ["/jobs/weekly", "today"],
     ["/jobs/matches", "find"], ["/jobs/profile/", "find"], ["/jobs/listing/a%2Fb", "find"],

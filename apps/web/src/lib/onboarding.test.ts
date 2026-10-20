@@ -194,7 +194,7 @@ describe("checklist", () => {
   });
 });
 
-describe("prefsFromAnswers (the Jobs AI profile)", () => {
+describe("prefsFromAnswers (the Jobs profile)", () => {
   it("puts the role first and the city in, keeping the rest", () => {
     const next = prefsFromAnswers(prefs, answers());
     expect(next.titles).toEqual(["Data analyst", "Analyst"]);

@@ -192,12 +192,12 @@ describe("the built public pages", () => {
       expect(empty(spans(cards, /\bmd:col-span-2\b/), 2), `${path}: the toolkit at md`).toBe(0);
       expect(empty(spans(cards, /\bmd:col-span-2\b/), 3), `${path}: the toolkit at lg`).toBe(0);
     }
-    // LinkedIn AI's hero: its seven section bars in two columns (wideBars).
+    // LinkedIn's hero: its seven section bars in two columns (wideBars).
     const linkedin = files.get(workerFile("/linkedin-ai"))!;
     const at = linkedin.indexOf('aria-label="Your score by section"');
     const bars = [...linkedin.slice(at, linkedin.indexOf("</ul>", at)).matchAll(/<li class="(-mx-1\.5[^"]*)"/g)].map((m) => m[1]!);
     expect(bars.length).toBe(7);
-    expect(empty(spans(bars, /\bsm:col-span-2\b/), 2), "the LinkedIn AI hero's section bars").toBe(0);
+    expect(empty(spans(bars, /\bsm:col-span-2\b/), 2), "the LinkedIn hero's section bars").toBe(0);
   });
 
   it("keeps each guide page light", () => {

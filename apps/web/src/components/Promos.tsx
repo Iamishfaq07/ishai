@@ -4,7 +4,6 @@ import { useIndia } from "../lib/country";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
 import { OFFERS_HOME } from "../pages/offers/model";
-import { AiPill } from "./products";
 
 type Tool = { to: string; name: string; icon: LucideIcon; line: string };
 
@@ -15,7 +14,7 @@ export const MORE_TOOLS: Tool[] = [
   { to: LEARN_HOME, name: "Learning", icon: GraduationCap, line: "Coding-round practice with an AI interviewer's review, and free cybersecurity lessons on KashSec Academy." },
 ];
 
-/** The tools for where the visitor applies: outside India, Offer AI's take-home is rupee-only, so it promises the first
+/** The tools for where the visitor applies: outside India, the offer tool's take-home is rupee-only, so it promises the first
  *  year's value, and its mark isn't the rupee. */
 function useMoreTools(): Tool[] {
   const india = useIndia();
@@ -53,10 +52,10 @@ export function MoreToolCards() {
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white">
               <Icon className="h-5 w-5" aria-hidden />
             </span>
-            <span className="mt-3 flex items-center gap-1 font-display text-lg font-semibold">{name} <AiPill /></span>
+            <span className="mt-3 flex items-center gap-1 font-display text-lg font-semibold">{name}</span>
             <span className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{line}</span>
             <span className="mt-auto inline-flex items-center gap-1 pt-3 text-sm font-medium text-indigo-700 dark:text-indigo-300">
-              Open {name} AI <ArrowRight className="h-4 w-4" aria-hidden />
+              Open {name} <ArrowRight className="h-4 w-4" aria-hidden />
             </span>
           </Link>
         </li>

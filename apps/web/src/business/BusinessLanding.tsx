@@ -176,11 +176,11 @@ export function BusinessLandingPage() {
           lead={
             <>
               <Link to="/jobs" className="underline">
-                Jobs AI
+                Jobs
               </Link>{" "}
               finds openings, and{" "}
               <Link to="/resume-ai" className="underline">
-                Resume AI
+                Resume
               </Link>{" "}
               gets the resume ready. A company never sees your Orbit unless you apply to it.
             </>

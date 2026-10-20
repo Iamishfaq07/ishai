@@ -25,7 +25,7 @@ const BUILT = `<!doctype html>
   </body>
 </html>`;
 
-const head = { title: "Orbit LinkedIn AI", description: "A score out of 100.", canonical: "https://orbitanswer.com/linkedin-ai" };
+const head = { title: "Orbit LinkedIn", description: "A score out of 100.", canonical: "https://orbitanswer.com/linkedin-ai" };
 
 describe("a built page's document", () => {
   it("lists the app's scripts for after the first paint instead of loading them with the page", () => {

@@ -46,7 +46,7 @@ def test_the_admin_sees_what_each_account_has_used(monkeypatch: pytest.MonkeyPat
         assert client.get("/v1/admin/users?only=all&q=%25", headers=admin).json()["users"] == []  # no wildcards
         items = client.get(f"/v1/admin/users/{user['id']}/activity", headers=admin).json()["items"]
         texts = {i["text"] for i in items}
-        assert {"Welcome credits", "Given by you", "Resume AI"} <= texts
+        assert {"Welcome credits", "Given by you", "Resume"} <= texts
         assert any(i["amount"] == "+30 interview mins" for i in items)
 
         # Admin only.

@@ -43,7 +43,7 @@ import { TailorQueue } from "./TailorQueue";
 export { scoreTone };
 
 /**
- * Orbit Resume AI's home: what it does, the ways to start a resume, your resume credits, and your resumes, each with
+ * Orbit Resume's home: what it does, the ways to start a resume, your resume credits, and your resumes, each with
  * its ATS score. Signed out, the same address shows the public product page (ResumeAiPublic.tsx) instead.
  */
 export function ResumeAiHomePage() {
@@ -118,7 +118,7 @@ export function ResumeAiHomePage() {
             <div>
               <p className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-600 dark:text-zinc-300">
                 <Sparkles className="h-4 w-4" aria-hidden />
-                Orbit Resume AI
+                Orbit Resume
               </p>
               <h1 id="resume-ai-title" className="mt-4 max-w-2xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
                 Build a resume that <span className="text-gradient">gets interviews.</span>
@@ -134,7 +134,7 @@ export function ResumeAiHomePage() {
                   <FileUp className="h-4 w-4" /> Import my resume
                 </Button>
               </div>
-              <ul aria-label="What Resume AI does" className="mt-6 flex flex-wrap gap-1.5 sm:mt-7 sm:gap-2">
+              <ul aria-label="What Resume does" className="mt-6 flex flex-wrap gap-1.5 sm:mt-7 sm:gap-2">
                 {resumeAiFeatures(country).map(({ icon: Icon, short }) => (
                   <li
                     key={short}
@@ -159,7 +159,7 @@ export function ResumeAiHomePage() {
             </span>
             <div>
               <h1 id="resume-ai-title" className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                Resume AI
+                Resume
               </h1>
               <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Your resumes and their ATS scores. Make a copy to tailor one for each job.</p>
             </div>
@@ -277,7 +277,7 @@ export function ResumeAiHomePage() {
 }
 
 /**
- * The way over to Jobs AI, Orbit's product for finding the jobs a resume fits and writing to them (each editor has
+ * The way over to Jobs, Orbit's product for finding the jobs a resume fits and writing to them (each editor has
  * one for its resume).
  */
 function FindJobs() {
@@ -295,7 +295,7 @@ function FindJobs() {
       <span className="min-w-0 flex-1">
         <span className="block font-display font-semibold">Find jobs that match your resume</span>
         <span className="block text-sm text-zinc-500 dark:text-zinc-400">
-          <span className="font-medium text-zinc-700 dark:text-zinc-200">Jobs AI</span>{" "}
+          <span className="font-medium text-zinc-700 dark:text-zinc-200">Jobs</span>{" "}
           shows the latest openings, ranked by how well they match you, with a free AI fit check and outreach for each job.
         </span>
       </span>

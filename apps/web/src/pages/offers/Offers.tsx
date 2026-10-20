@@ -20,7 +20,7 @@ export const POSITION_TONE = {
 } as const;
 
 /**
- * Offer AI: your offers, what each puts in your account every month (India; elsewhere what each is worth in its first
+ * Offers: your offers, what each puts in your account every month (India; elsewhere what each is worth in its first
  * year), where each sits in the market for the role, side by side, and a plan to negotiate each (OfferDetail). The
  * market is read from the pay ranges in job posts.
  */
@@ -54,7 +54,7 @@ export function OffersPage() {
     <>
       <PageHeader
         icon={Icon}
-        title="Offer AI"
+        title="Offers"
         subtitle={
           india
             ? "What an offer really pays each month, how it compares with the market, and a plan to ask for more."

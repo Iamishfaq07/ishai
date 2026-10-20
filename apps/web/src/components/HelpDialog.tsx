@@ -18,10 +18,10 @@ import { Sheet } from "./Sheet";
 const GLOSSARY: Array<[string, string]> = [
   ["ATS score", "How well screening software can read your resume and match it to a job, out of 100. Many companies use this software before a person reads anything."],
   ["Job post (JD)", "The job description: what the company wrote about the role. Orbit uses it to tailor answers and your resume."],
-  ["Fit check", "Jobs AI reads a job post next to your resume and says how well you fit, the gaps, and honest tweaks. Free, a few a day."],
+  ["Fit check", "Jobs reads a job post next to your resume and says how well you fit, the gaps, and honest tweaks. Free, a few a day."],
   ["Tailor", "Make a copy of your resume aimed at one job. You see every change before you keep it."],
   ["STAR", "A way to tell a work story: the Situation, your Task, the Action you took and the Result. The Story bank helps you write them."],
-  ["Credits and minutes", "AI credits pay for AI actions in Resume AI (import, rewrite, tailor, cover letter). Interview minutes pay for mock interviews and live sessions. Neither expires."],
+  ["Credits and minutes", "AI credits pay for AI actions in Resume (import, rewrite, tailor, cover letter). Interview minutes pay for mock interviews and live sessions. Neither expires."],
 ];
 // Only while packs are paid by UPI and checked by hand (no Razorpay): the number those payments are matched by.
 const UTR_TERM: [string, string] = ["UTR", "The 12-digit number your UPI app gives each payment. Orbit asks for it so your payment can be matched to you."];

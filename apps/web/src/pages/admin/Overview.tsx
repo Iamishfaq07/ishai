@@ -113,8 +113,8 @@ function StatTiles({ s }: { s: AdminStats | null }) {
           alert: s.payments_waiting > 0,
         },
         { label: "Interview minutes this month", value: s.interview_minutes_month, format: mins, note: "live and mock, every account" },
-        { label: "Resume AI credits used this month", value: s.resume_credits_used_month, format: count },
-        { label: "Jobs AI fit checks this month", value: s.fit_checks_month, format: count },
+        { label: "Resume credits used this month", value: s.resume_credits_used_month, format: count },
+        { label: "Jobs fit checks this month", value: s.fit_checks_month, format: count },
         { label: "Paying accounts", value: s.paid_accounts, format: count, note: "with an approved payment" },
       ]
     : [];

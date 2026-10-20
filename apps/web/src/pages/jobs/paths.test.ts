@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { JOBS_MATCHES, JOBS_OUTREACH, JOBS_TRACKER, isJobsAiHome, isOutreach, jobPath, jobsForResume, movedJobsPath, outreachPath } from "./paths";
 
-describe("Jobs AI's addresses", () => {
+describe("Jobs's addresses", () => {
   it("opens a job under /jobs, its id kept safe in the address", () => {
     expect(jobPath("8c1d2e")).toBe("/jobs/listing/8c1d2e");
     expect(jobPath("a/b c")).toBe("/jobs/listing/a%2Fb%20c");
@@ -33,7 +33,7 @@ describe("Jobs AI's addresses", () => {
   });
 });
 
-describe("Jobs' old addresses in Resume AI", () => {
+describe("Jobs' old addresses in Resume", () => {
   it("send the feed to the matches and the tracker view to the tracker", () => {
     expect(movedJobsPath("/resume-ai/jobs")).toEqual({ pathname: JOBS_MATCHES, search: "" });
     expect(movedJobsPath("/resume-ai/jobs/")).toEqual({ pathname: JOBS_MATCHES, search: "" });

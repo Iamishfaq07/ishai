@@ -123,7 +123,7 @@ export function UserDrawer({
                   <Section title="Access" hint="A plan for a while (it runs out on its own), approval for good, or back to waiting.">
                     <AccessControls user={detail.user} onChange={changed} />
                   </Section>
-                  <Section title="Credits" hint="Resume AI credits and interview minutes. Every change is in their history with your note.">
+                  <Section title="Credits" hint="Resume credits and interview minutes. Every change is in their history with your note.">
                     <CreditsAdjust user={detail.user} onChange={changed} />
                   </Section>
                 </>
@@ -171,7 +171,7 @@ function UsageGrid({ user }: { user: AdminUser }) {
     },
     {
       icon: FileText,
-      label: "Resume AI credits",
+      label: "Resume credits",
       main: `${u.resume_used} used`,
       sub: admin ? "unlimited" : `${user.resume_credits} left · ${u.resume_given} given${u.resume_removed ? ` · ${u.resume_removed} removed` : ""}`,
     },
@@ -497,7 +497,7 @@ function DangerZone({ detail, onChange, onDeleted }: { detail: AdminUserDetail; 
             const ok = await confirmDialog({
               title: `Delete ${u.email}?`,
               body:
-                "This deletes the account and everything in it: documents, sessions and transcripts, resumes, stories, Jobs AI data and usage. " +
+                "This deletes the account and everything in it: documents, sessions and transcripts, resumes, stories, Jobs data and usage. " +
                 `${live ? "Its live session stops first. " : ""}Approved payments stay on the books without the account. This can't be undone.`,
               confirmLabel: "Delete account",
               danger: true,

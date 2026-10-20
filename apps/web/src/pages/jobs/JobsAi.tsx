@@ -10,7 +10,7 @@ import { JobsWorkspaceNav } from "./WorkspaceNav";
 import { jobProfileWasSuggested, markJobProfileSuggested } from "../../lib/jobsSession";
 
 /**
- * Orbit Jobs AI's pages (/jobs/...): the tabs between them, and what they share: the search profile behind the feed,
+ * Orbit Jobs's pages (/jobs/...): the tabs between them, and what they share: the search profile behind the feed,
  * the tracker, and the AI reading a first profile from the resume. Each page is its own route under this one.
  */
 export interface JobsAi {
@@ -35,7 +35,7 @@ export function JobsAiSection() {
   const setData = profile.setData;
   const setProfile = useCallback((p: JobProfile) => setData(() => p), [setData]);
 
-  // "Find jobs that match this resume" (Resume AI) asks for ?resume=<id>: the feed is matched to that resume, read by
+  // "Find jobs that match this resume" (Resume) asks for ?resume=<id>: the feed is matched to that resume, read by
   // the AI the way a first profile is. Otherwise, the first visit with a resume lets the AI read it (free, cached per
   // resume; past today's reads it's worked out from the resume as written).
   // (On Outreach, ?resume= is the resume it writes from: the feed stays matched to the profile's.)
@@ -67,7 +67,7 @@ export function JobsAiSection() {
     <>
       <JobsWorkspaceNav />
       {/* Here, not the layout's: the tabs stay put while a page's code arrives. */}
-      <Suspense fallback={<Skeleton variant="job-card" count={2} label="Opening Jobs AI" />}>
+      <Suspense fallback={<Skeleton variant="job-card" count={2} label="Opening Jobs" />}>
         <Outlet context={value} />
       </Suspense>
     </>
