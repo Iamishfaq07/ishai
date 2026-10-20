@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
@@ -40,6 +40,7 @@ import { InterviewPrepPanel } from "./interview/InterviewPrep";
 
 import { opportunityStart } from "./opportunity";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
+const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const GuideNext = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityNext })));
 type Tab = MissionTool;
 
@@ -288,6 +289,7 @@ function FitPanel({ fit, entry }: { fit: MissionFit | null; entry: JobTrackerEnt
         <span className="text-xs text-zinc-500 dark:text-zinc-400">Checked {formatDate(fit.checked_at)}</span>
       </div>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{fit.summary}</p>
+      <p className="mt-3 rounded-xl bg-zinc-500/5 p-3 text-xs text-zinc-600 dark:text-zinc-400">This is a prior check. Its quotes may come from a different resume or evidence version. Relinking or editing a resume does not rerun it. Review your current resume and the original job before using these results.</p>
       {fit.requirements.length > 0 ? (
         <ul className="mt-4 divide-y divide-zinc-200 dark:divide-white/10">
           {fit.requirements.map((r, i) => {
@@ -301,10 +303,10 @@ function FitPanel({ fit, entry }: { fit: MissionFit | null; entry: JobTrackerEnt
                 {r.job_quote && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400"><span className="font-medium">The job:</span> "{r.job_quote}"</p>}
                 {(r.resume_quote || r.evidence_quote) ? (
                   <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
-                    <span className="font-medium">{r.resume_quote ? "Your resume:" : "Your evidence:"}</span> "{r.resume_quote || r.evidence_quote}"
+                    <span className="font-medium">{r.resume_quote ? "Resume quoted in this check:" : "Evidence quoted in this check:"}</span> "{r.resume_quote || r.evidence_quote}"
                   </p>
                 ) : (
-                  <p className="mt-0.5 text-xs text-rose-700 dark:text-rose-300">Nothing on your resume shows this yet. Add it only if it's true.</p>
+                  <p className="mt-0.5 text-xs text-rose-700 dark:text-rose-300">No supporting quote was recorded in this check. Add details only if they are true.</p>
                 )}
               </li>
             );
@@ -326,6 +328,13 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
   const navigate = useNavigate();
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const versionsHeading = useRef<HTMLHeadingElement>(null);
+  const selectedSnapshot = mission.snapshots.find((item) => item.id === params.get("snapshot"));
+  const closeComparison = () => {
+    const next = new URLSearchParams(params); next.delete("snapshot"); setParams(next);
+    requestAnimationFrame(() => { versionsHeading.current?.focus({ preventScroll: true }); versionsHeading.current?.scrollIntoView({ block: "start" }); });
+  };
   const run = async (fn: () => Promise<JobMission>, done?: string) => {
     setBusy(true);
     try {
@@ -346,7 +355,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className={cx("inline-flex h-8 min-w-10 items-center justify-center rounded-lg px-1.5 text-sm font-semibold tabular-nums ring-1", scoreTone(r.score))}>{r.score}</span>
             <div className="min-w-0 flex-1">
-              <Link to={resumePath(r.id)} className={cx("block truncate font-medium hover:underline", focusRing)}>{r.title}</Link>
+              <Link to={`${resumePath(r.id)}?guide=1&job=${encodeURIComponent(entry.id)}`} className={cx("block truncate font-medium hover:underline", focusRing)}>{r.title}</Link>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">ATS check · edited {formatDate(r.updated_at)}</p>
             </div>
           </div>
@@ -378,14 +387,14 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
       </Card>
 
       <Card>
-        <h2 className="font-display text-base font-semibold">Versions you sent</h2>
+        <h2 ref={versionsHeading} tabIndex={-1} className="scroll-mt-28 rounded font-display text-base font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">Saved resume versions</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Freeze the linked resume when you apply. Edits later never change the copy, so you always know what they have.
+          Keep the linked resume as a separate saved copy before sharing it. Later edits do not change that copy. Saving is not proof that an application was sent or received. A new saved copy becomes the default interview-preparation version; you can change the choice in Interview.
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <label className="min-w-0 flex-1 text-sm">
             <span className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Note (optional)</span>
-            <Input value={note} maxLength={200} placeholder="Sent through the careers page" onChange={(e) => setNote(e.target.value)} />
+            <Input value={note} maxLength={200} placeholder="Why I saved this version" onChange={(e) => setNote(e.target.value)} />
           </label>
           <Button
             disabled={!r || busy}
@@ -397,7 +406,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
               }, "Version kept")
             }
           >
-            Freeze this resume
+            Save this resume version
           </Button>
         </div>
         {mission.snapshots.length > 0 && (
@@ -408,11 +417,12 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{s.title}</p>
                   <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
-                    Sent {formatDate(s.created_at)}
+                    Saved {formatDate(s.created_at)}
                     {s.note ? ` · ${s.note}` : ""}
                     {s.resume_id ? "" : " · original deleted"}
                   </p>
                 </div>
+                <Button size="sm" variant="secondary" aria-pressed={selectedSnapshot?.id === s.id} disabled={busy} onClick={() => { const next = new URLSearchParams(params); next.set("snapshot", s.id); setParams(next); }}>Compare with linked resume</Button>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -420,7 +430,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
                   onClick={async () => {
                     try {
                       const { resume_id } = await api.copyMissionSnapshot(entry.id, s.id);
-                      navigate(resumePath(resume_id));
+                      navigate(`${resumePath(resume_id)}?guide=1&job=${encodeURIComponent(entry.id)}`);
                     } catch (err) {
                       toast({ message: errorText(err), tone: "error" });
                     }
@@ -430,10 +440,10 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
                 </Button>
                 <IconButton
                   icon={Trash2}
-                  label={`Delete the version sent ${formatDate(s.created_at)}`}
+                  label={`Delete the version saved ${formatDate(s.created_at)}`}
                   disabled={busy}
                   onClick={async () => {
-                    if (!(await confirmDialog({ title: "Delete this sent version?", body: "The resume itself stays.", confirmLabel: "Delete", danger: true }))) return;
+                    if (!(await confirmDialog({ title: "Delete this saved version?", body: "The resume itself stays.", confirmLabel: "Delete", danger: true }))) return;
                     void run(() => api.deleteMissionSnapshot(entry.id, s.id));
                   }}
                   className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300"
@@ -443,6 +453,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
           </ul>
         )}
       </Card>
+      {selectedSnapshot && <Suspense fallback={<p role="status">Opening saved-version comparison…</p>}><VersionReview key={`${entry.id}:${selectedSnapshot.id}:${r?.id}:${r?.updated_at}`} entryId={entry.id} snapshotId={selectedSnapshot.id} onClose={closeComparison} /></Suspense>}
     </div>
   );
 }

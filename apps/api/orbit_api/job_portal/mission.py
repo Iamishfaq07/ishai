@@ -1,6 +1,6 @@
 """Job Mission Room: one tracked job as a workspace. It reads what Orbit already keeps (the tracker entry, fit checks,
 the resume linked to the job, practice and live rounds, the offer) and adds two things only, both on the user's
-say: a frozen copy of the resume as it was sent (`ResumeSnapshot`) and an offer's link to the job
+say: a frozen candidate-saved resume copy (`ResumeSnapshot`) and an offer's link to the job
 (`JobOffer.application_id`).
 
 The stages are facts, not a progress estimate: each is done only when a matching record exists. The next step is the
@@ -26,6 +26,8 @@ from orbit_api.models import ApplicationPacket, JobApplication, JobFitCheck, Job
 from orbit_api.ratelimit import limit_user
 from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
+
+from .resume_lineage import VersionComparison, comparison
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["jobs"])
 read_limit = Depends(limit_user("jobs-mission", rate_per_s=3, burst=60))
@@ -151,7 +153,7 @@ def next_step(f: Facts, listing_path: str) -> NextStep | None:
                         to="link_offer")
     if f.upcoming_days == 0 and f.status == "interviewing":
         return NextStep(key="interview_day", title="Your interview is today", action="Open interview prep",
-                        why="It's today. The job post, the resume you sent and your stories are in one place, and "
+                        why="It's today. The job post, the selected resume version and your stories are in one place, and "
                             "the copilot starts with them loaded.", to="interview")
     if f.upcoming_days is not None and f.upcoming_days <= 7 and f.status == "interviewing":
         when = "tomorrow" if f.upcoming_days == 1 else f"in {f.upcoming_days} days"
@@ -171,8 +173,9 @@ def next_step(f: Facts, listing_path: str) -> NextStep | None:
                             "Mark this stage only after you have actually applied.",
                         to="mark_applied")
     if f.applied and not f.snapshot:
-        return NextStep(key="snapshot", title="Keep the version you sent", action="Freeze this resume",
-                        why="Editing the resume later won't change what they have. Keep a copy of what you sent.",
+        return NextStep(key="snapshot", title="Keep a resume version for this job", action="Save this resume version",
+                        why="Save a separate copy for later review. Confirm it is the version you used; "
+                            "saving a copy does not prove it was submitted or received.",
                         to="snapshot")
     if f.practice_rounds == 0 and f.status in {"applied", "interviewing"}:
         return NextStep(key="practise", title="Practise before they call", action="Start a mock interview",
@@ -297,11 +300,11 @@ class SnapshotIn(BaseModel):
              dependencies=[read_limit])
 async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
-    """Keep a copy of the linked resume as it is now: what was sent for this job."""
+    """Keep a copy of the linked resume. Saving is not evidence of submission or delivery."""
     entry = await _entry(db, entry_id, user)
     r = await db.get(Resume, entry.resume_id) if entry.resume_id else None
     if r is None or r.user_id != user.id:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Link the resume you sent first.")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Link the resume you want to save first.")
     count = len((await db.scalars(select(ResumeSnapshot.id).where(ResumeSnapshot.application_id == entry.id))).all())
     if count >= MAX_SNAPSHOTS:
         raise HTTPException(status.HTTP_409_CONFLICT, f"This job already keeps {MAX_SNAPSHOTS} versions. "
@@ -326,11 +329,22 @@ class RestoredOut(BaseModel):
     resume_id: str
 
 
+@router.get("/{entry_id}/mission/snapshots/{snapshot_id}/compare", response_model=VersionComparison,
+            dependencies=[read_limit])
+async def compare_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, Depends(current_user)],
+                           db: Annotated[AsyncSession, Depends(get_db)]) -> VersionComparison:
+    entry = await _entry(db, entry_id, user)
+    saved = await _snapshot(db, entry, snapshot_id, user)
+    current = await db.scalar(select(Resume).where(Resume.id == entry.resume_id, Resume.user_id == user.id)
+        .execution_options(populate_existing=True)) if entry.resume_id else None
+    return comparison(entry.id, saved, current)
+
+
 @router.post("/{entry_id}/mission/snapshots/{snapshot_id}/copy", response_model=RestoredOut,
              status_code=status.HTTP_201_CREATED, dependencies=[read_limit])
 async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> RestoredOut:
-    """Open the sent version again as a new resume (the snapshot itself never changes)."""
+    """Open a saved version as a new resume; the snapshot itself never changes."""
     from orbit_api.resumes.routes import MAX_RESUMES
 
     entry = await _entry(db, entry_id, user)
@@ -340,7 +354,7 @@ async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, D
     if (count or 0) >= MAX_RESUMES:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")
     date = (_aware(s.created_at) + timedelta(minutes=tz_offset)).strftime("%d %b %Y")  # their own day
-    copy = Resume(user_id=user.id, title=f"{s.title} (sent {date})"[:160], data=dict(s.data or {}),
+    copy = Resume(user_id=user.id, title=f"{s.title} (saved {date})"[:160], data=dict(s.data or {}),
                   design=dict(s.design or {}), job_text=s.job_text or "")
     db.add(copy)
     await db.commit()

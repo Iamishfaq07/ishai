@@ -18,6 +18,7 @@ from orbit_api.workflow_ai import preview
 
 from .action_priority import attention_packets
 from .plan import plan_for
+from .resume_lineage import digest, parts, summary as lineage_summary
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["opportunity coach"],
     dependencies=[Depends(limit_user("opportunity-coach", rate_per_s=1, burst=20))])
@@ -29,13 +30,17 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
         JobApplication.user_id == user.id).execution_options(populate_existing=True))
     if entry is None:
         raise HTTPException(404, "Not in your tracker")
-    resume = (await db.execute(select(Resume.id, Resume.updated_at).where(
-        Resume.id == entry.resume_id, Resume.user_id == user.id))).first() if entry.resume_id else None
+    resume = await db.scalar(select(Resume).where(Resume.id == entry.resume_id, Resume.user_id == user.id)
+        .execution_options(populate_existing=True)) if entry.resume_id else None
     fit = (await db.execute(select(JobFitCheck.id, JobFitCheck.created_at, JobFitCheck.result).where(
         JobFitCheck.user_id == user.id, JobFitCheck.listing_id == entry.listing_id)
         .order_by(JobFitCheck.created_at.desc(), JobFitCheck.id).limit(1))).first()
     snapshots = (await db.execute(select(func.count(), func.max(ResumeSnapshot.created_at)).where(
         ResumeSnapshot.user_id == user.id, ResumeSnapshot.application_id == entry.id))).one()
+    latest_snapshot = await db.scalar(select(ResumeSnapshot).where(ResumeSnapshot.user_id == user.id,
+        ResumeSnapshot.application_id == entry.id).order_by(ResumeSnapshot.created_at.desc(), ResumeSnapshot.id)
+        .limit(1).execution_options(populate_existing=True))
+    lineage = lineage_summary(latest_snapshot, resume) if latest_snapshot else None
     offer = (await db.execute(select(JobOffer.id, JobOffer.updated_at).where(
         JobOffer.user_id == user.id, JobOffer.application_id == entry.id).order_by(JobOffer.id).limit(1))).first()
     packet = await db.scalar(attention_packets(user.id).where(
@@ -69,6 +74,17 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
          f" The recorded tracker stage is {entry.status}. Offer and hired stages are records, "
          "not independently verified employer confirmations."},
     ]
+    if lineage is not None and latest_snapshot is not None:
+        fact = next(f for f in facts if f["id"] == "resume")
+        fact["path"] = base + f"resume&snapshot={latest_snapshot.id}"
+        if lineage["content_matches"] is None:
+            fact["text"] += " A saved copy exists, but no current owned linked resume is available for comparison."
+        elif lineage["content_matches"]:
+            fact["text"] += " The latest saved copy matches the linked resume's stored content, design and target text."
+        else:
+            fact["text"] += (f" The latest saved copy differs from the linked resume in "
+                             f"{len(lineage['changed_sections'])} stored sections. Review the comparison before sharing.")
+        fact["text"] += " A saved copy is not proof of submission, delivery, verified skills or employer receipt."
     # Requirements are explicitly labelled as prior check material, never as verified candidate skills.
     requirements = fit.result.get("requirements", []) if fit and isinstance(fit.result, dict) else []
     for index, row in enumerate(requirements[:3] if isinstance(requirements, list) else []):
@@ -93,9 +109,9 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
             facts.append({"id": f"prep_{index}", "label": "Preparation task", "path": base + "plan",
                 "text": f"An unchecked task in this job's browser-day preparation plan is: {task.title[:220]}. "
                         "Use truthful evidence. This is suggested practice, not verified employer interview content."})
-    material = {"prep": prep.model_dump(mode="json") if prep else None, "tz_offset": tz_offset,
+    material = {"prep": prep.model_dump(mode="json") if prep else None, "tz_offset": tz_offset, "lineage": lineage,
         "entry": [entry.id, str(entry.updated_at), entry.status, str(entry.next_at), entry.resume_id],
-        "resume": list(map(str, resume)) if resume else None,
+        "resume": [resume.id, str(resume.updated_at), digest(parts(resume))] if resume else None,
         "fit": [fit.id, str(fit.created_at), fit.result] if fit else None,
         "snapshots": list(map(str, snapshots)), "offer": list(map(str, offer)) if offer else None,
         "packet": [packet.id, str(packet.updated_at), packet.status] if packet else None, "facts": facts}
@@ -130,6 +146,8 @@ async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(requir
 
     result, provider = await preview(db, user, "opportunity_coach", INSTRUCTION +
         "Help a candidate with the selected opportunity step, explaining that fact first. "
+        "When saved and current resume versions differ, suggest reviewing the comparison. "
+        "You do not have their changed text and must not invent edits or attest to delivery or factual accuracy. "
         "Preparation tasks are suggested practice from the supplied browser-day plan, not employer questions. "
         "A rehearsal plan does not imply an interview date. Completion history is candidate-recorded, not proof "
         "of competence. Suggest reviewing matching earlier work; never mark it complete or claim employer approval. "

@@ -421,7 +421,7 @@ async def interview_questions(entry_id: str, user: Annotated[User, Depends(requi
     snaps, resume, _ = await _versions(db, user, entry)
     chosen = chosen_version(entry.interview_version, snaps, resume)
     if chosen is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Link the resume you sent for this job first.")
+        raise HTTPException(status.HTTP_409_CONFLICT, "Link or choose a resume version for this job first.")
     listing, doc = await _post(db, user, entry)
     job = (doc.source_text or "") if doc is not None else (
         _job_text(listing, listing.description or listing.snippet) if listing is not None else "")
@@ -495,7 +495,7 @@ def _version_title(v: Version, tz_offset: int) -> str:
     to two jobs is one document. The linked resume is named by its own title (as "Use in Orbit" names it), so it's the
     same document Resume AI keeps up to date."""
     if isinstance(v, ResumeSnapshot):
-        return f"{v.title} (sent {(_aware(v.created_at) + timedelta(minutes=tz_offset)).strftime('%d %b %Y')})"
+        return f"{v.title} (saved {(_aware(v.created_at) + timedelta(minutes=tz_offset)).strftime('%d %b %Y')})"
     return v.title
 
 
@@ -537,7 +537,7 @@ async def session_context(entry_id: str, user: Annotated[User, Depends(require_v
     if chosen is not None:
         text = resume_document_text(ResumeData.model_validate(chosen.data or {}))
         if len(text) >= 20:
-            resume_doc = await _saved(db, user, "resume", _version_title(chosen, tz), text, "the resume you sent",
+            resume_doc = await _saved(db, user, "resume", _version_title(chosen, tz), text, "the selected resume version",
                                       notes, update=not isinstance(chosen, ResumeSnapshot))
     else:
         notes.append("No resume is linked to this job, so the copilot uses the resumes you tick in setup.")

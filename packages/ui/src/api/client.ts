@@ -14,6 +14,7 @@ import type {
   SecurityActivity,
   SignedInDevice,
   JobMission,
+  ResumeVersionComparison,
   PrepPlan,
   JobTimelineEvent,
   LoopMemory,
@@ -902,10 +903,12 @@ export function createApiClient(options: ApiClientOptions) {
     jobMission: (id: string) => json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission${localDays()}`),
     linkMissionResume: (id: string, resumeId: string | null) =>
       json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/resume${localDays()}`, { method: "PUT", body: body({ resume_id: resumeId }) }),
-    /** Keep a copy of the linked resume as it is now: what was sent for this job. */
+    /** Keep an immutable copy; this does not establish that it was submitted. */
     freezeMissionResume: (id: string, note = "") =>
       json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots${localDays()}`, { method: "POST", body: body({ note }) }),
-    /** Open a sent version again as a new resume (the version itself never changes). */
+    compareMissionSnapshot: (id: string, snapshotId: string) =>
+      json<ResumeVersionComparison>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}/compare`),
+    /** Open a saved version as a new resume (the version itself never changes). */
     copyMissionSnapshot: (id: string, snapshotId: string) =>
       json<{ resume_id: string }>(
         `/v1/jobs/tracker/${encodeURIComponent(id)}/mission/snapshots/${encodeURIComponent(snapshotId)}/copy${localDays()}`,

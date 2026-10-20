@@ -879,9 +879,10 @@ class JobApplication(TimestampMixin, Base):
 
 
 class ResumeSnapshot(TimestampMixin, Base):
-    """The resume as it was sent for one tracked job (Job Mission Room): a frozen copy of its content, design and
-    ATS score, so "which version did I send?" has an answer after the resume is edited or deleted. Made only when the
-    user asks; deleted with the job or the account."""
+    """A candidate-saved copy of resume content, design and ATS score for one tracked job.
+
+    Retained after the source resume changes/deletes; removed with the job/account. Saving is not delivery proof.
+    """
 
     __tablename__ = "resume_snapshots"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)

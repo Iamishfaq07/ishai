@@ -2740,7 +2740,7 @@ export interface MissionResume {
   updated_at: string;
 }
 
-/** The resume as it was sent for this job: frozen, kept when the resume itself changes or is deleted. */
+/** Candidate-saved immutable resume copy; saving alone is not evidence of submission or delivery. */
 export interface MissionSnapshot {
   id: string;
   title: string;
@@ -2748,6 +2748,29 @@ export interface MissionSnapshot {
   note: string;
   resume_id: string | null;
   created_at: string;
+}
+
+export interface ResumeVersionComparison {
+  entry_id: string;
+  snapshot_id: string;
+  version: string;
+  saved_title: string;
+  saved_at: string;
+  current_id: string | null;
+  current_title: string | null;
+  current_updated_at: string | null;
+  same_source: boolean | null;
+  content_matches: boolean | null;
+  changed_sections: string[];
+  sections: {
+    key: string;
+    label: string;
+    changed: boolean | null;
+    saved_text: string;
+    current_text: string | null;
+    saved_truncated: boolean;
+    current_truncated: boolean;
+  }[];
 }
 
 export interface MissionOffer {

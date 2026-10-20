@@ -13,6 +13,8 @@ Source brief: owner-supplied ORBIT_PERSONAL_V6_CODEX_MASTER_PROMPT_2026-10-20.md
 
 ## Subsequent gated slices
 
+Increment4 (base `03d8ce37`, PR #440 merged) begins item3 with a read-only saved/current resume comparison, corrected saved-versus-sent language, historical fit-source labels and latest-version status in the existing coach. **UNVERIFIED BY OWNER REQUEST: no tests/build/lint/typecheck/browser validation run.** Full F03 claim lineage and F06 packet approval/receipt guarantees remain outstanding; later verification must precede any expansion of those writers. See `V6_RESUME_LINEAGE.md`.
+
 Increment 3 (base `822c7d49`, PR #439 merged) implements F05 completion history, reviewed reuse for matching one-time preparation, opt-in no-date rehearsal, one suggested task with progressive daily disclosure, and coach/checklist browser-offset alignment. See `V6_PREP_CONTINUITY.md`. Explicit round entities, offline sync, snooze and new notifications remain deferred; item3 (F03/F06 lineage) is the next independent source-audit slice after this review.
 
 Increment 2 (base `47bececf`) implements the supported reviewed ICS subset of item 1 and the saved-date/unchecked-task coach integration for item 2. See `V6_INTERVIEW_INTAKE.md`; broader acceptance remains partial. The original first-increment scope and blockers above are historical context.
