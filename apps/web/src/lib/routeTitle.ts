@@ -13,16 +13,16 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/start/, "New session"],
   [/^\/sessions\/[^/]+/, "Session"],
   [/^\/sessions/, "Sessions"],
-  [/^\/resume-ai\/jobs(\/|$)/, "Jobs AI"], // Jobs' old address, on its way to Jobs AI
-  [/^\/resume-ai/, "Resume AI"],
+  [/^\/resume-ai\/jobs(\/|$)/, "Jobs"], // Jobs' old address, on its way to Jobs
+  [/^\/resume-ai/, "Resume"],
   [/^\/jobs\/alerts\/off/, "Stop job alerts"],
   [/^\/jobs\/auto-apply/, "Orbit Apply setup"],
   [/^\/jobs\/applications/, "Applications"],
-  [/^\/jobs(\/|$)/, "Jobs AI"],
-  [/^\/offers(\/|$)/, "Offer AI"],
-  [/^\/linkedin(\/|$)/, "LinkedIn AI"],
-  [/^\/code(\/|$)/, "Code AI"],
-  [/^\/learn(\/|$)/, "Learning AI"],
+  [/^\/jobs(\/|$)/, "Jobs"],
+  [/^\/offers(\/|$)/, "Offers"],
+  [/^\/linkedin(\/|$)/, "LinkedIn"],
+  [/^\/code(\/|$)/, "Coding practice"],
+  [/^\/learn(\/|$)/, "Learning"],
   [/^\/documents\/stories/, "Story bank"],
   [/^\/documents\/evidence/, "Evidence vault"],
   [/^\/documents\/answers/, "My answers"],
@@ -44,7 +44,7 @@ const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/pricing/, "Pricing"],
   [/^\/interview-copilot/, "Interview copilot"],
   [/^\/mock-interview/, "Mock interviews"],
-  [/^\/linkedin-ai/, "LinkedIn AI"],
+  [/^\/linkedin-ai/, "LinkedIn"],
   [/^\/login/, "Sign in"],
   [/^\/register/, "Create account"],
   [/^\/forgot-password/, "Reset password"],
@@ -75,8 +75,8 @@ const ROUTE_DESCRIPTIONS: Array<[RegExp, string]> = [
   [/^\/pricing/, "Plans and credit packs in rupees and US dollars. Start free, pay once, nothing renews."],
   [/^\/interview-copilot/, "Live interview answers from your resume, in calls where AI help is allowed."],
   [/^\/mock-interview/, "Mock interviews with an AI interviewer: follow-ups, a video round and a scorecard."],  [/^\/login/, "Sign in to Orbit to practise, fix your resume, and see jobs that fit you."],
-  [/^\/register/, "Create a free Orbit account. No subscription. Interview practice, Resume AI and Jobs AI are included."],
-  [/^\/billing/, "Buy interview minutes and Resume AI credits once. Nothing renews, and what you buy never expires."],
+  [/^\/register/, "Create a free Orbit account. No subscription. Interview practice, Resume and Jobs are included."],
+  [/^\/billing/, "Buy interview minutes and Resume credits once. Nothing renews, and what you buy never expires."],
 ];
 
 export function routeDescription(pathname: string): string | null {

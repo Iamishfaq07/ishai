@@ -12,7 +12,7 @@ export interface Command {
   id: string;
   title: string;
   group: CommandGroup;
-  /** A second line ("Resume AI · ATS 72"). Searched too. */
+  /** A second line ("Resume · ATS 72"). Searched too. */
   hint?: string;
   /** Other words for it: synonyms, abbreviations, what it's for. Searched, never shown. */
   keywords?: string[];
@@ -180,15 +180,15 @@ export function baseCommands({ mockEnabled }: { mockEnabled: boolean }): Command
       to: "/documents",
       keywords: ["files", "uploads", "jd", "job description", "job post", "resume file"],
     },
-    { id: "go-resume-ai", title: "Resume AI", group: "Go to", product: "resume", to: "/resume-ai", keywords: ["cv", "resumes", "ats score", "cover letter"] },
-    { id: "go-jobs", title: "Jobs AI", group: "Go to", product: "jobs", to: "/jobs", keywords: ["jobs overview", "careers"] },
+    { id: "go-resume-ai", title: "Resume", group: "Go to", product: "resume", to: "/resume-ai", keywords: ["resume ai", "cv", "resumes", "ats score", "cover letter"] },
+    { id: "go-jobs", title: "Jobs", group: "Go to", product: "jobs", to: "/jobs", keywords: ["jobs ai", "jobs overview", "careers"] },
     { id: "go-matches", title: "Job matches", group: "Go to", product: "jobs", to: "/jobs/matches", keywords: ["feed", "openings", "match"] },
     { id: "go-tracker", title: "Job tracker", group: "Go to", product: "jobs", to: "/jobs/tracker", keywords: ["applications", "applied", "saved jobs", "follow up", "kanban"] },
     { id: "go-job-profile", title: "Job search profile", group: "Go to", product: "jobs", to: "/jobs/profile", keywords: ["preferences", "city", "role", "filters", "location"] },
-    { id: "go-learn", title: "Learning AI", group: "Go to", to: "/learn", keywords: ["learn", "learning", "courses", "cybersecurity", "security", "kashsec", "ai", "study"] },
-    { id: "go-code", title: "Code AI", group: "Go to", to: "/code", keywords: ["coding", "dsa", "leetcode", "algorithms", "data structures", "coding round", "practice code", "interview problems"] },
-    { id: "go-linkedin", title: "LinkedIn AI", group: "Go to", to: "/linkedin", keywords: ["linkedin", "profile", "headline", "about", "recruiters", "score", "optimize"] },
-    { id: "go-offers", title: "Offer AI", group: "Go to", to: "/offers", keywords: ["offer", "salary", "ctc", "in-hand", "take home", "negotiate", "compare offers", "pay"] },
+    { id: "go-learn", title: "Learning", group: "Go to", to: "/learn", keywords: ["learning ai", "learn", "learning", "courses", "cybersecurity", "security", "kashsec", "ai", "study"] },
+    { id: "go-code", title: "Coding practice", group: "Go to", to: "/code", keywords: ["code ai", "coding", "dsa", "leetcode", "algorithms", "data structures", "coding round", "practice code", "interview problems"] },
+    { id: "go-linkedin", title: "LinkedIn", group: "Go to", to: "/linkedin", keywords: ["linkedin ai", "linkedin", "profile", "headline", "about", "recruiters", "score", "optimize"] },
+    { id: "go-offers", title: "Offers", group: "Go to", to: "/offers", keywords: ["offer ai", "offer", "salary", "ctc", "in-hand", "take home", "negotiate", "compare offers", "pay"] },
     { id: "go-billing", title: "Plan and credits", group: "Go to", to: "/billing", keywords: ["billing", "upi", "payments", "balance", "minutes left", "credits left"] },
     { id: "go-settings", title: "Settings", group: "Go to", to: "/settings", keywords: ["account", "password", "privacy", "delete account", "appearance", "accent", "text size"] },
     { id: "do-sign-out", title: "Sign out", group: "Actions", run: "sign-out", keywords: ["log out", "logout"] },
@@ -205,7 +205,7 @@ export interface RecentSources {
 export function recentCommands({ resumes, sessions, tracker }: RecentSources): Command[] {
   const out: Command[] = [];
   for (const r of (resumes ?? []).slice(0, 5)) {
-    out.push({ id: `resume-${r.id}`, title: r.title || "Untitled resume", hint: `Resume AI · ATS score ${r.score}`, group: "Recent", product: "resume", to: `/resume-ai/${encodeURIComponent(r.id)}`, keywords: ["resume", "cv"] });
+    out.push({ id: `resume-${r.id}`, title: r.title || "Untitled resume", hint: `Resume · ATS score ${r.score}`, group: "Recent", product: "resume", to: `/resume-ai/${encodeURIComponent(r.id)}`, keywords: ["resume", "cv"] });
   }
   for (const s of (sessions ?? []).slice(0, 5)) {
     const ended = s.status === "ended";

@@ -577,7 +577,7 @@ async def suggest_profile(request: Request, body: SuggestIn, user: Annotated[Use
     resume = await _resume_for(db, user, row, body.resume_id)
     if resume is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            "Make a resume in Resume AI first: your job feed is matched to it.")
+                            "Make a resume in Resume first: your job feed is matched to it.")
     data = ResumeData.model_validate(resume.data or {})
     rhash = resume_hash(data)
     if row is None:
@@ -720,7 +720,7 @@ async def fit_check(request: Request, listing_id: str, user: Annotated[User, Dep
     _, prefs, resume = await _profile(db, user)
     if resume is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            "Make a resume in Resume AI first: the fit check compares it with the job.")
+                            "Make a resume in Resume first: the fit check compares it with the job.")
     data = ResumeData.model_validate(resume.data or {})
     evidence = await _confirmed_evidence(db, user.id)
     rhash = resume_hash(data)
@@ -807,7 +807,7 @@ async def tailor(listing_id: str, body: TailorIn, user: Annotated[User, Depends(
     resume = await _resume_for(db, user, profile, body.resume_id)
     if resume is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            "Make a resume in Resume AI first, then tailor it to this job.")
+                            "Make a resume in Resume first, then tailor it to this job.")
     count = await db.scalar(select(func.count()).select_from(Resume).where(Resume.user_id == user.id))
     if (count or 0) >= MAX_RESUMES:
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")

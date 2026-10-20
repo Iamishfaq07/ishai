@@ -7,7 +7,7 @@ export default function ToolFinder({ onNavigate }: { onNavigate: () => void }) {
   const id = useId();
   const [query, setQuery] = useState("");
   const results = findJobTools(query);
-  return <section id="jobs-tool-finder" aria-label="Find a Jobs AI tool" className="space-y-4 rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
+  return <section id="jobs-tool-finder" aria-label="Find a Jobs tool" className="space-y-4 rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
     <Field htmlFor={id} label="What do you want to do?" hint="Try interview, contacts, auto-apply or the name of an old tab.">
       <Input id={id} type="search" value={query} onChange={(event) => setQuery(event.target.value)} />
     </Field>

@@ -8,7 +8,7 @@ import { MM_TO_PX, PAGE_MM, ResumePreview } from "./ResumePreview";
 import { sampleResume, type SampleResume } from "./sample";
 
 /**
- * Resume AI's public page, drawn from Resume AI itself (DECISIONS D79): the real resume renderer (ResumePreview) with
+ * Resume's public page, drawn from Resume itself (DECISIONS D79): the real resume renderer (ResumePreview) with
  * the page's sample resume (sample.ts), and the editor's own pieces as small renders. Every number here is the real
  * ATS check's (orbit_api/resumes/ats.py, run on this sample): 82 with four things wrong, then 85, 91, 96 and 98 as
  * each is fixed; with the sample job post, 11 of its 15 keywords covered. Made-up people and companies, said so.
@@ -113,7 +113,7 @@ export function ResumeHeroArt() {
         ref={p.ref}
         {...p.attrs}
         role="img"
-        aria-label={`A sample resume in Resume AI. Its ATS score goes from ${STORY.from} to 98 out of 100 as four fixes are made: ${STORY.fixes.map((f) => `${f.label.toLowerCase()}, plus ${f.gain}`).join("; ")}.`}
+        aria-label={`A sample resume in Resume. Its ATS score goes from ${STORY.from} to 98 out of 100 as four fixes are made: ${STORY.fixes.map((f) => `${f.label.toLowerCase()}, plus ${f.gain}`).join("; ")}.`}
         className="kp relative h-[26rem] sm:h-[31rem]"
       >
         {/* Two of the other templates, behind. */}
@@ -157,7 +157,7 @@ export function ResumeHeroArt() {
         </div>
       </div>
       <figcaption className="mt-3 flex min-h-8 items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">
-        <span>A sample resume, scored by Resume AI's own ATS check.</span>
+        <span>A sample resume, scored by Resume's own ATS check.</span>
         {p.play && t === Infinity && (
           <button
             type="button"
@@ -465,7 +465,7 @@ export function ChatbotArt() {
   );
 }
 
-/** What Resume AI hands back: the resume itself, laid out, scored. */
+/** What Resume hands back: the resume itself, laid out, scored. */
 export function ResumeOutArt() {
   const sample = sampleResume(useCountry());
   // A whole resume page: drawn once it's near the screen (the built HTML keeps the light placeholder).

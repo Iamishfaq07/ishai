@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { API, a11y, seed } from "./business-fixtures";
 
 for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: "mobile", width: 360, height: 800 }]) {
-  test(`Jobs AI grouped workflows and deep links (${viewport.name})`, async ({ page, context }, info) => {
+  test(`Jobs grouped workflows and deep links (${viewport.name})`, async ({ page, context }, info) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
@@ -16,7 +16,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     expect(created.status(), await created.text()).toBe(201);
     const job = await created.json();
     await page.goto("/jobs/actions");
-    const nav = page.getByRole("navigation", { name: "Jobs AI", exact: true });
+    const nav = page.getByRole("navigation", { name: "Jobs", exact: true });
     await expect(nav.getByRole("link")).toHaveCount(4);
     await expect(nav.locator('[aria-current="page"]')).toHaveText("Launchpad");
     await expect(page.getByRole("heading", { name: "Daily actions", exact: true })).toBeVisible();
@@ -27,7 +27,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await page.screenshot({ path: info.outputPath(`jobs-today-${viewport.name}.png`), fullPage: true });
 
     await page.getByRole("button", { name: "Find a tool", exact: true }).click();
-    const finder = page.getByRole("region", { name: "Find a Jobs AI tool", exact: true });
+    const finder = page.getByRole("region", { name: "Find a Jobs tool", exact: true });
     await finder.getByLabel("What do you want to do?", { exact: true }).fill("weekly studio");
     await expect(finder.getByRole("link")).toHaveCount(1);
     await finder.getByRole("link", { name: /Weekly plan/ }).click();

@@ -48,7 +48,7 @@ interface ReportedJob {
 /**
  * The Contact page (`/contact`, public: signed in or out). A form whose messages wait in the admin's Inbox, with a
  * short reference to quote. Signed in, the name and email start filled in from the account (still editable); a link
- * can start it on a topic (`?topic=`) or with a job to report (`?listing=`, `?reason=`, from Jobs AI's "Report this
+ * can start it on a topic (`?topic=`) or with a job to report (`?listing=`, `?reason=`, from Jobs's "Report this
  * job"). A hidden honeypot field and, signed out, the bot check when the server asks for it; the server holds the
  * limits and says when someone has sent too many.
  */
@@ -85,7 +85,7 @@ export function ContactPage() {
     if (user) setFields((f) => ({ ...f, name: f.name || user.name || "", email: f.email || user.email }));
   }, [user]);
 
-  // The reported job's title and company, for the sender to see what they're reporting (Jobs AI needs a session).
+  // The reported job's title and company, for the sender to see what they're reporting (Jobs needs a session).
   useEffect(() => {
     if (!user || !prefill.listing) return;
     let cancelled = false;
@@ -240,7 +240,7 @@ export function ContactPage() {
                     <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-rose-600 dark:text-rose-300" aria-hidden />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">
-                        Reporting: {job ? `${job.title} at ${job.company}` : "a job from Jobs AI"}
+                        Reporting: {job ? `${job.title} at ${job.company}` : "a job from Jobs"}
                       </p>
                       {prefill.reason && <p className="text-xs text-zinc-600 dark:text-zinc-400">What's wrong: {prefill.reason}</p>}
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">We'll see which job it is. Add anything that helps, like what they asked you for.</p>

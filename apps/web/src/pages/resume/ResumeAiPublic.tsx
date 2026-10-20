@@ -30,7 +30,7 @@ import {
   useTemplates,
 } from "./publicArt";
 
-/** Sign-up and sign-in from here come back to Resume AI. */
+/** Sign-up and sign-in from here come back to Resume. */
 const BACK_HERE = { from: RESUME_AI_HOME };
 
 type Pack = Pick<CreditPack, "resume_credits" | "price_inr" | "currency" | "price_text">;
@@ -71,7 +71,7 @@ function Templates() {
           lead="Every template is the same resume laid out another way, so you can try them all without retyping a line. The one-column ones read cleanly in screening software."
         />
         <div className="mt-12">
-          <Carousel label="Resume AI's templates" count={templates.length} eager={0} render={(i, near) => <TemplateCard index={i} near={near} />} />
+          <Carousel label="Resume's templates" count={templates.length} eager={0} render={(i, near) => <TemplateCard index={i} near={near} />} />
         </div>
       </Container>
     </section>
@@ -79,7 +79,7 @@ function Templates() {
 }
 
 /**
- * Resume AI for signed-out visitors (at /resume-ai, where a signed-in person gets their resumes), built with the
+ * Resume for signed-out visitors (at /resume-ai, where a signed-in person gets their resumes), built with the
  * product pages' section kit (DECISIONS D79): the hero with the sample resume being scored and fixed, the facts, three
  * steps, the real templates, the toolkit as working pieces, a fair comparison, the prices, the questions, what comes
  * next and one last action. Nothing here calls the AI; the prices and the free allowance come from the server.
@@ -89,11 +89,11 @@ export function ResumeAiPublicPage() {
   const heroCtas = useRef<HTMLDivElement>(null);
   const finalCta = useRef<HTMLElement>(null);
   return (
-    <PublicLayout authState={BACK_HERE} context="Resume AI">
+    <PublicLayout authState={BACK_HERE} context="Resume">
       <HeroShowcase
-        product={{ id: "resume", name: "Resume AI", icon: FileText }}
+        product={{ id: "resume", name: "Resume", icon: FileText }}
         title={["Your resume,", "scored and fixed."]}
-        lead="Resume AI reads your resume the way screening software does, scores it out of 100 and fixes what it finds with you, line by line. It keeps your numbers and never makes one up."
+        lead="Resume reads your resume the way screening software does, scores it out of 100 and fixes what it finds with you, line by line. It keeps your numbers and never makes one up."
         ctas={heroCtas}
         actions={
           <>
@@ -110,7 +110,7 @@ export function ResumeAiPublicPage() {
       />
 
       <FactsBand
-        label="Resume AI in numbers"
+        label="Resume in numbers"
         facts={[
           { value: 100, label: "points in the ATS score, from eight parts of the resume" },
           { value: TEMPLATES.length, label: "templates, switched without retyping" },
@@ -153,10 +153,10 @@ export function ResumeAiPublicPage() {
         eyebrow="Why not just ask a chatbot?"
         title={
           <>
-            A chatbot gives you text. <span className="text-indigo-700 dark:text-indigo-300">Resume AI gives you a resume.</span>
+            A chatbot gives you text. <span className="text-indigo-700 dark:text-indigo-300">Resume gives you a resume.</span>
           </>
         }
-        lead="A general chatbot can rewrite a resume well. What it hands back is the words; Resume AI hands back the finished file, checked."
+        lead="A general chatbot can rewrite a resume well. What it hands back is the words; Resume hands back the finished file, checked."
         left={{
           name: "A general chatbot",
           tag: "Plain text",
@@ -164,7 +164,7 @@ export function ResumeAiPublicPage() {
           lines: ["Plain text: you lay it out and format it yourself", "No score, and no list of what's missing", "You check the job post's keywords by eye", "Rewritten in one go: you find what changed"],
         }}
         right={{
-          name: "Orbit Resume AI",
+          name: "Orbit Resume",
           tag: "Ready to send",
           mark: <OrbitLogo size={20} animated={false} />,
           visual: <ResumeOutArt />,
@@ -187,9 +187,9 @@ export function ResumeAiPublicPage() {
         id="next-title"
         eyebrow="The same account"
         title="After the resume, the interview."
-        lead="Your resume carries over: Jobs AI finds jobs that fit it, Practice asks about it, and the copilot answers from it."
+        lead="Your resume carries over: Jobs finds jobs that fit it, Practice asks about it, and the copilot answers from it."
         items={[
-          { product: { id: "jobs", name: "Jobs AI", icon: Briefcase }, title: "Jobs that fit this resume", text: "New openings from companies' own careers pages, matched to it, with a free AI fit check and a tracker.", to: JOBS_AI_HOME, cta: "See Jobs AI" },
+          { product: { id: "jobs", name: "Jobs", icon: Briefcase }, title: "Jobs that fit this resume", text: "New openings from companies' own careers pages, matched to it, with a free AI fit check and a tracker.", to: JOBS_AI_HOME, cta: "See Jobs" },
           { product: { id: "practice", name: "Practice", icon: Target }, title: "Practise the questions it raises", text: "A mock interview built from your resume and the job post, then a score for every answer.", to: PRACTICE_PAGE, cta: "See mock interviews" },
           { product: { id: "copilot", name: "Interview copilot", icon: AudioLines }, title: "Answers from it, live", text: "In calls where AI help is allowed, suggested answers built from your resume as the question is asked.", to: COPILOT_PAGE, cta: "See the copilot" },
         ]}
@@ -206,7 +206,7 @@ export function ResumeAiPublicPage() {
           <>
             Looking for jobs too?{" "}
             <Link to={JOBS_AI_HOME} className={cx("rounded font-medium text-white underline underline-offset-2", focusRing)}>
-              Jobs AI
+              Jobs
             </Link>{" "}
             finds the latest openings that fit your resume.
           </>

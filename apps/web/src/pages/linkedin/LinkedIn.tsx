@@ -16,9 +16,9 @@ import { Suggestions } from "./Suggestions";
 const LINK_KEY = "orbit.linkedin.url";
 
 /**
- * LinkedIn AI: your LinkedIn profile read from its "Save to PDF", scored section by section against the role you want
+ * LinkedIn: your LinkedIn profile read from its "Save to PDF", scored section by section against the role you want
  * and the skills job posts for it ask for, shown the way a recruiter's search shows it, and fixed a part at a time
- * like Resume AI: each fix is a suggestion to copy into LinkedIn, apply to Orbit's copy (the score updates) and tick
+ * like Resume: each fix is a suggestion to copy into LinkedIn, apply to Orbit's copy (the score updates) and tick
  * off when it's done there.
  */
 export function LinkedInPage() {
@@ -29,7 +29,7 @@ export function LinkedInPage() {
   const read = Boolean(s?.profile && s.audit);
   return (
     <AllowanceContext.Provider value={allowance}>
-      <PageHeader icon={IdCard} title="LinkedIn AI" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and the fixes to paste in." art={read ? <LinkedInScene /> : undefined} />
+      <PageHeader icon={IdCard} title="LinkedIn" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and the fixes to paste in." art={read ? <LinkedInScene /> : undefined} />
       <LoadGate loading={state.loading && !s} variant="card" count={3} label="Getting your LinkedIn check">
         {state.error && !s ? (
           <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>

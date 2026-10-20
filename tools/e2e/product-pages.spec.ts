@@ -31,11 +31,11 @@ test("every product page has its sections, one h1, breadcrumbs, and no sideways 
   }
 });
 
-test("the Resume AI hero plays its fixes once at Full motion, then offers Play again", async ({ page }) => {
+test("the Resume hero plays its fixes once at Full motion, then offers Play again", async ({ page }) => {
   await setMotion(page, "full");
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/resume-ai");
-  const hero = page.getByRole("img", { name: /A sample resume in Resume AI/ });
+  const hero = page.getByRole("img", { name: /A sample resume in Resume/ });
   await expect(hero).toBeVisible();
   // While the four fixes are made one after another (about four seconds), there is nothing to replay yet.
   await expect(page.getByRole("button", { name: "Play again" })).toHaveCount(0);
@@ -51,7 +51,7 @@ for (const motion of ["reduced", "off"] as const) {
     await setMotion(page, motion);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/resume-ai");
-    const hero = page.getByRole("img", { name: /A sample resume in Resume AI/ });
+    const hero = page.getByRole("img", { name: /A sample resume in Resume/ });
     await expect(hero).toContainText("98", { timeout: 1500 });
     // The last part of the sequence (the +16 beside the score) is in place, not waiting its turn.
     await expect.poll(() => hero.getByText("+16").evaluate((el) => getComputedStyle(el).opacity), { timeout: 2000 }).toBe("1");
@@ -67,7 +67,7 @@ test("the templates carousel moves a card at a time and says where it is", async
   await setMotion(page, "off");
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/resume-ai#templates");
-  const carousel = page.getByRole("region", { name: "Resume AI's templates" });
+  const carousel = page.getByRole("region", { name: "Resume's templates" });
   const previous = carousel.getByRole("button", { name: "Previous" });
   const next = carousel.getByRole("button", { name: "Next" });
   await carousel.scrollIntoViewIfNeeded();
@@ -89,12 +89,12 @@ test("a product page's questions open and close", async ({ page }) => {
   await expect(page.getByText(/Greenhouse, Lever, Ashby and SmartRecruiters job boards\) and remote job boards/).first()).toBeVisible();
 });
 
-test("LinkedIn AI's page is in the Products menu, and its search preview switches between before and after", async ({ page }) => {
+test("LinkedIn's page is in the Products menu, and its search preview switches between before and after", async ({ page }) => {
   await setMotion(page, "off");
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
   await page.getByRole("button", { name: "Products" }).click();
-  await page.getByRole("link", { name: /^LinkedIn AI/ }).first().click();
+  await page.getByRole("link", { name: /^LinkedIn/ }).first().click();
   await expect(page).toHaveURL(/\/linkedin-ai$/);
   await expect(page.locator("h1")).toContainText("See your profile");
   const preview = page.getByRole("figure", { name: "A preview of your profile in a search result" });

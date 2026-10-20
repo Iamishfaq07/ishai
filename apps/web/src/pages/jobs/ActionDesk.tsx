@@ -82,7 +82,7 @@ export function JobActionDeskPage() {
     </div>
     <details className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
       <summary className={cx("cursor-pointer rounded text-sm font-medium", focusRing)}>Filters, refresh & calendar{filter !== "all" ? " · filter active" : ""}</summary>
-      <div className="mt-3 flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["contact", "Contacts"], ["application", "Applications"], ["playbook", "Playbook"]].map(([key, label]) =>
+      <div className="mt-3 flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["follow_up", "Job follow-ups"], ["contact", "Contacts"], ["application", "Applications"], ["playbook", "Playbook"]].map(([key, label]) =>
         <Button key={key} size="sm" variant={filter === key ? "primary" : "secondary"} aria-pressed={filter === key} onClick={() => setFilter(key!)}>{label}</Button>)}</div>
       <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" disabled={busy} onClick={() => setLoad((n) => n + 1)}>Refresh records</Button>
         <Button variant="secondary" disabled={!queue?.items.some((a) => a.due_at && new Date(a.due_at) > new Date())}

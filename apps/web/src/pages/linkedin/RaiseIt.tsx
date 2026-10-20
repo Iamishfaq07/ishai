@@ -98,7 +98,7 @@ export function RaiseIt({ state, actions, resumes, pick }: { state: LinkedInStat
       </div>
       {!resumes.length && (
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          <Link to={RESUME_AI_HOME} className="font-medium text-indigo-700 underline dark:text-indigo-300">Make a resume in Resume AI</Link> to write from it too.
+          <Link to={RESUME_AI_HOME} className="font-medium text-indigo-700 underline dark:text-indigo-300">Make a resume in Resume</Link> to write from it too.
         </p>
       )}
       <p id="li-ai-cost" className="mt-3 rounded-lg bg-zinc-500/5 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300">
@@ -155,7 +155,7 @@ function tipFor(state: LinkedInState, r: LinkedInRaise): string {
   return checks[0]?.tip ?? "";
 }
 
-/** "Rewrite everything" from a resume: headline, About and skills in one go (Resume AI's LinkedIn writer, one credit). */
+/** "Rewrite everything" from a resume: headline, About and skills in one go (Resume's LinkedIn writer, one credit). */
 function Rewrite({ actions, resumes, resumeId }: { actions: LinkedInActions; resumes: ResumeSummary[]; resumeId: string }) {
   const { allowance } = useAllowance();
   const busy = actions.busy === "rewrite";
@@ -173,7 +173,7 @@ function Rewrite({ actions, resumes, resumeId }: { actions: LinkedInActions; res
       </div>
       {busy && <WorkingState compact kind="writing" label="Writing your headline, About and skills" className="mt-2" />}
       {err && <AiErrorNote className="mt-2" error={err.text} upgrade={err.upgrade} />}
-      {!resumes.length && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">It needs a resume in Resume AI.</p>}
+      {!resumes.length && <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">It needs a resume in Resume.</p>}
     </div>
   );
 }

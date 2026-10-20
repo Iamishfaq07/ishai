@@ -20,13 +20,13 @@ import { storedRef } from "../lib/referral";
 import { InviteNote } from "../components/InviteNote";
 import { acknowledgeSecurityChanges } from "../lib/securityNotice";
 
-/** "Free to start: 20 interview minutes + 1 Resume AI credit", from the server (it decides the welcome credits). */
+/** "Free to start: 20 interview minutes + 1 Resume credit", from the server (it decides the welcome credits). */
 function useWelcome(): string | null {
   const w = useWelcomeGrant();
   if (!w) return null;
   const parts = [
     w.interview_minutes ? `${w.interview_minutes} interview minutes` : "",
-    w.resume_credits ? `${w.resume_credits} Resume AI credit${w.resume_credits === 1 ? "" : "s"}` : "",
+    w.resume_credits ? `${w.resume_credits} Resume credit${w.resume_credits === 1 ? "" : "s"}` : "",
   ].filter(Boolean);
   return `Free to start: ${parts.join(" + ")}. No card needed.`;
 }
@@ -388,7 +388,7 @@ export function LoginPage() {
 
 export function RegisterPage() {
   const { user, register } = useAuth();
-  // Then the three welcome questions; from Resume AI's or Jobs AI's "Start free", back there after them.
+  // Then the three welcome questions; from Resume's or Jobs's "Start free", back there after them.
   const from = useCameFrom();
   // Set just before the account is made: the sign-in that comes with it re-renders this page signed in, and that
   // redirect must go to the welcome questions, not straight on (it used to win over the navigation after sign-up).
@@ -444,7 +444,7 @@ export function RegisterPage() {
   };
 
   return (
-    <AuthShell title="Create your free account" subtitle="Takes about a minute. Interview copilot, Resume AI and Jobs AI, in one account." features>
+    <AuthShell title="Create your free account" subtitle="Takes about a minute. Interview copilot, Resume and Jobs, in one account." features>
       <InviteNote />
       <GoogleContinue next={from ?? "/"} label="Sign up with Google" />
       <form onSubmit={(e) => void submit(e)} className="space-y-4">
@@ -737,7 +737,7 @@ export function StopJobAlertsPage() {
   return (
     <AuthShell
       title={state === "done" ? "Job alerts stopped" : "Stop job alert emails?"}
-      subtitle={state === "done" ? "You won't get any more. Turn them back on any time in Jobs AI, Profile." : "Orbit will stop emailing you new job matches."}
+      subtitle={state === "done" ? "You won't get any more. Turn them back on any time in Jobs, Profile." : "Orbit will stop emailing you new job matches."}
     >
       <div role="status" className="space-y-4 text-center text-sm">
         {state === "failed" && error && <ErrorNote>{error}</ErrorNote>}

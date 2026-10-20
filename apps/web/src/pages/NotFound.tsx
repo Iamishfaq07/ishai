@@ -13,7 +13,7 @@ const primary = buttonClass("primary", "md", "min-h-11 px-4");
  * button goes there; the probe above the heading leans toward the cursor while it searches.
  */
 export function NotFoundPage() {
-  useDocumentTitle("Page not found", "That address isn't a page on Orbit. Go home, or open Resume AI, Jobs AI, or contact.");
+  useDocumentTitle("Page not found", "That address isn't a page on Orbit. Go home, or open Resume, Jobs, or contact.");
   const { pathname } = useLocation();
   const recovery = recoveryFor(pathname);
   const probe = useRef<SVGGElement>(null);
@@ -58,8 +58,8 @@ export function NotFoundPage() {
             </Link>
           )}
           <Link to="/" className={link}>Go home</Link>
-          {recovery?.to !== "/resume-ai" && <Link to="/resume-ai" className={link}>Resume AI</Link>}
-          {recovery?.to !== "/jobs/matches" && <Link to="/jobs" className={link}>Jobs AI</Link>}
+          {recovery?.to !== "/resume-ai" && <Link to="/resume-ai" className={link}>Resume</Link>}
+          {recovery?.to !== "/jobs/matches" && <Link to="/jobs" className={link}>Jobs</Link>}
           {recovery?.to !== "/contact" && <Link to="/contact" className={link}>Contact</Link>}
         </div>
       </div>

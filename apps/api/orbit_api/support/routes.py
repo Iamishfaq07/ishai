@@ -234,7 +234,7 @@ async def _balance_answer(db: AsyncSession, user: User) -> str:
 
 
 def _credit_word(n: int) -> str:
-    return f"{n} Resume AI credit" if n == 1 else f"{n} Resume AI credits"
+    return f"{n} Resume credit" if n == 1 else f"{n} Resume credits"
 
 
 async def _account_answer(db: AsyncSession, user: User, kind: str, currency: str = pricing.INR) -> str:
@@ -253,12 +253,12 @@ async def _account_answer(db: AsyncSession, user: User, kind: str, currency: str
         resume_only = [p for p in on_sale if p.total_minutes == 0 and p.resume_credits > 0]
         if resume_only:
             ai = min(resume_only, key=lambda p: p.price_inr)
-            line += f" {packs_label(ai)} for Resume AI alone are {pricing.price_of(ai, currency).text()}."
+            line += f" {packs_label(ai)} for Resume alone are {pricing.price_of(ai, currency).text()}."
         return line
     pack = packs().get(payment.plan)
     name = packs_label(pack) if pack else payment.plan
     money = pricing.payment_text(payment)  # in what was charged: "₹5,199", or "$106.99" through PayPal
-    got = f"{payment.interview_minutes} interview minutes and {payment.resume_credits} Resume AI credits"
+    got = f"{payment.interview_minutes} interview minutes and {payment.resume_credits} Resume credits"
     if payment.status == "approved":
         how = _GATEWAY.get(payment.method or "", "UPI")
         return f"Your last payment landed. {name} for {money} via {how} added {got}."

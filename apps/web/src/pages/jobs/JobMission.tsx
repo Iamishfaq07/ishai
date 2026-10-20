@@ -328,7 +328,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             {mission.resume_missing ? "The resume linked here was deleted. " : "Not linked. "}
             Pick the one you'll send, or make one in{" "}
-            <Link to={RESUME_AI_HOME} className={textLink}>Resume AI</Link>.
+            <Link to={RESUME_AI_HOME} className={textLink}>Resume</Link>.
           </p>
         )}
         <div className="mt-4 flex flex-wrap items-end gap-2">
@@ -465,14 +465,14 @@ function OfferPanel({ mission, entry, onMission }: { mission: JobMission; entry:
             <p className="text-sm text-zinc-600 dark:text-zinc-400">{money(o.currency, o.fixed)} fixed a year · {o.status}</p>
           </div>
           <div className="flex gap-2">
-            <Link to={offerPath(o.id)} className={linkButton("primary", "sm")}>Open in Offer AI</Link>
+            <Link to={offerPath(o.id)} className={linkButton("primary", "sm")}>Open in Offers</Link>
             <Button size="sm" variant="secondary" disabled={busy} onClick={() => void link(null)}>Unlink</Button>
           </div>
         </div>
       ) : (
         <>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Not linked. {mission.offers.length ? "Pick the offer from this company, or add it in Offer AI." : "When an offer comes, add it in Offer AI and link it here."}
+            Not linked. {mission.offers.length ? "Pick the offer from this company, or add it in Offers." : "When an offer comes, add it in Offers and link it here."}
           </p>
           <div className="mt-3 flex flex-wrap items-end gap-2">
             {mission.offers.length > 0 && (
@@ -486,7 +486,7 @@ function OfferPanel({ mission, entry, onMission }: { mission: JobMission; entry:
                 </Select>
               </label>
             )}
-            <Link to={OFFERS_HOME} className={linkButton("secondary", "md")}>Add in Offer AI</Link>
+            <Link to={OFFERS_HOME} className={linkButton("secondary", "md")}>Add in Offers</Link>
           </div>
         </>
       )}

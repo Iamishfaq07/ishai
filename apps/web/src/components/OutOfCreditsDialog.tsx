@@ -7,7 +7,7 @@ import { Sheet } from "./Sheet";
 const COPY = {
   resume: {
     title: "You're out of AI credits",
-    body: "Each AI action in Resume AI and Jobs AI (an import, a rewrite, tailoring, a cover letter, outreach or interview prep) uses 1 credit. Typing, the ATS score and downloads stay free.",
+    body: "Each AI action in Resume and Jobs (an import, a rewrite, tailoring, a cover letter, outreach or interview prep) uses 1 credit. Typing, the ATS score and downloads stay free.",
     action: "Get credits",
   },
   minutes: {

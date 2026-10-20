@@ -513,7 +513,7 @@ function Summary({
           <>
             <h2 className="font-display text-lg font-semibold">Get an AI score and a mock interview: free account</h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-              An AI interviewer that asks, listens and follows up, a report on every answer, and the same account has Resume AI and Jobs AI.
+              An AI interviewer that asks, listens and follows up, a report on every answer, and the same account has Resume and Jobs.
               Nothing auto-renews.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">

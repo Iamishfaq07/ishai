@@ -6,7 +6,7 @@ import { PAGE_IMAGES, PAGE_META, imageFor, metaFor, withPageMeta } from "./meta.
 describe("metaFor (the Worker's per-page link previews)", () => {
   it("knows the public pages people share, with or without a trailing slash", () => {
     expect(metaFor("/")?.path).toBe("/");
-    expect(metaFor("/resume-ai")?.title).toMatch(/^Orbit Resume AI/);
+    expect(metaFor("/resume-ai")?.title).toMatch(/^Orbit Resume/);
     expect(metaFor("/jobs/")?.path).toBe("/jobs");
     expect(metaFor("/warmup")?.title).toMatch(/Interview Warmup alternative/i);
     expect(metaFor("/contact/")?.title).toMatch(/^Contact Orbit AI/);

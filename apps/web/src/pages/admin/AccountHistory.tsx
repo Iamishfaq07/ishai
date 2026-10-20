@@ -190,13 +190,13 @@ function Content({ detail }: { detail: AdminUserDetail }) {
     .join(" · ");
   const rows: Array<[string, string, string?]> = [
     ["Documents", String(c.documents), kinds || undefined],
-    ["Resumes (Resume AI)", String(c.resumes)],
+    ["Resumes (Resume)", String(c.resumes)],
     ["Story bank", String(c.stories)],
     ["Saved setups", String(c.workspaces)],
     ["Sessions", String(c.sessions), c.sessions_open ? `${c.sessions_open} not ended` : undefined],
-    ["Jobs AI search profile", c.job_profile ? "Set up" : "Not yet"],
-    ["Jobs AI tracker", String(c.jobs_tracked), jobs || undefined],
-    ["Jobs AI fit checks", String(c.fit_checks), `${c.fit_checks_30d} in the last 30 days`],
+    ["Jobs search profile", c.job_profile ? "Set up" : "Not yet"],
+    ["Jobs tracker", String(c.jobs_tracked), jobs || undefined],
+    ["Jobs fit checks", String(c.fit_checks), `${c.fit_checks_30d} in the last 30 days`],
   ];
   return (
     <dl className="grid gap-2 py-1 sm:grid-cols-2">

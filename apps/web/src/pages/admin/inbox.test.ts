@@ -87,7 +87,7 @@ describe("replying", () => {
 });
 
 describe("the context", () => {
-  it("shows a reported job with its post (http only) and its page in Jobs AI", () => {
+  it("shows a reported job with its post (http only) and its page in Jobs", () => {
     expect(
       contextRows({
         listing_id: "j3f2a9c",
@@ -99,7 +99,7 @@ describe("the context", () => {
       }),
     ).toEqual([
       { label: "Job", value: "Staff Engineer at Acme", href: "https://boards.example/acme/1" },
-      { label: "In Jobs AI", value: "j3f2a9c", to: "/jobs/listing/j3f2a9c" },
+      { label: "In Jobs", value: "j3f2a9c", to: "/jobs/listing/j3f2a9c" },
       { label: "What's wrong", value: "Asked me to pay a fee" },
       { label: "Sent from", value: "/jobs/listing/j3f2a9c" },
     ]);

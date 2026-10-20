@@ -135,10 +135,10 @@ export function PracticePublicPage() {
         id="next-title"
         eyebrow="The same account"
         title="Then the real one."
-        lead="Practice, the copilot and Resume AI work from the same resume, so what you rehearse is what you'll say."
+        lead="Practice, the copilot and Resume work from the same resume, so what you rehearse is what you'll say."
         items={[
           { product: { id: "copilot", name: "Interview copilot", icon: AudioLines }, title: "Live answers, where allowed", text: "In calls where AI help is allowed, a suggested answer from your resume as the question is asked.", to: COPILOT_PAGE, cta: "See the copilot" },
-          { product: { id: "resume", name: "Resume AI", icon: FileText }, title: "The resume they'll ask about", text: "An ATS score out of 100, and the questions your resume will get you asked.", to: RESUME_AI_HOME, cta: "See Resume AI" },
+          { product: { id: "resume", name: "Resume", icon: FileText }, title: "The resume they'll ask about", text: "An ATS score out of 100, and the questions your resume will get you asked.", to: RESUME_AI_HOME, cta: "See Resume" },
           { product: { id: "practice", name: "Free warm-up", icon: Target }, title: "One question, no account", text: "Answer a common interview question out loud or by typing and see what to improve straight away.", to: "/warmup", cta: "Try the warm-up" },
         ]}
       />

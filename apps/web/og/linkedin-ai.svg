@@ -23,7 +23,7 @@
   <g transform="translate(72 160)">
     <rect width="158.4" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.05" stroke="#FFFFFF" stroke-opacity="0.12"/>
     <circle cx="22" cy="20" r="6" fill="#8666FF"/>
-    <text x="36" y="27" font-size="18" font-weight="500" fill="#F6F7FB">LinkedIn AI</text>
+    <text x="36" y="27" font-size="18" font-weight="500" fill="#F6F7FB">LinkedIn</text>
   </g>
   <g id="head" font-size="54" font-weight="600" fill="#F6F7FB" letter-spacing="-1.6">
     <text x="72" y="280">See your profile</text>

@@ -2,20 +2,20 @@ import { describe, expect, it } from "vitest";
 import { routeTitle } from "./routeTitle";
 
 describe("routeTitle", () => {
-  it("names Resume AI's pages, the product home and each resume alike", () => {
-    expect(routeTitle("/resume-ai")).toBe("Resume AI");
-    expect(routeTitle("/resume-ai/3f2a9c")).toBe("Resume AI");
-    expect(routeTitle("/resume-ai/jobsearch")).toBe("Resume AI");
+  it("names Resume's pages, the product home and each resume alike", () => {
+    expect(routeTitle("/resume-ai")).toBe("Resume");
+    expect(routeTitle("/resume-ai/3f2a9c")).toBe("Resume");
+    expect(routeTitle("/resume-ai/jobsearch")).toBe("Resume");
   });
 
-  it("names every Jobs AI page Jobs AI, its old address in Resume AI too", () => {
+  it("names every Jobs page Jobs, its old address in Resume too", () => {
     for (const path of ["/jobs", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/outreach", "/jobs/profile", "/resume-ai/jobs"]) {
-      expect(routeTitle(path)).toBe("Jobs AI");
+      expect(routeTitle(path)).toBe("Jobs");
     }
     expect(routeTitle("/jobsearch")).toBeNull();
   });
 
-  it("keeps Documents and the Story bank apart from Resume AI", () => {
+  it("keeps Documents and the Story bank apart from Resume", () => {
     expect(routeTitle("/documents")).toBe("Documents");
     expect(routeTitle("/documents/stories")).toBe("Story bank");
     expect(routeTitle("/documents/answers")).toBe("My answers");

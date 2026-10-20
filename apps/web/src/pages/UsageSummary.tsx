@@ -24,7 +24,7 @@ function Bar({ used, limit }: { used: number; limit: number | null }) {
   );
 }
 
-// The two balances wear their product's colour: interview minutes the copilot's, Resume AI credits Resume AI's.
+// The two balances wear their product's colour: interview minutes the copilot's, Resume credits Resume's.
 const BALANCE_TONE = {
   interview: { tile: "bg-indigo-500/[0.06] ring-indigo-500/15 dark:bg-indigo-400/[0.07] dark:ring-indigo-300/15", chip: "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200" },
   resume: { tile: "bg-emerald-500/[0.06] ring-emerald-600/15 dark:bg-emerald-400/[0.07] dark:ring-emerald-300/15", chip: "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-200" },
@@ -63,10 +63,10 @@ export function CreditRows({ e, wide = false }: { e: Entitlements; wide?: boolea
         <Balance icon={Mic} tone="interview" value={wholeMinutes(c.interview_minutes_left)} unit="min left" label="Interview minutes">
           Live and mock interviews both use these. 60 minutes = 1 interview credit.
         </Balance>
-        <Balance icon={Sparkles} tone="resume" value={c.resume} unit="left" label="Resume AI credits">
+        <Balance icon={Sparkles} tone="resume" value={c.resume} unit="left" label="Resume credits">
           For{" "}
           <Link to={RESUME_AI_HOME} className={cx("font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>
-            Resume AI
+            Resume
           </Link>
           : one per import, tailoring, cover letter, profile or message; a single AI fix uses a fifth.
         </Balance>
@@ -130,7 +130,7 @@ export function SavedCredits({ saved }: { saved: NonNullable<Entitlements["saved
   const minutes = wholeMinutes(saved.interview_minutes_left);
   const parts = [
     minutes >= 1 && `${minutes.toLocaleString()} interview minute${minutes === 1 ? "" : "s"}`,
-    saved.resume > 0 && `${saved.resume.toLocaleString()} Resume AI credit${saved.resume === 1 ? "" : "s"}`,
+    saved.resume > 0 && `${saved.resume.toLocaleString()} Resume credit${saved.resume === 1 ? "" : "s"}`,
   ].filter(Boolean);
   if (!parts.length) return null;
   return (

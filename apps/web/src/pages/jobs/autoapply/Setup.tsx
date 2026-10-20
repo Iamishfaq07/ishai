@@ -25,7 +25,7 @@ const LEVELS: Array<{ id: ApplyLevel; label: string }> = [
   { id: "senior", label: "Senior" },
 ];
 
-/** Jobs AI → Applications → Set up: the one-time setup of Orbit Apply. */
+/** Jobs → Applications → Set up: the one-time setup of Orbit Apply. */
 export function AutoApplySetupPage() {
   const setup = useAsync(() => applyApi.getApplySetup(), [], "apply-setup");
   const bank = useAsync(() => applyApi.getApplyBank(), [], "apply-bank");
@@ -285,7 +285,7 @@ function ResumeStep({
     return (
       <Section title="Your resume">
         <p className="text-sm">
-          Orbit Apply uses a resume you made in Resume AI.{" "}
+          Orbit Apply uses a resume you made in Resume.{" "}
           <Link to={RESUME_AI_HOME} className={textLink}>
             Make one first
           </Link>
@@ -507,7 +507,7 @@ function FiltersStep({
   );
   const toggleIn = <T extends string>(items: T[], item: T): T[] => (items.includes(item) ? items.filter((x) => x !== item) : [...items, item]);
   return (
-    <Section title="Which jobs" hint="Jobs come from Jobs AI's feed and must fit all of these. Empty means what your Jobs AI profile says.">
+    <Section title="Which jobs" hint="Jobs come from Jobs's feed and must fit all of these. Empty means what your Jobs profile says.">
       <div className="grid gap-3 sm:grid-cols-2">
         {list("titles", "Job titles", "Separate with commas.", titles.join(", "))}
         {list("keywords", "Must mention", "Each word must be in the title or the skills.")}
@@ -631,7 +631,7 @@ function ModeStep({
             onChange={(e) => set("daily_limit", Math.max(1, Math.min(setup.caps.max_daily_limit, Number(e.target.value) || 1)))}
           />
         </Field>
-        <Field label={`Match score a job needs: ${draft.threshold}%`} htmlFor={`${id}-threshold`} hint="Jobs AI's match score. Higher sends fewer, closer matches.">
+        <Field label={`Match score a job needs: ${draft.threshold}%`} htmlFor={`${id}-threshold`} hint="Jobs's match score. Higher sends fewer, closer matches.">
           <input
             id={`${id}-threshold`}
             type="range"

@@ -7,7 +7,7 @@ import { STATUS_MARK } from "./model";
 import { StagePill } from "./StagePill";
 
 /**
- * Jobs AI's public page, drawn with Jobs AI's own pieces (DECISIONS D79): the match card, the fit check, the tracker's
+ * Jobs's public page, drawn with Jobs's own pieces (DECISIONS D79): the match card, the fit check, the tracker's
  * columns and stage marks (STATUS_MARK, StagePill), the Mission room's steps and its interview-day tasks. Employers and
  * people are made up and marked as examples; the sources and the tasks are the product's own.
  */
@@ -25,7 +25,7 @@ export function JobsHeroArt() {
         ref={p.ref}
         {...p.attrs}
         role="img"
-        aria-label={`An example match in Jobs AI: ${JOB.title} at ${JOB.company}, ${city ? `in ${city}` : "remote"}, an ${JOB.match} percent match with ${JOB.have.join(", ")} on the resume and ${JOB.missing} missing, then an AI fit check that says it's a strong fit.`}
+        aria-label={`An example match in Jobs: ${JOB.title} at ${JOB.company}, ${city ? `in ${city}` : "remote"}, an ${JOB.match} percent match with ${JOB.have.join(", ")} on the resume and ${JOB.missing} missing, then an AI fit check that says it's a strong fit.`}
         className="kp relative pb-28 sm:pb-32"
       >
         <div className={cx(solid, "relative p-5")}>
@@ -198,7 +198,7 @@ export function TrackerArt({ compact = false }: { compact?: boolean }) {
 
 // ─── The toolkit ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-/** Where the jobs come from: the careers-page systems Jobs AI reads, then the remote boards, each ticking in. */
+/** Where the jobs come from: the careers-page systems Jobs reads, then the remote boards, each ticking in. */
 export function SourcesArt({ feeds }: { feeds: string[] }) {
   const p = usePlay<HTMLDivElement>();
   const boards = ["Greenhouse", "Lever", "Ashby", "SmartRecruiters"];

@@ -34,7 +34,7 @@ describe("app navigation", () => {
   });
 });
 
-describe("Offer AI's mark", () => {
+describe("the offer tool's mark", () => {
   it("is the rupee in India and money in general elsewhere", async () => {
     const { BadgeIndianRupee, Banknote } = await import("@orbit/ui");
     const offer = (country?: string) => allNavItems(true, country).find((i) => i.id === "offer")!;

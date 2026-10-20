@@ -102,7 +102,7 @@ async def full_prep(listing_id: str, body: FullPrepIn, user: Annotated[User, Dep
     profile = await db.get(JobSearchProfile, user.id)
     source = await _resume_for(db, user, profile, body.resume_id)
     if source is None:
-        raise HTTPException(422, "Create a resume in Resume AI first, then launch full prep.")
+        raise HTTPException(422, "Create a resume in Resume first, then launch full prep.")
     uid, source_id, source_revision = user.id, source.id, source.revision
     query = select(CareerPreparation).where(CareerPreparation.user_id == uid,
         CareerPreparation.listing_id == listing_id, CareerPreparation.source_resume_id == source_id,

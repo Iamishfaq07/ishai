@@ -3,7 +3,7 @@ import { ProductTabs, type ProductSection } from "../../components/products";
 import { RESUME_AI_HOME } from "./paths";
 
 /**
- * Orbit Resume AI, one of Orbit's products next to the interview copilot and Jobs AI: what its AI does (the product
+ * Orbit Resume, one of Orbit's products next to the interview copilot and Jobs: what its AI does (the product
  * home and the public page list the same things) and its own pages. Light on purpose: Home imports it.
  */
 
@@ -16,8 +16,8 @@ export interface ResumeAiFeature {
 }
 
 /**
- * Only what Resume AI really does today, in the order people need it. Finding jobs, and the outreach messages and the
- * Naukri and LinkedIn profiles written from a resume, are Jobs AI's (pages/jobs). India's as written; resumeAiFeatures
+ * Only what Resume really does today, in the order people need it. Finding jobs, and the outreach messages and the
+ * Naukri and LinkedIn profiles written from a resume, are Jobs's (pages/jobs). India's as written; resumeAiFeatures
  * words the student resume for everywhere else.
  */
 export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
@@ -59,7 +59,7 @@ export const RESUME_AI_FEATURES: ResumeAiFeature[] = [
   },
 ];
 
-/** What Resume AI does, worded for where the user applies: outside India the campus mode is for new graduates. */
+/** What Resume does, worded for where the user applies: outside India the campus mode is for new graduates. */
 export function resumeAiFeatures(country: string = INDIA): ResumeAiFeature[] {
   if (isIndia(country)) return RESUME_AI_FEATURES;
   return RESUME_AI_FEATURES.map((f) =>
@@ -74,12 +74,12 @@ export function resumeAiFeatures(country: string = INDIA): ResumeAiFeature[] {
   );
 }
 
-/** Resume AI's own pages, as tabs under its header once there's more than one. */
+/** Resume's own pages, as tabs under its header once there's more than one. */
 export const RESUME_AI_SECTIONS: ProductSection[] = [{ to: RESUME_AI_HOME, label: "My resumes", icon: FileText, end: true }];
 
-/** The tabs between Resume AI's pages. Nothing while it has only the one. */
+/** The tabs between Resume's pages. Nothing while it has only the one. */
 export function ResumeAiTabs() {
-  return <ProductTabs label="Resume AI" sections={RESUME_AI_SECTIONS} />;
+  return <ProductTabs label="Resume" sections={RESUME_AI_SECTIONS} />;
 }
 
 /** The colour of an ATS score, from red (needs work) to green (passes). */

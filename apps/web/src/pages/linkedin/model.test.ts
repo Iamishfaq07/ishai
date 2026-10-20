@@ -27,7 +27,7 @@ const suggestion = (part: LinkedInSuggestion["part"], more: Partial<LinkedInSugg
 
 const allowance = (more: Partial<ResumeAiAllowance>): ResumeAiAllowance => ({ unlimited: false, credits_left: 1, upgrade: null, fixes_left: 0, fixes_per_credit: 5, ...more });
 
-describe("LinkedIn AI model", () => {
+describe("LinkedIn model", () => {
   it("adds up sections when an older server sends only checks, unknown ones left out", () => {
     const state = { audit: { score: 50, checks: [c("h1", "headline", true, 4, 4), c("h2", "headline", false, 0, 5), c("p", "photo", false, 0, 2, { known: false })], keywords: [], found: [], missing: [], mismatches: [], posts: 0 } } as unknown as LinkedInState;
     expect(sections(state).map((s) => [s.id, s.points, s.max, s.known])).toEqual([["headline", 4, 9, true], ["photo", 0, 0, false]]);

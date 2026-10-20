@@ -252,7 +252,7 @@ export function withSeoHead(response, path, env) {
 // ---------------------------------------------------------------- the 404 page and the app's own pages
 
 const NOT_FOUND_TITLE = "Page not found | Orbit AI";
-const NOT_FOUND_DESCRIPTION = "That address isn't a page on Orbit. Go to the front page, Resume AI, Jobs AI, the free interview warm-up, or contact us.";
+const NOT_FOUND_DESCRIPTION = "That address isn't a page on Orbit. Go to the front page, Resume, Jobs, the free interview warm-up, or contact us.";
 /** What a 404 shows before the app loads (and all a crawler that doesn't run JavaScript reads). The app then draws
  *  its own "This page isn't here" (pages/NotFound.tsx) over it. */
 export const NOT_FOUND_BODY = `<main id="main" class="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-16">
@@ -260,9 +260,9 @@ export const NOT_FOUND_BODY = `<main id="main" class="mx-auto flex w-full max-w-
       <h1 class="mt-2 font-display text-3xl font-semibold tracking-tight">This page isn't here</h1>
       <p class="mt-2 text-base text-zinc-600">The link may be old, or the address was typed wrong.</p>
       <ul class="mt-6 space-y-2">
-        <li><a href="/">Orbit: interview practice, live interview help, Resume AI and Jobs AI</a></li>
-        <li><a href="/resume-ai">Resume AI: ATS score and resume fixes</a></li>
-        <li><a href="/jobs">Jobs AI: new jobs that fit you</a></li>
+        <li><a href="/">Orbit: interview practice, live interview help, Resume and Jobs</a></li>
+        <li><a href="/resume-ai">Resume: ATS score and resume fixes</a></li>
+        <li><a href="/jobs">Jobs: new jobs that fit you</a></li>
         <li><a href="/warmup">Free interview warm-up</a></li>
         <li><a href="/contact">Contact us</a></li>
       </ul>

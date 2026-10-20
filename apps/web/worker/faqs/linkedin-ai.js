@@ -3,7 +3,7 @@
 /** @type {ReadonlyArray<readonly [string, string]>} */
 export const LINKEDIN_AI_FAQ = [
   [
-    "How does LinkedIn AI read my profile?",
+    "How does LinkedIn read my profile?",
     "LinkedIn doesn't let other sites read profiles from a link, so you upload the PDF LinkedIn makes of your profile (Save to PDF, on the desktop site), or paste the profile's text. Orbit doesn't keep the file and never signs in to LinkedIn.",
   ],
   [
@@ -23,7 +23,7 @@ export const LINKEDIN_AI_FAQ = [
     "The score, the search preview and the fixes worked out without AI, such as your skills and the custom URL, are free. An AI fix uses a fifth of a resume credit, and rewriting the headline, About and skills in one go uses one credit.",
   ],
   [
-    "Is LinkedIn AI made by LinkedIn?",
+    "Is LinkedIn made by LinkedIn?",
     "No. It's part of Orbit and isn't made by or connected to LinkedIn. The search preview is Orbit's own drawing of roughly what a recruiter's search shows.",
   ],
   ];

@@ -18,6 +18,7 @@ from orbit_api.workflow_advice import INSTRUCTION, AdviceIn, validate_advice
 from orbit_api.workflow_ai import preview
 
 from .action_priority import attention_packets
+from .actions import queue
 from .launchpad import snapshot
 
 router = APIRouter(prefix="/v1/jobs/launchpad", tags=["career planning"],
@@ -52,6 +53,9 @@ async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[
     stages = {state: count for state, count in await db.execute(select(JobApplication.status, func.count())
         .where(JobApplication.user_id == user.id).group_by(JobApplication.status))}
     attention = int(await db.scalar(select(func.count()).select_from(attention_packets(user.id).subquery())) or 0)
+    interview_id = await db.scalar(select(JobApplication.id).where(
+        JobApplication.user_id == user.id, JobApplication.status == "interviewing")
+        .order_by(JobApplication.status_at.desc(), JobApplication.id).limit(1))
     has_search = bool(source["prefs"]["titles"]) and source["profile_resume_id"] == source["resume_id"]
     search_path = "/jobs?start=1" + (f"&resume_id={resume.id}" if resume else "")
     facts = [{"id": "resume", "label": "Selected resume", "path": "/jobs?work=resume",
@@ -64,14 +68,25 @@ async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[
                  "Review target roles and which resume your search should use."},
         {"id": "attention", "label": "Application review", "path": "/jobs/applications",
          "text": f"{attention} prepared applications currently require candidate review or input."},
-        {"id": "interviews", "label": "Interviews", "path": "/jobs/actions",
+        {"id": "interviews", "label": "Interviews",
+         "path": f"/jobs/mission/{interview_id}?tab=plan" if interview_id else "/jobs/tracker",
          "text": f"{stages.get('interviewing', 0)} jobs are marked interviewing in your own tracker."},
         {"id": "outcomes", "label": "Recorded outcomes", "path": "/jobs/tracker",
          "text": f"Your tracker records {stages.get('offer', 0)} offer and {stages.get('hired', 0)} hired stages. "
                  "These are recorded stages, not independently verified employer confirmations."},
     ])
     by_id = {f["id"]: f for f in facts}
-    if attention:
+    actions = await queue(db, user)
+    focus = next((item for item in actions["items"] if item["id"] == actions["focus_id"]), None)
+    if focus:
+        # Reuse the action desk's priority and owned links, but only send static explanations to the model.
+        # Job/contact names, company details and notes are deliberately excluded from plan facts.
+        scheduled = {"id": "scheduled", "label": "Next saved action", "path": focus["path"],
+                     "text": focus["priority_reason"]}
+        facts.insert(0, scheduled)
+        by_id["scheduled"] = scheduled
+        next_id, action = "scheduled", focus["action_label"]
+    elif attention:
         next_id, action = "attention", "Review applications needing input"
     elif stages.get("interviewing"):
         next_id, action = "interviews", "Prepare for recorded interviews"
@@ -88,10 +103,13 @@ async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[
     next_step = {**by_id[next_id], "action": action}
     if action == "Explore matching jobs":
         next_step["path"] = "/jobs/matches"
-    material = {"source": source["version"], "facts": facts, "stages": stages, "attention": attention}
+    material = {"source": source["version"], "facts": facts, "stages": stages, "attention": attention,
+                "actions": actions["version"]}
     return {"version": hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest(),
         "resume_id": source["resume_id"], "resumes": source["resumes"], "checks": checks, "facts": facts,
-        "next_step": next_step, "tracker": stages}
+        "next_step": next_step, "tracker": stages,
+        "activity": {"count": len(actions["items"]), "truncated": actions["truncated"],
+                     "next_at": focus["due_at"] if focus else None}}
 
 
 @router.get("/progress")
@@ -116,6 +134,7 @@ async def plan(body: PlanIn, user: Annotated[User, Depends(require_verified_emai
         'freshers; education and real projects are valid starting evidence. Never suggest fabricated experience, '
         'skills or achievements. Do not instruct the user to enable mass applying or bypass employer checks. '
         'Prioritize applications needing review and recorded interviews when present. Respect candidate review. '
+        'When a next saved action is supplied, explain that action first using its recorded priority. '
         'Hired/offer tracker stages are self-reports. Never promise hiring or claim an action was completed.',
         json.dumps({"facts": source["facts"]}), lambda raw: validate_advice(raw, source["facts"]))
     if (await progress(db, user, body.resume_id))["version"] != body.version:

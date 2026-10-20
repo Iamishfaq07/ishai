@@ -258,7 +258,7 @@ export function BillingPage() {
         <div>
           <h2 id="packs-title" className="flex items-center gap-3 font-semibold"><Spot kind="credits" />Credits</h2>
           <p className="text-sm text-zinc-500">
-            Pay as you go: 1 interview credit is 1 hour of live or mock interviews, and Resume AI credits come with
+            Pay as you go: 1 interview credit is 1 hour of live or mock interviews, and Resume credits come with
             every pack. Credits never expire and are used whenever you're not on a plan.
           </p>
         </div>

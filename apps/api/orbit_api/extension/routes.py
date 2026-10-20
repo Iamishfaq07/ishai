@@ -124,7 +124,7 @@ async def fit(body: FitIn, user: Annotated[User, Depends(current_user)],
     data = _data(resume)
     if data is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
-                            "Make a resume in Resume AI first: the check compares it with the job.")
+                            "Make a resume in Resume first: the check compares it with the job.")
     keywords = extract_keywords(body.job_text)
     result = match_keywords(keywords, data)
     total = len(result.matched) + len(result.missing)

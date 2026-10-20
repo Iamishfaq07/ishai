@@ -97,7 +97,7 @@ async def turn_off(body: OffIn, db: Annotated[AsyncSession, Depends(get_db)]) ->
     """The email's "stop these emails" link: no sign-in, the token says whose. Unknown tokens are 404."""
     row = await db.scalar(select(JobSearchProfile).where(JobSearchProfile.alert_token == body.token))
     if row is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "That link has expired. Turn alerts off in Jobs AI, Profile.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "That link has expired. Turn alerts off in Jobs, Profile.")
     row.alert = "off"
     await db.commit()
 
@@ -110,7 +110,7 @@ def _email(user: User, frequency: str, jobs: list[tuple[JobListing, int]], token
     when = "today" if frequency == "daily" else "this week"
     lines = [f"Hi {user.name or 'there'},", "",
              f"{len(jobs)} new job{'' if len(jobs) == 1 else 's'} {when} that match{'es' if len(jobs) == 1 else ''} "
-             "your Jobs AI profile:", ""]
+             "your Jobs profile:", ""]
     for row, score in jobs:
         lines += [f"{row.title} at {row.company} ({score}% match)",
                   *([f"  {row.salary}"] if row.salary else []),

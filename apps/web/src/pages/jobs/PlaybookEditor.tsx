@@ -1,4 +1,5 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Button, Callout, Field, Input } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -6,13 +7,21 @@ import { useAsync } from "../../lib/useAsync";
 
 interface Playbook { revision: number; follow_up_days: number | null; prep_hours: number | null }
 export function PlaybookEditor({ onChanged }: { onChanged: (saved: boolean) => void }) {
+  const { hash } = useLocation();
+  const details = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (hash !== "#follow-up-rules" || !details.current) return;
+    details.current.open = true;
+    details.current.querySelector("summary")?.focus({ preventScroll: true });
+    details.current.scrollIntoView({ block: "start" });
+  }, [hash]);
   const state = useAsync(() => api.call<Playbook>("/v1/jobs/playbook"), [], "career-playbook");
   const [reset, setReset] = useState(0);
   const reload = async () => {
     const next = await api.call<Playbook>("/v1/jobs/playbook");
     state.setData(() => next); setReset((n) => n + 1); onChanged(false);
   };
-  return <details className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900">
+  return <details ref={details} id="follow-up-rules" className="scroll-mt-28 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900">
     <summary className="cursor-pointer rounded-lg font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500">Your follow-up playbook</summary>
     <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Choose which reminders Orbit derives from your saved activity. Rules are off until you enable and save them. This adds actions here; it never sends a message or changes a job status.</p>
     {state.error && <Callout tone="error">{errorText(state.error)} <Button variant="ghost" onClick={state.reload}>Retry loading rules</Button></Callout>}

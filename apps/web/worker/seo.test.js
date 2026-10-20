@@ -413,7 +413,7 @@ describe("structured data (site.js)", () => {
   });
 
   it("numbers breadcrumbs from 1 and escapes '<' so no value can end the script", () => {
-    expect(breadcrumbs([["Home", "/"], ["Jobs AI", "/jobs"]]).itemListElement.map((i) => i.position)).toEqual([1, 2]);
+    expect(breadcrumbs([["Home", "/"], ["Jobs", "/jobs"]]).itemListElement.map((i) => i.position)).toEqual([1, 2]);
     expect(jsonLdText({ name: "</script><b>" })).not.toContain("</script>");
   });
 });

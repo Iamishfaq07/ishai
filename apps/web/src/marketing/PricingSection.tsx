@@ -70,11 +70,11 @@ export function PricingSection({
         <h3 className="mk-h3 text-zinc-950 dark:text-white">Pay as you go: credits</h3>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
           {packs === null && !india
-            ? "1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them; what's in them never expires."
+            ? "1 interview credit is 1 hour of live or mock interviews, with Resume credits included. Bought once when you need them; what's in them never expires."
             : paypal
-              ? "1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, in US dollars through PayPal (your PayPal account, or a card where PayPal offers it). What's in them never expires."
+              ? "1 interview credit is 1 hour of live or mock interviews, with Resume credits included. Bought once when you need them, in US dollars through PayPal (your PayPal account, or a card where PayPal offers it). What's in them never expires."
               : cards
-                ? `1 interview credit is 1 hour of live or mock interviews, with Resume AI credits included. Bought once when you need them, by ${india ? "UPI, card or netbanking" : packs?.[0]?.currency === "USD" ? "card, in US dollars" : abroad ? "card from any country (in US dollars outside India)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
+                ? `1 interview credit is 1 hour of live or mock interviews, with Resume credits included. Bought once when you need them, by ${india ? "UPI, card or netbanking" : packs?.[0]?.currency === "USD" ? "card, in US dollars" : abroad ? "card from any country (in US dollars outside India)" : "an Indian card, UPI or netbanking for now (cards from other countries are coming soon)"}. What's in them never expires.`
                 : india
                   ? "Credit packs, bought once with any UPI app when you need them. What's in them never expires."
                   : packs?.[0]?.currency === "USD"
@@ -110,8 +110,8 @@ export function PricingSection({
                 ["Job matches, search links to other job sites, the application tracker", "Free"],
                 ["An AI fit check for a job", stats ? `Free, ${stats.fit_daily} a day` : "Free, a few a day"],
                 ["A practice question with instant feedback", "Free, no account needed"],
-                ["An AI action in Resume AI or Outreach: import, tailor, whole-resume rewrite, cover letter, a message", "1 AI credit each"],
-                ["A single AI fix in Resume AI: one ATS check, one section or line", "1/5 of an AI credit"],
+                ["An AI action in Resume or Outreach: import, tailor, whole-resume rewrite, cover letter, a message", "1 AI credit each"],
+                ["A single AI fix in Resume: one ATS check, one section or line", "1/5 of an AI credit"],
                 ["A mock interview or a live session", "Interview credits (1 credit = 1 hour), used by the minute"],
               ] as Array<[string, string]>).map(([what, cost]) => (
                 <tr key={what}>

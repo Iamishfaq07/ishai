@@ -19,12 +19,12 @@ export const PAGE_META = {
       "Interview practice and live help, a resume checker with an ATS score, and new jobs that fit you. One free account. No subscription.",
   },
   "/resume-ai": {
-    title: "Orbit Resume AI: free ATS resume checker and builder",
+    title: "Orbit Resume: free ATS resume checker and builder",
     description:
       "An ATS score out of 100, what's missing for the job you want, and AI rewrites that keep your own numbers. Editing, the score and downloads are free.",
   },
   "/jobs": {
-    title: "Orbit Jobs AI: jobs that fit your resume, from careers pages",
+    title: "Orbit Jobs: jobs that fit your resume, from careers pages",
     description:
       "The latest openings from companies' careers pages, matched to your resume, with a tracker and free AI fit checks. Apply always opens the original post.",
   },
@@ -54,7 +54,7 @@ export const PAGE_META = {
       "In calls where AI help is allowed, Orbit hears the question and suggests an answer from your resume and the job post. In Chrome, Edge or on Windows.",
   },
   "/linkedin-ai": {
-    title: "Orbit LinkedIn AI: score your profile, paste the fixes",
+    title: "Orbit LinkedIn: score your profile, paste the fixes",
     description:
       "A score out of 100 for your LinkedIn profile, section by section, the fixes to paste in, and how a recruiter's search shows you. Not made by LinkedIn.",
   },

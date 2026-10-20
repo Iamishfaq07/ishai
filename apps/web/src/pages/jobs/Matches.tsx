@@ -47,7 +47,7 @@ import { JOBS_PROFILE } from "./paths";
 import { Sheet } from "./Sheet";
 
 /**
- * Jobs AI → Matches: the latest openings that match the user's resume (from companies' own career pages and
+ * Jobs → Matches: the latest openings that match the user's resume (from companies' own career pages and
  * remote-job boards that allow it), best first, with the search box, sort and quick filters, and "search on" links
  * for the sites Orbit can't read. `?q=` and `?sort=` keep the search in the address, so Back returns to it.
  */
@@ -501,7 +501,7 @@ export function NoResume({ blank = false }: { blank?: boolean }) {
         {blank ? (
           <>
             <strong className="font-medium">Add your skills to see how you match.</strong> Your resume doesn't list a job title or skills yet: add them in
-            Resume AI, or type your skills into your profile. Until then these are the newest jobs, with no match score.
+            Resume, or type your skills into your profile. Until then these are the newest jobs, with no match score.
           </>
         ) : (
           <>
@@ -512,7 +512,7 @@ export function NoResume({ blank = false }: { blank?: boolean }) {
       </p>
       {/* Its own line on a phone, so the words get the card's full width. */}
       <Link to={RESUME_AI_HOME} className={cx(linkButton("primary", "sm"), "w-full sm:w-auto")}>
-        {blank ? "Open Resume AI" : "Add your resume"}
+        {blank ? "Open Resume" : "Add your resume"}
       </Link>
     </Card>
   );
@@ -552,7 +552,7 @@ export function ProfileCard({ profile, suggesting, className }: { profile: JobPr
             <Link to={resumePath(profile.resume.id)} className={textLink}>
               {profile.resume.title}
             </Link>{" "}
-            in Resume AI{profile.suggested?.by === "ai" ? ", read by the AI." : "."}
+            in Resume{profile.suggested?.by === "ai" ? ", read by the AI." : "."}
           </>
         ) : (
           "No resume yet."

@@ -336,7 +336,7 @@ function CompaniesHome() {
             )}
             <p className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
               <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" aria-hidden />
-              Your own Orbit (practice, resumes, sessions, LinkedIn AI) is never shown to a company, including yours. A company sees only what someone sends it when they apply.
+              Your own Orbit (practice, resumes, sessions, LinkedIn) is never shown to a company, including yours. A company sees only what someone sends it when they apply.
             </p>
           </div>
         )}

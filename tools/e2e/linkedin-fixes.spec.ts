@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-// LinkedIn AI, like Resume AI: read a profile, fix one part with the AI (mock provider), apply it to Orbit's copy so
+// LinkedIn, like Resume: read a profile, fix one part with the AI (mock provider), apply it to Orbit's copy so
 // the score moves, tick it done on LinkedIn, and find it all still there after a reload. Then the filled page against
 // WCAG A/AA in both themes. The profile is made up.
 const API = "http://127.0.0.1:8000";
@@ -46,7 +46,7 @@ async function score(page: Page): Promise<number> {
   return Number(text?.match(/\d+/)?.[0] ?? NaN);
 }
 
-test("LinkedIn AI: fix the headline, apply it, tick it done, and it all stays", async ({ page, context }) => {
+test("LinkedIn: fix the headline, apply it, tick it done, and it all stays", async ({ page, context }) => {
   test.setTimeout(90_000);
   await signup(context);
   await page.emulateMedia({ reducedMotion: "reduce" });
@@ -87,7 +87,7 @@ test("LinkedIn AI: fix the headline, apply it, tick it done, and it all stays", 
 });
 
 for (const scheme of ["light", "dark"] as const) {
-  test(`LinkedIn AI with a fix written has no WCAG A/AA violations (${scheme})`, async ({ page, context }) => {
+  test(`LinkedIn with a fix written has no WCAG A/AA violations (${scheme})`, async ({ page, context }) => {
     test.setTimeout(90_000);
     await signup(context);
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });

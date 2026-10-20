@@ -13,7 +13,7 @@ export function JobsWorkspaceNav() {
   const [finder, setFinder] = useState(false);
   const tools = group ? workspaceTools(group.id) : [];
   return <div className="mb-6 space-y-3">
-    <ProductTabs label="Jobs AI" sections={JOB_WORKSPACES.map((area, index) => ({
+    <ProductTabs label="Jobs" sections={JOB_WORKSPACES.map((area, index) => ({
       to: area.to, label: area.label, end: true, also: area.paths, icon: ICONS[index]!,
     }))} />
     <div className="flex flex-wrap items-center justify-between gap-2">
