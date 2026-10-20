@@ -21,13 +21,14 @@ export default function ContactResearch({ listingId, onSaved }: { listingId: str
   const jobs = tracker.data ?? [];
   const [choice, setChoice] = useState({ context: listingId, id: "" });
   const target = jobs.find((j) => j.id === (choice.context === listingId ? choice.id : ""))
-    ?? jobs.find((j) => j.listing_id === listingId) ?? jobs[0];
+    ?? jobs.find((j) => j.listing_id === listingId) ?? (listingId ? undefined : jobs[0]);
   return <section id="contact-research" aria-label="Contact finder" className="mt-4 space-y-4">
     <Field label="Job to research" htmlFor={selectId}><Select id={selectId} value={target?.id ?? ""} onChange={(e) => setChoice({ context: listingId, id: e.target.value })}>
-      {!jobs.length && <option value="">Save a job first</option>}
+      {!target && <option value="">{jobs.length ? "Choose a saved job" : "Save a job first"}</option>}
       {jobs.map((j) => <option key={j.id} value={j.id}>{j.title} · {j.company}</option>)}
     </Select></Field>
     {tracker.error && <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>}
+    {listingId && jobs.length > 0 && !target && <p className="rounded-xl bg-amber-500/10 p-3 text-sm">The linked job is not in your tracker. Save it first, or explicitly choose a different saved job to research.</p>}
     {!jobs.length ? <p className="text-sm">Save a job in <Link className="underline" to="/jobs/matches">Matches</Link> or add it to your tracker to start contact research.</p> :
       target && <JobNetwork key={target.id} applicationId={target.id} onSaved={onSaved} />}
   </section>;

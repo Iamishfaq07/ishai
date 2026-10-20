@@ -11,6 +11,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.auto_apply import hosted, planner, rules
 from orbit_api.auto_apply.pacing import aware
 from orbit_api.db import get_db
+from orbit_api.job_portal.action_priority import attention_packets
 from orbit_api.models import ApplicationPacket, AutoApplySetup, JobApplication, JobSearchProfile, Resume, User
 from orbit_api.ratelimit import limit_user
 
@@ -59,6 +60,7 @@ async def journey(user: Annotated[User, Depends(current_user)],
     return {"steps": steps, "next_step": "hired" if tracker["hired"] else next(
             (s["id"] for s in steps if not s["done"]), "hired"),
         "packets": dict(packets), "tracker": dict(tracker), "paused": bool(setup and setup.paused),
-        "needs_attention": sum(packets[s] for s in ("needs_answer", "needs_you", "review")),
+        "needs_attention": int(await db.scalar(
+            select(func.count()).select_from(attention_packets(user.id).subquery())) or 0),
         "email_verified": user.email_verified, "execution": setup.execution if setup else "browser",
         "hosted_online": hosted_online, "executor_ready": executor_ready}

@@ -502,6 +502,10 @@ def _summary(p: ApplicationPacket, has_proof: bool) -> dict[str, Any]:
 
 async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
     proof = await db.get(ApplyProof, p.id)
+    # A prepared packet can belong to an already saved job before any submission links it.
+    # Resolve context by owned listing; this GET never creates or marks an application as sent.
+    tracker_id = await db.scalar(select(JobApplication.id).where(
+        JobApplication.user_id == p.user_id, JobApplication.listing_id == p.listing_id))
     status_path = None
     if p.ats == "orbit" and p.status == "submitted":
         from orbit_api.business.emails import status_token_for
@@ -519,7 +523,7 @@ async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
         result_status=p.result_status, result_reason=p.result_reason, confirmation_text=p.confirmation_text,
         final_url=p.final_url, submitted=p.submitted_payload,
         screenshot_url=f"/v1/apply/packets/{p.id}/screenshot" if proof is not None else None,
-        resume_pdf_url=f"/v1/apply/packets/{p.id}/resume.pdf", tracker_id=p.application_id)
+        resume_pdf_url=f"/v1/apply/packets/{p.id}/resume.pdf", tracker_id=tracker_id)
 
 
 @router.get("/packets", response_model=list[PacketSummary], dependencies=[read_limit])

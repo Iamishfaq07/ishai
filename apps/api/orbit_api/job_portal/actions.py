@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import Field
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
@@ -14,6 +14,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.business.hiring_schema import Contract
 from orbit_api.db import get_db
 from orbit_api.job_portal import playbooks
+from orbit_api.job_portal.action_priority import PACKET_ACTIONS, TERMINAL_JOBS, attention_packets, priority
 from orbit_api.models import ApplicationPacket, JobApplication, JobContact, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.workflow_ai import preview
@@ -34,7 +35,7 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
     reminders, truncated = await playbooks.followups(db, user.id, playbook["follow_up_days"], now)
     items.extend(reminders)
     for job in await db.scalars(select(JobApplication).where(JobApplication.user_id == user.id,
-            JobApplication.status.not_in(("rejected", "hired")), JobApplication.next_at <= horizon)
+            JobApplication.status.not_in(TERMINAL_JOBS), JobApplication.next_at <= horizon)
             .order_by(JobApplication.next_at, JobApplication.id).limit(101)):
         assert job.next_at is not None
         past = aware(job.next_at) < now
@@ -46,7 +47,9 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
                 "Open your interview preparation plan." if job.status == "interviewing" else
                 "Review your saved next step and update its date."),
             "due_at": aware(job.next_at).isoformat(), "overdue": past,
-            "path": f"/jobs/mission/{job.id}"})
+            "path": f"/jobs/mission/{job.id}?tab={'plan' if job.status == 'interviewing' and not past else 'timeline'}",
+            "action_label": ("Prepare for interview" if job.status == "interviewing" and not past
+                             else "Update next step")})
         if prep:
             items[-1].update(rule="interview_preparation", detail=(
                 f"Your {playbook['prep_hours']}-hour preparation window is open. "
@@ -58,21 +61,21 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
             "detail": (f"Follow up with your contact at {contact.company}." if contact.company
                        else "Follow up with your contact."),
             "due_at": aware(contact.follow_up_at).isoformat(), "overdue": aware(contact.follow_up_at) < now,
-            "path": "/jobs/outreach#people"})
-    for packet in await db.scalars(select(ApplicationPacket).where(ApplicationPacket.user_id == user.id,
-            ApplicationPacket.status.in_(("needs_answer", "review", "needs_you", "handoff", "failed")))
-            .order_by(ApplicationPacket.updated_at, ApplicationPacket.id).limit(101)):
+            "path": "/jobs/outreach#people", "action_label": "Open saved contacts"})
+    for packet in await db.scalars(attention_packets(user.id).order_by(
+            case((ApplicationPacket.status == "needs_answer", 0), (ApplicationPacket.status == "review", 1), else_=2),
+            ApplicationPacket.updated_at, ApplicationPacket.id).limit(101)):
         items.append({"id": f"packet:{packet.id}", "kind": "application", "title": f"{packet.title} · {packet.company}",
-            "detail": {"needs_answer": "Add a truthful answer to a required question.",
-                "review": "Review the prepared application before approval.",
-                "needs_you": "This application needs your attention before it can proceed.",
-                "handoff": "Finish this application on the employer's site.",
-                "failed": "Check the application result before deciding what to do next."}[packet.status],
+            "detail": PACKET_ACTIONS[packet.status][0], "action_label": PACKET_ACTIONS[packet.status][1],
+            "source_status": packet.status, "source_updated_at": aware(packet.updated_at).isoformat(),
             "due_at": None, "overdue": False, "path": f"/jobs/applications?packet={packet.id}"})
-    items.sort(key=lambda i: (i["due_at"] is None, i["due_at"] or "", i["id"]))
+    for item in items:
+        item.setdefault("action_label", "Review follow-up")
+    items.sort(key=lambda item: priority(item, now))
     # Include text and source dates in the revision; no stale briefing after any relevant source changes.
     version = hashlib.sha256(json.dumps({"items": items, "playbook": playbook}, sort_keys=True).encode()).hexdigest()
-    return {"version": version, "items": items[:100], "truncated": truncated or len(items) > 100,
+    return {"version": version, "items": items[:100], "focus_id": items[0]["id"] if items else None,
+            "truncated": truncated or len(items) > 100,
             "as_of": now.isoformat(), "horizon_days": 7}
 
 

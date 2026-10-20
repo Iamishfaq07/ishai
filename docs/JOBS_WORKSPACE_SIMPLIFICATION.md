@@ -41,9 +41,9 @@ The daily action filters, manual refresh and calendar export share one disclosur
 
 ## Further product work to validate
 
-1. Resume a specific unfinished application from Today, using server-confirmed packet state.
-2. Show the chosen job context consistently across fit checks, preparation and outreach.
+1. Implemented in the daily focus follow-up: resume a specific unfinished application from Today using server-confirmed packet state. See [Personal daily focus](./PERSONAL_DAILY_FOCUS.md).
+2. Application review now links to its owned job workspace, preparation and job-specific outreach. Continue validating context consistency across the remaining tools.
 3. Test whether candidates understand the distinction between their tracker and the agent's review queue.
 4. Improve global tool search using observed candidate vocabulary and privacy-preserving aggregate usage, after designing its data and consent requirements.
 
-These items are proposals, not shipped features or claims of improved hiring outcomes.
+Items 3 and 4 are proposals. No improvement in hiring outcomes has been measured.
