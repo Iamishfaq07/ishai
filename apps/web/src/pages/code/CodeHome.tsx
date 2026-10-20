@@ -1,10 +1,12 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Badge, CircleCheck, Code2, CodeScene, LoadGate, Spot, cx, focusRing, type SpotKind } from "@orbit/ui";
 import { Card, ErrorNote, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { codePath } from "./paths";
+import { OpportunityReturn } from "../../components/OpportunityReturn";
+import { careerToolHref } from "../../lib/opportunityTrail";
 
 /** Each pattern drawn, so the list reads at a glance (the API's pattern names; anything new gets the code window). */
 const PATTERN_SPOT: Record<string, SpotKind> = {
@@ -27,11 +29,13 @@ export const DIFFICULTY_TONE = { easy: "success", medium: "warning", hard: "dang
  * reviews your code and how you explained it.
  */
 export function CodeHomePage() {
+  const [params] = useSearchParams();
   const data = useAsync(() => api.codeProblems(), [], "code-problems");
   const d = data.data;
   const solved = d?.problems.filter((p) => p.solved).length ?? 0;
   return (
     <>
+      <OpportunityReturn />
       <PageHeader icon={Code2} title="Coding practice" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<CodeScene />} />
       <LoadGate loading={data.loading && !d} variant="card" count={3} label="Getting the problems">
         {data.error && !d ? (
@@ -67,7 +71,7 @@ export function CodeHomePage() {
                     <ul className="space-y-1">
                       {mine.map((p) => (
                         <li key={p.id}>
-                          <Link to={codePath(p.id)} className={cx("flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-zinc-500/5", focusRing)}>
+                          <Link to={careerToolHref(codePath(p.id), params)} className={cx("flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-zinc-500/5", focusRing)}>
                             {p.solved ? <CircleCheck className="h-4 w-4 shrink-0 text-emerald-500" aria-label="Solved" /> : <span aria-hidden className="h-4 w-4 shrink-0 rounded-full border-2 border-zinc-300 dark:border-zinc-600" />}
                             <span className="min-w-0 flex-1 truncate">{p.title}</span>
                             <Badge tone={DIFFICULTY_TONE[p.difficulty]} className="capitalize">{p.difficulty}</Badge>

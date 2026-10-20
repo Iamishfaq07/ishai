@@ -1,5 +1,11 @@
 # V6 baseline and verification — 20–21 October 2026
 
+## Increment 7 — connected tools, verification deferred by owner
+
+Base `ddc03794`, PR #443 confirmed merged. The owner's **no tests** instruction remains active. No tests/build/lint/typecheck/browser checks/screenshots/validation scripts were run; no test files added or changed. Source inspection and Git operations only. Earlier results do not validate this increment. `[skip ci]` requests automatic GitHub Actions skipping without workflow/protection changes or dispatch/rerun.
+
+Scope and deferred checks: `V6_CONNECTED_JOURNEY.md`. Owned return context across learning, coding, stories, evidence and session review; contextual step cards; combined help/updates; existing round-review integration. Implemented/unverified, draft review only, no launch sign-off or deployment.
+
 ## Increment 6 — requirement practice, verification deferred by owner
 
 Base `27cea82b`, PR #442 confirmed merged. The owner repeated **no tests**. No tests/builds/lint/typecheck/browser checks/screenshots/validation scripts were run; no test files added or changed. Source inspection and Git operations only. Earlier passing results do not validate this increment. `[skip ci]` requests automatic GitHub Actions skipping, without workflow/protection changes or dispatch/rerun.

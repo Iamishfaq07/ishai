@@ -14,6 +14,7 @@ import type {
   SecurityActivity,
   SignedInDevice,
   JobMission,
+  OpportunityContext,
   JobSourceReview,
   RequirementPractice,
   ResumeVersionComparison,
@@ -903,6 +904,7 @@ export function createApiClient(options: ApiClientOptions) {
 
     /** Job Mission Room: one tracked job as a workspace (stages, fit, resume, sent versions, offer, next step). */
     jobMission: (id: string) => json<JobMission>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission${localDays()}`),
+    opportunityContext: (id: string) => json<OpportunityContext>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/context`),
     jobSourceReview: (id: string) => json<JobSourceReview>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/source`),
     requirementPractice: (id: string) => json<RequirementPractice>(`/v1/jobs/tracker/${encodeURIComponent(id)}/mission/practice`),
     linkMissionResume: (id: string, resumeId: string | null) =>

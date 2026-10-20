@@ -8,6 +8,7 @@ import { errorText } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { actionLabel, sourceLabel, suggestNote } from "../lib/evidence";
 import { LibraryTabs } from "./Stories";
+import { OpportunityReturn } from "../components/OpportunityReturn";
 
 const MAX_CLAIM = 300;
 
@@ -168,6 +169,7 @@ export function EvidencePage() {
         title="Evidence vault"
         subtitle="Short claims about your work, each with where it comes from. Confirmed claims are facts live answers can use; suggestions wait for you."
       />
+        <OpportunityReturn />
 
       <Card className="mb-6 space-y-4">
         <form

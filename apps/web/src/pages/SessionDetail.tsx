@@ -25,6 +25,7 @@ import {
   sessionLanguageLabel,
 } from "@orbit/ui";
 import { BackLink } from "../components/BackLink";
+import { OpportunityReturn } from "../components/OpportunityReturn";
 import { Button, Card, ErrorNote, Input, PageHeader } from "../components/ui";
 import { api } from "../lib/api";
 import { SESSION_TYPE_LABEL, downloadText, errorText, formatClock, formatDate, formatDuration, isNotFound } from "../lib/format";
@@ -120,6 +121,7 @@ export function SessionDetailPage() {
 
   return (
     <div>
+      <OpportunityReturn />
       <PageHeader
         title={session.title}
         icon={SESSION_TYPE_ICON[session.type]}

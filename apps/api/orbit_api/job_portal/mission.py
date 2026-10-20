@@ -277,6 +277,21 @@ async def get_mission(entry_id: str, user: Annotated[User, Depends(current_user)
     return await mission(db, user, await _entry(db, entry_id, user), tz_offset=tz_offset)
 
 
+class OpportunityContext(BaseModel):
+    entry_id: str
+    title: str
+    company: str
+    evidence_enabled: bool
+
+
+@router.get("/{entry_id}/mission/context", response_model=OpportunityContext, dependencies=[read_limit])
+async def get_opportunity_context(entry_id: str, user: Annotated[User, Depends(current_user)],
+                                  db: Annotated[AsyncSession, Depends(get_db)]) -> OpportunityContext:
+    entry = await _entry(db, entry_id, user)
+    return OpportunityContext(entry_id=entry.id, title=entry.title, company=entry.company,
+                              evidence_enabled=get_settings().evidence_vault)
+
+
 @router.get("/{entry_id}/mission/source", response_model=SourceReview, dependencies=[read_limit])
 async def get_source_review(entry_id: str, user: Annotated[User, Depends(current_user)],
                             db: Annotated[AsyncSession, Depends(get_db)]) -> SourceReview:

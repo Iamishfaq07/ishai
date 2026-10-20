@@ -2,6 +2,8 @@
 
 What protects what, and where it lives in the code.
 
+V6 increment 7 adds minimal owned-job navigation context behind existing authentication/owner/rate checks. The banner remounts by account/job, discards obsolete reads and clears metadata on failure. Trail propagation is restricted to bounded fields and supported local personal-tool routes; no arbitrary return URL, new artifact association or worker privilege. Existing session/library ownership and reviewed writes remain authoritative. **No security/runtime/regression validation was run, per owner instruction.** See `implementation/V6_CONNECTED_JOURNEY.md`.
+
 V6 increment 6 adds a read-only requirement workshop using existing owned-job/fit queries and rate limits. AI selection keys bind the owned check and original row; replaced sources are rejected before generation and source context is rechecked afterwards. Existing workflow fencing, explicit AI request and shared quota remain. No automatic story/evidence/resume writer or new worker privilege. **No security/runtime/regression validation was run, per owner instruction.** See `implementation/V6_REQUIREMENT_PRACTICE.md`.
 
 V6 increment 5 adds an authenticated, rate-limited read-only owned-job/public-cache comparison. Stable listing ID and source are both matched; duplicate lookup reads only the shared cache. No provider request, approval, submission, new storage or business-candidate access is added. Fixed derived status facts ground the coach; displayed comparisons remain text and external links use the existing HTTP(S) filter. **No security/runtime/regression checks were run, per owner instruction.** See `implementation/V6_SOURCE_REVIEW.md` for deferred verification and limits.

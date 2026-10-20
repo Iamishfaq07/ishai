@@ -39,11 +39,13 @@ import { JOBS_TRACKER, jobPath } from "./paths";
 import { InterviewPrepPanel } from "./interview/InterviewPrep";
 
 import { opportunityStart } from "./opportunity";
+import { careerToolHref } from "../../lib/opportunityTrail";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
 const RequirementWorkshop = lazy(() => import("./RequirementWorkshop").then((m) => ({ default: m.RequirementWorkshop })));
 const GuideNext = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityNext })));
+const StepTools = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityStepTools })));
 type Tab = MissionTool;
 
 /**
@@ -85,6 +87,10 @@ export function JobMissionPage() {
   const toggleGuide = () => {
     const next = new URLSearchParams(params); next.set("guide", guided ? "0" : "1"); next.set("tab", tab); setParams(next);
   };
+  const openWorkshop = () => {
+    const next = new URLSearchParams(params); next.set("tab", "fit"); next.set("workshop", "1"); setParams(next);
+    requestAnimationFrame(() => { const heading = document.getElementById("requirement-practice-heading"); heading?.focus({ preventScroll: true }); heading?.scrollIntoView({ block: "start" }); });
+  };
 
   if (tracker.data && !entry) {
     return (
@@ -116,7 +122,7 @@ export function JobMissionPage() {
         ) : m && entry ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-zinc-600 dark:text-zinc-400">{guided ? "One job, one step at a time." : "All tools for this opportunity."}</p><Button variant="secondary" onClick={toggleGuide}>{guided ? "Open all job tools" : "Follow guided steps"}</Button></div>
-            {guided ? <Suspense fallback={<p role="status">Opening guided steps…</p>}><Guided entry={entry} mission={m} tab={tab} onSelect={setTab} onSaved={() => { tracker.reload(); mission.reload(); }} /></Suspense> : <Stages mission={m} />}
+            {guided ? <Suspense fallback={<p role="status">Opening guided steps…</p>}><Guided key={entry.id} entry={entry} mission={m} tab={tab} onSelect={setTab} onSaved={() => { tracker.reload(); mission.reload(); }} /></Suspense> : <Stages mission={m} />}
             <div className={cx("grid grid-cols-[minmax(0,1fr)] gap-6", !guided && "lg:grid-cols-[minmax(0,1fr)_20rem]")}>
               <div className="min-w-0">
                 {!guided && <><div role="group" aria-label="Job workspace areas" className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-zinc-500/5 p-1">
@@ -142,7 +148,7 @@ export function JobMissionPage() {
                     {MISSION_TOOLS.filter((tool) => tool.group === selected.group).map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}
                   </Select>
                 </Field></div></>}
-                {guided && ["fit", "interview", "plan", "practice", "company"].includes(tab) && <div className="mb-4"><Field label="Tools for this step" htmlFor="guided-step-tool"><Select id="guided-step-tool" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>{MISSION_TOOLS.filter((tool) => tool.group === selected.group && tool.id !== "resume").map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}</Select></Field></div>}
+                {guided && <Suspense><StepTools tab={tab} onSelect={setTab} /></Suspense>}
                 <section id="mission-tool-panel" aria-label={selected.label}>
                   {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
                   {tab === "interview" && (
@@ -155,7 +161,7 @@ export function JobMissionPage() {
                     />
                   )}
                   {tab === "plan" && <PrepPlanPanel entry={entry} onOpenInterview={() => setTab("interview")} />}
-                  {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
+                  {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel mission={m} entry={entry} onMission={update} />}
                   {tab === "company" && <CompanyPanel entry={entry} />}
                   {tab === "practice" && <PracticePanel mission={m} entry={entry} />}
@@ -267,7 +273,7 @@ const TONE = {
 } as const;
 
 /** What the job asks for, quoted, next to what the resume shows for it, quoted: never a claim without its source. */
-function FitPanel({ fit, entry }: { fit: MissionFit | null; entry: JobTrackerEntry }) {
+function FitPanel({ fit, entry, onPractice }: { fit: MissionFit | null; entry: JobTrackerEntry; onPractice: () => void }) {
   if (!fit) {
     return (
       <Card>
@@ -293,6 +299,7 @@ function FitPanel({ fit, entry }: { fit: MissionFit | null; entry: JobTrackerEnt
       </div>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">{fit.summary}</p>
       <p className="mt-3 rounded-xl bg-zinc-500/5 p-3 text-xs text-zinc-600 dark:text-zinc-400">This is a prior check. Its quotes may come from a different resume or evidence version. Relinking or editing a resume does not rerun it. Review your current resume and the original job before using these results.</p>
+      {fit.requirements.length > 0 && <Button variant="secondary" className="mt-3" onClick={onPractice}>Turn one requirement into a practice plan</Button>}
       {fit.requirements.length > 0 ? (
         <ul className="mt-4 divide-y divide-zinc-200 dark:divide-white/10">
           {fit.requirements.map((r, i) => {
@@ -462,6 +469,9 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
 }
 
 function PracticePanel({ mission, entry }: { mission: JobMission; entry: JobTrackerEntry }) {
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [params] = useSearchParams();
+  const context = new URLSearchParams(params); context.set("job", entry.id); context.set("career_from", "practice");
   return (
     <Card>
       <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="mic" />Practice for {entry.company}</h2>
@@ -479,6 +489,8 @@ function PracticePanel({ mission, entry }: { mission: JobMission; entry: JobTrac
       <Link to={practiceLink(entry, jobPath)} className={cx(linkButton("primary", "md"), "mt-4")}>
         Practise for this job <ArrowRight className="h-4 w-4" aria-hidden />
       </Link>
+      <div className="mt-4 flex flex-wrap gap-x-5"><Link className={textLink} to={careerToolHref("/documents/stories", context)}>Review real examples in your story bank</Link><Link className={textLink} to={careerToolHref("/learn", context)}>Work on a skill before rehearsing</Link></div>
+      <details className="mt-4" onToggle={(event) => setReviewOpen(event.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Review previous rounds, then try again</summary><p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Includes linked rounds and company-name matches from your history. Open a completed session to review your recorded answers and existing retry tools.</p>{reviewOpen && <Journey key={entry.id} entryId={entry.id} roundsOnly />}</details>
     </Card>
   );
 }

@@ -1,8 +1,10 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import type { CodeAttemptRecord, CodeLanguage, CodeProblem, CodeReview } from "@orbit/types";
 import { Badge, CircleAlert, CircleCheck, CosmicEmptyState, Lightbulb, Play, Sparkles, LoadGate, cx, focusRing } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
+import { OpportunityReturn } from "../../components/OpportunityReturn";
+import { careerToolHref } from "../../lib/opportunityTrail";
 import { Button, Card, ErrorNote, Field, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText, isNotFound } from "../../lib/format";
@@ -25,10 +27,12 @@ function starter(p: CodeProblem, lang: CodeLanguage): string {
 /** One problem: the statement, an editor, tests run in the browser, hints, and the interviewer's review. */
 export function CodeProblemPage() {
   const { problemId = "" } = useParams();
+  const [params] = useSearchParams();
   const data = useAsync(() => api.codeProblem(problemId), [problemId], `code-${problemId}`);
   return (
     <>
-      <BackLink to={CODE_HOME} className="mb-4">All problems</BackLink>
+      <OpportunityReturn />
+      <BackLink to={careerToolHref(CODE_HOME, params)} className="mb-4">All problems</BackLink>
       <LoadGate loading={data.loading && !data.data} variant="card" count={2} label="Getting the problem">
         {data.error && !data.data && !isNotFound(data.error) ? (
           <ErrorNote onRetry={data.reload}>{errorText(data.error)}</ErrorNote>

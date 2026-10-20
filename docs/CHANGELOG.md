@@ -1,5 +1,11 @@
 # Implementation log
 
+## Personal Orbit V6: connected tools for one job (2026-10-21, unverified)
+
+- Keep the selected job and practice-plan return path across Learning, Coding, Stories, Evidence and completed-session review. Context is owner-checked; related tools are grouped in a quiet return banner.
+- Replace the guided tool selector with contextual cards, combine AI/reply/calendar help, open practice plans from fit results, and connect previous-round reviews back to rehearsal. No automatic artifact association, claim or application send.
+- **All verification deferred by owner request.** No tests/build/lint/typecheck/browser validation. See `implementation/V6_CONNECTED_JOURNEY.md`. Draft PR only; no merge or deployment.
+
 ## Personal Orbit V6: requirement to practice (2026-10-21, unverified)
 
 - Turn a prior job requirement into a four-stage practice plan with project, explanation or coding formats. Keep historical source quotes visible, copy a clearly labeled brief, and continue to existing learning/practice/story/evidence tools without automatic claims.

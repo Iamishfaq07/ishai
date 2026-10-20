@@ -1,5 +1,7 @@
 # Launch sign-off — historical snapshot
 
+Latest source-review slice: [V6 connected opportunity tools](implementation/V6_CONNECTED_JOURNEY.md), base `ddc03794`. Implemented/unverified. No tests/build/lint/typecheck/browser validation under the owner's continued no-tests instruction. Draft review is not release approval; no merge or manual deployment.
+
 Latest source-review slice: [V6 requirement practice](implementation/V6_REQUIREMENT_PRACTICE.md), base `27cea82b`. Implemented/unverified. No tests/build/lint/typecheck/browser validation, per the owner's explicit instruction. Draft review is not release approval; no merge or manual deployment.
 
 Latest source-review slice: [V6 job source review](implementation/V6_SOURCE_REVIEW.md), base `018abd43`. Implemented/unverified. The owner repeated the no-tests instruction; no test/build/lint/typecheck/browser validation was run. Draft review is not release approval. No merge or manual deployment.
