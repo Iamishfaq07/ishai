@@ -1,5 +1,11 @@
 # V6 baseline and verification — 20–21 October 2026
 
+## Increment 6 — requirement practice, verification deferred by owner
+
+Base `27cea82b`, PR #442 confirmed merged. The owner repeated **no tests**. No tests/builds/lint/typecheck/browser checks/screenshots/validation scripts were run; no test files added or changed. Source inspection and Git operations only. Earlier passing results do not validate this increment. `[skip ci]` requests automatic GitHub Actions skipping, without workflow/protection changes or dispatch/rerun.
+
+Scope, rollout and deferred checks: `V6_REQUIREMENT_PRACTICE.md`. Four-stage requirement practice in the existing opportunity, optional source-bound exercise guidance through the existing coach/quota, and deliberate links to existing learning/practice/story/evidence tools. Implemented/unverified; draft review only, no release sign-off or deployment.
+
 ## Increment 5 — job source review, verification deferred by owner
 
 Base `018abd43`, PR #441 confirmed merged. **No tests, builds, lint, typecheck, browser checks, screenshots or validation scripts were run.** The owner repeated the no-tests instruction. Source inspection and Git operations only; no tests added or modified. Earlier passing results do not apply to this increment. Commits request `[skip ci]` without changing workflows/protection rules; no workflow dispatch/rerun.

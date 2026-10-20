@@ -1,5 +1,11 @@
 # Implementation log
 
+## Personal Orbit V6: requirement to practice (2026-10-21, unverified)
+
+- Turn a prior job requirement into a four-stage practice plan with project, explanation or coding formats. Keep historical source quotes visible, copy a clearly labeled brief, and continue to existing learning/practice/story/evidence tools without automatic claims.
+- Optional AI guidance binds the selected owned requirement and format using the existing coach/quota and source recheck. Replaced requirements require a new selection; no new experiment storage, migration or dependency.
+- **All verification deferred by owner request.** No tests/build/lint/typecheck/browser validation run. See `implementation/V6_REQUIREMENT_PRACTICE.md`. Draft PR only; no merge or deployment.
+
 ## Personal Orbit V6: job source review (2026-10-21, unverified)
 
 - Review saved versus cached role, company, location and links inside Understand/Apply. Show observation dates and explicit recent/older/unknown/missing/manual states without claiming employer availability.

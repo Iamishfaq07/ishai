@@ -75,7 +75,7 @@ export function OpportunityNext({ tab, onSelect }: { tab: MissionTool; onSelect:
   </nav>;
 }
 
-export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: string }) {
+export function OpportunityCoach({ entryId, focus, requirementKey, experimentKind = "project" }: { entryId: string; focus: string; requirementKey?: string; experimentKind?: "project" | "explanation" | "code" }) {
   const [source, setSource] = useState<Source | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -84,13 +84,14 @@ export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: s
   const busyRef = useRef(true);
   const base = `/v1/jobs/tracker/${encodeURIComponent(entryId)}/coach`;
   const tzOffset = -new Date().getTimezoneOffset();
+  const practiceQuery = requirementKey ? `&requirement_key=${encodeURIComponent(requirementKey)}&experiment_kind=${experimentKind}` : "";
   const refresh = useCallback(async (quiet = false) => {
     const request = ++seq.current; busyRef.current = true; setBusy(true);
     if (!quiet) { setSource(null); setPlan(null); } setError(null);
-    try { const next = await api.call<Source>(`${base}?tz_offset=${tzOffset}`); if (request === seq.current) { setSource(next); setPlan((old) => old?.version === next.version ? old : null); } }
+    try { const next = await api.call<Source>(`${base}?tz_offset=${tzOffset}${practiceQuery}`); if (request === seq.current) { setSource(next); setPlan((old) => old?.version === next.version ? old : null); } }
     catch (e) { if (request === seq.current) { setSource(null); setPlan(null); setError(errorText(e)); } }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(false); } }
-  }, [base, tzOffset]);
+  }, [base, tzOffset, practiceQuery]);
   const cancel = useCallback(() => { seq.current++; }, []);
   useEffect(() => { void refresh(); return cancel; }, [refresh, cancel]);
   useEffect(() => {
@@ -103,7 +104,7 @@ export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: s
     if (!source || busyRef.current) return;
     const request = ++seq.current; busyRef.current = true; setBusy(true); setPlan(null); setError(null);
     try {
-      const next = await api.call<Plan>(`${base}/plan`, { method: "POST", timeoutMs: 70_000, body: JSON.stringify({ version: source.version, focus, tz_offset: tzOffset }) });
+      const next = await api.call<Plan>(`${base}/plan`, { method: "POST", timeoutMs: 70_000, body: JSON.stringify({ version: source.version, focus, tz_offset: tzOffset, ...(requirementKey ? { requirement_key: requirementKey, experiment_kind: experimentKind } : {}) }) });
       if (request === seq.current) setPlan(next);
     } catch (e) { if (request === seq.current) setError(errorText(e)); }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(false); } }
@@ -111,7 +112,7 @@ export function OpportunityCoach({ entryId, focus }: { entryId: string; focus: s
   return <div className="mt-3 space-y-3 text-sm">
     <p className="text-zinc-600 dark:text-zinc-400">Optional AI guidance from this job’s recorded resume links, prior fit-check requirements, cached source status, application stages and dates. Nothing is edited, enabled or submitted. Review every suggestion.</p>
     {error && <ErrorNote onRetry={() => void refresh()}>{error}</ErrorNote>}
-    <Button disabled={busy || !source} loading={busy && Boolean(source)} onClick={() => void generate()}>Help me with this step</Button>
+    <Button disabled={busy || !source} loading={busy && Boolean(source)} onClick={() => void generate()}>{requirementKey ? "Suggest a small practice exercise" : "Help me with this step"}</Button>
     <p className="text-xs text-zinc-600 dark:text-zinc-400">5 requests per UTC day, including failures. Opening this panel does not call AI.</p>
     {busy && !source && <p role="status">Reading this opportunity’s saved records…</p>}
     {plan && <div aria-live="polite" className="space-y-3"><p className="text-xs font-semibold">{plan.source === "mock" ? "Demo opportunity guidance" : "AI suggestions — review before acting"}</p>{plan.tips.map((tip) => <article key={tip.fact_id} className="rounded-xl bg-zinc-500/5 p-4 motion-safe:animate-menu-in">

@@ -42,6 +42,7 @@ import { opportunityStart } from "./opportunity";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
+const RequirementWorkshop = lazy(() => import("./RequirementWorkshop").then((m) => ({ default: m.RequirementWorkshop })));
 const GuideNext = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityNext })));
 type Tab = MissionTool;
 
@@ -154,7 +155,7 @@ export function JobMissionPage() {
                     />
                   )}
                   {tab === "plan" && <PrepPlanPanel entry={entry} onOpenInterview={() => setTab("interview")} />}
-                  {tab === "fit" && <FitPanel fit={m.fit} entry={entry} />}
+                  {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel mission={m} entry={entry} onMission={update} />}
                   {tab === "company" && <CompanyPanel entry={entry} />}
                   {tab === "practice" && <PracticePanel mission={m} entry={entry} />}

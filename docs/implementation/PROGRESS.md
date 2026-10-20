@@ -1,5 +1,11 @@
 # V6 progress
 
+## Increment 6 — requirement to reviewed practice (base `27cea82b`)
+
+PR #442 is merged. **IMPLEMENTED / UNVERIFIED:** F10 workshop inside Understand, four progressively disclosed stages, project/explanation/code formats, bounded historical source quotes, explicit clipboard brief, existing tool continuations and source-bound selected-requirement AI guidance using the existing coach/quota. No exercise becomes a claim automatically; no persistence/schema/dependency or worker change.
+
+**DEFERRED BY OWNER:** all tests/build/lint/typecheck/browser validation; no test files changed. `[skip ci]` requests CI skipping; no workflows weakened or dispatch/rerun. See `V6_REQUIREMENT_PRACTICE.md`. F10 durable experiment/artifact tracking and F11 replay remain future slices. Draft PR for review, no merge/deployment.
+
 ## Increment 5 — job source review (base `018abd43`)
 
 PR #441 is merged. **IMPLEMENTED / UNVERIFIED:** source review inside Understand/Apply; five saved-versus-cached job fields; explicit recent/older/unknown/missing/manual states; possible duplicate review using the existing key; attribution; derived source-status facts and cache-bound source invalidation in the existing coach. No automatic changes, external fetch, new writer/schema/dependency or tool tab. One remaining interview snapshot timestamp now says Saved.

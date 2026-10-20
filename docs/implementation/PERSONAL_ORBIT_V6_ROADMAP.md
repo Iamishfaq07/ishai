@@ -13,6 +13,8 @@ Source brief: owner-supplied ORBIT_PERSONAL_V6_CODEX_MASTER_PROMPT_2026-10-20.md
 
 ## Subsequent gated slices
 
+Increment 6 (base `27cea82b`, PR #442 merged) begins item 5's F10 requirement-practice integration: progressive Understand/Try/Review/Rehearse, three formats, optional selected-source coach guidance and existing learning/practice/story/evidence links. No new completion/claim writer, schema or worker permission. Full experiment tracking and F11 replay remain separate. **UNVERIFIED BY OWNER REQUEST: no tests/build/lint/typecheck/browser validation.** See `V6_REQUIREMENT_PRACTICE.md`.
+
 Increment 5 (base `018abd43`, PR #441 merged) begins item 4's independent read-only F09 slice: saved/current cached job fields, observation-age states, possible duplicates and derived source facts in the existing coach. No source/packet/approval writer is expanded while earlier lineage verification remains deferred. Full description history, closure/repost identity and alerts are not implemented. **UNVERIFIED BY OWNER REQUEST: no tests/build/lint/typecheck/browser validation.** See `V6_SOURCE_REVIEW.md`.
 
 Increment4 (base `03d8ce37`, PR #440 merged) begins item3 with a read-only saved/current resume comparison, corrected saved-versus-sent language, historical fit-source labels and latest-version status in the existing coach. **UNVERIFIED BY OWNER REQUEST: no tests/build/lint/typecheck/browser validation run.** Full F03 claim lineage and F06 packet approval/receipt guarantees remain outstanding; later verification must precede any expansion of those writers. See `V6_RESUME_LINEAGE.md`.
