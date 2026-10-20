@@ -36,7 +36,9 @@ All routes require the candidate's own tracked application. Mutations use the ex
 - `POST /v1/jobs/network/{application_id}/capture` — reviewed `{person, source_url?, remind_in_days?}`; returns `{created, contact}`. Duplicate captures preserve existing records.
 - `POST /v1/jobs/network/{application_id}/draft` — `{contact_id, channel: connection|email, prior_relationship}`; returns an editable draft and character budget. No send action.
 
-Saved data uses existing `JobContact` fields, ownership, export and account-deletion cascades. No schema migration or new contact database is needed. The public source URL is attribution, not independent proof that a pasted identity is authentic. No automated messages, mailbox polling, bulk scraping, login bypass or contact enrichment database is introduced.
+Saved data uses existing `JobContact` fields, ownership, export and account-deletion cascades. No new contact tables or columns are needed. The public source URL is attribution, not independent proof that a pasted identity is authentic. No automated messages, mailbox polling, bulk scraping, login bypass or contact enrichment database is introduced.
+
+Release integration also includes the no-DDL merge revision `c407e21a6d93`: PRs #426 and #427 were merged during this work with independent migration heads (`82ac6d705f91` and `91bd47e8c2a0`). This joins them without changing their existing identities. Tests cover upgrade from either parent, downgrade to their shared ancestor, and upgrade again.
 
 ## Reference implementation inspected
 

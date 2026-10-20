@@ -19,10 +19,11 @@ export default function ContactResearch({ listingId, onSaved }: { listingId: str
   const selectId = useId();
   const { tracker } = useJobsAi();
   const jobs = tracker.data ?? [];
-  const [choice, setChoice] = useState("");
-  const target = jobs.find((j) => j.id === choice) ?? jobs.find((j) => j.listing_id === listingId) ?? jobs[0];
+  const [choice, setChoice] = useState({ context: listingId, id: "" });
+  const target = jobs.find((j) => j.id === (choice.context === listingId ? choice.id : ""))
+    ?? jobs.find((j) => j.listing_id === listingId) ?? jobs[0];
   return <section id="contact-research" aria-label="Contact finder" className="mt-4 space-y-4">
-    <Field label="Job to research" htmlFor={selectId}><Select id={selectId} value={target?.id ?? ""} onChange={(e) => setChoice(e.target.value)}>
+    <Field label="Job to research" htmlFor={selectId}><Select id={selectId} value={target?.id ?? ""} onChange={(e) => setChoice({ context: listingId, id: e.target.value })}>
       {!jobs.length && <option value="">Save a job first</option>}
       {jobs.map((j) => <option key={j.id} value={j.id}>{j.title} · {j.company}</option>)}
     </Select></Field>
