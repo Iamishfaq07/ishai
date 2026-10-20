@@ -35,6 +35,11 @@ export function CompanyPanel({ entry }: { entry: JobTrackerEntry }) {
         )}
       </LoadGate>
       <Card>
+        <h2 className="font-display text-base font-semibold">People at {entry.company}</h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Find saved contacts from earlier roles, research a public lead or capture a recruiter reply.</p>
+        <Link className="mt-3 inline-block text-sm text-indigo-700 underline dark:text-indigo-300" to={`/jobs/outreach?job=${encodeURIComponent(entry.listing_id)}&network=1`}>Open contact finder</Link>
+      </Card>
+      <Card>
         <h2 className="font-display text-base font-semibold">What {entry.company} asked you before</h2>
         <LoadGate loading={memory.loading && !m} variant="line" count={2} label="Loading your earlier rounds">
           {m && m.rounds > 0 ? (

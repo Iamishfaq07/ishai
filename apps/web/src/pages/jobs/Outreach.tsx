@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { ResumeSummary } from "@orbit/types";
 import {
@@ -18,7 +18,7 @@ import {
   isIndia,
   regionWords,
 } from "@orbit/ui";
-import { Card, EmptyState, ErrorNote, Field, PageHeader, Select, Spinner } from "../../components/ui";
+import { Button, Card, EmptyState, ErrorNote, Field, PageHeader, Select, Spinner } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useCountry } from "../../lib/country";
 import { errorText } from "../../lib/format";
@@ -34,6 +34,7 @@ import { jobPath } from "./paths";
 import { PeopleSection } from "./People";
 
 type Part = "messages" | "naukri" | "linkedin";
+const ContactResearch = lazy(() => import("./ContactResearch"));
 
 // "Naukri" and "LinkedIn" alone on phones, so the three fit a 360 px screen.
 const PARTS: Array<{ id: Part; label: string; more?: string }> = [
@@ -53,6 +54,8 @@ export function JobOutreachPage() {
   const country = useCountry();
   const india = isIndia(country);
   const [params, setParams] = useSearchParams();
+  const [networkOpen, setNetworkOpen] = useState(params.get("network") === "1");
+  const [peopleRevision, setPeopleRevision] = useState(0);
   const resumes = useAsync(() => api.listResumes(), [], "resumes");
   const allowance = useResumeAllowance();
   const list = resumes.data;
@@ -73,6 +76,13 @@ export function JobOutreachPage() {
         title="Outreach"
         subtitle={`Referral requests, ${regionWords(country).coldEmails}, follow-ups and thank-you notes, and your ${india ? "Naukri and LinkedIn profiles" : "LinkedIn profile"}.`}
       />
+      <Card className="my-5 p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Your job network</p>
+        <h2 className="mt-2 text-xl font-semibold">Find the right person for a job</h2>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">Check saved contacts at the company, research public leads, capture a recruiter reply and draft a personal introduction—with source evidence and your company history together.</p>
+        <Button variant="secondary" className="mt-3" aria-expanded={networkOpen} onClick={() => setNetworkOpen(!networkOpen)}>{networkOpen ? "Close contact finder" : "Open contact finder"}</Button>
+        {networkOpen && <Suspense fallback={<p className="mt-4 text-sm">Opening contact finder…</p>}><ContactResearch listingId={params.get("job")} onSaved={() => setPeopleRevision((revision) => revision + 1)} /></Suspense>}
+      </Card>
       <LoadGate loading={resumes.loading && !list} variant="card" count={2} label="Getting your resumes">
       {resumes.error && !list ? (
         <ErrorNote onRetry={resumes.reload}>{errorText(resumes.error)}</ErrorNote>
@@ -82,7 +92,7 @@ export function JobOutreachPage() {
         <ResumeOutreach key={picked.id} picked={picked} resumes={list} jobId={params.get("job")} onPick={pick} />
       ) : null}
       </LoadGate>
-      <PeopleSection />
+      <PeopleSection revision={peopleRevision} />
     </AllowanceContext.Provider>
   );
 }

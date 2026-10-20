@@ -2,7 +2,7 @@
 import asyncio
 import json
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
@@ -20,7 +20,7 @@ from orbit_api.transactions import lock_account
 
 
 async def preview[T: BaseModel](db: AsyncSession, user: User, kind: str, instruction: str,
-                               evidence: str, validate: Callable[[object], T],
+                               evidence: str | Callable[[], Awaitable[str]], validate: Callable[[object], T],
                                company_id: str | None = None) -> tuple[T, str]:
     # Caller checks resource permissions before reserving. A company caller holds its company lock too.
     await lock_account(db, user.id)
@@ -36,11 +36,13 @@ async def preview[T: BaseModel](db: AsyncSession, user: User, kind: str, instruc
     await db.commit()  # Release database locks before network I/O, but keep the durable quota reservation.
     start = time.perf_counter()
     try:
+        # Optional bounded research tools run only after the durable allowance reservation, including failures.
+        reference = await evidence() if callable(evidence) else evidence
         llm = get_llm_provider()
         record.provider = llm.name
         response = await asyncio.wait_for(llm.generate(LLMRequest(
             messages=[LLMMessage("system", BOUNDARY + instruction), LLMMessage("user",
-                '<reference_data source="workflow">\n' + fence(evidence) + '\n</reference_data>')],
+                '<reference_data source="workflow">\n' + fence(reference) + '\n</reference_data>')],
             request_type=kind, max_tokens=3000, json_mode=llm.supports_structured_output(), temperature=0.2)), 60)
         record.provider, record.model = response.provider or llm.name, response.model
         record.input_tokens, record.output_tokens = response.usage.input_tokens, response.usage.output_tokens
