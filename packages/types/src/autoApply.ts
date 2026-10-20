@@ -324,6 +324,7 @@ export type ApplyPacketStatus =
   | "expired";
 
 export interface ApplyPacketSummary {
+  submission_uncertain?: boolean;
   id: string;
   listing_id: string;
   status: ApplyPacketStatus;
@@ -366,7 +367,6 @@ export interface ApplyResumeChange {
 export interface ApplyPacketDetail extends ApplyPacketSummary {
   /** Exact cached description captured when these materials were prepared; null for legacy packets. */
   posting_text?: string | null;
-  submission_uncertain?: boolean;
   employer_status_path?: string | null;
   resume_title: string;
   resume_diff: ApplyResumeChange[];

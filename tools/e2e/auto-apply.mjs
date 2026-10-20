@@ -86,10 +86,10 @@ try {
 
   // Applications: needs_answer → answered.
   await page.goto(`${WEB}/jobs/applications`);
-  await page.getByRole("button", { name: /^Needs you/ }).waitFor();
+  await page.getByLabel("Show applications", { exact: true }).waitFor();
   await shot("07-applications-prepared");
   await axe("applications");
-  await page.getByRole("button", { name: /^Needs you/ }).click();
+  await page.getByLabel("Show applications", { exact: true }).selectOption("attention");
   await shot("08-applications-needs-you");
   await page.getByRole("button", { name: /Backend Engineer at Meesho/ }).click();
   const form = page.locator("form", { hasText: "Only you can answer" });
@@ -131,14 +131,14 @@ try {
 
   // What the candidate sees.
   await page.goto(`${WEB}/jobs/applications`);
-  await page.getByRole("button", { name: /^Applied/ }).click();
+  await page.getByLabel("Show applications", { exact: true }).selectOption("sent");
   await page.getByRole("button", { name: new RegExp(`at ${first[0].company}`) }).click();
   await page.getByRole("heading", { name: "Proof" }).waitFor();
   await page.locator("img").last().waitFor();
   await shot("11-applied-proof");
   await axe("application detail (applied, with proof)");
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: /^Needs you/ }).click();
+  await page.getByLabel("Show applications", { exact: true }).selectOption("attention");
   await page.getByRole("button", { name: new RegExp(`at ${second[0].company}`) }).click();
   await page.getByText(/captcha/i).first().waitFor();
   await shot("12-needs-you-captcha");

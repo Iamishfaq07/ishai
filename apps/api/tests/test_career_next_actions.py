@@ -141,3 +141,16 @@ def test_candidate_answers_are_not_starved_by_a_large_review_queue(client: TestC
     assert result["truncated"] and len(result["items"]) == 100
     assert result["focus_id"] == f"packet:{pid}"
     assert client.get("/v1/apply/journey", headers=auth(user)).json()["needs_attention"] == 111
+
+
+@pytest.mark.parametrize("state,started,uncertain", [
+    ("failed", True, True), ("failed", False, False), ("submitted", True, False), ("applied", True, False)])
+def test_packet_list_and_detail_agree_on_unconfirmed_attempts(client: TestClient, state: str,
+                                                            started: bool, uncertain: bool) -> None:
+    user, other = person(client), person(client)
+    pid = packet(client, user, state, submission_started_at=datetime.now(UTC) if started else None)
+    listed = client.get("/v1/apply/packets", headers=auth(user))
+    assert listed.status_code == 200, listed.text
+    assert listed.json()[0]["id"] == pid and listed.json()[0]["submission_uncertain"] is uncertain
+    assert client.get(f"/v1/apply/packets/{pid}", headers=auth(user)).json()["submission_uncertain"] is uncertain
+    assert client.get("/v1/apply/packets", headers=auth(other)).json() == []

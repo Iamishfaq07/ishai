@@ -462,11 +462,11 @@ class PacketSummary(BaseModel):
     updated_at: datetime
     submitted_at: datetime | None
     has_proof: bool
+    submission_uncertain: bool = False
 
 
 class PacketDetail(PacketSummary):
     posting_text: str | None = None
-    submission_uncertain: bool = False
     employer_status_path: str | None
     resume_title: str
     resume_diff: list[dict[str, Any]]
@@ -497,7 +497,8 @@ def _summary(p: ApplicationPacket, has_proof: bool) -> dict[str, Any]:
                 ats=p.ats, site=p.site, company=p.company, title=p.title, url=p.url, apply_url=p.apply_url,
                 match_score=p.match_score, match_reason=p.match_reason, reason=p.reason,
                 missing=len(p.missing or []), created_at=aware(p.created_at), updated_at=aware(p.updated_at),
-                submitted_at=aware(p.submitted_at), has_proof=has_proof)
+                submitted_at=aware(p.submitted_at), has_proof=has_proof,
+                submission_uncertain=p.submission_started_at is not None and p.status not in ("submitted", "applied"))
 
 
 async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
@@ -515,7 +516,6 @@ async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
             token = status_token_for(app)
             status_path = f"/application/{token}" if token else None
     return PacketDetail(
-        submission_uncertain=p.submission_started_at is not None and p.status not in ("submitted", "applied"),
         employer_status_path=status_path,
         **_summary(p, _has_proof(p, proof is not None)), resume_title=p.resume_title, resume_diff=p.resume_diff or [],
         cover_letter=p.cover_letter, posting_text=p.posting_text, fields=p.fields or {}, answers=p.answers or [],
