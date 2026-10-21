@@ -257,6 +257,9 @@ class Settings(BaseSettings):
     jsearch_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_JSEARCH_KEY"))
     jsearch_monthly_budget: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_JSEARCH_MONTHLY_BUDGET"))
     contact_search_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_CONTACT_SEARCH_KEY"))
+    contact_deepseek_search: bool = Field(True, validation_alias=AliasChoices("ORBIT_CONTACT_DEEPSEEK_SEARCH"))
+    contact_deepseek_search_cost_usd: float = Field(0.00075, ge=0, le=1,
+        validation_alias=AliasChoices("ORBIT_CONTACT_DEEPSEEK_SEARCH_COST_USD"))
     contact_searxng_url: str | None = Field(None, max_length=1000,
         validation_alias=AliasChoices("ORBIT_CONTACT_SEARXNG_URL"))
 

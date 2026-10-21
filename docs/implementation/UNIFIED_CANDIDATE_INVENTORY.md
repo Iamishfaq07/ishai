@@ -1,3 +1,11 @@
+# Current increment — automatic job contact finder, 2026-10-21
+
+Contact finder only: extend existing contact_sources/contact_research, ContactResearch and CompanyPanel. Automatic three-query workflow, official DeepSeek-key fallback, source/activity display, exact job-bound room entry and reviewed existing People capture. No new primary tab/store/schema/dependency. [Scope](AUTOMATIC_JOB_CONTACT_FINDER.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Saba preparation workspace, 2026-10-21
 
 Existing JobSabaPractice/LaunchCard now own source briefing and10/20-minute choices. Existing ResumeCard/JobPostCard/QuestionsCard are disclosed inside Prepare; original Interview route remains. PracticePanel connects job plan/rounds/story/learning/code and report history without new records. Existing session context/create/quota remain authorities. [Scope](UNIFIED_SABA_PREPARATION.md).

@@ -1,3 +1,11 @@
+# Current increment — automatic job contact finder, 2026-10-21
+
+Owner narrowed scope to automatic in-browser job contact finder. Fresh branch orbit-automatic-contact-finder-2026-10-21 from origin/main a48b3512 after confirming PR451 merged. Read existing finder/search/provider/source guards; researched Career-Ops, JobScout and official DeepSeek Search. Implemented existing-key fallback, bounded three-query workflow + one source-validated extraction, dedupe/ranking/activity/usage metadata, manual JD context, exact job room entry and stale/unmount guards. No testing/validation/provider smoke or deployment. [Full scope](AUTOMATIC_JOB_CONTACT_FINDER.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Saba preparation workspace, 2026-10-21
 
 Base24e29789 after read-only confirmation PR450 was owner-merged. Branch orbit-saba-preparation-workspace-2026-10-21. Implementation commit6237cb24; draft [PR451](https://github.com/Iamishfaq07/ishai/pull/451) opened and attached for owner review, not merged. Source reads/edits and Git/PR only; no tests/build/lint/typecheck/browser/screenshot/migration/provider/hardware/scans. Code adds Saba source briefing and10/20-minute options, in-room existing materials/questions, plan/round/tool continuation, disclosed report history, visible-source comparison and active/duplicate/stale-drill guards. No new backend/schema/dependency/AI-on-mount. [Scope/known limits](UNIFIED_SABA_PREPARATION.md). Production NO-GO.

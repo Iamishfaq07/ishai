@@ -3,7 +3,7 @@ import { MISSION_TOOLS, ROOM_SECTIONS, roomSection } from "./mission";
 import { cx, focusRing } from "@orbit/ui";
 
 const labels: Record<MissionTool, string> = {
-  fit: "Requirements & fit", company: "Company research", resume: "Resume & materials",
+  fit: "Requirements & fit", company: "Company & contacts", resume: "Resume & materials",
   timeline: "Application history", practice: "Practice with Saba", plan: "Preparation plan",
   interview: "Rounds & interview day", offer: "Offer & decision",
 };

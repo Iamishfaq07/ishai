@@ -1,3 +1,11 @@
+# Current increment — automatic job contact finder, 2026-10-21
+
+Automatic contact action, bounded planned workflow, actual completed activity disclosure, source labels and advanced manual inputs use existing enterprise UI. Finder is lazy inside Company & contacts with exact job selected; standalone Outreach remains. No screenshots/browser/keyboard/contrast/theme/viewport checks. All visual intent unverified. [Scope](AUTOMATIC_JOB_CONTACT_FINDER.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Saba preparation workspace, 2026-10-21
 
 New Saba briefing/source grid, duration/format choices, progressive material/question controls and disclosed history use enterprise shared styles. No new screenshots/browser/contrast/accessibility/motion/viewport checks; prior screenshots do not depict this slice. Source/permission/loading/failure layouts remain unverified. [Design intent](UNIFIED_SABA_PREPARATION.md).

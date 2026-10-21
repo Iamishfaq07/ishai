@@ -77,3 +77,8 @@ Primary references inspected at upstream commit `81371861f67226091d1c4df2e3908a1
 [container installation](https://docs.searxng.org/admin/installation-docker.html),
 [settings](https://docs.searxng.org/admin/settings/settings_search.html),
 [license](https://github.com/searxng/searxng/blob/81371861f67226091d1c4df2e3908a11d3b54eb9/LICENSE).
+
+
+## Automatic workflow / DeepSeek fallback (2026-10-21, unverified)
+
+Managed SearXNG remains first priority. If neither SearXNG nor Brave is configured, the finder can use the existing effective server DeepSeek key with official Search API; this is provider-billed, not keyless/free search. Automatic mode performs up to three queries per deliberate run. Set ORBIT_CONTACT_DEEPSEEK_SEARCH=false to disable fallback. [Setup, limits and deferred checks](implementation/AUTOMATIC_JOB_CONTACT_FINDER.md). No live provider checks were run.

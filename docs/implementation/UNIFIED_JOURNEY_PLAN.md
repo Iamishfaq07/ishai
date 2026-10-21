@@ -1,3 +1,11 @@
+# Current increment — automatic job contact finder, 2026-10-21
+
+Scope narrowed by owner to automatic job contact finder. Reuse current owned context/research/capture/draft and provider-budget reservation; max three public queries then one validated extraction. Existing managed providers retain priority, DeepSeek effective server key is fallback with kill switch. No agent platform or new contact database. [Limits/rollback](AUTOMATIC_JOB_CONTACT_FINDER.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Saba preparation workspace, 2026-10-21
 
 Decision: reuse existing interview prep projection/material writers/question engine and session context. Bring them into job Practice progressively; add short/full options and source identity comparison before creation. Keep existing server ownership/round-revision checks and quotas; no new engine/table/primary tab. Full body hashes/atomic source binding are remaining work. [Rollback/gates](UNIFIED_SABA_PREPARATION.md).

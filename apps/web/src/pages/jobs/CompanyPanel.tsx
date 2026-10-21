@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
+import { lazy, Suspense, useState } from "react";
 import type { JobTrackerEntry } from "@orbit/types";
 import { ArrowRight, LoadGate, cx, focusRing } from "@orbit/ui";
-import { Card } from "../../components/ui";
+import { Button, Card } from "../../components/ui";
 import { api } from "../../lib/api";
 import { matchStyle } from "../../lib/companyStyle";
 import { formatDate } from "../../lib/format";
@@ -10,12 +11,15 @@ import { CompanyGuide } from "../CompanyGuide";
 import { practiceLink } from "./model";
 import { jobPath } from "./paths";
 
+const ContactResearch = lazy(() => import("./ContactResearch"));
+
 /**
  * The company, for this job: how it interviews (Orbit's guide, when it has one: as candidates commonly report it), and
  * what it asked you before (questions from your own sessions you named for this company). Nothing is presented as
  * "the questions they'll ask"; it's what to practise.
  */
 export function CompanyPanel({ entry }: { entry: JobTrackerEntry }) {
+  const [contactsOpen, setContactsOpen] = useState(false);
   const styles = useAsync(() => api.interviewStyles(), [], "interview-styles");
   const memory = useAsync(() => api.loopMemory(entry.company), [entry.company], `loop-memory:${entry.company}`);
   const guide = matchStyle(styles.data ?? [], entry.company);
@@ -36,8 +40,9 @@ export function CompanyPanel({ entry }: { entry: JobTrackerEntry }) {
       </LoadGate>
       <Card>
         <h2 className="font-display text-base font-semibold">People at {entry.company}</h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Find saved contacts from earlier roles, research a public lead or capture a recruiter reply.</p>
-        <Link className="mt-3 inline-block text-sm text-indigo-700 underline dark:text-indigo-300" to={`/jobs/outreach?job=${encodeURIComponent(entry.listing_id)}&network=1`}>Open contact finder</Link>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Automatically research public hiring contacts for this role, review sources and save the people you choose.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-4"><Button variant="secondary" aria-expanded={contactsOpen} aria-controls="company-contact-finder" onClick={() => setContactsOpen((open) => !open)}>{contactsOpen ? "Close contact finder" : "Find contacts here"}</Button><Link className="workspace-text-link" to={`/jobs/outreach?job=${encodeURIComponent(entry.listing_id)}&network=1`}>All contacts & outreach</Link></div>
+        <div id="company-contact-finder">{contactsOpen && <Suspense fallback={<p role="status" className="mt-4 text-sm">Opening contact finder…</p>}><ContactResearch key={entry.id} listingId={entry.listing_id} applicationId={entry.id} onSaved={() => undefined} /></Suspense>}</div>
       </Card>
       <Card>
         <h2 className="font-display text-base font-semibold">What {entry.company} asked you before</h2>

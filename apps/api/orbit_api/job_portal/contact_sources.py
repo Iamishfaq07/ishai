@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from orbit_api.config import get_settings
 from orbit_api.prep.job_link import JobLinkError, fetch_reference_page, html_to_text
+from orbit_api.runtime_config import get_effective_config
 
 
 class Source(BaseModel):
@@ -43,28 +44,54 @@ def search_provider() -> str | None:
     settings = get_settings()
     if settings.contact_searxng_url:
         return "searxng"
-    return "brave" if settings.contact_search_key else None
+    if settings.contact_search_key:
+        return "brave"
+    cfg = get_effective_config()
+    return "deepseek" if (settings.contact_deepseek_search and cfg.deepseek_api_key
+                           and cfg.llm_provider != "mock") else None
 
 
-async def search_sources(company: str, title: str) -> list[Source]:
+def contact_queries(company: str, title: str) -> list[tuple[str, str]]:
+    # Keep within the128-character provider limit; no candidate profile data in public queries.
+    employer = re.sub(r'[^\w .&-]', ' ', company).strip()[:60]
+    role = re.sub(r'[^\w -]', ' ', title).strip()[:24]
+    return [
+        ("Hiring team", f'"{employer}" "{role}" "hiring manager"'),
+        ("Recruiting", f'"{employer}" "{role}" (recruiter OR "talent acquisition")'),
+        ("Relevant team", f'"{employer}" "{role}" team contact'),
+    ]
+
+
+async def search_sources(company: str, title: str, *, query: str | None = None,
+                         source_prefix: str = "web") -> list[Source]:
     settings = get_settings()
     provider = search_provider()
     if provider is None:
         return []
     # Operator-configured service, no redirects or environment proxy. Only company and role become query inputs.
-    query = re.sub(r'[^\w .&-]', ' ', company)[:160] + " " + re.sub(r'[^\w -]', ' ', title)[:100]
-    query += ' (recruiter OR "talent acquisition" OR "hiring manager")'
+    query = (query or contact_queries(company, title)[0][1])[:128]
     headers = {"Accept": "application/json"}
+    params: dict[str, str | int] | None = None
+    payload: dict[str, str | int | bool] | None = None
     if provider == "searxng":
         url = str(settings.contact_searxng_url) + "/search"
-        params: dict[str, str | int] = {"q": query, "format": "json", "categories": "general", "pageno": 1}
-    else:
+        params = {"q": query, "format": "json", "categories": "general", "pageno": 1}
+    elif provider == "brave":
         assert settings.contact_search_key is not None
         url = "https://api.search.brave.com/res/v1/web/search"
         params = {"q": query, "count": 5, "text_decorations": "false"}
         headers["X-Subscription-Token"] = settings.contact_search_key.get_secret_value()
+    else:
+        key = get_effective_config().deepseek_api_key
+        if not key:
+            raise ValueError("DeepSeek search key is unavailable.")
+        # Fixed endpoint: browser input and custom model base URLs cannot receive this secret.
+        url = "https://api.deepseek.com/v1/tools/search"
+        headers["Authorization"] = "Bearer " + key
+        payload = {"query": query, "count": 5, "need_content": True}
     async with asyncio.timeout(10), httpx.AsyncClient(timeout=8, follow_redirects=False, trust_env=False) as client:
-        async with client.stream("GET", url, params=params, headers=headers) as response:
+        async with client.stream("POST" if provider == "deepseek" else "GET", url, params=params,
+                                 json=payload, headers=headers) as response:
             response.raise_for_status()
             body = bytearray()
             async for chunk in response.aiter_bytes():
@@ -72,7 +99,7 @@ async def search_sources(company: str, title: str) -> list[Source]:
                 if len(body) > 400000:
                     raise JobLinkError("Search returned too much data. Try a specific public company page.")
     data = json.loads(body)
-    web = data if provider == "searxng" else data.get("web") if isinstance(data, dict) else None
+    web = (data.get("web") if provider == "brave" else data) if isinstance(data, dict) else None
     results = web.get("results", []) if isinstance(web, dict) else []
     sources: list[Source] = []
     for row in results[:5] if isinstance(results, list) else []:
@@ -82,9 +109,13 @@ async def search_sources(company: str, title: str) -> list[Source]:
             url = public_url(str(row.get("url", "")))
         except ValueError:
             continue
-        text = html_to_text(str(row.get("title", "")) + "\n" +
-                            str(row.get("content" if provider == "searxng" else "description", "")))[:1500]
+        content = row.get("content") if provider == "deepseek" else None
+        kind = "search_content" if isinstance(content, str) and content.strip() else "search_snippet"
+        # Provider summaries are not literal published evidence: use returned content/snippet only.
+        text = html_to_text(str(row.get("title", "")) + "\n" + str(content if kind == "search_content" else
+            row.get("snippet" if provider == "deepseek" else "content" if provider == "searxng" else "description", "")))
+        text = text[:3000 if kind == "search_content" else 1500]
         if not text.strip():
             continue
-        sources.append(Source(id=f"web:{len(sources)}", kind="search_snippet", url=url, text=text))
+        sources.append(Source(id=f"{source_prefix}:{len(sources)}", kind=kind, url=url, text=text))
     return sources

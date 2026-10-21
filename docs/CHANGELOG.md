@@ -3611,3 +3611,8 @@ Existing URL tool/room context remains authoritative; contextual navigation and 
 ## Connected Saba preparation — 2026-10-21 (unverified)
 
 Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.
+
+
+## Automatic job contact finder — 2026-10-21 (unverified)
+
+Extend existing contact research with up to three public queries and one evidence-validated extraction, DeepSeek official Search using the effective server key after managed SearXNG/Brave, and exact job-bound finder inside Company & contacts. Add search activity/usage metadata; public queries contain company/role only. No new schema/dependency/browser key or automatic save/send. Existing reviewed People capture/export/delete remain. DeepSeek fallback can be disabled with ORBIT_CONTACT_DEEPSEEK_SEARCH=false; no environment/secret changed. No testing/provider smoke/deployment, production NO-GO. [Contracts, research, costs, retention and rollback](implementation/AUTOMATIC_JOB_CONTACT_FINDER.md). Technical note, not new legal/provider certification.
