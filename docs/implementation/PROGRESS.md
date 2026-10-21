@@ -1,3 +1,9 @@
+# Current increment — room continuity, 2026-10-21
+
+PR449 owner-merged; implementing contextual room navigation, packet review and safe draft/response continuity. IMPLEMENTED / UNVERIFIED, no testing. [Current scope](UNIFIED_OPPORTUNITY_CONTINUITY.md). Historical evidence below does not validate this slice.
+
+---
+
 # Current checkpoint — enterprise design, 2026-10-21
 
 Owner merged PR448. Continuing with paper/graphite/Slate blue shared visual language and connected Today/core candidate layout. IMPLEMENTED / UNVERIFIED; no testing under explicit owner instruction. No backend/schema/dependency change or deployment. Full scope/remaining work: [enterprise slice](UNIFIED_ENTERPRISE_DESIGN.md), [current progress](UNIFIED_JOURNEY_PROGRESS.md). Older entries below are historical.

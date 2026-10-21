@@ -1,3 +1,11 @@
+# Current increment — Opportunity Room continuity, 2026-10-21
+
+Current room slice uses merged enterprise tokens, wrapping canonical/context navigation, opportunity switcher, source briefing and lazy packet review. No new browser visits/screenshots/contrast/layout/accessibility/motion checks; earlier screenshots are historical. Complete responsive/light/dark/motion/zoom/keyboard matrix remains open. [Design intent](UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+**No tests run, by owner instruction.**
+
+---
+
 # Active visual checkpoint — enterprise workbench, 2026-10-21
 
 **IMPLEMENTED / UNVERIFIED. NO VISUAL TESTING.** Owner explicitly prohibits testing. No runtime/browser/screenshot/contrast/accessibility check was performed. Existing screenshot matrices below are historical and do not depict the new palette/layout.

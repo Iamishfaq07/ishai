@@ -688,3 +688,8 @@ Opportunity Room > Interviews gains owned planned/completed/cancelled round hist
 Saved-version list and comparison share SnapshotSource disclosure with existing focus/touch patterns, wrapping digest and packet evidence link. Legacy unknown and packet file/design limits are explicit. No additional primary navigation or animation dependency. No current screenshots or visual validation.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).

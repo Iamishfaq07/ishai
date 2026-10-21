@@ -180,3 +180,8 @@ Owner instruction: no tests, builds, lint, typechecks, migrations or browser che
 This is a visual/navigation-only change. No new profile facts, telemetry, persistence, public sharing or audio/video retention. Journey links carry only opaque job IDs and existing tab keys. Business/candidate data authorities stay separate. Technical note, not a new legal claim.
 
 No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).

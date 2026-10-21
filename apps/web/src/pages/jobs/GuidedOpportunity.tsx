@@ -4,11 +4,12 @@ import type { JobMission, JobTrackerEntry } from "@orbit/types";
 import { Button, ErrorNote, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
-import type { MissionTool } from "./mission";
+import { MISSION_TOOLS, type MissionTool } from "./mission";
 import { applicationPath } from "./paths";
 import { packetGuidance } from "./autoapply/inbox";
 import { OPPORTUNITY_STEPS, opportunityStep } from "./opportunity";
 
+const PacketDetail = lazy(() => import("./autoapply/PacketDetail"));
 const Calendar = lazy(() => import("./CalendarIntake").then((m) => ({ default: m.CalendarIntake })));
 const Message = lazy(() => import("./MessageUpdate").then((m) => ({ default: m.MessageUpdate })));
 const link = cx("inline-flex min-h-11 items-center rounded text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
@@ -22,6 +23,8 @@ export function GuidedOpportunity({ entry, mission, tab, onSaved }: { entry: Job
   const heading = useRef<HTMLHeadingElement>(null);
   const previous = useRef(`${entry.id}:${tab}`);
   const [support, setSupport] = useState(false);
+  const [packetOpen, setPacketOpen] = useState(false);
+  const [visitedPacket, setVisitedPacket] = useState(false);
   const [supportKind, setSupportKind] = useState<"help" | "reply" | "invitation">("help");
   const [visitedSupport, setVisitedSupport] = useState<string[]>([]);
   const supportChoices: { id: "help" | "reply" | "invitation"; label: string }[] = [];
@@ -39,7 +42,7 @@ export function GuidedOpportunity({ entry, mission, tab, onSaved }: { entry: Job
   const revision = JSON.stringify([entry.id, tab, entry.status, entry.next_at, mission.resume?.updated_at, mission.resume?.id,
     mission.fit?.checked_at, mission.snapshots.map((snapshot) => snapshot.id), mission.offer]);
   return <section aria-label="Opportunity context" className="min-w-0 space-y-4">
-    <h2 ref={heading} tabIndex={-1} className="scroll-mt-28 rounded font-display text-xl font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">{tab === "practice" ? "Practice for this role" : tab === "plan" ? "Your preparation" : step.label}</h2>
+    <h2 ref={heading} tabIndex={-1} className="scroll-mt-28 rounded font-display text-xl font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">{tab === "practice" ? "Practice with Saba" : tab === "plan" ? "Your preparation plan" : MISSION_TOOLS.find((tool) => tool.id === tab)?.label ?? step.label}</h2>
     <details onToggle={(event) => { const opened = event.currentTarget.open; setSupport(opened); if (opened && activeSupport) setVisitedSupport((old) => old.includes(activeSupport) ? old : [...old, activeSupport]); }} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
       <summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Help and updates for this job<span className="mt-1 block text-xs font-normal text-zinc-600 dark:text-zinc-400">{supportChoices.map((choice) => choice.label).join(" · ")}</span></summary>
       <div hidden={!support} className="mt-3 space-y-3"><div role="group" aria-label="Choose help or update" className="flex flex-wrap gap-2">{supportChoices.map((choice) => <button key={choice.id} type="button" aria-pressed={activeSupport === choice.id} onClick={() => { setSupportKind(choice.id); setVisitedSupport((old) => old.includes(choice.id) ? old : [...old, choice.id]); }} className={cx("min-h-11 rounded-xl border px-3 py-2 text-sm motion-safe:transition-colors", activeSupport === choice.id ? "border-indigo-500 bg-indigo-500/5 font-semibold" : "border-zinc-200 dark:border-white/10", focusRing)}>{choice.label}</button>)}</div>
@@ -51,9 +54,15 @@ export function GuidedOpportunity({ entry, mission, tab, onSaved }: { entry: Job
     {(tab === "timeline" || tab === "resume") && <section aria-label="Application kit for this job" className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
       <h3 className="font-semibold">{mission.application ? packetGuidance(mission.application).label : "Your application materials"}</h3>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{mission.application ? packetGuidance(mission.application).detail : "No prepared application is linked to this job. You can apply on the employer site or prepare eligible materials through your application agent."}</p>
-      {mission.application && <Link className={link} to={applicationPath(mission.application.id)}>Open this job’s application kit</Link>}
+      {mission.application && <div className="mt-3 flex flex-wrap items-center gap-3"><Button variant="secondary" aria-expanded={packetOpen} aria-controls="room-application-packet" onClick={() => { setPacketOpen((open) => !open); setVisitedPacket(true); }}>{packetOpen ? "Close application review" : "Review application here"}</Button><Link className={link} to={applicationPath(mission.application.id)}>Open full application view</Link></div>}
       <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Your tracker stage and the application’s delivery status are separate records. Prepared materials do not mean an application was sent.</p>
       <details className="mt-2"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-medium", focusRing)}>Other application tools</summary><div className="flex flex-wrap gap-x-4"><Link className={link} to="/jobs/applications">All prepared applications</Link><Link className={link} to="/jobs/journey">Application agent and permissions</Link></div></details>
+    </section>}
+    {mission.application && <section id="room-application-packet" aria-label="Application review for this opportunity" hidden={!packetOpen || (tab !== "resume" && tab !== "timeline")} className="workspace-panel p-4 sm:p-5">
+      {visitedPacket && <>
+      <p className="mb-4 text-xs text-zinc-600 dark:text-zinc-400">Review the existing packet for {entry.title} at {entry.company}. Sending still requires its existing authorization and review steps.</p>
+      <Suspense fallback={<p role="status">Opening this job’s application review…</p>}><PacketDetail key={`${entry.id}:${mission.application.id}`} id={mission.application.id} opportunityId={entry.id} onChanged={onSaved} /></Suspense>
+      </>}
     </section>}
     {tab === "offer" && <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10"><p>Your recorded stage: <strong>{entry.status}</strong>. Keep offer details only if useful; you can also record a different outcome.</p><Link className={link} to="/jobs/tracker">Update outcome in tracker</Link></div>}
   </section>;

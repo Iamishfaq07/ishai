@@ -1,3 +1,11 @@
+# Current increment — Opportunity Room continuity, 2026-10-21
+
+Basebb66a5c2 after read-only confirmation PR449 was merged by owner. Branch orbit-opportunity-room-continuity-2026-10-21. Source reads/edits and Git/PR operations only; no testing/validation. Implemented contextual room sections preserving old tabs; owned-list job switching; honest resume/next-date briefing; lazy existing application review with expected-room check; keyed panels, visit-bound save guard and bounded note drafts. No new schema/dependency/LLM call or send authorization. [Scope and remaining work](UNIFIED_OPPORTUNITY_CONTINUITY.md). Production NO-GO.
+
+**No tests run, by owner instruction.**
+
+---
+
 # Active increment — enterprise visual language / connected Today, 2026-10-21
 
 Base982099e5 after read-only confirmation PR448 was owner-merged. Branch orbit-enterprise-visual-language-2026-10-21. Implementation commit10812552; draft [PR449](https://github.com/Iamishfaq07/ishai/pull/449) opened and attached for owner review, not merged.
