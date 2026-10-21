@@ -29,7 +29,7 @@ export function LinkedInPage() {
   const read = Boolean(s?.profile && s.audit);
   return (
     <AllowanceContext.Provider value={allowance}>
-      <PageHeader icon={IdCard} title="LinkedIn" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and the fixes to paste in." art={read ? <LinkedInScene /> : undefined} />
+      <PageHeader eyebrow="Your career profile" icon={IdCard} title="LinkedIn" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and the fixes to paste in." art={read ? <LinkedInScene /> : undefined} />
       <LoadGate loading={state.loading && !s} variant="card" count={3} label="Getting your LinkedIn check">
         {state.error && !s ? (
           <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>

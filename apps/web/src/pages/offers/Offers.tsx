@@ -52,7 +52,7 @@ export function OffersPage() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader eyebrow="Offers & decisions"
         icon={Icon}
         title="Offers"
         subtitle={

@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { ResumeData, ResumeInput, ResumeSummary } from "@orbit/types";
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   Briefcase,
+  IdCard,
+  Reveal,
+  Search,
+  useInView,
   ClipboardCheck,
   Copy,
   FileText,
@@ -27,7 +32,8 @@ import {
   isIndia,
   regionWords,
 } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, IconButton, Select, Textarea } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, IconButton, Input, Select, Textarea } from "../../components/ui";
+import { Stat, Tool, type ToolCard } from "../prepare/parts";
 import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -41,6 +47,30 @@ import { ResumeAiTabs, resumeAiFeatures, scoreTone } from "./product";
 import type { fromJsonResume } from "./jsonResume";
 import { TailorQueue } from "./TailorQueue";
 export { scoreTone };
+
+type Sort = "edited" | "score" | "name";
+
+/** An ATS score as a ring that fills to the score the first time it's in view (motion-safe). */
+function ScoreRing({ score }: { score: number }) {
+  const [ref, inView] = useInView<HTMLSpanElement>();
+  const r = 20, c = 2 * Math.PI * r;
+  const stroke = score >= 80 ? "stroke-emerald-500" : score >= 65 ? "stroke-sky-500" : score >= 45 ? "stroke-amber-500" : "stroke-rose-500";
+  return <span ref={ref} className="relative grid h-14 w-14 shrink-0 place-items-center" aria-label={`ATS score ${score} out of 100`}>
+    <svg viewBox="0 0 48 48" className="absolute inset-0 -rotate-90" aria-hidden>
+      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" className="stroke-zinc-200 dark:stroke-white/10" />
+      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" strokeLinecap="round" className={cx(stroke, "motion-safe:transition-[stroke-dashoffset] motion-safe:duration-1000 motion-safe:ease-out")}
+        strokeDasharray={c} strokeDashoffset={inView ? c * (1 - Math.max(0, Math.min(100, score)) / 100) : c} />
+    </svg>
+    <span className="relative text-center leading-none" aria-hidden><span className="block font-display text-base font-semibold tabular-nums">{score}</span><span className="text-[0.55rem] text-zinc-500">ATS</span></span>
+  </span>;
+}
+
+const RESUME_TOOLS: ToolCard[] = [
+  { title: "Find jobs that fit", detail: "Match your resume to live openings and save a shortlist.", icon: Search, to: JOBS_AI_HOME + "/matches", ai: true },
+  { title: "LinkedIn profile", detail: "Bring your profile in line with your resume, reviewed before anything changes.", icon: IdCard, to: "/linkedin", ai: true },
+  { title: "Story bank", detail: "Turn resume bullets into interview stories.", icon: BookOpen, to: "/documents/stories" },
+  { title: "Documents", detail: "Cover letters and files you saved from your resumes.", icon: FolderOpen, to: "/documents" },
+];
 
 /**
  * Orbit Resume's home: what it does, the ways to start a resume, your resume credits, and your resumes, each with
@@ -105,6 +135,13 @@ export function ResumeAiHomePage() {
     await api.deleteResume(r.id).catch(() => list.reload());
   };
 
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<Sort>("edited");
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const rows = (list.data ?? []).filter((r) => !q || `${r.title} ${r.name} ${r.headline}`.toLowerCase().includes(q));
+    return [...rows].sort((a, b) => sort === "score" ? b.score - a.score : sort === "name" ? a.title.localeCompare(b.title) : b.updated_at.localeCompare(a.updated_at));
+  }, [list.data, query, sort]);
   const count = list.data?.length ?? 0;
   const intro = Boolean(list.data && count === 0) || Boolean(list.error && !list.data);
   return (
@@ -152,27 +189,23 @@ export function ResumeAiHomePage() {
           </div>
         </section>
       ) : (
-        <section aria-labelledby="resume-ai-title" className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:text-emerald-300">
-              <FileText className="h-5 w-5" />
-            </span>
-            <div>
-              <h1 id="resume-ai-title" className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">
-                Resume
-              </h1>
-              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Your resumes and their ATS scores. Make a copy to tailor one for each job.</p>
-            </div>
-          </div>
+        <div className="mb-6 space-y-6">
+        <header className="workspace-heading">
+          <div><p className="workspace-eyebrow">Resume Studio</p>
+            <h1 id="resume-ai-title">Your resumes</h1>
+            <p className="workspace-description">Every version with its ATS score. Make a copy to tailor one for each job.</p></div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => setCreating("new")}>
-              <Plus className="h-4 w-4" /> Create a resume
-            </Button>
-            <Button variant="secondary" onClick={() => setCreating("import")}>
-              <FileUp className="h-4 w-4" /> Import
-            </Button>
+            <Button variant="secondary" onClick={() => setCreating("import")}><FileUp className="h-4 w-4" /> Import</Button>
+            <Button onClick={() => setCreating("new")}><Plus className="h-4 w-4" /> Create a resume</Button>
           </div>
-        </section>
+        </header>
+        <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Stat label="Resumes" value={list.data ? count : null} hint="Master and job copies" />
+          <Stat label="Best ATS score" value={list.data?.length ? Math.max(...list.data.map((r) => r.score)) : list.data ? 0 : null} hint="Out of 100" />
+          <Stat label="Average ATS score" value={list.data?.length ? Math.round(list.data.reduce((n, r) => n + r.score, 0) / list.data.length) : list.data ? 0 : null} hint="Across all versions" />
+          <Stat label="Tailored to a job" value={list.data ? list.data.filter((r) => r.has_job).length : null} hint="Copies with a job post" />
+        </Reveal>
+        </div>
       )}
       <AllowanceBanner />
       {fromBefore && (
@@ -196,12 +229,20 @@ export function ResumeAiHomePage() {
       )}
       {creating && <NewResume key={creating} initial={creating === "import" ? "file" : null} onClose={() => setCreating(null)} />}
       {actionError && <div className="mb-4"><ErrorNote>{actionError}</ErrorNote></div>}
-      <div className={cx("mb-3 flex items-baseline justify-between gap-3", intro ? "mt-8" : "mt-6")}>
+      <div className={cx("mb-3 flex flex-wrap items-end justify-between gap-3", intro ? "mt-8" : "mt-6")}>
         <h2 className="font-display text-lg font-semibold tracking-tight">
-          Your resumes
+          All versions
           {count > 0 && <span className="ml-2 text-sm font-normal tabular-nums text-zinc-500 dark:text-zinc-400">{count}</span>}
         </h2>
-        {count > 0 && <p className="hidden text-xs text-zinc-500 sm:block dark:text-zinc-400">Make a copy to tailor one for another job.</p>}
+        {count > 1 && <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          <label className="relative min-w-0 flex-1 sm:w-56 sm:flex-none"><span className="sr-only">Search resumes</span>
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" aria-hidden />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search" className="pl-9" /></label>
+          <label><span className="sr-only">Sort resumes</span>
+            <Select value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+              <option value="edited">Recently edited</option><option value="score">Highest ATS score</option><option value="name">Name</option>
+            </Select></label>
+        </div>}
       </div>
       <LoadGate
         loading={list.loading && !list.data}
@@ -226,19 +267,14 @@ export function ResumeAiHomePage() {
           />
         )
       ) : (
-        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {list.data.map((r) => (
+        <Reveal as="ul" stagger key={`${sort}|${query}`} className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {!shown.length && <li className="text-sm text-zinc-600 dark:text-zinc-400">No resumes match “{query}”.</li>}
+          {shown.map((r) => (
             <li key={r.id}>
               <Card interactive className="relative h-full">
                 <Link to={resumePath(r.id)} className={cx("block rounded-lg", focusRing)}>
                   <div className="flex items-start gap-3">
-                    <span
-                      className={cx("flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl ring-1", scoreTone(r.score))}
-                      aria-label={`ATS score ${r.score} out of 100`}
-                    >
-                      <span className="font-display text-lg font-semibold leading-none tabular-nums">{r.score}</span>
-                      <span className="text-[0.625rem] leading-none">ATS</span>
-                    </span>
+                    <ScoreRing score={r.score} />
                     <span className="min-w-0 pr-16">
                       <span className="block truncate font-medium">{r.title}</span>
                       <span className="block truncate text-sm text-zinc-500 dark:text-zinc-400">
@@ -246,8 +282,8 @@ export function ResumeAiHomePage() {
                       </span>
                       <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
                         Edited {formatDate(r.updated_at)}
-                        {r.has_job ? " · tailored to a job" : ""}
                       </span>
+                      {r.has_job && <span className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">Tailored to a job</span>}
                     </span>
                   </div>
                 </Link>
@@ -267,10 +303,14 @@ export function ResumeAiHomePage() {
               </Card>
             </li>
           ))}
-        </ul>
+        </Reveal>
       )}
       </LoadGate>
       {list.data && list.data.length > 0 && <TailorQueue resumes={list.data} onMade={afterTailoring} />}
+      {count > 0 && <section aria-labelledby="resume-tools" className="mt-8">
+        <h2 id="resume-tools" className="font-display text-lg font-semibold tracking-tight">Put your resume to work</h2>
+        <Reveal as="ul" stagger className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{RESUME_TOOLS.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
+      </section>}
       {count > 0 && <FindJobs />}
     </AllowanceContext.Provider>
   );

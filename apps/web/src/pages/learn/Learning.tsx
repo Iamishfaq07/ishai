@@ -22,7 +22,7 @@ export function LearningPage() {
   return (
     <>
       <OpportunityReturn />
-      <PageHeader icon={GraduationCap} title="Learning" subtitle="Learn the skills interviews test: coding rounds here in Orbit, and cybersecurity for free on KashSec Academy." />
+      <PageHeader eyebrow="Interview preparation" icon={GraduationCap} title="Learning" subtitle="Learn the skills interviews test: coding rounds here in Orbit, and cybersecurity for free on KashSec Academy." />
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-4">
         <li className="min-w-0">
           <Link to={careerToolHref(CODE_HOME, params)} className={cx(card, focusRing)}>
