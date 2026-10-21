@@ -39,7 +39,7 @@ from orbit_api.transactions import lock_account
 
 from .requirement_practice import RequirementPractice, practice_source
 from .resume_binding import for_job, needs_copy
-from .resume_lineage import VersionComparison, comparison
+from .resume_lineage import SnapshotOrigin, VersionComparison, capture_origin, comparison, snapshot_origin
 from .source_review import SourceReview
 from .source_review import review as review_source
 
@@ -81,7 +81,8 @@ class SnapshotOut(BaseModel):
     title: str
     score: int
     note: str
-    resume_id: str | None  # null once the resume it came from is deleted (the snapshot stays)
+    resume_id: str | None  # live link only; immutable origin survives deletion
+    origin: SnapshotOrigin | None = None
     created_at: datetime
 
 
@@ -281,7 +282,7 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
         entry_id=entry.id, application=application, stages=stages_for(facts), fit=fit,
         resume=resume, resume_missing=missing, resume_requires_copy=requires_copy,
         snapshots=[SnapshotOut(id=s.id, title=s.title, score=s.score, note=s.note, resume_id=s.resume_id,
-                               created_at=_aware(s.created_at)) for s in snaps],
+                               created_at=_aware(s.created_at), origin=snapshot_origin(s)) for s in snaps],
         offer=_offer_ref(linked) if linked else None,
         offers=[_offer_ref(o) for o in offers if o.application_id in (None, entry.id)],
         practice_rounds=practice, live_rounds=live_rounds,
@@ -349,6 +350,8 @@ async def link_resume(entry_id: str, body: LinkResumeIn, user: Annotated[User, D
 
 class SnapshotIn(BaseModel):
     note: str = Field("", max_length=200)
+    resume_id: str | None = Field(None, max_length=36)
+    updated_at: datetime | None = None
 
 
 @router.post("/{entry_id}/mission/snapshots", response_model=MissionOut, status_code=status.HTTP_201_CREATED,
@@ -356,10 +359,16 @@ class SnapshotIn(BaseModel):
 async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     """Keep a copy of the linked resume. Saving is not evidence of submission or delivery."""
+    await lock_account(db, user.id)
     entry = await _entry(db, entry_id, user)
-    r = await db.get(Resume, entry.resume_id) if entry.resume_id else None
+    r = await db.scalar(select(Resume).where(Resume.id == entry.resume_id, Resume.user_id == user.id)
+        .with_for_update().execution_options(populate_existing=True)) if entry.resume_id else None
     if r is None or r.user_id != user.id:
         raise HTTPException(status.HTTP_409_CONFLICT, "Link the resume you want to save first.")
+    if (body.resume_id is not None and body.resume_id != r.id) or (
+        body.updated_at is not None and _aware(body.updated_at) != _aware(r.updated_at)
+    ):
+        raise HTTPException(status.HTTP_409_CONFLICT, "The linked resume changed. Refresh and review it before saving.")
     count = len((await db.scalars(select(ResumeSnapshot.id).where(ResumeSnapshot.application_id == entry.id))).all())
     if count >= MAX_SNAPSHOTS:
         raise HTTPException(status.HTTP_409_CONFLICT, f"This job already keeps {MAX_SNAPSHOTS} versions. "
@@ -367,8 +376,9 @@ async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, D
     score = await asyncio.to_thread(_score, r.data, r.design, r.job_text or "")
     db.add(ResumeSnapshot(user_id=user.id, application_id=entry.id, resume_id=r.id, title=r.title,
                           data=dict(r.data or {}), design=dict(r.design or {}), job_text=r.job_text or "",
-                          score=score, note=body.note.strip()))
-    entry.interview_version = None  # interview prep and the copilot use the version just sent (job_portal/interview.py)
+                          score=score, note=body.note.strip(), origin=capture_origin(r, kind="resume",
+                              source_id=r.id, source_revision=r.revision)))
+    entry.interview_version = None  # preparation defaults to the newly saved copy, not a delivery claim
     await db.commit()
     return await mission(db, user, entry, tz_offset=tz_offset)
 
@@ -410,7 +420,9 @@ async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, D
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")
     date = (_aware(s.created_at) + timedelta(minutes=tz_offset)).strftime("%d %b %Y")  # their own day
     copy = Resume(user_id=user.id, title=f"{s.title} (saved {date})"[:160], data=dict(s.data or {}),
-                  design=dict(s.design or {}), job_text=s.job_text or "")
+                  design=dict(s.design or {}), job_text=s.job_text or "",
+                  prep_context={"source_snapshot_id": s.id, "application_id": entry.id,
+                                "snapshot_origin": s.origin})
     db.add(copy)
     await db.commit()
     return RestoredOut(resume_id=copy.id)

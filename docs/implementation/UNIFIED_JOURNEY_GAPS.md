@@ -1,3 +1,13 @@
+## 2026-10-21 — source findings, no runtime reproduction
+
+SOURCE-CONFIRMED: `mission.freeze_resume` stored only a nullable live resume FK, which is SET NULL on deletion, without original revision. Reproduction recipe for later: save revision, edit/delete source, inspect version. Impact: missing durable provenance. New creation-time origin captures ID/revision; legacy provenance remains unknown. Acceptance deferred.
+
+SOURCE-CONFIRMED: `auto_apply.packets.track_applied` read current JobListing text rather than packet.posting_text. Recipe for later: prepare packet, change listing, report result, compare saved JD. Impact: historical materials could carry the wrong source description. New writer uses captured packet text, or empty when absent. Acceptance deferred.
+
+SOURCE-CONFIRMED: snapshot UI marked every null resume_id “original deleted”, including packet snapshots never linked to a Resume. New UI labels only known deleted resume sources and distinguishes legacy unknown/packet origin. Runtime/visual behavior unverified.
+
+RISK / remaining: exact uploaded-file delivery provenance and packet-generation master revision are not supplied by this change. A current packet link is not an immutable receipt. Full migration/runtime/security/UI acceptance remains deferred by owner instruction. [Details](UNIFIED_SNAPSHOT_ORIGIN.md).
+
 # Unified journey gaps — evidence classes
 
 ## Confirmed regressions

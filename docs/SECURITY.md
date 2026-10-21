@@ -308,3 +308,10 @@ Session attribution link/unlink serializes through existing account and session-
 ## Draft owned interview-round boundaries
 
 Authenticated ownership is checked for job and round actions. Strict confirmation, source revisions, tracker-version conditional updates, existing account locks, per-job limits and source-key uniqueness are implemented. Session creation with round context rechecks the current owned selected planned round/revision. Calendar input uses the existing bounded nonexecuting parser; URLs/attachments/organizers are not fetched or trusted. No business record is merged into Personal Orbit. These statements describe code intent only: no security, race, migration or runtime validation was run for this increment under the latest owner instruction.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+New save uses account and owned resume locks; supplied displayed ID/timestamp mismatches return409. track_applied explicitly rejects a foreign packet owner. References grant no authorization; existing destination routes recheck owner. Hash is neither signature nor receipt. Security behavior remains unverified; no scan was run.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).

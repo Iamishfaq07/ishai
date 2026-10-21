@@ -1,3 +1,15 @@
+# Active increment — saved-material provenance, 2026-10-21
+
+Fresh branch orbit-application-material-lineage-2026-10-21 from origin/main4a49967d after read-only confirmation PR447 was merged by owner. Implementation commit387bdf99. Draft [PR448](https://github.com/Iamishfaq07/ishai/pull/448) opened and attached for owner review; not merged.
+
+**IMPLEMENTED / UNVERIFIED. NO TESTING.** Source reads/edits and Git/PR operations only. No tests, builds, lint, typechecks, migrations, browser checks, screenshots, provider/hardware calls or scans. Earlier test evidence is historical.
+
+Code: nullable immutable snapshot origin; exact owned resume ID/revision/hash capture; optional displayed-source409 guard with account/resume locks; packet result source/status observation; packet-captured JD replaces live-listing lookup; restored-copy lineage; shared in-room source disclosure with legacy unknown, explicit PDF/delivery limits and existing packet link; clearer deletion warning. Existing export/cascade paths include new column by source inspection only.
+
+Migration a84b0f2d573e drafted, not applied; required before ORM rollout. No runtime flag/new dependency/AI call. No test fixtures changed or CI weakened. Production NO-GO. [Detailed scope and next verification work](UNIFIED_SNAPSHOT_ORIGIN.md).
+
+---
+
 # Active increment — interview-round continuity, 2026-10-21
 
 Base3d9fa3b8 after explicit owner-authorized merge of PR445. Branch orbit-interview-round-continuity-2026-10-21.

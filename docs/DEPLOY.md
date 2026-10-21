@@ -191,3 +191,10 @@ Local database proof can be reproduced on an EMPTY local PostgreSQL+pgvector dat
 Migration f73a9e1c462d follows e62f8d0b351c. ORBIT_PERSONAL_INTERVIEW_ROUNDS defaults false in configuration/example only; no actual environment was modified. New model fields require the migration before backend deployment even while UI remains disabled. No migration, upgrade/downgrade, build or smoke was executed under the current no-testing instruction. Do not use prior PR445 evidence to enable this slice.
 
 Deferred gates include migration fixtures/head contracts, populated PostgreSQL/SQLite preservation, owner/race/export/delete/timezone/session/plan isolation, UI/browser/scroll/motion and provider/staging/operator checks. Prefer compatible code rollback/flag disable while retaining schema/history. Downgrade removes new round records/references and requires export/backup/operator approval; no production downgrade here. Full protocol/scope: implementation/UNIFIED_INTERVIEW_ROUNDS.md.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Migration a84b0f2d573e follows f73a9e1c462d and adds nullable resume_snapshots.origin without backfill. Schema must precede backend deployment regardless of interview-round flag. Neither migration was executed in this slice. Older backend can ignore the column; dropping it loses provenance and requires export/backup/operator approval. Production NO-GO.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).

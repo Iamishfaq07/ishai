@@ -151,3 +151,10 @@ Opportunity session attribution now uses existing LiveSessionRow.application_id 
 ## Interview-round continuity (draft, unverified)
 
 JobInterviewRound extends the existing owned opportunity with employer-round records and schedule/status history. It is distinct from live/mock execution. Explicit preparation_round_id/revision projects a selected dated round into existing tracker fields; legacy writers clear that selection. Saba/session setup captures and rechecks source round/revision; old sessions are not relabeled. Preparation keys bind selected round/version while retaining completion snapshots. ORBIT_PERSONAL_INTERVIEW_ROUNDS defaults OFF. Migration f73a9e1c462d is drafted, not run; see implementation/UNIFIED_INTERVIEW_ROUNDS.md.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+ResumeSnapshot remains the sole saved-copy authority. New nullable origin records creation-time source ID/revision and content digest; live resume_id remains a separate nullable FK. No new artifact store or dashboard. Application snapshots use packet-captured JD and distinguish candidate/executor observations.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).

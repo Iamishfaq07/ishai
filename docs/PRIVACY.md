@@ -166,3 +166,10 @@ Reviewed session linking/unlinking records only opaque job/session identifiers a
 ## Draft round-history implementation note
 
 When explicitly enabled and a candidate confirms a save, round records store their label, schedule/time zone, notes, outcome and schedule/status history for an owned opportunity. Old note text is not duplicated into every schedule event. Original calendar content is reparsed during the request and not stored in the round database; input-only draft restoration uses existing bounded tab memory. Export includes owned round data; deleting the account/job cascades round content. Surviving owned sessions may retain opaque original round identifiers/revisions, like other historical source references. No new recording retention, calendar subscription, employer sharing, mailbox scope or analytics containing private content. Implementation is unverified; no new legal/counsel approval claimed.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Origin duplicates only opaque source IDs, revision, structured-content hash, observation/time/status. No new raw audio, confirmation body, screenshot, submitted answers or job/career text stored in this metadata. Existing owned export includes the column; snapshot/job/account deletion removes it. Technical implementation note, not a legal-policy approval.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
