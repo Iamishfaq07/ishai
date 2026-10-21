@@ -39,6 +39,8 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   chip in the workbench (the front door's product pages keep theirs).
 - **Labels are sentence case**: small labels, eyebrows and table headings are `text-xs font-medium` ink, never
   tracked capitals (`uppercase tracking-*`). The resume templates keep their own type.
+- **No eyebrows in the app** (21 Oct 2026): a signed-in page heading stands alone, with no small label above it.
+  Field labels (`dt`, form labels) stay. The marketing pages keep `Eyebrow` as described under the front door.
 - **No new gradients in the app.** A highlighted block (the Windows app, the video interview) is a solid ink panel
   (`bg-zinc-900 text-white`); an icon tile is neutral (`IconTile`, `bg-zinc-100 ring-zinc-200`) or the solid accent.
 
@@ -180,15 +182,19 @@ class string; `/dev/components` (development builds) shows each in its states, i
 
 One definition, `apps/web/src/components/nav.ts`, feeds the desktop sidebar, the phone tab bar and the phone's Explore
 sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav does.
-- **Desktop sidebar**, grouped by the job to be done: Home; **Prepare** (Practice and Video interview while mock
-  interviews are on, Resume AI, Learning AI); **Apply** (Jobs AI, LinkedIn AI); **Interview & offer** (Copilot AI,
-  Offer AI). Plan & credits, Settings, Admin (admins only) and Support sit at its foot. Each tool is named in full
-  ("Resume AI"), one ink icon each, no AI mark. It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with
-  none it starts collapsed under 1280 px.
+- **Desktop sidebar** (personal shell), five tasks: **Today**, **Discover**, **Applications**, **Prepare** and **My
+  Career**, then **More** (Copilot, All tools). Specialist tools (Practice, Video interview, Resume, Learning,
+  LinkedIn, Offers) stay reachable from All tools, the phone's Explore sheet and search. Plan & credits, Settings,
+  Admin (admins only) and Support sit at its foot. One ink icon each, no repeats (All tools is a grid, Today a house).
+  It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with none it starts collapsed under
+  1280 px.
+- **One navigation layer per screen** (21 Oct 2026): where the sidebar already names an area, a page does not repeat
+  it as tabs. Job pages show only their area's tools (Discover: Launchpad, Matches, Search preferences; Applications:
+  Tracker, Auto-apply agent, Review queue, People); the Jobs area tabs remain only where there is no sidebar.
 - **Top bar**: a wide "Search or jump to…" (Ctrl K, the command palette), a **New** menu (live session, mock
   interview, resume, job search, offer) and the account menu.
-- **Phones**: five destinations, Home, Jobs, Resume, Practice (the copilot when mock interviews are off) and
-  **Explore**, a sheet with the other tools as cards, then plan, settings, admin, support and sign out. The support
+- **Phones**: the same five tasks as tabs (Today, Discover, Apply, Prepare, Me); the other tools are in the top bar's
+  Explore sheet, then plan, settings, admin, support and sign out. The support
   button keeps the bottom-right corner above the tab bar; a page's own floating button (Resume AI's Preview) sits
   centred, clear of it.
 - **A product's own pages** sit under its item as `ProductTabs` (`components/products.tsx`): Jobs AI's Overview,

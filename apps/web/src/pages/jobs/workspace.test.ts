@@ -30,7 +30,9 @@ describe("Jobs task navigation", () => {
   });
 
   it("keeps context links short and marks deep tools in their parent", () => {
-    expect(workspaceTools("applications").map((tool) => tool.label)).toEqual(["Tracker", "Auto-apply agent", "Review queue"]);
+    expect(workspaceTools("applications").map((tool) => tool.label)).toEqual(["Tracker", "Auto-apply agent", "Review queue", "People"]);
+    // With the area tabs gone in the personal shell, the launchpad and People stay one click away.
+    expect(workspaceTools("find").map((tool) => tool.label)).toEqual(["Launchpad", "Matches", "Search preferences"]);
     expect(currentJobTool("/jobs/auto-apply/")).toBe("/jobs/journey");
     expect(currentJobTool("/jobs/mission/a")).toBe("/jobs/tracker");
     expect(currentJobTool("/jobs/listing/a")).toBe("/jobs/matches");

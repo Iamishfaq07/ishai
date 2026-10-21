@@ -188,7 +188,6 @@ function Header({ entry }: { entry: JobTrackerEntry }) {
       <div className="flex min-w-0 items-center gap-3">
         <CompanyLogo company={entry.company} size="lg" />
         <div className="min-w-0">
-          <p className="workspace-eyebrow">Opportunity room</p>
           <h1 className="break-words font-display text-xl font-semibold tracking-tight sm:text-2xl">{entry.title}</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {[entry.company, entry.location, `added ${formatDate(entry.created_at)}`].filter(Boolean).join(" · ")}

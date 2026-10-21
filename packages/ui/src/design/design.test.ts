@@ -44,13 +44,16 @@ describe("design prefs", () => {
 
   it("round-trips and falls back on junk", () => {
     vi.stubGlobal("localStorage", fakeStorage());
-    expect(loadDesign(PLAIN)).toEqual({ accent: "nebula", textSize: "md", motion: "full" });
+    expect(loadDesign(PLAIN)).toEqual({ accent: "slate", textSize: "md", motion: "full" });
     saveDesign({ accent: "rose", textSize: "sm", motion: "reduced" });
     expect(loadDesign(PLAIN)).toEqual({ accent: "rose", textSize: "sm", motion: "reduced" });
     localStorage.setItem("orbit.design", JSON.stringify({ accent: "neon", textSize: "xxl", motion: "yes" }));
-    expect(loadDesign(PLAIN)).toEqual({ accent: "nebula", textSize: "md", motion: "full" });
+    expect(loadDesign(PLAIN)).toEqual({ accent: "slate", textSize: "md", motion: "full" });
+    // The former default, saved before Slate blue replaced it, loads as Slate blue (design.ts).
+    localStorage.setItem("orbit.design", JSON.stringify({ accent: "nebula", textSize: "md", motion: "full" }));
+    expect(loadDesign(PLAIN).accent).toBe("slate");
     localStorage.setItem("orbit.design", "{not json");
-    expect(loadDesign(PLAIN)).toEqual({ accent: "nebula", textSize: "md", motion: "full" });
+    expect(loadDesign(PLAIN)).toEqual({ accent: "slate", textSize: "md", motion: "full" });
   });
 });
 
