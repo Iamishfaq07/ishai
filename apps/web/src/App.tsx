@@ -72,6 +72,7 @@ import {
   BulletBuilderPage,
   GapExplainerPage,
   GroupDiscussionPage,
+  ReadinessPage,
   CodeProblemPage,
   OfferDetailPage,
   AdminUsersPage,
@@ -348,6 +349,7 @@ export function App() {
         <Route path="bullet-builder" element={<BulletBuilderPage />} />
         <Route path="career-gap" element={<GapExplainerPage />} />
         <Route path="group-discussion" element={<GroupDiscussionPage />} />
+        <Route path="readiness" element={<ReadinessPage />} />
         <Route path="code" element={<CodeHomePage />} />
         <Route path="code/:problemId" element={<CodeProblemPage />} />
         <Route path="offers" element={<OffersPage />} />
