@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, Banknote, GraduationCap, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, Banknote, GraduationCap, House, INDIA, IdCard, LayoutGrid, MOCK_INTERVIEW_ENABLED, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -66,7 +66,7 @@ const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon
   current: (p) => /^\/(prepare|mock|interview|learn|code)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: IdCard,
   current: (p) => /^\/(career|resume-ai|linkedin|offers)(\/|$)/.test(p) };
-const TOOLS: NavItem = { id: "tools", to: "/tools", label: "All tools", icon: House, current: under("/tools") };
+const TOOLS: NavItem = { id: "tools", to: "/tools", label: "All tools", icon: LayoutGrid, current: under("/tools") };
 
 /** Five task destinations; specialist tools remain available through More and search. */
 export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, _country: string = INDIA): NavGroup[] {

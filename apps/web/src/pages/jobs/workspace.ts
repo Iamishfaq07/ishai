@@ -38,7 +38,12 @@ export function findJobTools(query: string) {
 
 /** Secondary navigation contains only the frequent tools for the current area. */
 export function workspaceTools(group: JobWorkspace) {
-  return JOB_TOOLS.filter((tool) => tool.group === group && ![JOBS_AI_HOME, JOBS_AUTO_APPLY, JOBS_OUTREACH].includes(tool.to) && !tool.to.includes("?"));
+  const tools = JOB_TOOLS.filter((tool) => tool.group === group && ![JOBS_AI_HOME, JOBS_AUTO_APPLY, JOBS_OUTREACH].includes(tool.to) && !tool.to.includes("?"));
+  // People (outreach and referrals) belongs to applying; with the area tabs gone it lives beside the tracker.
+  if (group === "applications") return [...tools, { group, to: JOBS_OUTREACH, label: "People", description: "", keywords: "" }];
+  // The launchpad (resume setup, exploring roles) sits with Discover.
+  if (group === "find") return [{ group, to: JOBS_AI_HOME, label: "Launchpad", description: "", keywords: "" }, ...tools];
+  return tools;
 }
 
 export function currentJobTool(pathname: string) {

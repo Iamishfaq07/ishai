@@ -38,7 +38,8 @@ export function CookieNotice() {
       className={cx(
         // Phones: left of the support button (right-3, about 3.5rem wide), at its height, so they never overlap.
         "fixed left-3 right-[4.75rem] z-40 flex items-center gap-2.5 rounded-xl border border-[rgb(var(--site-line))] bg-[rgb(var(--site-surface))] py-1.5 pl-3 pr-1 text-[0.8125rem] text-zinc-700 shadow-[0_8px_24px_-12px_rgb(var(--ink-900)/0.25)] md:bottom-5 md:left-5 md:right-auto md:max-w-sm dark:text-zinc-300 dark:shadow-[0_12px_32px_-12px_rgb(0_0_0/0.6)]",
-        user ? "bottom-[calc(4.25rem+env(safe-area-inset-bottom))]" : "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
+        // Signed in, from md up: bottom-right beside the support button, so it doesn't cover the sidebar's Settings.
+        user ? "bottom-[calc(4.25rem+env(safe-area-inset-bottom))] md:left-auto md:right-[5.25rem]" : "bottom-[max(0.75rem,env(safe-area-inset-bottom))]",
       )}
     >
       <Cookie className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
