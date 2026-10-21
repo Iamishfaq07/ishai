@@ -39,6 +39,16 @@ const QUICK = [
   { to: "/jobs/weekly", label: "Weekly progress", icon: Gauge },
   { to: "/jobs?work=plan", label: "Next-step guidance", icon: Sparkles },
 ];
+/** Conversion so far, from the tracker's own records: of everything past "saved", how much reached an interview, and
+ *  of that, how much reached an offer. Null until there's something to divide by. */
+export function conversion(statuses: JobStatus[]): { interview: number | null; offer: number | null } {
+  const applied = statuses.filter((s) => s !== "saved").length;
+  const interviewed = statuses.filter((s) => s === "interviewing" || s === "offer" || s === "hired").length;
+  const offered = statuses.filter((s) => s === "offer" || s === "hired").length;
+  return { interview: applied ? Math.round((interviewed / applied) * 100) : null,
+           offer: interviewed ? Math.round((offered / interviewed) * 100) : null };
+}
+
 /** "Good morning" by the viewer's own clock. */
 export function greeting(hour: number): string {
   return hour < 5 ? "Good evening" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -61,6 +71,10 @@ export function HomePage() {
     const timer = window.setInterval(refresh, 60_000);
     return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); window.clearInterval(timer); };
   }, [reload]);
+  const rates = conversion(tracker.data?.map((j) => j.status) ?? []);
+  const hintFor = (status: JobStatus, fallback: string) =>
+    status === "interviewing" && rates.interview !== null ? `${rates.interview}% of applications got here`
+      : status === "offer" && rates.offer !== null ? `${rates.offer}% of interviews became offers` : fallback;
   const active = tracker.data?.filter((job) => !["hired", "withdrawn", "rejected"].includes(job.status)) ?? [];
   const validFocus = active.some((job) => job.id === focused) ? focused : "";
   const selected = !tracker.error ? active.find((job) => job.id === validFocus) ?? (active.length === 1 ? active[0] : undefined) : undefined;
@@ -80,7 +94,7 @@ export function HomePage() {
     </header>
     <Reveal stagger as="nav" aria-label="Your pipeline" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {PIPELINE.map((p) => <Link key={p.status} to={`/jobs/tracker?status=${p.status}`} className={cx("block rounded-xl motion-safe:transition-transform motion-safe:hover:-translate-y-0.5", focusRing)}>
-        <Stat label={p.label} value={tracker.data ? tracker.data.filter((j) => j.status === p.status).length : null} hint={p.hint} /></Link>)}
+        <Stat label={p.label} value={tracker.data ? tracker.data.filter((j) => j.status === p.status).length : null} hint={hintFor(p.status, p.hint)} /></Link>)}
     </Reveal>
     <Suspense fallback={null}><SecurityNotice /></Suspense>
     <WeekStrip />

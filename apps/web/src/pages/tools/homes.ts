@@ -1,6 +1,6 @@
 import {
   BookOpen, BookmarkCheck, Briefcase, Building2, CalendarPlus, ClipboardCheck, Code2, FileText, Gauge, GraduationCap,
-  Headphones, IdCard, ListChecks, MOCK_INTERVIEW_ENABLED, MessageSquareQuote, Mic, NotebookPen, Search, Send, Sparkles,
+  Headphones, IdCard, ListChecks, MOCK_INTERVIEW_ENABLED, MessageSquareQuote, Mic, NotebookPen, Search, Send, ShieldCheck, Sparkles,
   Target, Users, UsersRound, Video, Wallet, Zap,
 } from "@orbit/ui";
 import { TOOLS, type Tool } from "./catalog";
@@ -11,7 +11,7 @@ export type Home = "today" | "jobs" | "prepare" | "career" | "copilot";
 const HOMES: Record<string, Home> = {
   playbook: "today", actions: "today", weekly: "today", "employer-updates": "today", "wrap-up": "today",
   matches: "jobs", agent: "jobs", review: "jobs", network: "jobs", outreach: "jobs", "auto-tailor": "jobs",
-  "whats-working": "jobs", "skill-gaps": "jobs", "first-look": "jobs", "first-90": "jobs",
+  "whats-working": "jobs", "skill-gaps": "jobs", "scam-check": "jobs", "first-look": "jobs", "first-90": "jobs",
   saba: "prepare", debrief: "prepare", pitch: "prepare", references: "prepare", promises: "prepare", learn: "prepare",
   stories: "prepare", video: "prepare", warmup: "prepare", code: "prepare",
   resume: "career", linkedin: "career", offers: "career",
@@ -24,7 +24,7 @@ const TOOL_ICONS: Record<string, typeof Search> = {
   review: ClipboardCheck, weekly: Gauge, network: Users, actions: CalendarPlus, outreach: Send, saba: Headphones,
   debrief: NotebookPen, "skill-gaps": Target, "first-look": Sparkles, "auto-tailor": FileText, "whats-working": Gauge,
   "first-90": Briefcase, pitch: Mic, references: UsersRound, promises: ClipboardCheck, learn: GraduationCap,
-  offers: Wallet, copilot: Sparkles, stories: BookOpen, video: Video, warmup: Zap, code: Code2, linkedin: IdCard,
+  offers: Wallet, copilot: Sparkles, "scam-check": ShieldCheck, stories: BookOpen, video: Video, warmup: Zap, code: Code2, linkedin: IdCard,
   "wrap-up": BookmarkCheck, team: Users, pipeline: ListChecks, "interview-plan": NotebookPen, "business-saba": Headphones,
   decision: ClipboardCheck, post: Building2,
 };
