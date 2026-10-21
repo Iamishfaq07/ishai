@@ -14,6 +14,7 @@ import { useCountry } from "../../lib/country";
 import { JOBS_MATCHES } from "./paths";
 import { OnThisPage, type PageSection } from "../../components/OnThisPage";
 import { AlertsSection } from "./AlertsSection";
+import { adjacentTitles } from "./adjacentTitles";
 
 /** Jobs → Profile: what the feed looks for, filled in by the AI from the resume, every part of it the user's. */
 export function JobProfilePage() {
@@ -170,6 +171,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
               placeholder="e.g. Backend Engineer"
               onChange={(v) => set("titles", v)}
             />
+            <AdjacentTitles titles={draft.titles} onAdd={(t) => set("titles", [...draft.titles, t].slice(0, 8))} />
             <ChipsField
               label="Your key skills"
               hint="Matched against what each job asks for. Only list skills you really have."
@@ -518,4 +520,19 @@ function ChipsField({
       </div>
     </Field>
   );
+}
+
+/** Titles that ask for much the same work (adjacentTitles.ts), to add to the search or try in Discover first. */
+function AdjacentTitles({ titles, onAdd }: { titles: string[]; onAdd: (title: string) => void }) {
+  const near = adjacentTitles(titles);
+  if (!near.length) return null;
+  const full = titles.length >= 8;
+  return <div className="rounded-xl bg-zinc-50 p-3 dark:bg-white/5">
+    <p className="text-sm font-medium">Also worth searching</p>
+    <p className="text-xs text-zinc-600 dark:text-zinc-400">Titles employers use for similar work. Add one to your search, or try it in Discover first.</p>
+    <ul className="mt-2 flex flex-wrap gap-2">{near.map((t) => <li key={t} className="flex items-center overflow-hidden rounded-full ring-1 ring-zinc-200 dark:ring-white/10">
+      <button type="button" disabled={full} onClick={() => onAdd(t)} className={cx("min-h-9 px-3 text-sm hover:bg-white disabled:opacity-50 dark:hover:bg-white/10", focusRing)} aria-label={`Add ${t} to your job titles`}>+ {t}</button>
+      <Link to={`${JOBS_MATCHES}?q=${encodeURIComponent(t)}`} className={cx("min-h-9 border-l border-zinc-200 px-2 py-2 text-xs text-indigo-700 hover:bg-white dark:border-white/10 dark:text-indigo-300 dark:hover:bg-white/10", focusRing)} aria-label={`Search ${t} jobs`}>Search</Link>
+    </li>)}</ul>
+  </div>;
 }

@@ -51,6 +51,7 @@ import { ReferenceBrief } from "./ReferenceBrief";
 import { WithdrawNote } from "./WithdrawNote";
 import { ScamCheck } from "./ScamCheck";
 import { InterviewChecklist } from "./InterviewChecklist";
+import { InterviewRedFlags } from "./InterviewRedFlags";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
@@ -162,6 +163,7 @@ export function JobMissionPage() {
                   {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
                   {tab === "interview" && (entry.status === "interviewing" || entry.status === "applied") && <InterviewChecklist key={`checklist:${entry.id}`} entryId={entry.id} />}
                   {tab === "interview" && <Commitments key={`commitments:${entry.id}`} entryId={entry.id} />}
+                  {tab === "interview" && entry.status !== "saved" && <InterviewRedFlags key={`flags:${entry.id}`} entryId={entry.id} />}
                   {tab === "interview" && (
                     <InterviewPrepPanel key={entry.id}
                       entry={entry}
