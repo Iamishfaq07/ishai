@@ -187,6 +187,27 @@ async def wrap_up(db: AsyncSession, user_id: str, now: datetime) -> list[dict[st
         "action_label": "Write the note", "rule": "wrap_up"} for job in rows]
 
 
+async def find_contacts(db: AsyncSession, user_id: str, now: datetime) -> list[dict[str, Any]]:
+    """Applied in the last 7 days, still waiting, and nobody saved at that company: a short note to the recruiter or
+    hiring manager is one of the few things that moves an application. Links to the contact finder on the job's
+    Company tab. A suggestion only: nothing is searched or sent until the candidate asks."""
+    from orbit_api.models import JobContact
+    from orbit_api.sessions.loop_memory import same_company
+
+    rows = (await db.scalars(select(JobApplication).where(JobApplication.user_id == user_id,
+        JobApplication.status == "applied", JobApplication.status_at >= now - timedelta(days=7))
+        .order_by(JobApplication.status_at.desc()).limit(20))).all()
+    if not rows:
+        return []
+    companies = (await db.scalars(select(JobContact.company).where(JobContact.user_id == user_id))).all()
+    return [{"id": f"contacts:{job.id}", "kind": "application", "title": f"{job.title} · {job.company}",
+        "detail": "You applied, but you haven't saved anyone at this company. Find the recruiter or hiring manager "
+            "from public sources, then choose whether to write to them.",
+        "due_at": None, "overdue": False, "path": f"/jobs/mission/{job.id}?tab=company&contacts=1",
+        "action_label": "Find who's hiring", "rule": "find_contacts"}
+        for job in rows if not any(same_company(c, job.company) for c in companies)][:5]
+
+
 async def gone_postings(db: AsyncSession, user_id: str) -> list[dict[str, Any]]:
     """Saved jobs from a company's own careers board whose post is no longer there: a board's fetch replaces its
     listings (refresh.py), so a post taken down drops out. Worth checking before preparing an application. Always
