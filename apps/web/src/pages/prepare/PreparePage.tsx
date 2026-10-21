@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
 import {
-  ArrowRight, BookOpen, Building2, CalendarPlus, ClipboardCheck, Code2, ErrorNote, GraduationCap, Headphones,
+  ArrowRight, BookOpen, Brain, Building2, CalendarPlus, ClipboardCheck, Code2, ErrorNote, GraduationCap, Headphones,
   ListChecks, MOCK_INTERVIEW_ENABLED, Mic, NotebookPen, Play, Reveal, ShieldCheck, Sparkles,
   Target, UsersRound, Video, Zap, cx, focusRing,
 } from "@orbit/ui";
@@ -63,6 +63,7 @@ export function PreparePage() {
         { title: "Video interview", detail: "Rehearse on camera with on-device delivery notes: pace, pauses, filler words.", icon: Video, to: "/interview", ai: true },
       ] : []),
       { title: "Quick warm-up", detail: "One question, answered out loud, minutes before you go in.", icon: Zap, to: "/warmup", ai: true },
+      { title: "Aptitude tests", detail: "Timed quant, reasoning and verbal practice with worked answers, like placement tests.", icon: Brain, to: "/aptitude" },
       { title: "Coding & system design", detail: "Practise problems in an editor and explain your approach to a voice interviewer.", icon: Code2, to: "/code", ai: true },
     ] },
     { title: "Build your answers", about: "Your own material, ready before the questions come.", items: [
