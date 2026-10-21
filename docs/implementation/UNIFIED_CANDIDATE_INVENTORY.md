@@ -1,3 +1,11 @@
+# Current increment — Saba preparation workspace, 2026-10-21
+
+Existing JobSabaPractice/LaunchCard now own source briefing and10/20-minute choices. Existing ResumeCard/JobPostCard/QuestionsCard are disclosed inside Prepare; original Interview route remains. PracticePanel connects job plan/rounds/story/learning/code and report history without new records. Existing session context/create/quota remain authorities. [Scope](UNIFIED_SABA_PREPARATION.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Opportunity Room continuity, 2026-10-21
 
 RoomNavigation exposes existing Company/Requirements, Materials/History, Practice/Plan without a generic tool catalog. JobMission switcher/briefing use existing tracker/mission authority. GuidedOpportunity lazily embeds existing PacketDetail; full route remains. Resume version notes reuse bounded account/job tab-memory. No new data model/tool/primary route. [Scope](UNIFIED_OPPORTUNITY_CONTINUITY.md).

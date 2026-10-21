@@ -1,3 +1,9 @@
+# Current increment — Saba preparation, 2026-10-21
+
+PR450 owner-merged; implementing Saba briefing/short practice/material and question continuity. No testing/validation. [Current scope](UNIFIED_SABA_PREPARATION.md). Earlier evidence remains historical.
+
+---
+
 # Current increment — room continuity, 2026-10-21
 
 PR449 owner-merged; implementing contextual room navigation, packet review and safe draft/response continuity. IMPLEMENTED / UNVERIFIED, no testing. [Current scope](UNIFIED_OPPORTUNITY_CONTINUITY.md). Historical evidence below does not validate this slice.

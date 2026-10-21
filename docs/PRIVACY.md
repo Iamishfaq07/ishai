@@ -185,3 +185,8 @@ No tests or validation under owner instruction. [Scope and deferred release gate
 ## Opportunity Room continuity — 2026-10-21 (unverified)
 
 Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

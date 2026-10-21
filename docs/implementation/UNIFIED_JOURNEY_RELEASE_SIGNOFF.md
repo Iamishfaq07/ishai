@@ -1,3 +1,11 @@
+# Current increment — Saba preparation workspace, 2026-10-21
+
+**NO-GO. IMPLEMENTED / UNVERIFIED.** No testing/validation per owner. Saba preparation source/10–20-minute choices/reused materials/questions, stale drill and source/navigation guards implemented. No schema/dependency/backend change or deployment. Live provider/device, atomic/full-hash source assurance, visual/integration and prior migration/dependency/operator gates remain open. [Scope/rollback](UNIFIED_SABA_PREPARATION.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Opportunity Room continuity, 2026-10-21
 
 **NO-GO. IMPLEMENTED / UNVERIFIED.** Owner says no testing. Contextual room navigation, switching, in-room packet review and input/late-response continuity implemented. No test/build/lint/typecheck/browser/screenshot/migration/provider/native/security check run; no deployment. Existing earlier backend/migration/dependency/operator gates and full programme remain open. No schema/dependency in this slice. [Release/rollback limits](UNIFIED_OPPORTUNITY_CONTINUITY.md).

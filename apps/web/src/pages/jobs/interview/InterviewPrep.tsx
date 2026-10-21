@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import type {
   InterviewPrepUpdate,
   InterviewPrepView,
+  InterviewSessionContext,
   InterviewRoundType,
   JobTrackerEntry,
   MockConfig,
@@ -44,7 +45,7 @@ import type { LiveLaunchState } from "../../SessionSetup";
 import { RESUME_AI_HOME, resumePath } from "../../resume/paths";
 import { scoreTone } from "../../resume/product";
 import { linkButton, textLink } from "../links";
-import { jobPath } from "../paths";
+import { jobPath, missionPath } from "../paths";
 import { copilotPath } from "./links";
 import { InterviewRounds } from "./InterviewRounds";
 
@@ -81,12 +82,12 @@ export function InterviewPrepPanel({ entry, onEntry }: { entry: JobTrackerEntry;
         <div className="space-y-4">
           {roundsEnabled && <InterviewRounds entryId={entry.id} onSaved={() => { prep.reload(); onEntry(); }} />}
           {roundsEnabled ? <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Existing tracker date and manual controls</summary><p className="mb-3 text-xs text-zinc-600 dark:text-zinc-400">These controls remain available for historical dates and follow-ups. Editing them clears the selected round reference; saved round and preparation history stay intact.</p><WhenCard view={v} onSave={save} /></details> : <WhenCard view={v} onSave={save} />}
-          <LaunchCard view={v} />
+          <LaunchCard view={v} onRefresh={prep.reload} />
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
             <JobPostCard view={v} onSave={save} />
             <ResumeCard view={v} onSave={save} />
           </div>
-          <QuestionsCard view={v} onGenerated={prep.reload} />
+          <QuestionsCard key={`${practiceLaunchKey(v)}:${v.questions?.generated_at ?? "none"}`} view={v} onGenerated={prep.reload} />
           <StoriesCard view={v} />
           {guide && <CompanyGuide style={guide} inMock={false} />}
           <RoundsCard view={v} />
@@ -197,53 +198,97 @@ function WhenCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Inter
 }
 
 /** The two ways in: the copilot with this job loaded, or a practice round on it first. */
-export function JobSabaPractice({ entryId }: { entryId: string }) {
+export function JobSabaPractice({ entryId, onChanged }: { entryId: string; onChanged?: () => void }) {
   const prep = useAsync(() => api.interviewPrep(entryId), [entryId], `interview-prep:${entryId}`);
-  return prep.error ? <ErrorNote onRetry={prep.reload}>{errorText(prep.error)}</ErrorNote> : prep.data ? <LaunchCard view={prep.data} practiceOnly /> : <p role="status">Loading this role’s Saba briefing…</p>;
+  const [materialsVisited, setMaterialsVisited] = useState(false);
+  const [questionsVisited, setQuestionsVisited] = useState(false);
+  const reload = prep.reload;
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") reload(); };
+    window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
+    return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, [reload]);
+  const save = async (patch: InterviewPrepUpdate, done?: string): Promise<boolean> => {
+    try {
+      const next = await api.updateInterviewPrep(entryId, patch);
+      prep.setData(() => next); onChanged?.();
+      if (done) toast({ message: done, tone: "success" });
+      return true;
+    } catch (err) { toast({ message: errorText(err), tone: "error" }); return false; }
+  };
+  return prep.error && !prep.data ? <ErrorNote onRetry={reload}>{errorText(prep.error)}</ErrorNote> : prep.data ? <div className="space-y-4">
+    <LaunchCard key={entryId} view={prep.data} practiceOnly onRefresh={reload} />
+    <details className="workspace-panel p-4" onToggle={(event) => { if (event.currentTarget.open) setMaterialsVisited(true); }}>
+      <summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Review or change Saba’s source materials</summary>
+      <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Choose an existing saved resume version or this job’s description. No repeat resume upload. Changing the interview selection does not overwrite your master or a saved copy.</p>
+      {materialsVisited && <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-2"><ResumeCard view={prep.data} onSave={save} /><JobPostCard view={prep.data} onSave={save} /></div>}
+    </details>
+    <details className="workspace-panel p-4" onToggle={(event) => { if (event.currentTarget.open) setQuestionsVisited(true); }}>
+      <summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Choose questions for a focused rehearsal</summary>
+      <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Reuse saved questions or deliberately generate a new set using the existing resume-credit allowance. Generated questions are suggestions, not guaranteed employer questions.</p>
+      {questionsVisited && <div className="mt-4"><QuestionsCard key={`${practiceLaunchKey(prep.data)}:${prep.data.questions?.generated_at ?? "none"}`} view={prep.data} onGenerated={reload} /></div>}
+    </details>
+  </div> : <p role="status">Loading this role’s Saba briefing…</p>;
 }
 
-function LaunchCard({ view, practiceOnly = false }: { view: InterviewPrepView; practiceOnly?: boolean }) {
+function LaunchCard({ view, practiceOnly = false, onRefresh }: { view: InterviewPrepView; practiceOnly?: boolean; onRefresh?: () => void }) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const active = useRef(true);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, [view.entry_id]);
   const [mode, setMode] = useState<"audio" | "video">("audio");
+  const [minutes, setMinutes] = useState<10 | 20>(10);
+  const [launchError, setLaunchError] = useState<string | null>(null);
+  const starting = useRef(false);
+  const briefing = useRef(practiceLaunchKey(view));
+  briefing.current = practiceLaunchKey(view);
   const practise = async () => {
-    setBusy(true);
+    if (starting.current) return;
+    starting.current = true; setBusy(true); setLaunchError(null);
+    const approvedBrief = practiceLaunchKey(view);
+    const current = () => active.current && briefing.current === approvedBrief;
     try {
-      const session = await startPractice(view, undefined, mode === "video");
-      if (!active.current) return;
+      const session = await startPractice(view, undefined, mode === "video", minutes, current);
+      if (!current()) { if (active.current) { setLaunchError("Your briefing changed while the session was being created. Review it before starting again. A created session may appear in Sessions; no interview was started here."); setBusy(false); } return; }
       const launch: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${session}`, { state: launch });
     } catch (err) {
       if (!active.current) return;
-      toast({ message: errorText(err), tone: "error" });
+      setLaunchError(errorText(err));
       setBusy(false);
-    }
+    } finally { starting.current = false; }
   };
   return (
-    <section aria-labelledby="iv-launch" className="glass-panel gradient-border rounded-2xl p-5">
+    <section aria-labelledby="iv-launch" className="workspace-panel workspace-next">
       <h2 id="iv-launch" className="flex items-center gap-3 font-display text-lg font-semibold">
-        <Spot kind="copilot" /> {practiceOnly ? "Practice with Saba" : "Practice and interview day"}
+        <Spot kind="copilot" /> {practiceOnly ? "Your Saba practice briefing" : "Practice and interview day"}
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
         Saba uses this opportunity’s saved job description, selected resume version and recorded round. Practice stays linked to this job; it never marks an employer interview complete.
       </p>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{view.version?.title ?? "No resume selected — choose this job’s materials before practicing."} · {view.round.label || "General role practice"}</p>
-      <label className="mt-3 block text-sm">Practice format<Select value={mode} onChange={(event) => setMode(event.target.value as "audio" | "video")}><option value="audio">Audio with transcript</option><option value="video">Video with transcript</option></Select></label>
+      <dl className="mt-5 grid min-w-0 gap-4 border-y border-zinc-200 py-4 text-sm sm:grid-cols-2 dark:border-white/10">
+        <div className="min-w-0"><dt className="workspace-eyebrow">Opportunity</dt><dd className="mt-1 break-words font-semibold">{view.title} · {view.company}</dd></div>
+        <div className="min-w-0"><dt className="workspace-eyebrow">Selected resume</dt><dd className="mt-1 break-words">{view.version?.title ?? "Choose a resume in source materials below"}</dd>{view.version && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{view.version.kind === "snapshot" ? "Saved copy" : "Editable resume"} · {formatDate(view.version.at)}</p>}</div>
+        <div><dt className="workspace-eyebrow">Round context</dt><dd className="mt-1">{view.round.label || "General role practice · no round type selected"}</dd><p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{view.round.at ? `Recorded date · ${new Date(view.round.at).toLocaleString()}` : "No interview date recorded. Practice does not need one."}</p></div>
+        <div><dt className="workspace-eyebrow">Job description</dt><dd className="mt-1">{view.job.has_text ? "Stored job material available" : "No stored description · questions may be less specific"}</dd></div>
+      </dl>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="block text-sm">Practice format<Select disabled={busy || !MOCK_INTERVIEW_ENABLED} value={mode} onChange={(event) => setMode(event.target.value as "audio" | "video")}><option value="audio">Audio with transcript</option><option value="video">Video with transcript</option></Select></label><label className="block text-sm">Time to practice<Select disabled={busy || !MOCK_INTERVIEW_ENABLED} value={minutes} onChange={(event) => setMinutes(event.target.value === "20" ? 20 : 10)}><option value="10">10 minutes · focused rehearsal</option><option value="20">20 minutes · fuller conversation</option></Select></label></div>
+      {!MOCK_INTERVIEW_ENABLED && <p role="status" className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Saba practice is unavailable on this deployment. Your materials, preparation and interview records remain available.</p>}
+      {launchError && <div className="mt-4"><ErrorNote onRetry={onRefresh}>{launchError}</ErrorNote></div>}
       <div className="mt-4 flex flex-wrap gap-2">
         {!practiceOnly && <Link to={copilotPath(view.entry_id)} className={linkButton("primary", "md")}>
           <Rocket className="h-4 w-4" aria-hidden /> Start permitted live assistance
         </Link>}
         {MOCK_INTERVIEW_ENABLED && (
-          <Button variant="secondary" loading={busy} disabled={!view.version} onClick={() => void practise()}>
-            <Target className="h-4 w-4" aria-hidden /> Start practice with Saba
+          <Button variant={practiceOnly ? "primary" : "secondary"} loading={busy} disabled={!view.version || busy} onClick={() => void practise()}>
+            <Target className="h-4 w-4" aria-hidden /> Start {minutes}-minute practice
           </Button>
         )}
       </div>
       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-        Uses interview minutes while running, by the second. Camera and microphone permissions are requested when needed. Choose audio if you prefer no camera. Transcript retention follows your session settings. Live assistance requires permission under your interview rules.
+        Planned duration is a practice limit, not a prepaid charge. Uses interview minutes while running, by the second. Camera and microphone permissions are requested when needed. Choose audio if you prefer no camera. Transcript retention follows your session settings. Live assistance requires permission under your interview rules.
       </p>
+      <nav aria-label="Continue preparing for this opportunity" className="mt-4 flex flex-wrap items-center gap-x-5 border-t border-zinc-200 pt-3 dark:border-white/10"><Link to={`${missionPath(view.entry_id)}?tab=plan`} className={textLink}>Open preparation plan</Link><Link to={`${missionPath(view.entry_id)}?tab=interview`} className={textLink}>Review recorded rounds</Link>{onRefresh && <Button variant="ghost" disabled={busy} onClick={() => { setLaunchError(null); onRefresh(); }}>Refresh briefing</Button>}</nav>
     </section>
   );
 }
@@ -252,8 +297,30 @@ function LaunchCard({ view, practiceOnly = false }: { view: InterviewPrepView; p
  * A mock interview for this job: its documents (saved once by the server), the interviewer for the round type, the
  * company's style, and with `drill` the picked likely questions. Returns the new session's id.
  */
-async function startPractice(view: InterviewPrepView, drill?: NonNullable<MockConfig["drill"]>, video = false): Promise<string> {
+function practiceBriefKey(view: Pick<InterviewPrepView, "entry_id" | "version" | "round">): string {
+  return JSON.stringify([view.entry_id, view.version?.kind, view.version?.id, view.version?.at,
+    view.round.type, view.round.number, view.round.at]);
+}
+
+function practiceLaunchKey(view: InterviewPrepView): string {
+  return JSON.stringify([practiceBriefKey(view), view.job.document_id, view.job.has_text, view.title, view.company]);
+}
+
+function assertPracticeBrief(view: InterviewPrepView, ctx: InterviewSessionContext): void {
+  if (ctx.role !== view.title.slice(0, 300) || ctx.company !== view.company.slice(0, 120) ||
+      practiceBriefKey(view) !== practiceBriefKey({ entry_id: ctx.application_id, version: ctx.version, round: ctx.round })) {
+    throw new Error("Your selected resume or round changed since this briefing loaded. Refresh the briefing, review the materials and start again.");
+  }
+  if (view.job.document_id && !ctx.documents.some((doc) => doc.kind === "job_description" && doc.id === view.job.document_id)) {
+    throw new Error("The selected job document changed. Refresh and review Saba’s source materials before starting.");
+  }
+}
+
+async function startPractice(view: InterviewPrepView, drill?: NonNullable<MockConfig["drill"]>, video = false,
+                             minutes: 10 | 20 = 20, isCurrent: () => boolean = () => true): Promise<string> {
   const ctx = await api.interviewSessionContext(view.entry_id);
+  assertPracticeBrief(view, ctx);
+  if (!isCurrent()) throw new Error("The practice briefing changed. Review the current sources before starting.");
   // Only what stops a document loading (a full plan, a post Orbit doesn't have): the rest the prep view already says.
   const missing = ctx.notes.find((n) => n.includes("isn't loaded"));
   if (missing) toast({ message: missing, tone: "neutral" });
@@ -268,10 +335,10 @@ async function startPractice(view: InterviewPrepView, drill?: NonNullable<MockCo
     auto_answer: false,
     document_ids: contextDocumentIds(ctx, []),
     mock: {
-      ...mockForRound(view.round.type),
+      ...mockForRound(ctx.round.type),
       video,
       difficulty: "medium",
-      duration_minutes: drill?.length ? practiceMinutes(drill.length) : 20,
+      duration_minutes: drill?.length ? practiceMinutes(drill.length) : minutes,
       company: ctx.company,
       ...(drill?.length ? { drill } : {}),
     },
@@ -315,7 +382,7 @@ function JobPostCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: In
           <label className="sr-only" htmlFor="iv-post">
             The job post
           </label>
-          <Textarea id="iv-post" rows={5} maxLength={20000} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the job description from the job's page" className="!text-sm" />
+          <Textarea disabled={busy} id="iv-post" rows={5} maxLength={20000} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste the job description from the job's page" className="!text-sm" />
           <Button
             size="sm"
             disabled={text.trim().length < 40}
@@ -375,7 +442,7 @@ function ResumeCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Int
       ) : (
         <p className={cx("mt-1", muted)}>
           {view.resume_missing ? "The resume linked to this job was deleted. " : "None linked yet. "}
-          Pick the one you sent: the copilot and the questions use it.
+          Choose the version you want to practice with. A saved copy does not establish what an employer received.
           {resumes.data?.length === 0 && (
             <>
               {" "}
@@ -410,7 +477,7 @@ function ResumeCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Int
       </label>
       {view.versions.every((x) => x.kind !== "snapshot") && r && (
         <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          Freeze it as sent on the Resume kit tab, so editing it later doesn't change what you prepare from.
+          Save a separate copy under Application → Resume & materials so later edits do not change that copy. Saving is not submission.
         </p>
       )}
     </Card>
@@ -432,6 +499,9 @@ function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGener
   const navigate = useNavigate();
   const allowance = useAsync(() => api.resumeAllowance(), [], "resume-allowance");
   const saved = view.questions ?? null;
+  const active = useRef(true);
+  const busyRef = useRef(false);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   const [out, setOut] = useState<ResumeQuestionsResponse | null>(() => saved?.result ?? null);
   const [picked, setPicked] = useState<Set<string>>(() => new Set(saved ? defaultPractice(saved.result) : []));
   const [busy, setBusy] = useState<"ask" | "practise" | null>(null);
@@ -439,31 +509,35 @@ function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGener
   const a = allowance.data;
   const none = Boolean(a && !a.unlimited && a.credits_left <= 0);
   const ask = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
     setBusy("ask");
     setError(null);
     try {
       const result = await api.interviewQuestions(view.entry_id);
+      if (!active.current) return;
       setOut(result);
       setPicked(new Set(defaultPractice(result)));
       allowance.reload();
       onGenerated();
     } catch (err) {
-      setError(errorText(err));
+      if (active.current) setError(errorText(err));
     } finally {
-      setBusy(null);
+      busyRef.current = false;
+      if (active.current) setBusy(null);
     }
   };
   const practise = async () => {
-    if (!out) return;
-    setBusy("practise");
+    if (!out || busyRef.current || saved?.stale) return;
+    busyRef.current = true; setBusy("practise"); setError(null);
     try {
-      const id = await startPractice(view, practiceDrill(out.questions, picked));
+      const id = await startPractice(view, practiceDrill(out.questions, picked), false, 20, () => active.current);
+      if (!active.current) return;
       const launch: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${id}`, { state: launch });
     } catch (err) {
-      setError(errorText(err));
-      setBusy(null);
-    }
+      if (active.current) { setError(errorText(err)); setBusy(null); }
+    } finally { busyRef.current = false; }
   };
   return (
     <Card>
@@ -489,7 +563,7 @@ function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGener
         </>
       ) : (
         <>
-          <p className={cx("mt-1", muted)}>Tick the ones to practise: the AI interviewer asks them in order and follows up where they'd push.</p>
+          <p className={cx("mt-1", muted)}>Choose questions to rehearse. The interviewer asks them in order and may follow up. If the saved set is stale, review or regenerate it before starting a drill.</p>
           {saved && (
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
               <span>
@@ -556,7 +630,7 @@ function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGener
           </div>
           {MOCK_INTERVIEW_ENABLED && (
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button onClick={() => void practise()} loading={busy === "practise"} disabled={picked.size === 0}>
+              <Button onClick={() => void practise()} loading={busy === "practise"} disabled={picked.size === 0 || saved?.stale === true || busy !== null}>
                 <Target className="h-4 w-4" aria-hidden /> Practise {picked.size} {picked.size === 1 ? "question" : "questions"}
               </Button>
               <span className="text-xs text-zinc-500 dark:text-zinc-400">Uses interview minutes while it runs.</span>
