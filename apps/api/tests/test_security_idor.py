@@ -442,9 +442,10 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/billing/webhook"),
     # PayPal's: believed only when PayPal's verify-webhook-signature says so (tests/test_paypal.py).
     ("POST", "/v1/billing/paypal/webhook"),
-    # The job alert email's "stop these emails" link: the stored random token (in the body) is the credential, and
-    # all it can do is turn that one person's alerts off.
+    # The job alert and weekly progress emails' "stop these emails" links: the stored random token (in the body) is
+    # the credential, and all it can do is turn that one person's emails off.
     ("POST", "/v1/jobs/alerts/off"),
+    ("POST", "/v1/jobs/playbook/digest/off"),
     # Google sign-in: the redirect out and back, before anyone is signed in (the state cookie guards the return).
     ("GET", "/v1/auth/google/start"), ("GET", "/v1/auth/google/callback"),
     # The desktop app's Google sign-in (D81): the loopback code and its PKCE verifier are the credential.

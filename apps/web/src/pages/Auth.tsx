@@ -719,6 +719,20 @@ export function VerifyEmailPage() {
 
 /** The job alert email's "stop these emails" link: a button, so a mail scanner opening the link changes nothing. */
 export function StopJobAlertsPage() {
+  return <StopEmailsPage stop={(token) => api.stopJobAlerts(token)} what="job alert emails" stopped="Job alerts stopped"
+    detail="Orbit will stop emailing you new job matches." again="Turn them back on any time in Jobs, Profile." home="/jobs/profile" homeLabel="Go to your job profile" />;
+}
+
+/** The weekly progress email's stop link (job_portal/digest.py), the same one-click shape as job alerts. */
+export function StopWeeklyDigestPage() {
+  return <StopEmailsPage stop={(token) => api.call<void>("/v1/jobs/playbook/digest/off", { method: "POST", body: JSON.stringify({ token }) })}
+    what="weekly progress emails" stopped="Weekly emails stopped" detail="Orbit will stop sending your weekly progress summary."
+    again="Turn it back on any time in Today, Your workflow rules." home="/#follow-up-rules" homeLabel="Go to Today" />;
+}
+
+function StopEmailsPage({ stop: request, what, stopped, detail, again, home, homeLabel }: {
+  stop: (token: string) => Promise<unknown>; what: string; stopped: string; detail: string; again: string; home: string; homeLabel: string;
+}) {
   const token = useOneTimeToken();
   const { user } = useAuth();
   const [state, setState] = useState<"ready" | "working" | "done" | "failed">(token ? "ready" : "failed");
@@ -726,7 +740,7 @@ export function StopJobAlertsPage() {
   const stop = () => {
     if (!token) return;
     setState("working");
-    api.stopJobAlerts(token).then(
+    request(token).then(
       () => setState("done"),
       (err: unknown) => {
         setError(errorText(err));
@@ -736,8 +750,8 @@ export function StopJobAlertsPage() {
   };
   return (
     <AuthShell
-      title={state === "done" ? "Job alerts stopped" : "Stop job alert emails?"}
-      subtitle={state === "done" ? "You won't get any more. Turn them back on any time in Jobs, Profile." : "Orbit will stop emailing you new job matches."}
+      title={state === "done" ? stopped : `Stop ${what}?`}
+      subtitle={state === "done" ? `You won't get any more. ${again}` : detail}
     >
       <div role="status" className="space-y-4 text-center text-sm">
         {state === "failed" && error && <ErrorNote>{error}</ErrorNote>}
@@ -747,8 +761,8 @@ export function StopJobAlertsPage() {
           </Button>
         )}
         {state !== "ready" && state !== "working" && (
-          <Link to={user ? "/jobs/profile" : "/login"} className={cx(linkClass, "inline-block")}>
-            {user ? "Go to your job profile" : "Sign in"}
+          <Link to={user ? home : "/login"} className={cx(linkClass, "inline-block")}>
+            {user ? homeLabel : "Sign in"}
           </Link>
         )}
       </div>

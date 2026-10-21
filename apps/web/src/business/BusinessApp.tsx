@@ -126,7 +126,7 @@ function CompanyNav({ company, sidebar = false }: { company: BizCompany; sidebar
   const items = NAV.filter((n) => (n.to === "control-room" ? company.role !== "interviewer" : n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
   return (
     <nav aria-label={`${company.name}`} className={sidebar ? "hidden w-60 shrink-0 space-y-6 border-r border-zinc-200 p-4 dark:border-white/10 lg:block" : "border-b border-zinc-200 dark:border-white/10 lg:hidden"}>
-      {sidebar && <div className="space-y-3 rounded-xl bg-zinc-950 p-4 text-white"><p className="text-xs uppercase tracking-widest text-indigo-300">Company workspace</p><p className="truncate font-semibold">{company.name}</p><p className="text-xs text-zinc-300">{ROLE_LABEL[company.role]} · {company.verified ? "Verified" : "Verification pending"}</p></div>}
+      {sidebar && <div className="space-y-3 rounded-xl bg-zinc-950 p-4 text-white"><p className="text-xsst text-indigo-300">Company workspace</p><p className="truncate font-semibold">{company.name}</p><p className="text-xs text-zinc-300">{ROLE_LABEL[company.role]} · {company.verified ? "Verified" : "Verification pending"}</p></div>}
       <ul className={sidebar ? "space-y-1" : "mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6"}>
         {items.map((n) => (
           <li key={n.to}>

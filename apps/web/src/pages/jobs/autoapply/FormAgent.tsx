@@ -37,8 +37,7 @@ export function FormAgent({ eligible, onChanged }: { eligible: boolean; onChange
           <rect x="12" y="15" width="24" height="21" rx="6" /><path d="M24 9v6M19 25h.01M29 25h.01M19 30h10M7 23v6M41 23v6" strokeLinecap="round" />
           <circle cx="24" cy="8" r="2" />
         </svg>
-        <div><p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Personal Orbit · hosted AI</p>
-          <h2 className="mt-1 text-xl font-semibold">Agent mode</h2>
+        <div><h2 className="text-xl font-semibold">Agent mode</h2>
           <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">Let AI help the application worker understand unfamiliar contact and profile text fields. It chooses an approved profile fact; Orbit copies the saved value and continues the form.</p>
         </div>
       </div>

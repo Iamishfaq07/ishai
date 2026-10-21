@@ -165,7 +165,7 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
               {last.template && <p className="text-amber-800 dark:text-amber-300">We couldn't reach the AI writer, so this is what you wrote, laid out. It's in the editor: fill in the rest there.</p>}
               {last.assumptions.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">What Orbit assumed</p>
+                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">What Orbit assumed</p>
                   <ul className="mt-1 list-disc space-y-0.5 pl-4 text-zinc-700 dark:text-zinc-300">
                     {last.assumptions.map((a) => (
                       <li key={a}>{a}</li>
@@ -175,7 +175,7 @@ export function JobAssistant({ companyId, panel, setPanel, getCurrent, onAnswer,
               )}
               {last.notes.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Inclusive wording</p>
+                  <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Inclusive wording</p>
                   <ul className="mt-1 list-disc space-y-0.5 pl-4 text-zinc-700 dark:text-zinc-300">
                     {last.notes.map((n) => (
                       <li key={n}>{n}</li>

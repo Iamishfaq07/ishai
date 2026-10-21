@@ -1025,6 +1025,9 @@ class CareerPlaybook(Base):
     thank_you_hours: Mapped[int | None] = mapped_column(Integer)  # after a recorded interview round
     stale_days: Mapped[int | None] = mapped_column(Integer)  # applied, no reply or next step
     saved_days: Mapped[int | None] = mapped_column(Integer)  # saved, not applied
+    weekly_digest: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    digest_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    digest_token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)  # the email's stop link
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

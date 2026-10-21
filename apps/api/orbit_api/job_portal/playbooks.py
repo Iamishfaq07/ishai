@@ -10,7 +10,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +32,7 @@ class Rules(BaseModel):
     thank_you_hours: int | None = Field(None, ge=2, le=72, strict=True)
     stale_days: int | None = Field(None, ge=14, le=90, strict=True)
     saved_days: int | None = Field(None, ge=3, le=60, strict=True)
+    weekly_digest: StrictBool = False  # the weekly progress email (digest.py)
 
 
 class Save(Rules):
@@ -40,7 +41,8 @@ class Save(Rules):
 
 async def settings(db: AsyncSession, user_id: str) -> dict[str, Any]:
     row = await db.get(CareerPlaybook, user_id, populate_existing=True)
-    return {"revision": row.revision if row else 0, **{key: getattr(row, key) if row else None for key in RULES}}
+    return {"revision": row.revision if row else 0, **{key: getattr(row, key) if row else None for key in RULES},
+            "weekly_digest": bool(row and row.weekly_digest)}
 
 
 RULES = ("follow_up_days", "prep_hours", "thank_you_hours", "stale_days", "saved_days")
@@ -162,6 +164,12 @@ async def save(body: Save, user: Annotated[User, Depends(current_user)],
         db.add(row)
     for key in RULES:
         setattr(row, key, getattr(body, key))
+    if body.weekly_digest and not row.weekly_digest:
+        from orbit_api.job_portal.digest import new_token
+
+        row.digest_token = row.digest_token or new_token()
+        row.digest_sent_at = None  # the first email goes out on the next pass, then weekly
+    row.weekly_digest = body.weekly_digest
     row.revision += 1
     await db.commit()
     return await settings(db, user.id)

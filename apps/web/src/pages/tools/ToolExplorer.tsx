@@ -37,8 +37,7 @@ export function ToolExplorerPage() {
     <PublicHeader />
     <main id="main-content" className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
       <header className="grid items-center gap-6 rounded-3xl border border-indigo-200 bg-white p-6 sm:p-8 md:grid-cols-2 dark:border-indigo-500/20 dark:bg-zinc-900">
-        <div><p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Explore Orbit</p>
-          <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight sm:text-4xl">Find your next move.</h1>
+        <div><h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Find your next move.</h1>
           <p className="mt-3 text-zinc-600 dark:text-zinc-400">A connected workspace for finding a role or building a team. Choose a step to discover the tools that help.</p>
           <div className="mt-5 flex flex-wrap gap-2" role="group" aria-label="Tool audience">{(["personal", "business"] as const).map((a) => <button key={a} type="button" aria-pressed={a === audience} className={buttonClass(a === audience ? "primary" : "secondary", "md")} onClick={() => update("audience", a)}>{a === "personal" ? "Personal Orbit" : "Orbit for Business"}</button>)}</div>
         </div>

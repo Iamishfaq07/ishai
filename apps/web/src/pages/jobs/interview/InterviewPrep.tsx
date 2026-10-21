@@ -587,7 +587,7 @@ function QuestionsCard({ view, onGenerated }: { view: InterviewPrepView; onGener
               if (!qs.length) return null;
               return (
                 <section key={g.id} aria-label={g.label}>
-                  <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-zinc-500">{g.label}</h3>
+                  <h3 className="text-xs font-semibold text-zinc-500">{g.label}</h3>
                   <ul className="mt-2 space-y-2">
                     {qs.map((q) => (
                       <li key={q.id} className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
