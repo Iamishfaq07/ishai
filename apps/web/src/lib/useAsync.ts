@@ -89,9 +89,11 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[], key?
   }, [...deps, nonce, key]);
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const ownerGeneration = generation;
   const setData = useCallback(
     (updater: (prev: T | null) => T | null) =>
       setDataState((prev) => {
+        if (ownerGeneration !== generation) return prev;
         const next = updater(prev);
         if (key) {
           if (next === null) cache.delete(key);
@@ -99,7 +101,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: readonly unknown[], key?
         }
         return next;
       }),
-    [key],
+    [key, ownerGeneration],
   );
   return { data, error, loading, reload, setData };
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type {
   InterviewPrepUpdate,
@@ -194,16 +194,26 @@ function WhenCard({ view, onSave }: { view: InterviewPrepView; onSave: (p: Inter
 }
 
 /** The two ways in: the copilot with this job loaded, or a practice round on it first. */
-function LaunchCard({ view }: { view: InterviewPrepView }) {
+export function JobSabaPractice({ entryId }: { entryId: string }) {
+  const prep = useAsync(() => api.interviewPrep(entryId), [entryId], `interview-prep:${entryId}`);
+  return prep.error ? <ErrorNote onRetry={prep.reload}>{errorText(prep.error)}</ErrorNote> : prep.data ? <LaunchCard view={prep.data} practiceOnly /> : <p role="status">Loading this role’s Saba briefing…</p>;
+}
+
+function LaunchCard({ view, practiceOnly = false }: { view: InterviewPrepView; practiceOnly?: boolean }) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const active = useRef(true);
+  useEffect(() => { active.current = true; return () => { active.current = false; }; }, [view.entry_id]);
+  const [mode, setMode] = useState<"audio" | "video">("audio");
   const practise = async () => {
     setBusy(true);
     try {
-      const session = await startPractice(view);
+      const session = await startPractice(view, undefined, mode === "video");
+      if (!active.current) return;
       const launch: LiveLaunchState = { systemAudio: false };
       navigate(`/live/${session}`, { state: launch });
     } catch (err) {
+      if (!active.current) return;
       toast({ message: errorText(err), tone: "error" });
       setBusy(false);
     }
@@ -211,23 +221,25 @@ function LaunchCard({ view }: { view: InterviewPrepView }) {
   return (
     <section aria-labelledby="iv-launch" className="glass-panel gradient-border rounded-2xl p-5">
       <h2 id="iv-launch" className="flex items-center gap-3 font-display text-lg font-semibold">
-        <Spot kind="copilot" /> On the day
+        <Spot kind="copilot" /> {practiceOnly ? "Practice with Saba" : "Practice and interview day"}
       </h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-        The copilot starts with this job's post, the selected resume version and {view.guide ? `the ${view.guide} guide` : "the role"} loaded, so answers are about you and this job.
+        Saba uses this opportunity’s saved job description, selected resume version and recorded round. Practice stays linked to this job; it never marks an employer interview complete.
       </p>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{view.version?.title ?? "No resume selected — choose this job’s materials before practicing."} · {view.round.label || "General role practice"}</p>
+      <label className="mt-3 block text-sm">Practice format<Select value={mode} onChange={(event) => setMode(event.target.value as "audio" | "video")}><option value="audio">Audio with transcript</option><option value="video">Video with transcript</option></Select></label>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link to={copilotPath(view.entry_id)} className={linkButton("primary", "md")}>
-          <Rocket className="h-4 w-4" aria-hidden /> Start copilot for this interview
-        </Link>
+        {!practiceOnly && <Link to={copilotPath(view.entry_id)} className={linkButton("primary", "md")}>
+          <Rocket className="h-4 w-4" aria-hidden /> Start permitted live assistance
+        </Link>}
         {MOCK_INTERVIEW_ENABLED && (
-          <Button variant="secondary" loading={busy} onClick={() => void practise()}>
-            <Target className="h-4 w-4" aria-hidden /> Practise this interview
+          <Button variant="secondary" loading={busy} disabled={!view.version} onClick={() => void practise()}>
+            <Target className="h-4 w-4" aria-hidden /> Start practice with Saba
           </Button>
         )}
       </div>
       <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-        Both use interview minutes while they run, by the second. Nothing is spent until you start.
+        Uses interview minutes while running, by the second. Camera and microphone permissions are requested when needed. Choose audio if you prefer no camera. Transcript retention follows your session settings. Live assistance requires permission under your interview rules.
       </p>
     </section>
   );
@@ -237,12 +249,12 @@ function LaunchCard({ view }: { view: InterviewPrepView }) {
  * A mock interview for this job: its documents (saved once by the server), the interviewer for the round type, the
  * company's style, and with `drill` the picked likely questions. Returns the new session's id.
  */
-async function startPractice(view: InterviewPrepView, drill?: NonNullable<MockConfig["drill"]>): Promise<string> {
+async function startPractice(view: InterviewPrepView, drill?: NonNullable<MockConfig["drill"]>, video = false): Promise<string> {
   const ctx = await api.interviewSessionContext(view.entry_id);
   // Only what stops a document loading (a full plan, a post Orbit doesn't have): the rest the prep view already says.
   const missing = ctx.notes.find((n) => n.includes("isn't loaded"));
   if (missing) toast({ message: missing, tone: "neutral" });
-  const docs = ctx.resume_included ? [] : await api.listDocuments();
+  if (!ctx.resume_included) throw new Error("This job’s selected resume could not load. Review its materials and try again; other resumes will not be substituted.");
   const session = await api.createSession({
     title: `Practice: ${ctx.title}`.slice(0, 300),
     type: "mock",
@@ -251,9 +263,10 @@ async function startPractice(view: InterviewPrepView, drill?: NonNullable<MockCo
     length: "standard",
     style: "natural",
     auto_answer: false,
-    document_ids: contextDocumentIds(ctx, docs),
+    document_ids: contextDocumentIds(ctx, []),
     mock: {
       ...mockForRound(view.round.type),
+      video,
       difficulty: "medium",
       duration_minutes: drill?.length ? practiceMinutes(drill.length) : 20,
       company: ctx.company,

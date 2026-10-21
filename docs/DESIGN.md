@@ -671,3 +671,9 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
   Previous and Next; it never moves on its own.
 - **Copy**: what's true and checkable, as everywhere on the front door; a comparison says what each side hands you
   and names no one ("A general chatbot").
+
+## Candidate cockpit integration — 21 October 2026
+
+Today presents one source-backed next action, a nonlinear journey strip and owned opportunity rows. My Career begins with explicit identity/master review and goals; advanced utilities are disclosed after these tasks. The Opportunity Room uses Overview, Application, Prepare with Saba, Interviews, and Offer; legacy tools remain accessible through More tools, without a guided/expert mode split. The room suppresses the additional Jobs navigation. Opaque surfaces, indigo action hierarchy, responsive wrapping and existing motion primitives replace competing hero/catalog surfaces. Screenshot evidence and untested visual states are recorded in implementation/UNIFIED_JOURNEY_VISUAL_QA.md.
+
+Opportunity history offers optional review/link controls and confirmed unlink with preserved-report copy. Original report context and current job attribution are distinct. Return navigation does not attach a report. Evidence descriptions wrap on small screens so uncertainty qualifications are visible; provenance is text as well as color. Primary five-destination navigation is unchanged.

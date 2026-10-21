@@ -32,7 +32,8 @@ function OwnedReturn({ trail }: { trail: OpportunityTrail }) {
     catch { if (request === seq.current) { setContext(null); setError(true); } }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(false); } }
   }, [trail.jobId]);
-  useEffect(() => { void refresh(); return () => { seq.current++; }; }, [refresh]);
+  const cancel = useCallback(() => { seq.current++; }, []);
+  useEffect(() => { void refresh(); return cancel; }, [refresh, cancel]);
   useEffect(() => {
     const onReturn = () => { if (!busyRef.current && document.visibilityState === "visible") void refresh(); };
     window.addEventListener("focus", onReturn); document.addEventListener("visibilitychange", onReturn);

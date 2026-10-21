@@ -47,9 +47,10 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     const actions = await (await context.request.get(`${API}/v1/jobs/actions`)).json();
     expect(actions.items.some((action: { path: string }) => action.path === `/jobs/mission/${entry.id}?tab=plan`)).toBe(true);
     await helper.getByRole("link", { name: "Continue with this job", exact: true }).click();
-    await expect(page.getByRole("region", { name: "Guided opportunity", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Interview, one step at a time", exact: true })).toBeVisible();
-    await page.getByText("Record an employer reply", { exact: true }).click();
+    await expect(page.getByRole("region", { name: "Opportunity context", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Interview", exact: true })).toBeVisible();
+    await page.locator("summary").filter({ hasText: "Help and updates for this job" }).click();
+    await page.getByRole("button", { name: "Employer reply", exact: true }).click();
     await expect(page.getByRole("region", { name: "Review an employer message", exact: true }).getByLabel("2. Paste the relevant employer message")).toHaveValue("");
     await a11y(page);
   });

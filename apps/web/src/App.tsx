@@ -5,7 +5,6 @@ import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-rou
 import { InviteLinkPage } from "./pages/InviteLink";
 import { Layout } from "./components/Layout";
 import { CookieNotice } from "./components/CookieNotice";
-import { SupportChat } from "./components/SupportChat";
 import { Spinner } from "./components/ui";
 import { EmptyState, Skeleton, toast } from "@orbit/ui";
 import { signedInHereBefore, useAuth } from "./lib/auth";
@@ -96,6 +95,8 @@ import {
   publicPageFor,
 } from "./routes";
 
+const SupportChat = lazy(() => import("./components/SupportChat").then((module) => ({ default: module.SupportChat })));
+
 /** While a page's code downloads (first visit only; later visits are instant). */
 export function PageLoading() {
   return (
@@ -111,7 +112,7 @@ export function PageLoading() {
  * page, and Resume's and Jobs's homes their product pages.
  */
 export function RequireAuth({ children, publicPage }: { children: ReactNode; publicPage?: (pathname: string) => ReactNode }) {
-  const { user, loading, unreachable, recheck } = useAuth();
+const { user, loading, unreachable, recheck } = useAuth();
   const location = useLocation();
   if (loading) {
     // A browser nobody has signed in on: the public face now, not a spinner until the session check answers (the
@@ -356,7 +357,7 @@ export function App() {
     {/* After the page in the DOM, so the first Tab stop is the page's "Skip to content", not the floating support
         button or the cookie note (both are fixed in place, so where they sit in the markup doesn't move them). */}
     <CookieNotice />
-    <SupportChat />
+    <Suspense fallback={null}><SupportChat /></Suspense>
     </Suspense>
   );
 }

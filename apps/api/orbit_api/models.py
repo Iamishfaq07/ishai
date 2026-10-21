@@ -830,6 +830,9 @@ class JobSearchProfile(TimestampMixin, Base):
     prefs: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     suggested: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     suggested_hash: Mapped[str | None] = mapped_column(String(64))  # the resume content it was read from
+    # Explicit master selection/review metadata only. Resume remains the facts/version authority.
+    # Kept separately from resume_id, which may change when a candidate tries a different search resume.
+    career_identity: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     # Job alerts (job_portal/alerts.py): an email of new matches, "off" | "daily" | "weekly"; when the last went out
     # (or was due with nothing new); and the token of its one-click "stop these emails" link.
     alert: Mapped[str] = mapped_column(String(8), default="off", server_default="off")

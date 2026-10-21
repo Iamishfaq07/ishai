@@ -57,7 +57,7 @@ test("mobile target context survives a reload and a trip through Home", async ({
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("mobile-home.png"), fullPage: true });
   await page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Prepare", exact: true }).click();
-  await page.getByRole("link", { name: /^Practice with Saba/ }).click();
+  await page.getByRole("link", { name: "Prepare my Saba session", exact: true }).click();
   await expect(page).toHaveURL(/\/mock\?.*company=Acme/);
   await expect(page.getByLabel("Company (optional)", { exact: true })).toHaveValue("Acme");
 });

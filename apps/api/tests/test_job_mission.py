@@ -80,7 +80,7 @@ def test_a_mission_from_saved_to_sent(client: TestClient) -> None:
     copy = client.post(f"/v1/jobs/tracker/{eid}/mission/snapshots/{snap['id']}/copy", headers=h)
     assert copy.status_code == 201
     copied = client.get(f"/v1/resumes/{copy.json()['resume_id']}", headers=h).json()
-    assert copied["title"].startswith("Backend CV (sent ")
+    assert copied["title"].startswith("Backend CV (saved ")
     assert client.delete(f"/v1/resumes/{rid}", headers=h).status_code == 204
     m = client.get(f"/v1/jobs/tracker/{eid}/mission", headers=h).json()
     kept = m["snapshots"][0]

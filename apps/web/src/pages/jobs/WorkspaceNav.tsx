@@ -12,6 +12,8 @@ export function JobsWorkspaceNav() {
   const group = jobWorkspace(pathname);
   const [finder, setFinder] = useState(false);
   const tools = group ? workspaceTools(group.id) : [];
+  // The room owns its contextual navigation; do not stack another Jobs workspace menu above it.
+  if (pathname.startsWith("/jobs/mission/")) return null;
   return <div className="mb-6 space-y-3">
     <ProductTabs label="Jobs" sections={JOB_WORKSPACES.map((area, index) => ({
       to: area.to, label: area.label, end: true, also: area.paths, icon: ICONS[index]!,

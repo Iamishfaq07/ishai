@@ -42,12 +42,12 @@ def test_a_tracked_jobs_journey_in_order_and_private(jobs: TestClient) -> None: 
     events = r.json()
     kinds = [e["kind"] for e in events]
     assert kinds[0] == "saved" and kinds[-1] == "next" and events[-1]["upcoming"] is True
-    assert {"fit", "contact", "outreach", "applied", "round", "stage"} <= set(kinds)
+    assert {"fit", "contact", "outreach", "applied", "related_round", "stage"} <= set(kinds)
     fit = next(e for e in events if e["kind"] == "fit")
     assert fit["detail"] == "Good fit"
     contact = next(e for e in events if e["kind"] == "contact")
     assert contact["detail"] == "Priya (recruiter)"
-    rounds = [e for e in events if e["kind"] == "round"]
+    rounds = [e for e in events if e["kind"] == "related_round"]
     assert [x["detail"] for x in rounds] == ["Groww round 1"] and rounds[0]["link"] == f"/sessions/{ended}"
     assert next(e for e in events if e["kind"] == "stage")["title"] == "Interviewing"
     times = [e["at"] for e in events]
@@ -63,6 +63,45 @@ def test_a_just_saved_job_has_one_event(jobs: TestClient) -> None:  # noqa: F811
     entry = jobs.post("/v1/jobs/tracker", headers=h, json={"listing_id": lid}).json()["id"]
     events: list[dict[str, Any]] = jobs.get(f"/v1/jobs/tracker/{entry}/timeline", headers=h).json()
     assert [e["kind"] for e in events] == ["saved"] and events[0]["detail"] == "Backend Engineer at Acme"
+
+
+def test_company_match_needs_owned_review_and_cannot_move_between_jobs(jobs: TestClient) -> None:  # noqa: F811
+    h, other = _register(jobs), _register(jobs)
+    me = jobs.get("/v1/auth/me", headers=h).json()["id"]
+    lid = insert(jobs, _listing(company="Groww"))[0]
+    entry = jobs.post("/v1/jobs/tracker", headers=h, json={"listing_id": lid}).json()["id"]
+    second = jobs.post("/v1/jobs/tracker/manual", headers=h,
+                       json={"title": "Different role", "company": "Groww"}).json()["id"]
+    ended, unfinished, running = str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())
+
+    async def add() -> None:
+        async with sessionmaker()() as db:
+            db.add_all([
+                LiveSessionRow(id=ended, user_id=me, title="General Groww practice", type="mock",
+                               company="Groww", status="ended"),
+                LiveSessionRow(id=unfinished, user_id=me, title="Not finished", type="mock", status="created"),
+                LiveSessionRow(id=running, user_id=me, title="In progress", type="mock", status="live",
+                               application_id=entry),
+            ])
+            await db.commit()
+
+    run(jobs, add)
+    mission = f"/v1/jobs/tracker/{entry}/mission"
+    assert jobs.get(mission, headers=h).json()["practice_rounds"] == 0
+    path = f"/v1/jobs/tracker/{entry}/sessions/link"
+    body = {"session_id": ended, "confirmed": True}
+    assert jobs.post(path, headers=h, json={**body, "confirmed": False}).status_code == 422
+    assert jobs.post(path, headers=other, json=body).status_code == 404
+    assert jobs.post(f"/v1/jobs/tracker/{second}/sessions/link", headers=other, json=body).status_code == 404
+    assert jobs.post(path, headers=h, json={**body, "session_id": unfinished}).status_code == 409
+    assert jobs.post(path, headers=h, json=body).status_code == 200
+    assert jobs.post(path, headers=h, json=body).status_code == 200  # retry is idempotent
+    assert jobs.get(mission, headers=h).json()["practice_rounds"] == 1
+    timeline = jobs.get(f"/v1/jobs/tracker/{entry}/timeline", headers=h).json()
+    assert len([event for event in timeline if event["kind"] == "round" and event["completed"]]) == 1
+    assert not next(event for event in timeline if event["session_id"] == running)["completed"]
+    assert jobs.post(f"/v1/jobs/tracker/{second}/sessions/link", headers=h, json=body).status_code == 409
+    assert jobs.get(f"/v1/jobs/tracker/{second}/mission", headers=h).json()["practice_rounds"] == 0
 
 
 def test_a_job_says_where_else_it_is_posted(jobs: TestClient) -> None:  # noqa: F811

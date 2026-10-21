@@ -15,6 +15,9 @@ engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''
 with engine.begin() as db:
     db.execute(text('CREATE TABLE job_plan_checks (id VARCHAR(36) PRIMARY KEY, item_key VARCHAR(64))'))
     db.execute(text("INSERT INTO job_plan_checks (id,item_key) VALUES ('legacy','2026-10-20:gap:0')"))
+with engine.begin() as prerequisite:
+    prerequisite.execute(text('CREATE TABLE job_search_profiles '
+                             '(user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
 cfg = Config('alembic.ini')
 command.stamp(cfg, 'c407e21a6d93')
 command.upgrade(cfg, 'head')

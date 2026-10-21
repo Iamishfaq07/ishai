@@ -19,8 +19,10 @@ from orbit_api.workflow_ai import preview
 from .action_priority import attention_packets
 from .plan import plan_for
 from .requirement_practice import PracticeKind, choices, practice_fact
-from .resume_lineage import digest, parts, summary as lineage_summary
-from .source_review import coach_fact, review as review_source
+from .resume_lineage import digest, parts
+from .resume_lineage import summary as lineage_summary
+from .source_review import coach_fact
+from .source_review import review as review_source
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["opportunity coach"],
     dependencies=[Depends(limit_user("opportunity-coach", rate_per_s=1, burst=20))])
@@ -87,7 +89,8 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
             fact["text"] += " The latest saved copy matches the linked resume's stored content, design and target text."
         else:
             fact["text"] += (f" The latest saved copy differs from the linked resume in "
-                             f"{len(lineage['changed_sections'])} stored sections. Review the comparison before sharing.")
+                             f"{len(lineage['changed_sections'])} stored sections. "
+                             "Review the comparison before sharing.")
         fact["text"] += " A saved copy is not proof of submission, delivery, verified skills or employer receipt."
     facts.append({"id": "job_source", "label": "Job source review", "path": base + "fit&source=1",
                   "text": coach_fact(source_review)})
@@ -100,9 +103,11 @@ async def source(db: AsyncSession, user: User, entry_id: str, tz_offset: int = 0
                 "path": base + "fit", "text": f"A prior fit check lists this requirement: {requirement}. "
                 "Check the original job and current resume; this does not verify a candidate skill."})
     if requirement_key is not None:
-        selected = next((item for item in choices(fit.id, fit.result) if item.key == requirement_key), None) if fit else None
+        selected = next((item for item in choices(fit.id, fit.result)
+                         if item.key == requirement_key), None) if fit else None
         if selected is None:
-            raise HTTPException(409, "This requirement changed or is unavailable. Refresh and choose a current requirement.")
+            raise HTTPException(409, "This requirement changed or is unavailable. "
+                                    "Refresh and choose a current requirement.")
         fact = next(item for item in facts if item["id"] == "fit")
         fact["text"] += " " + practice_fact(selected, experiment_kind)
         fact["label"] = "Practice project"
@@ -187,7 +192,8 @@ async def plan(entry_id: str, body: PlanIn, user: Annotated[User, Depends(requir
         "For hired, rejected or withdrawn records, suggest reflection or recording the outcome, not further applying. "
         "Never instruct bypassing employer checks or automatically enabling applications.",
         json.dumps({"focus": body.focus, "facts": facts}), validate)
-    if (await source(db, user, entry_id, body.tz_offset, body.requirement_key, body.experiment_kind))["version"] != body.version:
+    refreshed = await source(db, user, entry_id, body.tz_offset, body.requirement_key, body.experiment_kind)
+    if refreshed["version"] != body.version:
         raise HTTPException(409, "This opportunity changed while guidance was prepared. Refresh to continue.")
     by_id = {fact["id"]: fact for fact in facts}
     return {"version": body.version, "source": provider, "tips": [

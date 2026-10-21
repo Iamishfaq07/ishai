@@ -39,10 +39,11 @@ export function RequirementWorkshop({ entryId, onRehearse }: { entryId: string; 
     } catch (err) { if (request === seq.current) { setView(null); setError(errorText(err)); } }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(false); } }
   }, [entryId]);
+  const cancel = useCallback(() => { seq.current++; }, []);
   useEffect(() => {
     if (open) void refresh();
-    return () => { seq.current++; };
-  }, [refresh, open]);
+    return cancel;
+  }, [refresh, open, cancel]);
   useEffect(() => { if (params.has("requirement") || params.get("workshop") === "1") setOpen(true); }, [params]);
   useEffect(() => {
     const onReturn = () => { if (open && !busyRef.current && document.visibilityState === "visible") void refresh(true); };

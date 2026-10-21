@@ -46,6 +46,7 @@ for (const width of [320, 1440]) {
     await expect(page).toHaveURL(new RegExp(`/jobs/mission/${tracker.id}`));
     await page.goto("/career");
     await expect(page.getByRole("heading", { name: "My Career", exact: true })).toBeVisible();
+    await page.getByText("Experience, documents and advanced tools", { exact: true }).click();
     await expect(page.getByRole("link", { name: /^Resume Build, import/ }).first()).toHaveAttribute("href", "/jobs?work=resume");
     await a11y(page);
     await page.screenshot({ path: info.outputPath(`career-${width}.png`), fullPage: true });

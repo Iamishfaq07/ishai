@@ -294,3 +294,13 @@ The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](S
 ## Preview data boundary
 
 Canonical production API access is refused from previews at both Worker and browser endpoint selection, including production artifacts accidentally served on a preview host. Staging requires independent infrastructure/secrets/domain; configuration guards cannot identify every private production alias. See [STAGING.md](STAGING.md) and [verification limits](implementation/SECURITY_AND_DATA_LINEAGE.md).
+
+## Unified candidate context boundaries
+
+Identity selection/review endpoints derive the user from authentication, check owned resume IDs, serialize writes with the existing account lock, and compare a version fingerprint plus resume revision. No client-supplied user authority. Completed-session association checks both job and session ownership and rejects rebinding a session already owned by another opportunity. Same-company matching never establishes a durable association or completed progress. New private content is not placed in URLs or analytics.
+
+PostgreSQL concurrency/staging, real speech providers, Windows hardware/signing and production backup/rollback remain separate operator gates; see implementation/UNIFIED_JOURNEY_RELEASE_SIGNOFF.md.
+
+Candidate account transitions also synchronize across same-origin tabs through storage events and opaque BroadcastChannel notifications; server authentication remains authoritative. Blocked browser storage is covered by the channel fallback. Raw resume or draft text is not broadcast.
+
+Session attribution link/unlink serializes through existing account and session-row locks. Both resources are checked against authenticated ownership; ended-only transitions reject cross-job stale actions. No inferred reassignment or raw provider context in audit targets. PostgreSQL16.15/pgvector0.8.7 local tests now cover competing links/master selection and export/delete. Hosted CI, deployed staging and live provider/hardware proof remain separate.

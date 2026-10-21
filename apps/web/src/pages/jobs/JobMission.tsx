@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
   Spot,
-  ArrowRight,
   ArrowUpRight,
   Check,
   CompanyLogo,
@@ -32,11 +31,10 @@ import { CompanyPanel } from "./CompanyPanel";
 import { Journey } from "./Journey";
 import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
-import { MISSION_GROUPS, MISSION_TOOLS, MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone, type MissionTool } from "./mission";
-import { practiceLink } from "./model";
+import { ROOM_SECTIONS, roomSection, MISSION_TOOLS, MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone, type MissionTool } from "./mission";
 import { StagePill } from "./StagePill";
 import { JOBS_TRACKER, jobPath } from "./paths";
-import { InterviewPrepPanel } from "./interview/InterviewPrep";
+import { JobSabaPractice, InterviewPrepPanel } from "./interview/InterviewPrep";
 
 import { opportunityStart } from "./opportunity";
 import { careerToolHref } from "../../lib/opportunityTrail";
@@ -44,8 +42,6 @@ const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: 
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
 const RequirementWorkshop = lazy(() => import("./RequirementWorkshop").then((m) => ({ default: m.RequirementWorkshop })));
-const GuideNext = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityNext })));
-const StepTools = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.OpportunityStepTools })));
 type Tab = MissionTool;
 
 /**
@@ -62,21 +58,20 @@ export function JobMissionPage() {
   // opens on its plan, and otherwise the fit.
   const [params, setParams] = useSearchParams();
   const asked = MISSION_TOOLS.find((tool) => tool.id === params.get("tab"))?.id;
-  const guided = params.get("guide") === "1" || (!params.has("guide") && !asked);
-  const tab: Tab = asked ?? (guided ? opportunityStart(entry?.status ?? "saved", mission.data) : entry?.next_at && (entry.status === "interviewing" || entry.status === "applied") ? "plan" : "fit");
+  // Legacy guide=0/1 remains bookmark-compatible; both resolve to the same owned room.
+  const tab: Tab = asked ?? opportunityStart(entry?.status ?? "saved", mission.data);
   const selected = MISSION_TOOLS.find((tool) => tool.id === tab)!;
   const setTab = (value: Tab) => {
     const next = new URLSearchParams(params);
     next.set("tab", value);
-    if (guided) next.set("guide", "1");
     setParams(next);
   };
 
   useEffect(() => {
-    if (!guided || asked || !mission.data || !entry) return;
+    if (asked || !mission.data || !entry) return;
     const next = new URLSearchParams(params); next.set("tab", tab); next.set("guide", "1");
     setParams(next, { replace: true });
-  }, [guided, asked, mission.data, entry, params, setParams, tab]);
+  }, [asked, mission.data, entry, params, setParams, tab]);
   const reloadMission = mission.reload;
   const reloadTracker = tracker.reload;
   useEffect(() => {
@@ -84,9 +79,6 @@ export function JobMissionPage() {
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
     return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
   }, [entryId, reloadMission, reloadTracker]);
-  const toggleGuide = () => {
-    const next = new URLSearchParams(params); next.set("guide", guided ? "0" : "1"); next.set("tab", tab); setParams(next);
-  };
   const openWorkshop = () => {
     const next = new URLSearchParams(params); next.set("tab", "fit"); next.set("workshop", "1"); setParams(next);
     requestAnimationFrame(() => { const heading = document.getElementById("requirement-practice-heading"); heading?.focus({ preventScroll: true }); heading?.scrollIntoView({ block: "start" }); });
@@ -110,7 +102,7 @@ export function JobMissionPage() {
 
   return (
     <div className="space-y-6">
-      <BackLink to={JOBS_TRACKER}>Tracker</BackLink>
+      <BackLink to={JOBS_TRACKER}>Applications</BackLink>
 
       {/* The heading's placeholder only while something is still loading: next to an error it read as stuck. */}
       {entry ? <Header entry={entry} /> : !tracker.error && !mission.error && <Skeleton variant="line" count={2} label="Loading the job" />}
@@ -121,34 +113,27 @@ export function JobMissionPage() {
           <ErrorNote onRetry={mission.reload}>{errorText(mission.error)}</ErrorNote>
         ) : m && entry ? (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-zinc-600 dark:text-zinc-400">{guided ? "One job, one step at a time." : "All tools for this opportunity."}</p><Button variant="secondary" onClick={toggleGuide}>{guided ? "Open all job tools" : "Follow guided steps"}</Button></div>
-            {guided ? <Suspense fallback={<p role="status">Opening guided steps…</p>}><Guided key={entry.id} entry={entry} mission={m} tab={tab} onSelect={setTab} onSaved={() => { tracker.reload(); mission.reload(); }} /></Suspense> : <Stages mission={m} />}
-            <div className={cx("grid grid-cols-[minmax(0,1fr)] gap-6", !guided && "lg:grid-cols-[minmax(0,1fr)_20rem]")}>
-              <div className="min-w-0">
-                {!guided && <><div role="group" aria-label="Job workspace areas" className="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-zinc-500/5 p-1">
-                  {MISSION_GROUPS.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      aria-pressed={selected.group === t.id}
-                      aria-controls="mission-tool-panel"
-                      onClick={() => { if (selected.group !== t.id) setTab(t.first); }}
-                      className={cx(
-                        "min-h-11 rounded-lg px-2 text-sm font-medium transition-colors motion-reduce:transition-none",
-                        selected.group === t.id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-                        focusRing,
-                      )}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="mb-4"><Field label="Workspace tool" htmlFor="mission-tool">
-                  <Select id="mission-tool" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>
-                    {MISSION_TOOLS.filter((tool) => tool.group === selected.group).map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}
-                  </Select>
-                </Field></div></>}
-                {guided && <Suspense><StepTools tab={tab} onSelect={setTab} /></Suspense>}
+            <Stages mission={m} />
+            <nav aria-label="Opportunity room" className="grid grid-cols-2 gap-2 rounded-2xl border border-zinc-200 bg-white p-2 sm:grid-cols-5 dark:border-white/10 dark:bg-zinc-900">
+              {ROOM_SECTIONS.map((section) => <button key={section.id} type="button" aria-current={roomSection(tab) === section.id ? "page" : undefined} onClick={() => setTab(section.first)} className={cx("min-h-11 rounded-xl px-3 py-2 text-sm font-semibold motion-safe:transition-colors", roomSection(tab) === section.id ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950" : "hover:bg-zinc-500/5", focusRing)}>{section.label}</button>)}
+            </nav>
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+              <aside aria-label="Next step" className="min-w-0 space-y-4 lg:order-last">
+                <NextStepCard
+                  step={m.next}
+                  entry={entry}
+                  onTab={setTab}
+                  onEntry={(e) => {
+                    onEntry(e);
+                    mission.reload();
+                  }}
+                />
+                <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10"><h2 className="font-semibold">Selected materials</h2><p className="mt-2 break-words">{m.resume?.title ?? "Choose a resume for this opportunity."}</p><p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Saved versions are separate from employer delivery receipts.</p><Button variant="secondary" className="mt-3" onClick={() => setTab("resume")}>Review application materials</Button></div>
+                {isSecurityRole(entry.title) && <KashSecContext placement="mission" />}
+              </aside>
+              <div className="min-w-0 space-y-4">
+                <Suspense fallback={<p role="status">Opening opportunity context…</p>}><Guided key={entry.id} entry={entry} mission={m} tab={tab} onSaved={() => { tracker.reload(); mission.reload(); }} /></Suspense>
+                <details className="rounded-xl border border-zinc-200 p-3 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-medium", focusRing)}>More tools · {selected.label}</summary><Field label="Opportunity tool" htmlFor="mission-tool"><Select id="mission-tool" value={tab} onChange={(event) => setTab(event.target.value as Tab)}>{MISSION_TOOLS.map((tool) => <option key={tool.id} value={tool.id}>{tool.label}</option>)}</Select></Field></details>
                 <section id="mission-tool-panel" aria-label={selected.label}>
                   {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
                   {tab === "interview" && (
@@ -164,7 +149,7 @@ export function JobMissionPage() {
                   {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel mission={m} entry={entry} onMission={update} />}
                   {tab === "company" && <CompanyPanel entry={entry} />}
-                  {tab === "practice" && <PracticePanel mission={m} entry={entry} />}
+                  {tab === "practice" && <PracticePanel mission={m} entry={entry} onLinked={mission.reload} />}
                   {tab === "timeline" && (
                     <Card>
                       <h2 className="font-display text-base font-semibold">Journey</h2>
@@ -173,22 +158,8 @@ export function JobMissionPage() {
                   )}
                   {tab === "offer" && <OfferPanel mission={m} entry={entry} onMission={update} />}
                 </section>
-                {guided && <Suspense><GuideNext tab={tab} onSelect={setTab} /></Suspense>}
               </div>
-              <aside aria-label="Next step" className={cx("min-w-0 space-y-4", guided ? "order-none" : "order-first lg:order-none")}>
-                <details open={!guided || tab === "timeline" || undefined}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-medium", focusRing)}>More actions for this opportunity</summary>
-                <NextStepCard
-                  step={m.next}
-                  entry={entry}
-                  onTab={setTab}
-                  onEntry={(e) => {
-                    onEntry(e);
-                    mission.reload();
-                  }}
-                />
-                </details>
-                {isSecurityRole(entry.title) && <KashSecContext placement="mission" />}
-              </aside>
+
             </div>
           </>
         ) : null}
@@ -376,6 +347,8 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
             <Link to={RESUME_AI_HOME} className={textLink}>Resume</Link>.
           </p>
         )}
+        <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">Selecting your master or a resume used by another job creates an independent copy for this opportunity. Your master and other jobs stay unchanged.</p>
+        {r && mission.resume_requires_copy && <Button className="mt-3" loading={busy} onClick={() => void run(() => api.linkMissionResume(entry.id, r.id), "Independent job copy created")}>Create an independent job copy</Button>}
         <div className="mt-4 flex flex-wrap items-end gap-2">
           <label className="min-w-0 flex-1 text-sm">
             <span className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">{r ? "Change linked resume" : "Link a resume"}</span>
@@ -468,29 +441,28 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
   );
 }
 
-function PracticePanel({ mission, entry }: { mission: JobMission; entry: JobTrackerEntry }) {
+function PracticePanel({ mission, entry, onLinked }: { mission: JobMission; entry: JobTrackerEntry; onLinked: () => void }) {
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const context = new URLSearchParams(params); context.set("job", entry.id); context.set("career_from", "practice");
   return (
     <Card>
       <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="mic" />Practice for {entry.company}</h2>
       <dl className="mt-3 grid grid-cols-2 gap-3 sm:max-w-sm">
         <div>
-          <dt className="text-xs text-zinc-600 dark:text-zinc-400">Practice rounds</dt>
+          <dt className="text-xs text-zinc-600 dark:text-zinc-400">Completed practice</dt>
           <dd className="font-display text-2xl font-semibold tabular-nums">{mission.practice_rounds}</dd>
         </div>
         <div>
-          <dt className="text-xs text-zinc-600 dark:text-zinc-400">Live rounds</dt>
+          <dt className="text-xs text-zinc-600 dark:text-zinc-400">Completed live sessions</dt>
           <dd className="font-display text-2xl font-semibold tabular-nums">{mission.live_rounds}</dd>
         </div>
       </dl>
-      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Counted from sessions started from this job, and ones you named for {entry.company} since you saved it.</p>
-      <Link to={practiceLink(entry, jobPath)} className={cx(linkButton("primary", "md"), "mt-4")}>
-        Practise for this job <ArrowRight className="h-4 w-4" aria-hidden />
-      </Link>
+      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Only sessions explicitly linked to this opportunity count here. Company-name matches require your review.</p>
+      <JobSabaPractice entryId={entry.id} />
+      <Button variant="secondary" className="mt-3" onClick={() => { const next = new URLSearchParams(params); next.set("tab", "plan"); setParams(next); }}>Review preparation plan</Button>
       <div className="mt-4 flex flex-wrap gap-x-5"><Link className={textLink} to={careerToolHref("/documents/stories", context)}>Review real examples in your story bank</Link><Link className={textLink} to={careerToolHref("/learn", context)}>Work on a skill before rehearsing</Link></div>
-      <details className="mt-4" onToggle={(event) => setReviewOpen(event.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Review previous rounds, then try again</summary><p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Includes linked rounds and company-name matches from your history. Open a completed session to review your recorded answers and existing retry tools.</p>{reviewOpen && <Journey key={entry.id} entryId={entry.id} roundsOnly />}</details>
+      <details className="mt-4" onToggle={(event) => setReviewOpen(event.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Review previous rounds, then try again</summary><p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Linked rounds count toward this opportunity. Possible company-name matches are shown separately for review. Open a completed session to review your recorded answers and existing retry tools.</p>{reviewOpen && <Journey key={entry.id} entryId={entry.id} roundsOnly onLinked={onLinked} />}</details>
     </Card>
   );
 }

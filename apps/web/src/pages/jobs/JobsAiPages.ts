@@ -12,4 +12,5 @@ export { JobDetailPage } from "./JobDetail";
 export { JobTrackerPage } from "./Tracker";
 export { JobOutreachPage } from "./Outreach";
 export { JobProfilePage } from "./Profile";
-export { JobMissionPage } from "./JobMission";
+const Mission = lazy(async () => ({ default: (await import("./JobMission")).JobMissionPage }));
+export function JobMissionPage() { return createElement(Mission); }
