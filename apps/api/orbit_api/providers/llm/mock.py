@@ -505,6 +505,12 @@ class MockLLMProvider(LLMProvider):
                 {"question": f"[mock] What would success look like in the first 90 days? ({i + 1})",
                  "why": "[mock] Shows you're thinking about delivering, not just landing the job."}
                 for i in range(4)]})
+        if request.request_type == "pitch":
+            return json.dumps({
+                "short": "[mock] I'm a backend engineer building Python services. Most recently I built payment "
+                         "services handling 7 million requests, and I want to bring that to your platform team.",
+                "standard": "[mock] I'm a backend engineer. " * 12, "long": "[mock] I'm a backend engineer. " * 18,
+                "hooks": ["[mock] Python services at PayNest", "[mock] REST APIs for partner banks"]})
         if request.request_type == "first_ninety":
             return json.dumps({"phases": [
                 {"name": name, "goals": [f"[mock] {name}: learn how the team ships", "[mock] Meet the people below"]}

@@ -30,6 +30,7 @@ from orbit_api.models import (
     Document,
     EvidenceItem,
     JobApplication,
+    JobCommitment,
     JobContact,
     JobFitCheck,
     JobInterviewRound,
@@ -134,6 +135,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             "playbook": _row(book) if (book := await db.get(CareerPlaybook, user_id)) else None,
             "contacts": [_row(c) for c in (await db.scalars(select(JobContact).where(
                 JobContact.user_id == user_id).order_by(JobContact.created_at))).all()],
+            "commitments": [_row(c) for c in (await db.scalars(select(JobCommitment).where(
+                JobCommitment.user_id == user_id).order_by(JobCommitment.created_at))).all()],
             "prep_plan_ticks": [_row(r) for r in (await db.scalars(select(JobPlanCheck).where(
                 JobPlanCheck.user_id == user_id).order_by(JobPlanCheck.created_at))).all()],
             "sent_resume_versions": [_row(r) for r in (await db.scalars(select(ResumeSnapshot).where(

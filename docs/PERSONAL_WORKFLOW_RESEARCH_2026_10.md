@@ -110,3 +110,14 @@ driven tailoring, AGPL; concept only). No code reused.
   goals for the first two weeks and by day 30, 60 and 90 from the job post's responsibilities, people to meet by
   role, questions for the manager and an early win the resume supports. Nothing stored; copy or download. In the
   job's Offer tab. The journey's last step ("Next chapter") now has a tool of its own.
+
+## Round six, 21 October 2026: promises to keep and "Tell me about yourself"
+
+- **Promises to keep** (`job_portal/commitments.py`, table `job_commitments`, migration `f6c8e0a2b4d7`): dated to-dos
+  per job for what the candidate told an employer they'd do. Added by hand on the job's Interview tab, or from an
+  interview debrief's "You said you would send" list in one click (due the next morning). Open ones due within seven
+  days, or overdue, appear on Today until ticked off. The same open promise isn't duplicated. Included in the data
+  export; deleted with the job or the account.
+- **"Tell me about yourself"** (`job_portal/pitch.py`, `POST /v1/jobs/tracker/{id}/pitch`): 30, 60 and 90 second
+  answers for one job from the resume's facts, shaped present, past, future; unproven numbers become [number] prompts.
+  On the job's Practice tab, above Saba practice.
