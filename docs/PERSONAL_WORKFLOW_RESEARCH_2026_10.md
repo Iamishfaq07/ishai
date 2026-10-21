@@ -100,3 +100,13 @@ driven tailoring, AGPL; concept only). No code reused.
   copy of the search resume in the existing background tailoring queue, with the same limits and credits as queuing by
   hand. It skips quietly when there is no resume, room or credit, and never blocks the save. Inspired by the
   "tailor every application" loops in career-ops and ai-job-search, without auto-submitting anything.
+
+## Round five, 21 October 2026: what's working and the first 90 days
+
+- **What's working** (`job_portal/resume_performance.py`, `GET /v1/jobs/resume-performance`): replies and interviews
+  by the resume each application used, traced to its source resume, and tailored copies against general ones. From
+  recorded statuses only; groups under 5 applications are marked too few to compare. On the Tracker.
+- **First 90 days** (`job_portal/first_ninety.py`, `POST /v1/jobs/tracker/{id}/first-90`): after an offer or a hire,
+  goals for the first two weeks and by day 30, 60 and 90 from the job post's responsibilities, people to meet by
+  role, questions for the manager and an early win the resume supports. Nothing stored; copy or download. In the
+  job's Offer tab. The journey's last step ("Next chapter") now has a tool of its own.

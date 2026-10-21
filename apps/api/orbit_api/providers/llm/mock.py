@@ -505,6 +505,13 @@ class MockLLMProvider(LLMProvider):
                 {"question": f"[mock] What would success look like in the first 90 days? ({i + 1})",
                  "why": "[mock] Shows you're thinking about delivering, not just landing the job."}
                 for i in range(4)]})
+        if request.request_type == "first_ninety":
+            return json.dumps({"phases": [
+                {"name": name, "goals": [f"[mock] {name}: learn how the team ships", "[mock] Meet the people below"]}
+                for name in ("First two weeks", "By day 30", "By day 60", "By day 90")],
+                "people": ["[mock] your manager", "[mock] the on-call lead"],
+                "questions": ["[mock] What does a great first quarter look like?"],
+                "early_win": "[mock] Improve one slow API, drawing on your PostgreSQL work."})
         if request.request_type == "first_look":
             return json.dumps({"impression": "[mock] Reads as a backend engineer; the job's main platform skill isn't "
                                "visible until the second role.",
