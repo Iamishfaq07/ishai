@@ -1022,6 +1022,9 @@ class CareerPlaybook(Base):
     revision: Mapped[int] = mapped_column(Integer, default=1)
     follow_up_days: Mapped[int | None] = mapped_column(Integer)
     prep_hours: Mapped[int | None] = mapped_column(Integer)
+    thank_you_hours: Mapped[int | None] = mapped_column(Integer)  # after a recorded interview round
+    stale_days: Mapped[int | None] = mapped_column(Integer)  # applied, no reply or next step
+    saved_days: Mapped[int | None] = mapped_column(Integer)  # saved, not applied
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

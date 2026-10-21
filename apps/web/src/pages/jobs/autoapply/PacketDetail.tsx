@@ -9,7 +9,7 @@ import { useAsync } from "../../../lib/useAsync";
 import { linkButton, textLink } from "../links";
 import { missionPath, outreachPath } from "../paths";
 import { applyApi } from "./applyApi";
-import { SOURCE_LABEL, actionsFor, answerText } from "./model";
+import { SOURCE_LABEL, actionsFor, answerText, sendsItself } from "./model";
 import { packetGuidance } from "./inbox";
 import ApplicationReview from "./ApplicationReview";
 
@@ -39,6 +39,7 @@ export default function PacketDetail({ id, onChanged, opportunityId }: { id: str
   const [showReview, setShowReview] = useState(false);
   const [confirmedFor, setConfirmedFor] = useState<string | null>(null);
   const detail = useAsync(() => applyApi.applyPacket(id), [id], `apply-packet|${id}`);
+  const setup = useAsync(() => applyApi.getApplySetup(), [], "apply-setup");
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const p = detail.data;
@@ -73,8 +74,10 @@ export default function PacketDetail({ id, onChanged, opportunityId }: { id: str
   if (detail.error && !p) return <ErrorNote onRetry={detail.reload}>{errorText(detail.error)}</ErrorNote>;
   if (!p) return <p className="text-sm" role="status">Loading application materials…</p>;
   if (!contextMatches) return <ErrorNote onRetry={() => { detail.reload(); onChanged(); }}>This packet no longer matches the open opportunity. Refresh the room before reviewing or taking action.</ErrorNote>;
-  const can = actionsFor(p.status);
-  const guidance = packetGuidance(p);
+  // Nothing sends this approved application for the candidate (no hosted worker, no active extension): it's theirs.
+  const sendYourself = !!setup.data?.configured && !sendsItself(setup.data) && p.ats !== "orbit";
+  const can = actionsFor(p.status, sendYourself);
+  const guidance = packetGuidance(p, sendYourself);
   return (
     <div className="space-y-5">
       <section aria-label="Application status" className="space-y-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-400/20 dark:bg-indigo-500/10">
@@ -136,13 +139,13 @@ export default function PacketDetail({ id, onChanged, opportunityId }: { id: str
       <div className="flex flex-wrap gap-2">
         {can.finish && (
           <a href={p.apply_url} target="_blank" rel="noreferrer" className={linkButton("primary", "md")}>
-            Finish in one click <ExternalLink className="h-4 w-4" aria-hidden />
+            Open the application form <ExternalLink className="h-4 w-4" aria-hidden />
             <span className="sr-only"> (opens the job in a new tab)</span>
           </a>
         )}
         {can.finish && (
           <Button variant="secondary" loading={busy === "done"} onClick={() => void act("done", () => applyApi.doneApplyPacket(p.id))}>
-            I applied
+            I sent it · mark applied
           </Button>
         )}
         {can.approve && (

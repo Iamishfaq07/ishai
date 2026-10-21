@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
-from orbit_api.auto_apply import hosted, planner, rules
+from orbit_api.auto_apply import handoff, hosted, planner, rules
 from orbit_api.auto_apply.pacing import aware
 from orbit_api.db import get_db
 from orbit_api.job_portal.action_priority import attention_packets
@@ -21,6 +21,8 @@ router = APIRouter(prefix="/v1/apply", tags=["career journey"])
 @router.get("/journey", dependencies=[Depends(limit_user("apply-journey", rate_per_s=1, burst=20))])
 async def journey(user: Annotated[User, Depends(current_user)],
                    db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    if await handoff.hand_off_unsendable(db, datetime.now(UTC), user.id):
+        await db.commit()
     resumes = int(await db.scalar(select(func.count()).select_from(Resume).where(Resume.user_id == user.id)) or 0)
     setup = await db.get(AutoApplySetup, user.id)
     approved = (await planner.master_resume(db, setup))[2] if setup else False
@@ -44,9 +46,10 @@ async def journey(user: Annotated[User, Depends(current_user)],
         ("activate", "Turn on automatic applications", consented and not bool(setup and setup.paused),
          "/jobs/auto-apply",
          "Choose automatic or review mode, set your limits and quiet hours, and authorise applications."),
-        ("execution", "Choose where applications run", executor_ready, "/jobs/auto-apply",
-         "Hosted applying keeps supported external forms running while your browser is closed. "
-         "Browser mode uses the connected Orbit extension. Logins and human checks need you."),
+        ("execution", "Choose how applications are sent", consented and (executor_ready or not hosted.enabled()),
+         "/jobs/auto-apply",
+         "Where Orbit's hosted applying is on, it sends supported employer forms for you, even with Orbit closed. "
+         "Otherwise each approved application waits in Needs you with its answers and tailored resume ready to send."),
         ("applications", "Follow applications and resolve blockers", any(n for s, n in tracker.items() if s != "saved"),
          "/jobs/applications",
          "See receipts, answer missing questions once, and monitor employer updates."),

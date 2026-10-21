@@ -150,7 +150,8 @@ async def timeline(db: AsyncSession, entry: JobApplication, now: datetime | None
             events.append(TimelineEvent(kind="interview_round", at=at,
                 title=f"{recorded.label} — {recorded.status}",
                 detail=f"Candidate-recorded employer round; {recorded.time_zone}. Separate from Saba practice.",
-                provenance="candidate_recorded", upcoming=recorded.status == "planned" and recorded.scheduled_at is not None and _aware(at) > now,
+                provenance="candidate_recorded",
+                upcoming=recorded.status == "planned" and recorded.scheduled_at is not None and _aware(at) > now,
                 link=f"/jobs/mission/{entry.id}?tab=interview"))
 
     if entry.status in STAGE_LABEL:

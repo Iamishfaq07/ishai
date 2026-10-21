@@ -36,7 +36,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.auto_apply import bank, direct, letters, quota, rules
+from orbit_api.auto_apply import bank, direct, handoff, letters, quota, rules
 from orbit_api.auto_apply.forms import FormClient, FormError, FormQuestion, fetch_form, standard_form
 from orbit_api.auto_apply.pacing import OPEN, aware, company_count, daily_limit, expire, pause_if_hired
 from orbit_api.auto_apply.resolve import Target, resolve
@@ -482,6 +482,7 @@ async def plan_due(now: datetime | None = None) -> int:
     made = 0
     async with sessionmaker()() as db:
         await expire(db, now)
+        await handoff.hand_off_unsendable(db, now)
         await db.commit()
         due = (await db.scalars(select(AutoApplySetup).where(
             AutoApplySetup.consent_at.is_not(None), AutoApplySetup.paused.is_(False),

@@ -49,7 +49,8 @@ async def context_round(db: AsyncSession, entry: JobApplication) -> JobInterview
     row = await db.scalar(select(JobInterviewRound).where(JobInterviewRound.id == entry.preparation_round_id,
         JobInterviewRound.user_id == entry.user_id, JobInterviewRound.application_id == entry.id))
     if row is None or not selected(entry, row):
-        raise HTTPException(409, "The selected interview round changed. Review this job's round history before practice.")
+        raise HTTPException(409, "The selected interview round changed. "
+                                 "Review this job's round history before practice.")
     return row
 
 

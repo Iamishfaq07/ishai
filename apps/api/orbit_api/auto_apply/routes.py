@@ -33,7 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.admin.routes import require_admin
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user, decode_claims, token_from_request
-from orbit_api.auto_apply import bank, pacing, packets, planner, quota, rules
+from orbit_api.auto_apply import bank, handoff, pacing, packets, planner, quota, rules
 from orbit_api.auto_apply.pacing import aware
 from orbit_api.auto_apply.pdf import resume_pdf
 from orbit_api.auto_apply.setup import Facts, Filters, Mode, QuietHours, WorkAuth
@@ -258,7 +258,8 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
         from orbit_api.auto_apply.hosted import enabled
 
         if not enabled():
-            raise HTTPException(422, "Hosted applying is not enabled on this deployment yet. Use your browser for now.")
+            raise HTTPException(422, "Hosted applying is not enabled on this deployment yet. "
+                                     "Orbit will prepare applications for you to send.")
         if not user.email_verified:
             raise HTTPException(403, "Verify your email before enabling hosted applications.")
         if not body.hosted_consent and setup.hosted_consent_at is None:
@@ -530,6 +531,7 @@ async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
 async def list_packets(user: Annotated[User, Depends(current_user)], db: Annotated[AsyncSession, Depends(get_db)],
                        group: Annotated[packets.Group | None, Query()] = None) -> list[PacketSummary]:
     await pacing.expire(db, datetime.now(UTC), user.id)
+    await handoff.hand_off_unsendable(db, datetime.now(UTC), user.id)
     await db.commit()
     q = select(ApplicationPacket).where(ApplicationPacket.user_id == user.id)
     if group is not None:

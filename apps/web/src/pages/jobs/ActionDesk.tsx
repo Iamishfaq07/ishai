@@ -9,13 +9,19 @@ import { PlaybookEditor } from "./PlaybookEditor";
 interface Action {
   id: string; kind: "interview" | "follow_up" | "contact" | "application";
   title: string; detail: string; due_at: string | null; overdue: boolean; path: string;
-  rule?: "application_follow_up" | "interview_preparation";
+  rule?: keyof typeof RULE_NAMES;
   action_label?: string; priority_reason?: string;
 }
+const RULE_NAMES = {
+  application_follow_up: "Application follow-up", interview_preparation: "Interview preparation",
+  interview_thank_you: "Thank-you note", application_quiet: "Quiet application", saved_job_decision: "Saved job",
+} as const;
 interface Queue { version: string; items: Action[]; focus_id?: string | null; truncated: boolean; as_of: string; horizon_days: number }
 interface Brief { version: string; source: "ai" | "mock"; steps: { action_id: string; source_quote: string; suggestion: string }[] }
 
-export function JobActionDeskPage() {
+/** The due-in-seven-days queue. `embedded` (on Today): the companion above already names one next step, so every
+ *  saved action is listed alike instead of a second "Start here" card. */
+export function JobActionDeskPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [queue, setQueue] = useState<Queue | null>(null);
   const [brief, setBrief] = useState<Brief | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +57,7 @@ export function JobActionDeskPage() {
     } catch (e) { setError(errorText(e)); }
     finally { setBusy(false); }
   };
-  const focus = filter === "all" ? queue?.items.find((item) => item.id === queue.focus_id) : null;
+  const focus = filter === "all" && !embedded ? queue?.items.find((item) => item.id === queue.focus_id) : null;
   const visible = queue?.items.filter((a) => a.id !== focus?.id && (filter === "all" || (filter === "overdue" ? a.overdue : filter === "playbook" ? !!a.rule : a.kind === filter))) ?? [];
   const exportCalendar = async () => {
     try {
@@ -60,7 +66,7 @@ export function JobActionDeskPage() {
     } catch (e) { setError(errorText(e)); }
   };
   return <div className="space-y-6">
-    <header><h2 className="text-lg font-semibold">Needs your attention</h2>
+    <header><h2 id="needs-attention" className="text-lg font-semibold">Needs your attention</h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Interviews, follow-ups and applications to review in the next seven days. Updates every minute from your saved records.</p>
       {queue && <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">{queue.truncated ? "Showing the first " : ""}{queue.items.length} saved {queue.items.length === 1 ? "action" : "actions"}{queue.truncated ? "; more in your workspaces" : ""}. Choose any action that fits your priorities.</p>}
     </header>
@@ -69,13 +75,13 @@ export function JobActionDeskPage() {
       <h3 className="mt-2 break-words font-display text-lg font-semibold">{focus.title}</h3>
       <p className="mt-2 text-sm font-medium">{focus.priority_reason}</p>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{focus.detail}</p>
-      {focus.rule && <p className="mt-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your playbook · {focus.rule === "application_follow_up" ? "Application follow-up" : "Interview preparation"}</p>}
+      {focus.rule && <p className="mt-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your playbook · {RULE_NAMES[focus.rule]}</p>}
       {focus.due_at && <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Saved date: {shortDate(focus.due_at)}{focus.overdue ? " · Past due" : ""}</p>}
       <Link to={focus.path} className={cx("mt-4 inline-flex min-h-10 items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700", focusRing)}>
         {focus.action_label ?? "Open workspace"}<ArrowRight className="h-4 w-4" aria-hidden />
       </Link>
     </section>}
-    {savedRules && <p role="status" className="text-sm">Follow-up rules saved.</p>}
+    {savedRules && <p role="status" className="text-sm">Workflow rules saved.</p>}
     <div className="flex flex-wrap items-center gap-3">
       <Button onClick={() => void generate()} loading={busy} disabled={!queue?.items.length}><Sparkles className="h-4 w-4" /> Build my AI brief</Button>
       <span className="text-xs text-zinc-500 dark:text-zinc-400">5 AI previews/day · resets at midnight UTC.</span>
@@ -110,7 +116,7 @@ export function JobActionDeskPage() {
       <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="min-w-0 max-w-full break-words font-medium">{action.title}</h3>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">{action.overdue ? "Past due · " : ""}{action.due_at ? shortDate(action.due_at) : "Needs your review"}</span></div>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{action.detail}</p>
-      {action.rule && <p className="mt-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your playbook · {action.rule === "application_follow_up" ? "Application follow-up" : "Interview preparation"}</p>}
+      {action.rule && <p className="mt-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your playbook · {RULE_NAMES[action.rule]}</p>}
       <Link to={action.path} className={cx("mt-3 inline-flex items-center gap-2 rounded text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>{action.action_label ?? "Open workspace"} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
     </li>)}</ul>
     {queue?.truncated && <Callout>This queue is bounded to 100 actions. Resolve or reschedule records, and review your tracker for the full list.</Callout>}

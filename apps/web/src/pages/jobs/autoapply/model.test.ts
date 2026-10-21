@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actionsFor, answerText, executorState, fromTri, minutesToTime, parseList, timeToMinutes, toTri } from "./model";
+import { actionsFor, answerText, executorState, fromTri, minutesToTime, parseList, sendsItself, timeToMinutes, toTri } from "./model";
 
 describe("Orbit Apply's helpers", () => {
   it("says whether the browser extension is applying", () => {
@@ -8,6 +8,17 @@ describe("Orbit Apply's helpers", () => {
     expect(executorState("not a date", now)).toBe("never");
     expect(executorState("2026-10-19T11:00:00Z", now)).toBe("on");
     expect(executorState("2026-10-16T11:00:00Z", now)).toBe("quiet");
+  });
+
+  it("knows when nothing sends an approved application, so the candidate sends it from the kit", () => {
+    const now = Date.parse("2026-10-19T12:00:00Z");
+    expect(sendsItself({ execution: "hosted", hosted_enabled: true, executor_seen_at: null }, now)).toBe(true);
+    expect(sendsItself({ execution: "browser", hosted_enabled: true, executor_seen_at: "2026-10-19T11:00:00Z" }, now)).toBe(true);
+    expect(sendsItself({ execution: "browser", hosted_enabled: false, executor_seen_at: null }, now)).toBe(false);
+    expect(sendsItself({ execution: "hosted", hosted_enabled: false, executor_seen_at: "2026-10-10T11:00:00Z" }, now)).toBe(false);
+    expect(actionsFor("ready").finish).toBe(false);
+    expect(actionsFor("ready", true).finish).toBe(true);
+    expect(actionsFor("submitted", true).finish).toBe(false);
   });
 
   it("reads lists the way they're typed", () => {

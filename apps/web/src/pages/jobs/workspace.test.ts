@@ -21,7 +21,7 @@ describe("Jobs task navigation", () => {
   });
 
   it("keeps old names and candidate goals discoverable", () => {
-    expect(findJobTools(" action desk ").map((tool) => tool.label)).toEqual(["Daily actions"]);
+    expect(findJobTools(" action desk ").map((tool) => tool.label)).toEqual(["Today"]);
     expect(findJobTools("weekly studio").map((tool) => tool.label)).toEqual(["Weekly plan"]);
     expect(findJobTools("INTERVIEW").map((tool) => tool.label)).toContain("Tracker");
     expect(findJobTools("recruiter").map((tool) => tool.label)).toContain("Contact finder");
@@ -30,9 +30,9 @@ describe("Jobs task navigation", () => {
   });
 
   it("keeps context links short and marks deep tools in their parent", () => {
-    expect(workspaceTools("applications").map((tool) => tool.label)).toEqual(["Tracker", "Auto-apply agent", "Review queue", "People"]);
-    // With the area tabs gone in the personal shell, the launchpad and People stay one click away.
-    expect(workspaceTools("find").map((tool) => tool.label)).toEqual(["Launchpad", "Matches", "Search preferences"]);
+    expect(workspaceTools("applications").map((tool) => tool.label)).toEqual(["Tracker", "Auto-apply", "Needs you", "People"]);
+    // The launchpad merged into Today; People stays one click away from applying.
+    expect(workspaceTools("find").map((tool) => tool.label)).toEqual(["Matches", "Search preferences"]);
     expect(currentJobTool("/jobs/auto-apply/")).toBe("/jobs/journey");
     expect(currentJobTool("/jobs/mission/a")).toBe("/jobs/tracker");
     expect(currentJobTool("/jobs/listing/a")).toBe("/jobs/matches");

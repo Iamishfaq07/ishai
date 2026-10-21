@@ -444,6 +444,39 @@ def test_bad_results_are_refused(app: TestClient) -> None:
                     json={"status": "submitted"}).status_code == 404
 
 
+def test_an_application_nothing_would_send_becomes_a_ready_to_send_kit(app: TestClient) -> None:
+    """No hosted worker and no extension: after its grace period a ready packet is handed to the candidate, who sends
+    it themselves from the kit. It is never charged. An extension that asked for work recently keeps its queue."""
+    h, _ = account(app)
+    uid = user_id(app, h)
+    jobs(app)
+    plan(app, h)
+    ashby = by_company(packets(app, h))["Sarvam AI"]
+    assert ashby["status"] == "ready"  # within the grace period an extension connected minutes ago may claim it
+    edit_packets(app, uid, updated_at=datetime.now(UTC) - timedelta(hours=1))
+    ashby = by_company(packets(app, h))["Sarvam AI"]
+    assert ashby["status"] == "handoff"
+    detail = app.get(f"/v1/apply/packets/{ashby['id']}", headers=h).json()
+    assert "mark it applied" in detail["reason"] and detail["resume_pdf_url"]
+    assert app.get("/v1/apply/journey", headers=h).json()["needs_attention"] >= 1
+    done = app.post(f"/v1/apply/packets/{ashby['id']}/done", headers=h)
+    assert done.status_code == 200 and done.json()["status"] == "applied"
+    assert app.get("/v1/apply/status", headers=ext_token(app, h)).json()["today"] == 0  # not charged
+
+
+def test_a_recently_connected_extension_keeps_its_queue(app: TestClient) -> None:
+    h, _ = account(app)
+    uid = user_id(app, h)
+    jobs(app)
+    plan(app, h)
+    ext = ext_token(app, h)
+    assert app.get("/v1/apply/status", headers=ext).status_code == 200
+    app.get("/v1/apply/next", headers=ext)  # the extension asks for work, then gives the lease back
+    edit_packets(app, uid, status="ready", lease_until=None, lease_holder=None,
+                 updated_at=datetime.now(UTC) - timedelta(hours=1))
+    assert {p["status"] for p in packets(app, h)} == {"ready"}
+
+
 def test_a_lease_that_runs_out_goes_back_and_a_late_submit_still_counts(app: TestClient) -> None:
     h, _ = account(app)
     uid = user_id(app, h)

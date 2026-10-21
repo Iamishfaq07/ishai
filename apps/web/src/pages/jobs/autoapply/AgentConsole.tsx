@@ -7,7 +7,7 @@ import { errorText } from "../../../lib/format";
 import { useAsync } from "../../../lib/useAsync";
 import { useJobsAi } from "../JobsAi";
 import { applyApi } from "./applyApi";
-import { ATS_LABEL } from "./model";
+import { ATS_LABEL, sendsItself } from "./model";
 import { PlanSummary } from "./Setup";
 import { FormAgent } from "./FormAgent";
 
@@ -37,32 +37,31 @@ export function AgentConsole({ onChanged }: { onChanged: () => void }) {
     finally { setBusy(false); }
   };
   const ready = !!s?.configured && !s.paused;
+  const hosted = s?.execution === "hosted" && !!s.hosted_enabled;
   return <section aria-label="Application agent controls" className="space-y-4">
     <Card className="p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Your application agent</p>
-          <h2 className="mt-2 text-xl font-semibold">Approve once. Follow every step.</h2>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">Orbit finds matches, prepares truthful materials, sends eligible applications within your limits, and records the result. Questions and employer checks return to you.</p>
-        </div>
-        <Link to="/jobs/auto-apply" className={buttonClass("secondary", "sm")}>Configure agent</Link>
-      </div>
+      <h2 className="text-xl font-semibold">Approve once. Follow every step.</h2>
+      <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">Orbit finds matches, prepares truthful materials, sends eligible applications within your limits, and records the result. Questions and employer checks return to you.</p>
       <dl className="mt-5 grid gap-3 sm:grid-cols-3">
-        {[["Execution", s?.execution === "hosted" ? "Hosted · no extension" : "Connected browser"],
-          ["Status", !s ? "Loading…" : !s.configured ? "Setup needed" : s.paused ? "Paused" : s.execution === "hosted" ? s.hosted_online ? "Worker online" : "Worker offline · waiting" : "Browser required"],
+        {[["Sending", !s ? "Loading…" : hosted ? "Orbit sends for you" : sendsItself(s) ? "Connected browser" : "You send · kit ready"],
+          ["Status", !s ? "Loading…" : !s.configured ? "Setup needed" : s.paused ? "Paused" : hosted ? s.hosted_online ? "Running" : "Starting up · applications wait" : "Running"],
           ["Today", status.data ? `${status.data.today} / ${status.data.limit} applications` : "Loading…"]].map(([label, value]) =>
           <div key={label} className="rounded-xl bg-zinc-50 p-3 dark:bg-white/5"><dt className="text-xs text-zinc-500">{label}</dt><dd className="mt-1 text-sm font-semibold"><span role={label === "Status" ? "status" : undefined}>{value}</span></dd></div>)}
       </dl>
-      <p className="mt-4 text-sm">{s?.execution === "hosted" ? "Your device can be off. The hosted worker must be online; login, CAPTCHA and unknown attestations need your help." : s?.hosted_enabled ? "Choose hosted execution in setup to keep applying when your browser is closed." : "Hosted applying is not available on this server yet. Orbit Direct applications can run here; other forms need your connected browser."}</p>
+      <p className="mt-4 text-sm">{hosted ? "Your device can be off. Logins, human checks and unknown attestations come back to you."
+        : s && sendsItself(s) ? "Your connected browser sends external applications while it is open."
+        : "Orbit Business applications are sent for you. Other employer applications wait in Needs you with answers and a tailored resume, ready to send. Nothing to install."}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         <Button loading={busy} disabled={!ready} onClick={() => void run(applyApi.planApplications)}>Find and prepare matches</Button>
         <Button variant="secondary" loading={busy} disabled={!s?.configured} onClick={() => void run(s?.paused ? applyApi.resumeApply : applyApi.pauseApply)}>{s?.paused ? "Resume agent" : "Pause agent"}</Button>
-        <Link to="/jobs/applications" className={buttonClass("secondary", "md")}>Review queue and receipts</Link>
+        <Link to="/jobs/applications" className={buttonClass("secondary", "md")}>Needs you & receipts</Link>
       </div>
       {status.data && status.data.sites_paused.length > 0 && <p className="mt-3 text-sm text-amber-700 dark:text-amber-300">Temporarily paused: {status.data.sites_paused.map((site) => ATS_LABEL[site] ?? site).join(", ")}.</p>}
       {setup.error && <ErrorNote onRetry={setup.reload}>{errorText(setup.error)}</ErrorNote>}
       {status.error && <ErrorNote onRetry={status.reload}>{errorText(status.error)}</ErrorNote>}
     </Card>
-    <FormAgent eligible={!!(ready && s?.execution === "hosted" && s.hosted_enabled)} onChanged={onChanged} />
+    {/* AI help for unfamiliar form fields runs inside the hosted worker only. */}
+    {s?.hosted_enabled && <FormAgent eligible={!!(ready && s.execution === "hosted")} onChanged={onChanged} />}
     <Card className="p-5">
       <h2 className="text-lg font-semibold">Send your shortlist to the agent</h2>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Save jobs in Matches, then choose up to 20 here. Your approved filters, match threshold, freshness rules and application limits still apply. In automatic mode eligible packets can be sent; review mode waits for approval.</p>

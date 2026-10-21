@@ -9,8 +9,8 @@ import { Sheet } from "../Sheet";
 import { linkButton } from "../links";
 import { JOBS_AUTO_APPLY, JOBS_TRACKER } from "../paths";
 import { applyApi } from "./applyApi";
-import { ExtensionNeeded } from "./ExtensionNeeded";
-import { ATS_LABEL, WHY_NOT } from "./model";
+import { ApplyEngine } from "./ApplyEngine";
+import { ATS_LABEL, WHY_NOT, sendsItself } from "./model";
 import { INBOX_VIEWS, inboxSort, inboxView, packetGuidance, packetView, selectPackets } from "./inbox";
 import { PlanSummary } from "./Setup";
 
@@ -77,19 +77,21 @@ export function ApplicationsPage() {
 
   const s = status.data;
   const configured = setup.data?.configured ?? false;
-  const attention = packets.filter((packet) => packetView(packet.status) === "attention").length;
-  const shown = selectPackets(packets, view, query, sort);
+  const sendYourself = configured && !sendsItself(setup.data);
+  const mine = (packet: ApplyPacketSummary) => sendYourself && packet.ats !== "orbit";
+  const attention = packets.filter((packet) => packetView(packet.status, mine(packet)) === "attention").length;
+  const shown = selectPackets(packets, view, query, sort, sendYourself);
   const loading = (setup.loading && !setup.data) || (all.loading && !all.data);
 
   return (
     <>
       <PageHeader
         icon={Rocket}
-        title="Application review"
-        subtitle="Find an application, understand its next step and check the materials or saved outcome."
+        title="Needs you"
+        subtitle="Applications to approve, answer or send, and the saved receipts for the ones already sent."
         actions={
           <Link to={JOBS_AUTO_APPLY} className={linkButton("secondary", "md")}>
-            <SlidersHorizontal className="h-4 w-4" aria-hidden /> Setup
+            <SlidersHorizontal className="h-4 w-4" aria-hidden /> Auto-apply settings
           </Link>
         }
       />
@@ -114,7 +116,7 @@ export function ApplicationsPage() {
             <details className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
               <summary className={cx("cursor-pointer rounded text-sm font-semibold", focusRing)}>Auto-apply controls{s?.paused ? " · Paused" : ""}</summary>
               <div className="mt-4 space-y-3">
-            {configured && <ExtensionNeeded seenAt={s?.executor_seen_at ?? setup.data?.executor_seen_at} setup={setup.data} />}
+            {configured && setup.data && <ApplyEngine setup={setup.data} />}
             <Card>
               <div className="flex flex-wrap items-center justify-between gap-4 p-4">
                 <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
@@ -189,7 +191,7 @@ export function ApplicationsPage() {
               <ul className="space-y-2">
                 {shown.map((p) => (
                   <li key={p.id}>
-                    <PacketRow packet={p} onOpen={() => openPacket(p.id)} />
+                    <PacketRow packet={p} sendYourself={mine(p)} onOpen={() => openPacket(p.id)} />
                   </li>
                 ))}
               </ul>
@@ -204,8 +206,8 @@ export function ApplicationsPage() {
   );
 }
 
-function PacketRow({ packet: p, onOpen }: { packet: ApplyPacketSummary; onOpen: () => void }) {
-  const guidance = packetGuidance(p);
+function PacketRow({ packet: p, sendYourself, onOpen }: { packet: ApplyPacketSummary; sendYourself: boolean; onOpen: () => void }) {
+  const guidance = packetGuidance(p, sendYourself);
   return (
     <button type="button" onClick={onOpen} className={cx("group w-full rounded-2xl border border-zinc-200 bg-white p-4 text-left transition-colors hover:border-indigo-400 motion-reduce:transition-none dark:border-white/10 dark:bg-zinc-900", focusRing)}>
       <span className="flex flex-wrap items-baseline justify-between gap-2">
@@ -215,7 +217,7 @@ function PacketRow({ packet: p, onOpen }: { packet: ApplyPacketSummary; onOpen: 
         <span className="text-sm tabular-nums text-zinc-700 dark:text-zinc-300">{p.match_score}% match</span>
       </span>
       <span className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-        <span className={cx("rounded-full px-2 py-0.5", packetView(p.status) === "attention" ? "bg-amber-500/10 text-amber-900 dark:text-amber-200" : "bg-zinc-100 dark:bg-white/10")}>{guidance.label}</span>
+        <span className={cx("rounded-full px-2 py-0.5", packetView(p.status, sendYourself) === "attention" ? "bg-amber-500/10 text-amber-900 dark:text-amber-200" : "bg-zinc-100 dark:bg-white/10")}>{guidance.label}</span>
         <span className="rounded-full border border-zinc-200 px-2 py-0.5 dark:border-white/10">{p.site ?? ATS_LABEL[p.ats] ?? p.ats}</span>
         {p.missing > 0 && <span className="text-amber-800 dark:text-amber-300">{p.missing} question{p.missing === 1 ? "" : "s"} for you</span>}
       </span>
