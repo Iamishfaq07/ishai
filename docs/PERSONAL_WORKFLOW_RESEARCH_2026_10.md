@@ -37,3 +37,28 @@ Paste only the relevant message for the selected job. A quote proves the text wa
 Confirmed changes compare the reviewed job revision inside the database update. Reusing a stale review cannot overwrite a later update. No mailbox ingestion or durable per-message import receipt is claimed; this is an interactive pasted-message workflow.
 
 The full message is transient browser/request data and is cleared from the form after saving. AI provider retention follows the configured provider; the app's preview accounting stores request metadata rather than the message. Browser tests use fabricated messages and the labelled mock provider.
+
+## Round two, 21 October 2026: workflow rules on Today
+
+Researched: [MadsLorentzen/ai-job-search](https://instagit.com/MadsLorentzen/ai-job-search/application-outcome-tracking-follow-up-drafting.md)
+(stale-application detection, drafts from verified facts only, manual review before sending),
+[Huntr vs Teal](https://huntr.co/blog/huntr-vs-teal) and [JobShinobi's comparison](https://jobshinobi.com/compare/job-tracking-teal-vs-huntr-2026)
+(follow-ups as part of the tracking loop; vendor claims, not verified), and
+[JobShinobi's follow-up reminders](https://jobshinobi.com/landing/job-application-tracker-with-follow-up-reminders).
+None of them is a dependency; no code was reused.
+
+Shipped as opt-in rules beside the existing follow-up and preparation rules (`job_portal/playbooks.py`, migration
+`c7e1a9d3b5f2`), each off until the candidate turns it on in "Your workflow rules" on Today:
+
+- **Thank-you note after an interview**: a recorded round in the last N hours (2-72) with no contact logged since
+  suggests drafting a thank-you note in the existing message writer (`/jobs/outreach?view=messages&job=…`).
+- **Decide on quiet applications**: applied, no reply, next step or contact for N days (14-90): one last follow-up,
+  keep waiting, or record it as closed. It replaces that job's routine follow-up reminder.
+- **Apply or let go of saved jobs**: saved for N days (3-60) without applying: apply, prepare with auto-apply, or remove.
+
+Rules only add suggestions to Today's action queue and the AI brief. None sends a message, closes an application
+or removes a job; the candidate drafts, reviews and sends.
+
+Also in this round: the launchpad and daily actions merged into Today (`/jobs`, `/jobs/actions` redirect to `/`),
+the Applications area reads Tracker · Auto-apply · Needs you · People, and auto-apply no longer needs the extension
+(docs/HOSTED_APPLY.md).

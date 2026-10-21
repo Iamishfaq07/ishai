@@ -15,6 +15,17 @@ there is no claim that Orbit can guarantee an interview or a hiring outcome.
 The default "Pause automatically when I mark a role as hired" setting stops this campaign at that outcome.
 An explicit Resume starts a new campaign, so an older hired role does not block a later search.
 
+## No extension in the candidate flow (21 Oct 2026)
+
+Auto-apply no longer offers or asks for the browser extension. Setup has one way to send: hosted, wherever this server
+runs it (`ORBIT_HOSTED_APPLY`). Where it doesn't, Orbit still finds matches and prepares every application, and each
+approved external one becomes a ready-to-send kit in Needs you (`auto_apply/handoff.py`): the employer form link,
+the prepared answers to copy, the cover letter and the tailored resume PDF, then "I sent it · mark applied"
+(`POST /v1/apply/packets/{id}/done`, never charged). The web app shows the kit at once; the server moves the packet to
+`handoff` after a 30-minute grace (so an extension connected minutes ago can still claim it), and the existing
+"needs you" email covers it. Orbit Business applications are sent by the API as before. Accounts still in browser
+mode with an extension that asked for work in the last two days keep it; the extension pages remain for them.
+
 ## Coverage and boundaries
 
 - Browser extension: existing Greenhouse, Lever and Ashby coverage.

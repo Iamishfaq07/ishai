@@ -1,7 +1,8 @@
-import { JOBS_AI_HOME, JOBS_APPLICATIONS, JOBS_AUTO_APPLY, JOBS_MATCHES, JOBS_OUTREACH, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
+import { JOBS_APPLICATIONS, JOBS_AUTO_APPLY, JOBS_MATCHES, JOBS_OUTREACH, JOBS_PROFILE, JOBS_TRACKER } from "./paths";
 
 export const JOB_WORKSPACES = [
-  { id: "today", label: "Launchpad", to: JOBS_AI_HOME, paths: /^\/jobs(?:\/(?:actions|weekly))?\/?$/ },
+  // The launchpad and daily actions merged into Today ("/"); /jobs and /jobs/actions redirect there.
+  { id: "today", label: "Today", to: "/", paths: /^\/jobs(?:\/(?:actions|weekly))?\/?$/ },
   { id: "find", label: "Find jobs", to: JOBS_MATCHES, paths: /^\/jobs\/(?:matches|profile|listing(?:\/[^/]+)?)\/?$/ },
   { id: "applications", label: "Applications", to: JOBS_TRACKER, paths: /^\/jobs\/(?:tracker|applications|auto-apply|journey|mission(?:\/[^/]+)?)\/?$/ },
   { id: "people", label: "People", to: JOBS_OUTREACH, paths: /^\/jobs\/outreach\/?$/ },
@@ -14,17 +15,16 @@ export function jobWorkspace(path: string) {
 }
 
 export const JOB_TOOLS: { group: JobWorkspace; to: string; label: string; description: string; keywords: string }[] = [
-  { group: "today", to: JOBS_AI_HOME, label: "Career launchpad", description: "Start a resume, explore roles with AI and review your search setup.", keywords: "fresher graduate student first job entry level internship career change learning projects" },
+  { group: "today", to: "/", label: "Today", description: "Your next step, due interviews, follow-ups and applications to review.", keywords: "overview action desk daily actions launchpad calendar follow up reminders fresher graduate student first job" },
   { group: "today", to: "/jobs?work=updates", label: "Employer message helper", description: "Review pasted replies, then confirm stage or interview-date changes.", keywords: "email recruiter inbox reply classification messages updates received rejected offer interview" },
-  { group: "today", to: "/jobs/actions", label: "Daily actions", description: "Due interviews, reminders and an AI brief from your saved activity.", keywords: "overview action desk calendar follow up" },
   { group: "today", to: "/jobs?work=resume", label: "Guided resume", description: "Add, import or edit your resume one section at a time.", keywords: "fresher student education projects skills builder editing" },
   { group: "today", to: "/jobs?work=plan", label: "Next-step companion", description: "Get an AI plan grounded in your saved career activity.", keywords: "coach automatic guidance resume progress hired journey" },
   { group: "today", to: "/jobs/weekly", label: "Weekly plan", description: "Set targets and review your recorded progress.", keywords: "weekly studio goals experiment" },
   { group: "find", to: JOBS_MATCHES, label: "Matches", description: "Discover jobs, check fit and save your shortlist.", keywords: "search listings openings" },
   { group: "find", to: JOBS_PROFILE, label: "Search preferences", description: "Choose your resume, roles, locations and job filters.", keywords: "profile settings skills" },
   { group: "applications", to: JOBS_TRACKER, label: "Tracker", description: "Open one job's connected resume, requirements, practice, application and outcome steps.", keywords: "mission practice company evidence fit timeline learning workshop project story interview replay review rounds tools source" },
-  { group: "applications", to: "/jobs/journey", label: "Auto-apply agent", description: "Prepare your shortlist and manage application automation.", keywords: "application agent hosted browser closed" },
-  { group: "applications", to: JOBS_APPLICATIONS, label: "Review queue", description: "Find applications, review materials, check outcomes and resolve requests for your input.", keywords: "inbox search filter statuses receipts packets sent approval answers" },
+  { group: "applications", to: "/jobs/journey", label: "Auto-apply", description: "Orbit finds matching jobs, prepares each application and sends what it can.", keywords: "application agent hosted automatic apply for me" },
+  { group: "applications", to: JOBS_APPLICATIONS, label: "Needs you", description: "Applications to approve, answer or send, with receipts for the ones sent.", keywords: "review queue inbox search filter statuses receipts packets sent approval answers send yourself" },
   { group: "applications", to: JOBS_AUTO_APPLY, label: "Auto-apply settings", description: "Approve your facts, limits, consent and execution mode.", keywords: "setup resume answers bank permissions" },
   { group: "people", to: `${JOBS_OUTREACH}?network=1`, label: "Contact finder", description: "Research people at a company and review their source evidence.", keywords: "career ops recruiter referral hiring manager" },
   { group: "people", to: `${JOBS_OUTREACH}?view=messages`, label: "Messages & profiles", description: "Draft outreach, follow-ups and LinkedIn or Naukri profiles.", keywords: "outreach email thank you resume" },
@@ -38,11 +38,9 @@ export function findJobTools(query: string) {
 
 /** Secondary navigation contains only the frequent tools for the current area. */
 export function workspaceTools(group: JobWorkspace) {
-  const tools = JOB_TOOLS.filter((tool) => tool.group === group && ![JOBS_AI_HOME, JOBS_AUTO_APPLY, JOBS_OUTREACH].includes(tool.to) && !tool.to.includes("?"));
+  const tools = JOB_TOOLS.filter((tool) => tool.group === group && !["/", JOBS_AUTO_APPLY, JOBS_OUTREACH].includes(tool.to) && !tool.to.includes("?"));
   // People (outreach and referrals) belongs to applying; with the area tabs gone it lives beside the tracker.
   if (group === "applications") return [...tools, { group, to: JOBS_OUTREACH, label: "People", description: "", keywords: "" }];
-  // The launchpad (resume setup, exploring roles) sits with Discover.
-  if (group === "find") return [{ group, to: JOBS_AI_HOME, label: "Launchpad", description: "", keywords: "" }, ...tools];
   return tools;
 }
 

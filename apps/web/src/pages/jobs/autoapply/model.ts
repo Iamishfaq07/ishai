@@ -1,4 +1,4 @@
-import type { ApplyAnswerSource, ApplyGroup, ApplyPacketStatus, ApplyWhyNot } from "@orbit/types";
+import type { ApplyAnswerSource, ApplyGroup, ApplyPacketStatus, ApplySetup, ApplyWhyNot } from "@orbit/types";
 
 /** Orbit Apply's words and small helpers, kept free of React so they're tested on their own (model.test.ts). */
 
@@ -88,12 +88,13 @@ export function timeToMinutes(time: string): number | null {
 export const answerText = (value: string | string[]): string => (Array.isArray(value) ? value.join("; ") : value);
 
 /** What the candidate can do with a packet in this status. */
-export function actionsFor(status: ApplyPacketStatus): { approve: boolean; dontApply: boolean; retry: boolean; finish: boolean } {
+/** `sendYourself`: nothing will send this approved packet (see sendsItself), so it is the candidate's to send now. */
+export function actionsFor(status: ApplyPacketStatus, sendYourself = false): { approve: boolean; dontApply: boolean; retry: boolean; finish: boolean } {
   return {
     approve: status === "review",
     dontApply: ["needs_answer", "review", "ready", "needs_you", "handoff", "failed", "expired"].includes(status),
     retry: ["needs_you", "failed", "expired", "skipped", "cancelled"].includes(status),
-    finish: status === "needs_you" || status === "handoff",
+    finish: status === "needs_you" || status === "handoff" || (sendYourself && status === "ready"),
   };
 }
 
@@ -105,4 +106,16 @@ export function executorState(seenAt: string | null | undefined, now = Date.now(
   const at = seenAt ? Date.parse(seenAt) : NaN;
   if (!Number.isFinite(at)) return "never";
   return now - at > EXECUTOR_QUIET_MS ? "quiet" : "on";
+}
+
+/**
+ * Whether anything sends this account's approved external applications: Orbit's hosted worker when the setup uses
+ * it, or for older accounts a browser extension that asked for work recently. When nothing does, each approved
+ * application is the candidate's to send from its kit (answers, cover letter, tailored resume); the server also
+ * moves it to Needs you after 30 minutes (auto_apply/handoff.py). Orbit Business applications always send themselves.
+ */
+export function sendsItself(setup: Pick<ApplySetup, "execution" | "hosted_enabled" | "executor_seen_at"> | null | undefined, now = Date.now()): boolean {
+  if (!setup) return true;
+  if (setup.execution === "hosted" && setup.hosted_enabled) return true;
+  return executorState(setup.executor_seen_at, now) === "on";
 }

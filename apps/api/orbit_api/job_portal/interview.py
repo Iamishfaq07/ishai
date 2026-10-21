@@ -40,9 +40,9 @@ from orbit_api.db import get_db
 from orbit_api.documents.routes import ORIGIN_ORBIT, Origin, _check_quota, _ingest
 from orbit_api.documents.uploads import sanitize_text
 from orbit_api.job_portal import manual, session_associations
-from orbit_api.job_portal.round_journal import context_round
 from orbit_api.job_portal.mission import _score
 from orbit_api.job_portal.resume_binding import for_job
+from orbit_api.job_portal.round_journal import context_round
 from orbit_api.job_portal.rounds import MAX_ROUND, RoundType, as_round_type, review_score, round_label
 from orbit_api.job_portal.routes import Status, _full_text, _job_text, _move
 from orbit_api.live import company_styles

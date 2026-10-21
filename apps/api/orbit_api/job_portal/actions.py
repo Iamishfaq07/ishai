@@ -33,7 +33,13 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
     items: list[dict[str, Any]] = []
     playbook = await playbooks.settings(db, user.id)
     reminders, truncated = await playbooks.followups(db, user.id, playbook["follow_up_days"], now)
-    items.extend(reminders)
+    quiet = await playbooks.quiet(db, user.id, playbook["stale_days"], now)
+    # A quiet application's decision replaces its routine follow-up reminder.
+    gone_quiet = {item["id"].removeprefix("quiet:") for item in quiet}
+    items.extend(item for item in reminders if item["id"].removeprefix("playbook:") not in gone_quiet)
+    items.extend(quiet)
+    items.extend(await playbooks.thank_yous(db, user.id, playbook["thank_you_hours"], now))
+    items.extend(await playbooks.saved(db, user.id, playbook["saved_days"], now))
     for job in await db.scalars(select(JobApplication).where(JobApplication.user_id == user.id,
             JobApplication.status.not_in(TERMINAL_JOBS), JobApplication.next_at <= horizon)
             .order_by(JobApplication.next_at, JobApplication.id).limit(101)):

@@ -153,3 +153,41 @@ def test_recent_contact_records_cannot_hide_a_due_job_behind_the_scan_limit(clie
     jid = db_call(client, seed)
     assert settings(client, user, follow_up_days=7).status_code == 200
     assert [a["id"] for a in actions(client, user)["items"]] == [f"playbook:{jid}"]
+
+
+def test_new_workflow_rules_are_off_until_enabled_and_only_suggest(client: TestClient) -> None:
+    from orbit_api.models import JobInterviewRound
+
+    user = person(client)
+    quiet_job = job(client, user, days=40)
+    saved_job = job(client, user, days=10, status="saved")
+    interviewing = job(client, user, days=3, status="interviewing")
+
+    async def round_held(db: Any) -> None:
+        db.add(JobInterviewRound(user_id=uid(user), application_id=interviewing, label="Hiring manager round",
+            scheduled_at=datetime.now(UTC) - timedelta(hours=3), status="planned", source_key=uuid4().hex))
+    db_call(client, round_held)
+    assert actions(client, user)["items"] == []  # every rule starts off
+
+    saved = settings(client, user, follow_up_days=7, stale_days=30, saved_days=7, thank_you_hours=24)
+    assert saved.status_code == 200, saved.text
+    assert {k: saved.json()[k] for k in ("stale_days", "saved_days", "thank_you_hours")} == {
+        "stale_days": 30, "saved_days": 7, "thank_you_hours": 24}
+    rules = {item["id"]: item["rule"] for item in actions(client, user)["items"] if item.get("rule")}
+    # The quiet application's decision replaces its routine follow-up for the same job.
+    assert rules[f"quiet:{quiet_job}"] == "application_quiet" and f"playbook:{quiet_job}" not in rules
+    assert rules[f"saved:{saved_job}"] == "saved_job_decision"
+    thanks = [item for item in actions(client, user)["items"] if item.get("rule") == "interview_thank_you"]
+    assert len(thanks) == 1 and thanks[0]["path"].startswith("/jobs/outreach?view=messages&job=")
+
+    # Nothing was changed by the rules themselves.
+    statuses = {e["id"]: e["status"] for e in client.get("/v1/jobs/tracker", headers=auth(user)).json()}
+    assert statuses[quiet_job] == "applied" and statuses[saved_job] == "saved"
+
+    # A contact logged after the interview clears the thank-you suggestion.
+    async def contacted(db: Any) -> None:
+        db.add(JobContact(user_id=uid(user), application_id=interviewing, name="Priya",
+            last_contacted_at=datetime.now(UTC) - timedelta(hours=1)))
+    db_call(client, contacted)
+    assert not [i for i in actions(client, user)["items"] if i.get("rule") == "interview_thank_you"]
+    assert settings(client, user, stale_days=7).status_code == 422  # below the 14-day floor

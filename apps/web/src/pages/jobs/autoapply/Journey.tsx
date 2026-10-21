@@ -18,7 +18,7 @@ export function CareerJourneyPage() {
   const data = state.data;
   const next = data?.steps.find((step) => step.id === data.next_step);
   return <div className="space-y-6">
-    <PageHeader icon={Rocket} title="Application agent" subtitle="Your applications, automation and next steps in one place." />
+    <PageHeader icon={Rocket} title="Auto-apply" subtitle="Orbit finds jobs that fit, prepares each application and sends what it can. You approve the rules once." actions={<Link to="/jobs/auto-apply" className={buttonClass("secondary", "sm")}>Settings</Link>} />
     {next && <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-500/20 dark:bg-indigo-500/5" aria-label="Your next career step">
       <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your next step</p>
       <h2 className="mt-2 text-lg font-semibold">{next.title}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{next.detail}</p>
@@ -35,7 +35,7 @@ export function CareerJourneyPage() {
           {!data.email_verified && <p className="mt-3 text-sm">Verify your account email before unattended applications can be sent.</p>}
           <p className="mt-3 text-sm">{data.execution === "hosted"
             ? data.hosted_online ? "Hosted worker online · supported applications can continue with your browser closed." : "Hosted worker offline · external applications are waiting."
-            : data.executor_ready ? "Connected browser ready · keep that browser open for external applications." : "Choose hosted applying or connect your browser to send external applications."}</p>
+            : data.executor_ready ? "Connected browser ready · it sends external applications while it is open." : "Approved applications wait in Needs you, ready for you to send. Nothing to install."}</p>
         </div>
         <details className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
           <summary className="cursor-pointer rounded-lg p-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500">Your full career journey · {data.steps.filter((step) => step.done).length} of {data.steps.length} steps ready</summary>
@@ -44,7 +44,7 @@ export function CareerJourneyPage() {
           <h2 className="mt-2 text-lg font-semibold">{step.title}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{step.detail}</p>
           <Link to={step.href} className={buttonClass(data.next_step === step.id ? "primary" : "secondary", "sm", "mt-4")}>{step.done ? "Review" : "Continue"} · {step.title}</Link>
         </li>)}</ol></details>
-        <p className="text-sm text-zinc-500">Hosted applying covers Greenhouse, Lever, Ashby, Workday, SmartRecruiters, Workable and Recruitee employer forms. Browser mode covers Greenhouse, Lever and Ashby. Human checks, logins, unknown attestations and unsupported sites need your input. You can pause at any time.</p>
+        <p className="text-sm text-zinc-500">Orbit sends Greenhouse, Lever, Ashby, Workday, SmartRecruiters, Workable and Recruitee employer forms where hosted applying is on, and Orbit Business jobs everywhere. Human checks, logins, unknown attestations and unsupported sites need your input. You can pause at any time.</p>
       </>}
     </LoadGate>
   </div>;

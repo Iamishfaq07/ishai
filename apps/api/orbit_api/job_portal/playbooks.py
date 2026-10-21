@@ -1,4 +1,11 @@
-"""Account-owned rules for the Action desk. No applications, emails or outcomes are changed."""
+"""Account-owned rules for the Action desk. No applications, emails or outcomes are changed.
+
+Each rule is off until the candidate enables it, and only adds a suggested action to Today, derived from their own
+records. Patterns from open-source job-search tools (docs/PERSONAL_WORKFLOW_RESEARCH_2026_10.md): a follow-up after
+silence, a thank-you note after an interview, a decision point for an application that has gone quiet (as in
+MadsLorentzen/ai-job-search's stale-application check) and a decision on saved jobs left unapplied. Drafts and
+decisions stay with the candidate: nothing here sends a message, closes an application or removes a job.
+"""
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
@@ -9,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
-from orbit_api.models import CareerPlaybook, JobApplication, JobContact, User
+from orbit_api.job_portal.action_priority import TERMINAL_JOBS
+from orbit_api.models import CareerPlaybook, JobApplication, JobContact, JobInterviewRound, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.transactions import lock_account
 
@@ -21,6 +29,9 @@ class Rules(BaseModel):
     model_config = ConfigDict(extra="forbid")
     follow_up_days: int | None = Field(None, ge=3, le=60, strict=True)
     prep_hours: int | None = Field(None, ge=1, le=168, strict=True)
+    thank_you_hours: int | None = Field(None, ge=2, le=72, strict=True)
+    stale_days: int | None = Field(None, ge=14, le=90, strict=True)
+    saved_days: int | None = Field(None, ge=3, le=60, strict=True)
 
 
 class Save(Rules):
@@ -29,8 +40,10 @@ class Save(Rules):
 
 async def settings(db: AsyncSession, user_id: str) -> dict[str, Any]:
     row = await db.get(CareerPlaybook, user_id, populate_existing=True)
-    return {"revision": row.revision if row else 0,
-        "follow_up_days": row.follow_up_days if row else None, "prep_hours": row.prep_hours if row else None}
+    return {"revision": row.revision if row else 0, **{key: getattr(row, key) if row else None for key in RULES}}
+
+
+RULES = ("follow_up_days", "prep_hours", "thank_you_hours", "stale_days", "saved_days")
 
 
 def aware(t: datetime) -> datetime:
@@ -71,6 +84,66 @@ async def followups(db: AsyncSession, user_id: str, days: int | None,
     return items, len(candidates) > 200
 
 
+async def thank_yous(db: AsyncSession, user_id: str, hours: int | None, now: datetime) -> list[dict[str, Any]]:
+    """Interview rounds that happened in the last `hours`, with no contact logged since: draft a thank-you note."""
+    if hours is None:
+        return []
+    rows = (await db.execute(select(JobInterviewRound, JobApplication)
+        .join(JobApplication, JobApplication.id == JobInterviewRound.application_id)
+        .where(JobInterviewRound.user_id == user_id, JobInterviewRound.status != "cancelled",
+               JobInterviewRound.scheduled_at <= now, JobInterviewRound.scheduled_at >= now - timedelta(hours=hours),
+               JobApplication.status.not_in(TERMINAL_JOBS),
+               ~select(JobContact.id).where(JobContact.user_id == user_id,
+                   JobContact.application_id == JobApplication.id,
+                   JobContact.last_contacted_at >= JobInterviewRound.scheduled_at).exists())
+        .order_by(JobInterviewRound.scheduled_at, JobInterviewRound.id).limit(50))).all()
+    items = []
+    for interview, job in rows:
+        assert interview.scheduled_at is not None
+        items.append({"id": f"thanks:{interview.id}", "kind": "follow_up", "title": f"{job.title} · {job.company}",
+            "detail": f"Your {interview.label or 'interview'} took place. A short thank-you note is common within a "
+                "day. Draft one, review it and send it yourself; Orbit sends nothing.",
+            "due_at": (aware(interview.scheduled_at) + timedelta(hours=hours)).isoformat(), "overdue": False,
+            "path": f"/jobs/outreach?view=messages&job={job.listing_id}", "action_label": "Draft a thank-you note",
+            "rule": "interview_thank_you"})
+    return items
+
+
+async def quiet(db: AsyncSession, user_id: str, days: int | None, now: datetime) -> list[dict[str, Any]]:
+    """Applied with no update, next step or contact for `days`: a decision point, not an automatic close."""
+    if days is None:
+        return []
+    cutoff = now - timedelta(days=days)
+    jobs = await db.scalars(select(JobApplication).where(JobApplication.user_id == user_id,
+        JobApplication.status == "applied", JobApplication.next_at.is_(None),
+        JobApplication.applied_at <= cutoff, JobApplication.status_at <= cutoff,
+        ~select(JobContact.id).where(JobContact.user_id == user_id, JobContact.application_id == JobApplication.id,
+            JobContact.last_contacted_at > cutoff).exists())
+        .order_by(JobApplication.status_at, JobApplication.id).limit(50))
+    return [{"id": f"quiet:{job.id}", "kind": "follow_up", "title": f"{job.title} · {job.company}",
+        "detail": f"No recorded reply or next step in {days} days. Decide: one last follow-up, keep waiting, or "
+            "record it as closed. Nothing changes until you do.",
+        "due_at": (aware(job.status_at) + timedelta(days=days)).isoformat(),
+        "overdue": True, "path": f"/jobs/mission/{job.id}?tab=timeline", "action_label": "Decide next step",
+        "rule": "application_quiet"} for job in jobs]
+
+
+async def saved(db: AsyncSession, user_id: str, days: int | None, now: datetime) -> list[dict[str, Any]]:
+    """Saved and not applied to for `days`: apply, prepare it, or let it go to keep the shortlist focused."""
+    if days is None:
+        return []
+    jobs = await db.scalars(select(JobApplication).where(JobApplication.user_id == user_id,
+        JobApplication.status == "saved", JobApplication.next_at.is_(None),
+        JobApplication.status_at <= now - timedelta(days=days))
+        .order_by(JobApplication.status_at, JobApplication.id).limit(50))
+    return [{"id": f"saved:{job.id}", "kind": "application", "title": f"{job.title} · {job.company}",
+        "detail": f"Saved {days}+ days ago and not applied to yet. Apply, prepare it with auto-apply, or remove it "
+            "to keep your shortlist focused.",
+        "due_at": (aware(job.status_at) + timedelta(days=days)).isoformat(), "overdue": True,
+        "path": f"/jobs/mission/{job.id}", "action_label": "Apply or let it go", "rule": "saved_job_decision"}
+        for job in jobs]
+
+
 @router.get("")
 async def get(user: Annotated[User, Depends(current_user)],
               db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
@@ -87,7 +160,8 @@ async def save(body: Save, user: Annotated[User, Depends(current_user)],
     if row is None:
         row = CareerPlaybook(user_id=user.id, revision=0)
         db.add(row)
-    row.follow_up_days, row.prep_hours = body.follow_up_days, body.prep_hours
+    for key in RULES:
+        setattr(row, key, getattr(body, key))
     row.revision += 1
     await db.commit()
     return await settings(db, user.id)

@@ -19,6 +19,14 @@ describe("Candidate application inbox", () => {
     expect(selectPackets([packet("p", status)], view, "", "action")).toHaveLength(1);
   });
 
+  it("puts an application the candidate must send in Needs action, except Orbit Business ones", () => {
+    expect(packetView("ready", true)).toBe("attention");
+    expect(packetGuidance(packet("p", "ready"), true).label).toBe("Ready for you to send");
+    const items = [packet("ext", "ready"), packet("orbit", "ready", { ats: "orbit" })];
+    expect(selectPackets(items, "attention", "", "action", true).map((p) => p.id)).toEqual(["ext"]);
+    expect(selectPackets(items, "active", "", "action", true).map((p) => p.id)).toEqual(["orbit"]);
+  });
+
   it("prioritises uncertain outcomes and required input without changing the source array", () => {
     const packets = [packet("sent", "submitted"), packet("review", "review"), packet("question", "needs_answer"),
       packet("uncertain", "failed", { submission_uncertain: true }), packet("cancelled", "cancelled", { submission_uncertain: true })];
