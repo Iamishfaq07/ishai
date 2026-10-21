@@ -6,6 +6,7 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
     ForeignKey,
@@ -399,6 +400,8 @@ class LiveSessionRow(TimestampMixin, Base):
     # (job_portal/interview.py). Checked against the owner when set; NULL once the job leaves the tracker.
     application_id: Mapped[str | None] = mapped_column(ForeignKey("job_applications.id", ondelete="SET NULL"),
                                                        index=True)
+    interview_round_id: Mapped[str | None] = mapped_column(String(36))
+    interview_round_revision: Mapped[int | None] = mapped_column(Integer)
 
 
 class Workspace(TimestampMixin, Base):
@@ -830,6 +833,9 @@ class JobSearchProfile(TimestampMixin, Base):
     prefs: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     suggested: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     suggested_hash: Mapped[str | None] = mapped_column(String(64))  # the resume content it was read from
+    # Explicit master selection/review metadata only. Resume remains the facts/version authority.
+    # Kept separately from resume_id, which may change when a candidate tries a different search resume.
+    career_identity: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     # Job alerts (job_portal/alerts.py): an email of new matches, "off" | "daily" | "weekly"; when the last went out
     # (or was due with nothing new); and the token of its one-click "stop these emails" link.
     alert: Mapped[str] = mapped_column(String(8), default="off", server_default="off")
@@ -871,11 +877,39 @@ class JobApplication(TimestampMixin, Base):
     # linked resume as it is now), or NULL: the newest version sent, else the linked resume. Not a foreign key: a
     # deleted snapshot just falls back to the default.
     interview_version: Mapped[str | None] = mapped_column(String(36))
+    preparation_round_id: Mapped[str | None] = mapped_column(String(36))
+    preparation_round_revision: Mapped[int | None] = mapped_column(Integer)
     # The likely questions last generated for this job (Resume AI's interview prep, one credit), kept so they're paid
     # for once: {"version_id", "generated_at", "result"} (job_portal/interview.py).
     interview_questions: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     # How it was applied to, when Orbit did it: "orbit_apply" (auto_apply, D84). NULL: by the candidate.
     applied_via: Mapped[str | None] = mapped_column(String(16))
+
+
+class JobInterviewRound(TimestampMixin, Base):
+    """Candidate-recorded employer round, distinct from mock/live session execution."""
+    __tablename__ = "job_interview_rounds"
+    __table_args__ = (CheckConstraint("revision >= 1", name="ck_job_round_revision"),
+                     CheckConstraint("status IN ('planned','completed','cancelled')", name="ck_job_round_status"),
+                     CheckConstraint("number IS NULL OR (number >= 1 AND number <= 20)", name="ck_job_round_number"),
+                     UniqueConstraint("application_id", "source_key", name="uq_job_round_source"),
+                     Index("ix_job_round_owner_application", "user_id", "application_id"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"))
+    label: Mapped[str] = mapped_column(String(160))
+    round_type: Mapped[str | None] = mapped_column(String(16))
+    number: Mapped[int | None] = mapped_column(Integer)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    time_zone: Mapped[str] = mapped_column(String(100), default="UTC")
+    status: Mapped[str] = mapped_column(String(16), default="planned")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    outcome: Mapped[str | None] = mapped_column(String(24))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    source: Mapped[str] = mapped_column(String(24), default="candidate")
+    source_key: Mapped[str] = mapped_column(String(64))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    history: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
 
 
 class ResumeSnapshot(TimestampMixin, Base):
@@ -895,6 +929,8 @@ class ResumeSnapshot(TimestampMixin, Base):
     job_text: Mapped[str] = mapped_column(Text, default="")
     score: Mapped[int] = mapped_column(Integer, default=0)
     note: Mapped[str] = mapped_column(String(200), default="")
+    # Captured at creation, never reconstructed from current sources. Opaque IDs survive source deletion.
+    origin: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
 
 
 class UserTwoFactor(TimestampMixin, Base):

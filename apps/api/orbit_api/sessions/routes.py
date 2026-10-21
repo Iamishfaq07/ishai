@@ -166,6 +166,8 @@ class SessionIn(BaseModel):
     # Started from a job in the tracker (its interview prep, job_portal/interview.py): recorded on the session, so the
     # round shows on that job. Only one of the account's own.
     application_id: str | None = Field(None, max_length=36)
+    interview_round_id: str | None = Field(None, max_length=36)
+    interview_round_revision: int | None = Field(None, ge=1)
 
     # A live session: the interview language and the answer language (live_language.py; None = the interview's),
     # when this server offers them; anything else is English. A mock interview: English, or its practice language
@@ -210,6 +212,8 @@ class SessionOut(BaseModel):
     negotiation: bool = False
     video: bool = False  # an AI video interview (MockConfig.video): the web app opens it in the video-call room
     application_id: str | None = None  # the tracked job it was started from
+    interview_round_id: str | None = None
+    interview_round_revision: int | None = None
 
 
 class SessionDetail(BaseModel):
@@ -241,7 +245,8 @@ def _to_out(row: LiveSessionRow, question_count: int, doc_ids: list[str],
         report_status=report_status, workspace_id=row.workspace_id, instructions=row.instructions,
         negotiation=_is_negotiation(row),
         video=_is_video(row),
-        application_id=row.application_id,
+        application_id=row.application_id, interview_round_id=row.interview_round_id,
+        interview_round_revision=row.interview_round_revision,
     )
 
 
@@ -306,6 +311,19 @@ async def create_session(body: SessionIn, user: Annotated[User, Depends(require_
         body.mock.interview_stage = body.interview_stage
         body.mock.tech_stack = list(body.tech_stack)
         body.mock.key_requirements = list(body.key_requirements)
+    if body.interview_round_id is not None or body.interview_round_revision is not None:
+        from orbit_api.job_portal.round_journal import context_round
+        from orbit_api.transactions import lock_account
+
+        if not body.application_id or not body.interview_round_id or body.interview_round_revision is None:
+            raise HTTPException(422, "A reviewed round needs its owned job and source revision.")
+        await lock_account(db, user.id)
+        entry = await db.get(JobApplication, body.application_id, populate_existing=True)
+        if entry is None or entry.user_id != user.id:
+            raise HTTPException(404, "Not in your tracker")
+        chosen = await context_round(db, entry)
+        if chosen is None or chosen.id != body.interview_round_id or chosen.revision != body.interview_round_revision:
+            raise HTTPException(409, "Interview round context changed. Review the opportunity before starting.")
     if body.application_id:
         entry = await db.get(JobApplication, body.application_id)
         if entry is None or entry.user_id != user.id:
@@ -566,7 +584,8 @@ async def drill_session(session_id: str, user: Annotated[User, Depends(require_v
     title = row.title.removeprefix("Drill: ")
     new = SessionIn(title=f"Drill: {title}"[:300], type="mock", role=row.role, language=row.language,
                     answer_language=row.answer_language, document_ids=doc_ids, mock=mock,
-                    application_id=row.application_id)  # a drill of a job's round is practice for that job
+                    application_id=row.application_id, interview_round_id=row.interview_round_id,
+                    interview_round_revision=row.interview_round_revision)  # replay keeps original round provenance
     return await create_session(new, user, db)
 
 

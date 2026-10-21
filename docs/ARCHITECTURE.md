@@ -141,3 +141,37 @@ Separate channels (mic → candidate, system → interviewer) instead of diariza
 Signed-in `/` is Today, using the existing launchpad progress/action projection, not a new recommendation engine. Five primary tasks route to Today, Discover (`/jobs/matches`), Applications (`/jobs/tracker`), Prepare (`/prepare`) and My Career (`/career`). The last two organize existing tools; legacy deep links stay intact. The first-use launchpad remains at `/jobs?start=1`.
 
 The existing mission read model now projects the exact owned listing's application identity/status only. Guided Application opens that packet's reviewed kit; packet and tracker statuses remain independent. See [lineage](implementation/SECURITY_AND_DATA_LINEAGE.md).
+
+## Unified candidate journey — 21 October 2026
+
+The first integration slice extends existing authorities. `JobSearchProfile.career_identity` contains explicit master selection and revision/fingerprint review metadata; Resume owns content, and profile.resume_id remains the search selection. JobApplication owns each opportunity. Master/shared-job selections create independent job copies. No shadow candidate or second packet tracker was introduced. Existing specialist `?tab=` links resolve within one room. See implementation/UNIFIED_JOURNEY_DATA_LINEAGE.md and UNIFIED_JOURNEY_PLAN.md for scope, migration and remaining work.
+
+Opportunity session attribution now uses existing LiveSessionRow.application_id plus minimal career.session.link/unlink AuditLog events; no parallel session/round model. The room can review existing ended sessions, undo attribution and return from reports with navigation-only context. Counts use grouped source rows, independent of bounded timeline previews. Packet evidence is a conservative read projection of explicit owned ApplicationPacket.application_id, not a new delivery authority.
+
+## Interview-round continuity (draft, unverified)
+
+JobInterviewRound extends the existing owned opportunity with employer-round records and schedule/status history. It is distinct from live/mock execution. Explicit preparation_round_id/revision projects a selected dated round into existing tracker fields; legacy writers clear that selection. Saba/session setup captures and rechecks source round/revision; old sessions are not relabeled. Preparation keys bind selected round/version while retaining completion snapshots. ORBIT_PERSONAL_INTERVIEW_ROUNDS defaults OFF. Migration f73a9e1c462d is drafted, not run; see implementation/UNIFIED_INTERVIEW_ROUNDS.md.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+ResumeSnapshot remains the sole saved-copy authority. New nullable origin records creation-time source ID/revision and content digest; live resume_id remains a separate nullable FK. No new artifact store or dashboard. Application snapshots use packet-captured JD and distinguish candidate/executor observations.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Reuse shared accent/ink tokens, preference loader, PageHeader/OrbitLogo and workspace surface/heading roles. No competing design system or data authority. Today contextual rail uses current owned room IDs/tab aliases; global next-action planner remains authoritative.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

@@ -3562,3 +3562,52 @@ per-app capture: it needs a desktop release to reach users.
 - Preview REST/live/proxy and employer rendering cannot use the canonical production API; independent staging remains operator setup.
 - Correct current release documentation; repair existing motion-contract and incomplete migration-fixture baseline failures.
 - No migration, new transport, automatic submission, provider call on mount or third-party runtime dependency.
+
+## Unreleased — unified candidate journey foundation
+
+- Explicit master resume selection and version-bound candidate review, reused as Discover’s starting resume without redefining the master when search preferences change.
+- Independent job copies when linking a master or resume already used by another opportunity.
+- Redesigned Today/My Career and one stable Opportunity Room with existing deep links preserved.
+- Context-bound Saba entry for audio/video practice and durable report return; matching company names are review suggestions, never counted job progress.
+- Private reply/invitation input retained temporarily in tab memory; account changes clear drafts and approvals are not restored.
+- Baseline regression repairs and new ownership/version/journey checks. Verification and release limitations: implementation/UNIFIED_JOURNEY_RELEASE_SIGNOFF.md.
+
+### Unified journey follow-on — reviewed session continuity
+
+- Review existing completed sessions from an opportunity; explicitly link, unlink or reassociate without changing recorded context/report.
+- Keep attribution history in export/delete; reject foreign, active and stale cross-job actions.
+- Preserve older linked sessions despite unrelated recent activity; count all completed linked practice rather than a ten-row preview.
+- Separate candidate-recorded/executor-reported/uncertain application evidence in the job timeline.
+- Validate identity migration/rollback and46 targeted lifecycle/concurrency checks on isolated local PostgreSQL; production gates remain open.
+
+### Draft interview-round continuity — UNVERIFIED
+
+- Owned employer rounds with UTC instant, IANA zone, revisioned schedule/status history, notes and candidate debrief.
+- Reviewed calendar event recording, duplicate-source guard and explicit preparation/stage choices.
+- Select/clear a preparation round; keep old completion history and bind Saba context to source revision.
+- Contextual next-round/offer actions and retained legacy manual controls.
+- Export/cascade semantics and additive migration drafted; experimental flag OFF. No tests, builds, lint, typechecks, migration execution or screenshots run under latest owner instruction.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Added saved-resume source/revision history, optional displayed-source conflict guard, restored-copy references and packet-source disclosure. Fixed packet snapshots reading mutable current job descriptions and packet copies being mislabeled as deleted original resumes.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Replace purple default/violet neutrals with paper/graphite/Slate blue; legacy Nebula resolves to Slate blue. Restructure Today into primary action/opportunity rows and contextual journey rail. Update core candidate headings, shared surfaces/logo/SVG favicon/offline. Explicit user accents remain selectable.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

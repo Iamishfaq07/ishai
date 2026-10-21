@@ -35,7 +35,7 @@ function useBlobUrl(path: string | null): string | null {
   return url;
 }
 
-export default function PacketDetail({ id, onChanged }: { id: string; onChanged: () => void }) {
+export default function PacketDetail({ id, onChanged, opportunityId }: { id: string; onChanged: () => void; opportunityId?: string }) {
   const [showReview, setShowReview] = useState(false);
   const [confirmedFor, setConfirmedFor] = useState<string | null>(null);
   const detail = useAsync(() => applyApi.applyPacket(id), [id], `apply-packet|${id}`);
@@ -44,7 +44,8 @@ export default function PacketDetail({ id, onChanged }: { id: string; onChanged:
   const p = detail.data;
   const confirmationKey = `${id}:${p?.updated_at}`;
   const confirmNotSubmitted = confirmedFor === confirmationKey;
-  const shot = useBlobUrl(p?.screenshot_url ?? null);
+  const contextMatches = !opportunityId || p?.tracker_id === opportunityId;
+  const shot = useBlobUrl(contextMatches ? p?.screenshot_url ?? null : null);
 
   const act = async (what: string, fn: () => Promise<ApplyPacketDetail>) => {
     setBusy(what);
@@ -70,7 +71,8 @@ export default function PacketDetail({ id, onChanged }: { id: string; onChanged:
   };
 
   if (detail.error && !p) return <ErrorNote onRetry={detail.reload}>{errorText(detail.error)}</ErrorNote>;
-  if (!p) return <p className="text-sm">Loading…</p>;
+  if (!p) return <p className="text-sm" role="status">Loading application materials…</p>;
+  if (!contextMatches) return <ErrorNote onRetry={() => { detail.reload(); onChanged(); }}>This packet no longer matches the open opportunity. Refresh the room before reviewing or taking action.</ErrorNote>;
   const can = actionsFor(p.status);
   const guidance = packetGuidance(p);
   return (

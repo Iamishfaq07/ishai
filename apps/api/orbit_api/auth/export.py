@@ -13,6 +13,7 @@ from sqlalchemy import inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from orbit_api.job_portal import session_associations
 from orbit_api.models import (
     Answer,
     AnswerBankEntry,
@@ -31,6 +32,7 @@ from orbit_api.models import (
     JobApplication,
     JobContact,
     JobFitCheck,
+    JobInterviewRound,
     JobOffer,
     JobPlanCheck,
     JobSearchProfile,
@@ -94,6 +96,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             LinkedInProfileRow.user_id == user_id))).all()],
         "code_attempts": [_row(r) for r in (await db.scalars(select(CodeAttempt).where(CodeAttempt.user_id == user_id)
                                                               .order_by(CodeAttempt.created_at))).all()],
+        "interview_rounds": [_row(r) for r in (await db.scalars(select(JobInterviewRound).where(
+            JobInterviewRound.user_id == user_id).order_by(JobInterviewRound.created_at))).all()],
         "job_offers": [_row(o) for o in (await db.scalars(select(JobOffer).where(JobOffer.user_id == user_id)
                                                            .order_by(JobOffer.created_at))).all()],
         "evidence": [_row(e) for e in (await db.scalars(select(EvidenceItem).where(EvidenceItem.user_id == user_id)
@@ -154,6 +158,10 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             for t in (await db.scalars(
                 select(SupportThread).where(SupportThread.user_id == user_id)
                 .options(selectinload(SupportThread.messages)).order_by(SupportThread.created_at))).all()],
+        "opportunity_session_associations": [
+            {"action": a.action, "application_id": (a.target or "").partition(":")[0],
+             "session_id": (a.target or "").partition(":")[2], "at": a.created_at}
+            for a in await session_associations.history(db, user_id)],
         "security_log": [{"action": a.action, "ip": a.ip, "at": a.created_at}
                          for a in (await db.scalars(select(AuditLog).where(AuditLog.user_id == user_id)
                                                     .order_by(AuditLog.created_at))).all()],

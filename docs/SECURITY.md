@@ -294,3 +294,41 @@ The full review, its method and its accepted risks are in [SECURITY_REVIEW.md](S
 ## Preview data boundary
 
 Canonical production API access is refused from previews at both Worker and browser endpoint selection, including production artifacts accidentally served on a preview host. Staging requires independent infrastructure/secrets/domain; configuration guards cannot identify every private production alias. See [STAGING.md](STAGING.md) and [verification limits](implementation/SECURITY_AND_DATA_LINEAGE.md).
+
+## Unified candidate context boundaries
+
+Identity selection/review endpoints derive the user from authentication, check owned resume IDs, serialize writes with the existing account lock, and compare a version fingerprint plus resume revision. No client-supplied user authority. Completed-session association checks both job and session ownership and rejects rebinding a session already owned by another opportunity. Same-company matching never establishes a durable association or completed progress. New private content is not placed in URLs or analytics.
+
+PostgreSQL concurrency/staging, real speech providers, Windows hardware/signing and production backup/rollback remain separate operator gates; see implementation/UNIFIED_JOURNEY_RELEASE_SIGNOFF.md.
+
+Candidate account transitions also synchronize across same-origin tabs through storage events and opaque BroadcastChannel notifications; server authentication remains authoritative. Blocked browser storage is covered by the channel fallback. Raw resume or draft text is not broadcast.
+
+Session attribution link/unlink serializes through existing account and session-row locks. Both resources are checked against authenticated ownership; ended-only transitions reject cross-job stale actions. No inferred reassignment or raw provider context in audit targets. PostgreSQL16.15/pgvector0.8.7 local tests now cover competing links/master selection and export/delete. Hosted CI, deployed staging and live provider/hardware proof remain separate.
+
+## Draft owned interview-round boundaries
+
+Authenticated ownership is checked for job and round actions. Strict confirmation, source revisions, tracker-version conditional updates, existing account locks, per-job limits and source-key uniqueness are implemented. Session creation with round context rechecks the current owned selected planned round/revision. Calendar input uses the existing bounded nonexecuting parser; URLs/attachments/organizers are not fetched or trusted. No business record is merged into Personal Orbit. These statements describe code intent only: no security, race, migration or runtime validation was run for this increment under the latest owner instruction.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+New save uses account and owned resume locks; supplied displayed ID/timestamp mismatches return409. track_applied explicitly rejects a foreign packet owner. References grant no authorization; existing destination routes recheck owner. Hash is neither signature nor receipt. Security behavior remains unverified; no scan was run.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Existing authenticated ownership boundaries and safe room routes remain. Appearance loading now accepts own palette keys, avoiding inherited object-key values. No provider/send/browser automation permission change. Security behavior and new preference paths remain unverified.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

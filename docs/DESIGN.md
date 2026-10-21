@@ -1,4 +1,6 @@
-# Design system — "Deep Space"
+> Current direction, 2026-10-21: the owner explicitly replaces the purple/deep-space default with warm paper, graphite, restrained Slate blue, opaque surfaces and editorial hierarchy. This supersedes older colour-direction statements below. New default/legacy alias, shared headers/logo and Today layout are implemented but unverified; no tests or visual checks were run. See [enterprise visual slice](implementation/UNIFIED_ENTERPRISE_DESIGN.md).
+
+# Design system — Orbit enterprise workbench
 
 Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.preset.ts` and
 `packages/ui/src/design/base.css`.
@@ -11,11 +13,11 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   restrained motion. No sky, no glass, no glows, no gradient headlines. Its rules are "The front door" below.
 - **The workbench** (everything signed in: `html.app-shell`, set by the web Layout and by the live session page) is
   where people run their job search every day, so it reads as professional software: one still canvas (`--canvas`,
-  #F5F6F8 / #0D121C), opaque surfaces (`--surface`) with a hairline border (`--line`) and no shadow, headings in the
+  #F5F5F4 / #101214), opaque surfaces (`--surface`) with a hairline border (`--line`) and no shadow, headings in the
   product face, and no gradients, glows, sheens or decorative blobs. Only things that float (a menu, a dialog, a
   toast) cast a shadow. The live session (`/live/:id`) is the workbench too: no sky behind the panel, no glow around
   it.
-- **Dark mode is the light theme's twin** (D58): inside the workbench the ink's darkest steps are the same blue-grey
+- **Dark mode is the light theme's twin** (D58): inside the workbench the ink's darkest steps are the same graphite
   family as the canvas: `zinc-950` (what `dark:` pairs with `bg-white`: the bars, fields, dialogs, the live panel) is
   the surface, `zinc-900` a raised step above it, `zinc-800` the line. The front door's dark mode is the same family
   (D66).
@@ -24,7 +26,7 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   product's own content (its mark, its row on Home), not the nav.
 - **Corners say how a thing behaves**: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px
   (`rounded-3xl`).
-- **Buttons**: primary is the solid accent (white on accent-600 passes AA in every accent), secondary is bordered,
+- **Buttons**: primary is the solid accent (foreground/background combinations require palette-specific contrast validation), secondary is bordered,
   ghost is plain, danger is rose-700 text, destructive is solid rose (inside a confirm), link is inline text. Nothing
   on a button moves except the press, and buttons cast no shadow. How each feels (hover, press, focus, busy, done)
   is "Interaction" below.
@@ -46,19 +48,18 @@ Components use plain Tailwind names; the preset maps them to CSS variables (RGB 
 
 | Tailwind name | Variable        | Meaning                                                                 |
 | ------------- | --------------- | ----------------------------------------------------------------------- |
-| `indigo-*`    | `--accent-*`    | The accent. Default **Nebula**; users can pick another in Settings.     |
-| `zinc-*`      | `--ink-*`       | Neutrals: surfaces, borders, secondary text. Cool, slightly violet.     |
-| `aurora-*`    | `--aurora-*`    | Cyan. Brand gradients only (logo, hero glows) — never UI state.         |
+| `indigo-*`    | `--accent-*`    | The accent. Default **Slate blue**; legacy Nebula resolves to Slate blue. Other explicit choices remain.     |
+| `zinc-*`      | `--ink-*`       | Neutrals: surfaces, borders, secondary text. Graphite neutrals on warm paper.     |
+| `aurora-*`    | `--aurora-*`    | Legacy illustration cyan only — not the product logo or UI state.         |
 | `stage-*`     | `--stage-*`     | A job's stage: `saved`, `applied`, `interviewing`, `offer`, `rejected`. |
 
 Status colours stay Tailwind's own (`emerald` live, `amber` warning, `rose` error).
 **Stage colours** are fixed (not the accent, so a stage looks the same for everyone and never meets a status colour
-that means something else): saved → applied → interviewing is one ordered violet ramp, further along = more ink
+that means something else): saved → applied → interviewing uses a neutral/steel ramp, further along = more ink
 (darker in light mode, lighter in dark mode); an offer is the status green; "not this time" a quiet grey. They're
 marks only (`STATUS_MARK` in `pages/jobs/model.ts`: the dot in a `StagePill`, a tracker card's edge, the Home pipeline
-bar), never text, and always beside the stage's name. Both themes' steps passed the dataviz palette validator
-(ordinal, colour-blind separation, contrast); re-run it if you change one.
-Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every surface in both themes, and so are
+bar), never text, and always beside the stage's name. The current enterprise stage palette is IMPLEMENTED / UNVERIFIED; contrast and colour-blind validation are deferred by the owner. Earlier palette results do not validate these values.
+Contrast: secondary text uses deeper neutrals in `base.css`; the new palette needs later validation. Existing status remaps also apply to
 `text-emerald-600` / `text-amber-600` in light mode (they draw in -700). Small text never takes `opacity-80`; text on
 amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by default (`tnum`, web), so columns of
 numbers line up; a stat's big number (a tile, a ring) takes `stat-value`, the font's proportional figures.
@@ -77,8 +78,7 @@ Score rings: the fill says how it went, the track is a pale step of the same col
 
 `font-sans` is **IBM Plex Sans** everywhere: body, numbers (tabular) and, in the workbench, headings too (base.css
 maps `h1`–`h3` and `font-display` to it inside `html.app-shell`). Its engineered, institutional shapes read as a
-serious tool. The front door uses it for every heading too (`html.site`); Space Grotesk lives on only inside the logo's
-wordmark, outlined (`BrandLogo`), so no page loads it for text. `font-mono` (JetBrains Mono) is
+serious tool. The front door and shared heading/wordmark defaults use Plex too. Existing Space Grotesk font assets are not removed in this unverified slice; no bundle saving is claimed. `font-mono` (JetBrains Mono) is
 for code only, never for small data labels. Self-hosted via Fontsource (`apps/web/src/fonts.css`, Latin only).
 
 ## Surfaces
@@ -671,3 +671,30 @@ are built from one section kit, `apps/web/src/marketing/kit/`, inside `PublicLay
   Previous and Next; it never moves on its own.
 - **Copy**: what's true and checkable, as everywhere on the front door; a comparison says what each side hands you
   and names no one ("A general chatbot").
+
+## Candidate cockpit integration — 21 October 2026
+
+Today presents one source-backed next action, a nonlinear journey strip and owned opportunity rows. My Career begins with explicit identity/master review and goals; advanced utilities are disclosed after these tasks. The Opportunity Room uses Overview, Application, Prepare with Saba, Interviews, and Offer; legacy tools remain accessible through More tools, without a guided/expert mode split. The room suppresses the additional Jobs navigation. Opaque surfaces, indigo action hierarchy, responsive wrapping and existing motion primitives replace competing hero/catalog surfaces. Screenshot evidence and untested visual states are recorded in implementation/UNIFIED_JOURNEY_VISUAL_QA.md.
+
+Opportunity history offers optional review/link controls and confirmed unlink with preserved-report copy. Original report context and current job attribution are distinct. Return navigation does not attach a report. Evidence descriptions wrap on small screens so uncertainty qualifications are visible; provenance is text as well as color. Primary five-destination navigation is unchanged.
+
+## Interview rounds — implementation only
+
+Opportunity Room > Interviews gains owned planned/completed/cancelled round history, explicit preparation choice, time-zone-labelled schedules and a short debrief. Completed/cancelled history and legacy date controls are disclosed rather than new global destinations. Next-round and offer actions return to the same opportunity. Existing focus/field/card/motion primitives are reused. No new browser, responsive, accessibility or screenshot proof was collected because the latest owner instruction prohibits validation.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Saved-version list and comparison share SnapshotSource disclosure with existing focus/touch patterns, wrapping digest and packet evidence link. Legacy unknown and packet file/design limits are explicit. No additional primary navigation or animation dependency. No current screenshots or visual validation.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

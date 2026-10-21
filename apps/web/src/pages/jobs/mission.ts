@@ -19,6 +19,22 @@ export const MISSION_GROUPS = [
   { id: "progress", label: "Progress & offer", first: "timeline" },
 ] as const;
 
+/** One room, while retaining all existing ?tab= specialist deep links. */
+export const ROOM_SECTIONS = [
+  { id: "overview", label: "Overview", first: "fit" },
+  { id: "application", label: "Application", first: "resume" },
+  { id: "prepare", label: "Prepare with Saba", first: "practice" },
+  { id: "interviews", label: "Interviews", first: "interview" },
+  { id: "offer", label: "Offer", first: "offer" },
+] as const;
+export function roomSection(tool: MissionTool): typeof ROOM_SECTIONS[number]["id"] {
+  if (tool === "resume" || tool === "timeline") return "application";
+  if (tool === "practice" || tool === "plan") return "prepare";
+  if (tool === "interview") return "interviews";
+  if (tool === "offer") return "offer";
+  return "overview";
+}
+
 /** The Mission Room's stages, in the order a job is won; each is done only on a record (job_portal/mission.py). */
 export const MISSION_STAGES: Array<{ id: MissionStage; label: string; done: string }> = [
   { id: "discover", label: "Discover", done: "Saved to your tracker" },

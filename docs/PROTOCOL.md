@@ -421,3 +421,41 @@ company and private candidate application `GET /scheduling-requests` lists reque
 `POST /scheduling-requests` creates one and `POST /scheduling-requests/{id}/withdraw` withdraws it;
 company `POST /scheduling-requests/{id}/reply` proposes alternatives or saves a message-only response.
 Existing candidate `/book` confirms an offered alternative. See [contracts and booking guarantees](BUSINESS_COORDINATION.md).
+
+## Candidate identity and reviewed session association
+
+`GET /v1/jobs/launchpad/identity` returns the authenticated candidate’s selected master, saved resume summaries, review state, source version and existing career preferences. `PUT` on that path accepts version, action (select/approve/revoke), owned resume_id, resume_revision and optional independent_copy. A stale source returns 409; missing/foreign owned references return 404. Selection does not approve content; approval does not rewrite content.
+
+`POST /v1/jobs/tracker/{entry_id}/sessions/link` accepts session_id and confirmed=true. Only the authenticated owner’s ended session may be attached, with no cross-opportunity rebinding. The timeline distinguishes round from related_round. session_id enables explicit association review; a related event is not counted toward job progress. Existing session creation with application_id remains the authority for practice launched from a job.
+
+POST /v1/jobs/tracker/{entry_id}/sessions/unlink uses the same session_id/confirmed=true contract as link; both require owned ended resources and reject another opportunity's current association with409. Same-state retries are idempotent. Link/unlink history is candidate-controlled attribution, not a transcript/context rewrite or employer interview result. Timeline provenance values are saved_record/candidate_recorded/executor_reported/outcome_uncertain/suggestion. Additional kinds application/association do not count as completed rounds. Export adds opportunity_session_associations; no source data is placed in navigation URLs.
+
+## Draft round history contract (default OFF, unverified)
+
+GET /v1/jobs/tracker/{entry_id}/rounds returns enabled, tracker_version and owned rounds. Manual POST /rounds takes label/category/number, optional local_time with IANA time_zone, notes, request_id, strict confirmed=true and tracker_version; explicit use_for_preparation and mark_interviewing default false. PUT /rounds/{round_id} additionally takes round revision, planned/completed/cancelled and optional candidate outcome. POST /rounds/{round_id}/prepare selects a dated planned round with source/job versions. POST /rounds/preparation/clear explicitly releases selection. POST /rounds/calendar reparses full reviewed input and chosen event_id, preserving a hashed source key without storing calendar text.
+
+Closed/stale context conflicts use409; foreign/missing owned resources404; unsupported time or consent422. Existing interview view/message state expose round_history_enabled. Session context/create/output optionally include interview_round_id/revision; creating against a stale/nonselected/foreign round is rejected. Timeline adds interview_round as candidate-recorded employer history, distinct from completed mock/live execution. Account export adds interview_rounds. No old source/history is inferred or rewritten. No current contract verification has run.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+MissionSnapshot and ResumeVersionComparison add nullable SnapshotOrigin; old rows return null. POST mission/snapshots accepts optional resume_id and updated_at guards; legacy clients may omit them. Origin is server-captured, not client-writable. Packet source observation distinguishes candidate_recorded and executor_reported; neither proves delivery.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+No backend/API/schema change. Today reuses /jobs/mission/:entryId with existing tab=resume/practice/interview/offer; existing old URLs remain. Device preference adds slate; legacy nebula resolves to slate without rewriting resume template colours or other explicit accent choices.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

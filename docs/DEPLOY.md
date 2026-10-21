@@ -177,3 +177,41 @@ and move to Workers Paid ($5 a month, 10 million requests included) before daily
 ## Preview isolation (20 October 2026)
 
 See [STAGING.md](STAGING.md). Branch previews no longer point at the production API and fail closed until an independent API is provisioned. Both direct browser REST/live URLs and the Worker proxy need isolation. Production defaults stay unchanged. Current read-only deployment observations are in [release verification](releases/2026-10-20-verification.md); the older Render launch snapshot is historical.
+
+## Unified identity rollout gate
+
+Apply additive migration `e62f8d0b351c` (parent d51e7c9a240b) before deploying clients that read explicit career identity. It adds nullable review metadata to job_search_profiles, without selecting or approving legacy resumes. Roll back UI independently; prior clients ignore the column. A database downgrade drops only review metadata: export/back up that metadata first if review history must survive. Do not execute an automatic production downgrade.
+
+Before production: validate upgrade/downgrade/upgrade and account locking on isolated PostgreSQL with realistic fixtures; verify staging endpoints cannot reach production, backup/restore, live providers and platform-specific gates. This local branch is not deployment approval. Consult implementation/UNIFIED_JOURNEY_RELEASE_SIGNOFF.md for factual evidence and outstanding actions.
+
+Local database proof can be reproduced on an EMPTY local PostgreSQL+pgvector database named orbit_unified_*: from apps/api, set ORBIT_DATABASE_URL to that disposable DB and run uv run python ../../tools/check_candidate_identity_postgres.py. It performs destructive full-graph rollback only after refusing nonlocal/nonmatching names or any existing application rows; never use production/staging data. Separately set ORBIT_TEST_DATABASE_URL for identity/session/timeline/job-mission/data-controls/resume-revision pytest files. Local16.15/0.8.7 proof does not replace deployed-staging rollback, backup/restore, hosted CI or operator approval. No runtime binary is vendored into the application.
+
+## Draft round rollout — no deployment approval
+
+Migration f73a9e1c462d follows e62f8d0b351c. ORBIT_PERSONAL_INTERVIEW_ROUNDS defaults false in configuration/example only; no actual environment was modified. New model fields require the migration before backend deployment even while UI remains disabled. No migration, upgrade/downgrade, build or smoke was executed under the current no-testing instruction. Do not use prior PR445 evidence to enable this slice.
+
+Deferred gates include migration fixtures/head contracts, populated PostgreSQL/SQLite preservation, owner/race/export/delete/timezone/session/plan isolation, UI/browser/scroll/motion and provider/staging/operator checks. Prefer compatible code rollback/flag disable while retaining schema/history. Downgrade removes new round records/references and requires export/backup/operator approval; no production downgrade here. Full protocol/scope: implementation/UNIFIED_INTERVIEW_ROUNDS.md.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Migration a84b0f2d573e follows f73a9e1c462d and adds nullable resume_snapshots.origin without backfill. Schema must precede backend deployment regardless of interview-round flag. Neither migration was executed in this slice. Older backend can ignore the column; dropping it loses provenance and requires export/backup/operator approval. Production NO-GO.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+No schema/migration or provider configuration required by this visual slice. Prior pending migration/operator gates remain separate. Revert code to roll back palette/layout; source records unaffected. SVG/favicon/theme-init changes need ordinary existing web asset/CSP build pipeline later; no build/deploy was run. Binary/native/social icons are not regenerated.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

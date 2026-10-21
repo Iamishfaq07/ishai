@@ -1,34 +1,36 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobMission, JobTrackerEntry } from "@orbit/types";
-import { ArrowRight, Button, ErrorNote, FileText, Search, Send, Sparkles, BookmarkCheck, cx, focusRing } from "@orbit/ui";
+import { Button, ErrorNote, cx, focusRing } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
-import type { MissionTool } from "./mission";
+import { MISSION_TOOLS, type MissionTool } from "./mission";
 import { applicationPath } from "./paths";
 import { packetGuidance } from "./autoapply/inbox";
 import { OPPORTUNITY_STEPS, opportunityStep } from "./opportunity";
 
+const PacketDetail = lazy(() => import("./autoapply/PacketDetail"));
 const Calendar = lazy(() => import("./CalendarIntake").then((m) => ({ default: m.CalendarIntake })));
 const Message = lazy(() => import("./MessageUpdate").then((m) => ({ default: m.MessageUpdate })));
-const icons = [FileText, Search, Send, Sparkles, BookmarkCheck];
 const link = cx("inline-flex min-h-11 items-center rounded text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
 interface Fact { id: string; label: string; text: string; path: string }
 interface Source { version: string; facts: Fact[] }
 interface Plan { version: string; source: string; tips: { fact_id: string; source_quote: string; suggestion: string; success_check: string; path: string; label: string }[] }
 
-export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { entry: JobTrackerEntry; mission: JobMission; tab: MissionTool; onSelect: (tool: MissionTool) => void; onSaved: () => void }) {
+export function GuidedOpportunity({ entry, mission, tab, onSaved }: { entry: JobTrackerEntry; mission: JobMission; tab: MissionTool; onSaved: () => void }) {
   const index = opportunityStep(tab);
   const step = OPPORTUNITY_STEPS[index]!;
   const heading = useRef<HTMLHeadingElement>(null);
   const previous = useRef(`${entry.id}:${tab}`);
   const [support, setSupport] = useState(false);
+  const [packetOpen, setPacketOpen] = useState(false);
+  const [visitedPacket, setVisitedPacket] = useState(false);
   const [supportKind, setSupportKind] = useState<"help" | "reply" | "invitation">("help");
   const [visitedSupport, setVisitedSupport] = useState<string[]>([]);
   const supportChoices: { id: "help" | "reply" | "invitation"; label: string }[] = [];
   if (tab !== "plan") supportChoices.push({ id: "help", label: "AI guidance" });
-  if (index >= 2) supportChoices.push({ id: "reply", label: "Employer reply" });
-  if (index === 3) supportChoices.push({ id: "invitation", label: "Calendar invitation" });
+  supportChoices.push({ id: "reply", label: "Employer reply" });
+  supportChoices.push({ id: "invitation", label: "Calendar invitation" });
   const activeSupport = supportChoices.find((choice) => choice.id === supportKind)?.id ?? supportChoices[0]?.id;
   useEffect(() => {
     const next = `${entry.id}:${tab}`;
@@ -37,23 +39,10 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
     const frame = requestAnimationFrame(() => { heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: "start" }); });
     return () => cancelAnimationFrame(frame);
   }, [entry.id, tab]);
-  const signals = [mission.resume ? "Resume linked" : "Choose a resume", mission.fit ? "Prior check saved" : "Check evidence",
-    `${mission.snapshots.length} resume copies saved`, entry.next_at ? "Date recorded" : "Add date when confirmed", `Recorded: ${entry.status}`];
   const revision = JSON.stringify([entry.id, tab, entry.status, entry.next_at, mission.resume?.updated_at, mission.resume?.id,
     mission.fit?.checked_at, mission.snapshots.map((snapshot) => snapshot.id), mission.offer]);
-  return <section aria-label="Guided opportunity" className="min-w-0 space-y-4">
-    <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 sm:p-5 dark:border-indigo-400/25 dark:bg-indigo-500/10">
-      <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">One opportunity · Step {index + 1} of 5</p>
-      <h2 key={step.tool} ref={heading} tabIndex={-1} className="mt-2 scroll-mt-28 rounded motion-safe:animate-menu-in font-display text-xl font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">{step.label}, one step at a time</h2>
-      <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-300">{step.hint}</p>
-      <nav aria-label="Opportunity steps" className="mt-4"><ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">{OPPORTUNITY_STEPS.map((item, n) => {
-        const Icon = icons[n]!;
-        return <li key={item.tool}><button type="button" aria-current={index === n ? "step" : undefined} onClick={() => onSelect(item.tool)}
-          className={cx("flex min-h-16 w-full flex-col items-start gap-1 rounded-xl border p-3 text-left motion-safe:transition-colors", index === n ? "border-indigo-500 bg-white dark:bg-zinc-900" : "border-transparent hover:border-indigo-300", focusRing)}>
-          <span className="flex items-center gap-2 text-sm font-semibold"><Icon aria-hidden className="h-4 w-4" />{n + 1}. {item.label}</span><span className="text-xs text-zinc-600 dark:text-zinc-400">{signals[n]}</span></button></li>;
-      })}</ol></nav>
-      <p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">Choose any step. Indicators describe saved records, not readiness or required completion.</p>
-    </div>
+  return <section aria-label="Opportunity context" className="min-w-0 space-y-4">
+    <h2 ref={heading} tabIndex={-1} className="scroll-mt-28 rounded font-display text-xl font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">{tab === "practice" ? "Practice with Saba" : tab === "plan" ? "Your preparation plan" : MISSION_TOOLS.find((tool) => tool.id === tab)?.label ?? step.label}</h2>
     <details onToggle={(event) => { const opened = event.currentTarget.open; setSupport(opened); if (opened && activeSupport) setVisitedSupport((old) => old.includes(activeSupport) ? old : [...old, activeSupport]); }} className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
       <summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Help and updates for this job<span className="mt-1 block text-xs font-normal text-zinc-600 dark:text-zinc-400">{supportChoices.map((choice) => choice.label).join(" · ")}</span></summary>
       <div hidden={!support} className="mt-3 space-y-3"><div role="group" aria-label="Choose help or update" className="flex flex-wrap gap-2">{supportChoices.map((choice) => <button key={choice.id} type="button" aria-pressed={activeSupport === choice.id} onClick={() => { setSupportKind(choice.id); setVisitedSupport((old) => old.includes(choice.id) ? old : [...old, choice.id]); }} className={cx("min-h-11 rounded-xl border px-3 py-2 text-sm motion-safe:transition-colors", activeSupport === choice.id ? "border-indigo-500 bg-indigo-500/5 font-semibold" : "border-zinc-200 dark:border-white/10", focusRing)}>{choice.label}</button>)}</div>
@@ -62,36 +51,21 @@ export function GuidedOpportunity({ entry, mission, tab, onSelect, onSaved }: { 
         <div hidden={activeSupport !== "invitation"}>{visitedSupport.includes("invitation") && <><p className="text-sm text-zinc-600 dark:text-zinc-400">Review an interview calendar file before adding its date to this job.</p><Suspense fallback={<p role="status">Opening invitation review…</p>}><Calendar key={entry.id} entryId={entry.id} onSaved={onSaved} /></Suspense></>}</div>
       </div>
     </details>
-    {tab === "timeline" && <section aria-label="Application kit for this job" className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
+    {(tab === "timeline" || tab === "resume") && <section aria-label="Application kit for this job" className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
       <h3 className="font-semibold">{mission.application ? packetGuidance(mission.application).label : "Your application materials"}</h3>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{mission.application ? packetGuidance(mission.application).detail : "No prepared application is linked to this job. You can apply on the employer site or prepare eligible materials through your application agent."}</p>
-      {mission.application && <Link className={link} to={applicationPath(mission.application.id)}>Open this job’s application kit</Link>}
+      {mission.application && <div className="mt-3 flex flex-wrap items-center gap-3"><Button variant="secondary" aria-expanded={packetOpen} aria-controls="room-application-packet" onClick={() => { setPacketOpen((open) => !open); setVisitedPacket(true); }}>{packetOpen ? "Close application review" : "Review application here"}</Button><Link className={link} to={applicationPath(mission.application.id)}>Open full application view</Link></div>}
       <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Your tracker stage and the application’s delivery status are separate records. Prepared materials do not mean an application was sent.</p>
       <details className="mt-2"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-medium", focusRing)}>Other application tools</summary><div className="flex flex-wrap gap-x-4"><Link className={link} to="/jobs/applications">All prepared applications</Link><Link className={link} to="/jobs/journey">Application agent and permissions</Link></div></details>
     </section>}
+    {mission.application && <section id="room-application-packet" aria-label="Application review for this opportunity" hidden={!packetOpen || (tab !== "resume" && tab !== "timeline")} className="workspace-panel p-4 sm:p-5">
+      {visitedPacket && <>
+      <p className="mb-4 text-xs text-zinc-600 dark:text-zinc-400">Review the existing packet for {entry.title} at {entry.company}. Sending still requires its existing authorization and review steps.</p>
+      <Suspense fallback={<p role="status">Opening this job’s application review…</p>}><PacketDetail key={`${entry.id}:${mission.application.id}`} id={mission.application.id} opportunityId={entry.id} onChanged={onSaved} /></Suspense>
+      </>}
+    </section>}
     {tab === "offer" && <div className="rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10"><p>Your recorded stage: <strong>{entry.status}</strong>. Keep offer details only if useful; you can also record a different outcome.</p><Link className={link} to="/jobs/tracker">Update outcome in tracker</Link></div>}
   </section>;
-}
-
-export function OpportunityNext({ tab, onSelect }: { tab: MissionTool; onSelect: (tool: MissionTool) => void }) {
-  const index = opportunityStep(tab);
-  return <nav aria-label="Continue opportunity" className="mt-5 flex flex-wrap justify-between gap-3 border-t border-zinc-200 pt-4 dark:border-white/10">
-    <Button variant="secondary" disabled={index === 0} onClick={() => onSelect(OPPORTUNITY_STEPS[index - 1]!.tool)}>Previous step</Button>
-    {index < 4 ? <Button onClick={() => onSelect(OPPORTUNITY_STEPS[index + 1]!.tool)}>Next: {OPPORTUNITY_STEPS[index + 1]!.label}<ArrowRight className="h-4 w-4" aria-hidden /></Button> : <Link className={link} to="/jobs">Back to career launchpad</Link>}
-  </nav>;
-}
-
-export function OpportunityStepTools({ tab, onSelect }: { tab: MissionTool; onSelect: (tool: MissionTool) => void }) {
-  const stage = opportunityStep(tab);
-  const choices: { tool: MissionTool; title: string; detail: string }[] = stage === 1 ? [
-    { tool: "fit", title: "Requirements & practice", detail: "Review the role and build one real example." },
-    { tool: "company", title: "Company research", detail: "Understand the employer before you apply." },
-  ] : stage === 3 ? [
-    { tool: "interview", title: "Round & setup", detail: "Confirm the date and choose your materials." },
-    { tool: "plan", title: "Daily preparation", detail: "Pick one task and revisit earlier work." },
-    { tool: "practice", title: "Practise & review", detail: "Rehearse, then review your real sessions." },
-  ] : [];
-  return choices.length ? <nav aria-label="Tools for this opportunity step" className="mb-4"><ul className="grid min-w-0 gap-2 sm:grid-cols-3">{choices.map((choice) => <li key={choice.tool}><button type="button" aria-pressed={tab === choice.tool} onClick={() => onSelect(choice.tool)} className={cx("min-h-16 w-full rounded-xl border p-3 text-left motion-safe:transition-colors", tab === choice.tool ? "border-indigo-500 bg-indigo-500/5" : "border-zinc-200 dark:border-white/10", focusRing)}><span className="block text-sm font-semibold">{choice.title}</span><span className="mt-1 block text-xs text-zinc-600 dark:text-zinc-400">{choice.detail}</span></button></li>)}</ul></nav> : null;
 }
 
 export function OpportunityCoach({ entryId, focus, requirementKey, experimentKind = "project" }: { entryId: string; focus: string; requirementKey?: string; experimentKind?: "project" | "explanation" | "code" }) {

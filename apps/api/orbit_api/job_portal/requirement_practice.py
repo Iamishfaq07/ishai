@@ -54,7 +54,8 @@ def choices(check_id: str, result: Any) -> list[PracticeRequirement]:
 def practice_source(entry_id: str, check_id: str | None, created_at: datetime | None, result: Any,
                     evidence_enabled: bool) -> RequirementPractice:
     return RequirementPractice(entry_id=entry_id, check_id=check_id,
-        checked_at=(created_at.replace(tzinfo=UTC) if created_at.tzinfo is None else created_at) if created_at else None,
+        checked_at=((created_at.replace(tzinfo=UTC) if created_at.tzinfo is None else created_at)
+                    if created_at else None),
         version=digest({"entry": entry_id, "check": check_id, "result": result}),
         evidence_enabled=evidence_enabled, requirements=choices(check_id, result) if check_id else [])
 

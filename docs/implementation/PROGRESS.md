@@ -1,4 +1,32 @@
+# Current increment — Saba preparation, 2026-10-21
+
+PR450 owner-merged; implementing Saba briefing/short practice/material and question continuity. No testing/validation. [Current scope](UNIFIED_SABA_PREPARATION.md). Earlier evidence remains historical.
+
+---
+
+# Current increment — room continuity, 2026-10-21
+
+PR449 owner-merged; implementing contextual room navigation, packet review and safe draft/response continuity. IMPLEMENTED / UNVERIFIED, no testing. [Current scope](UNIFIED_OPPORTUNITY_CONTINUITY.md). Historical evidence below does not validate this slice.
+
+---
+
+# Current checkpoint — enterprise design, 2026-10-21
+
+Owner merged PR448. Continuing with paper/graphite/Slate blue shared visual language and connected Today/core candidate layout. IMPLEMENTED / UNVERIFIED; no testing under explicit owner instruction. No backend/schema/dependency change or deployment. Full scope/remaining work: [enterprise slice](UNIFIED_ENTERPRISE_DESIGN.md), [current progress](UNIFIED_JOURNEY_PROGRESS.md). Older entries below are historical.
+
+---
+
 # V6 progress
+
+## Owned round continuity — base3d9fa3b8,2026-10-21
+
+**IMPLEMENTED / UNVERIFIED.** PR445 merged on explicit owner request. Next default-OFF slice adds owned employer rounds, UTC/IANA schedule history, reviewed invitation/debrief, deliberate preparation selection and source-bound Saba context. No tests/validation commands executed under latest owner instruction. Migration drafted, not run; production NO-GO. See UNIFIED_INTERVIEW_ROUNDS.md and current UNIFIED_JOURNEY_PROGRESS.md. Historical results below are not attributed to this slice.
+
+
+## Unified candidate foundation — 2026-10-21
+
+Follow-on: full API3807/17 skipped, root browser87, targeted SQLite/PostgreSQL46 each, and local migration rollback proof PASS; reviewed session unlink/history and truthful packet evidence now implemented. The current detailed owner instruction re-enabled verification. Fresh local evidence: API3798 passed/17 skipped, final affected provenance/identity suites39 passed; workspace tests/typecheck/lint/build and22 bundle budgets pass; root browser86 and deferred V6 browser21 pass. This is a bounded identity/Today/Opportunity Room/Saba foundation, not completion of V6 or the full redesign. See [current progress](UNIFIED_JOURNEY_PROGRESS.md), [visual evidence](UNIFIED_JOURNEY_VISUAL_QA.md) and [NO-GO production sign-off](UNIFIED_JOURNEY_RELEASE_SIGNOFF.md). Earlier skipped/unverified entries below are retained as history. Draft PR for review; no merge/deploy.
+
 
 ## Increment 7 — connected opportunity tools (base `ddc03794`)
 

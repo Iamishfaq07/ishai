@@ -1,24 +1,27 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import type { CandidateInterviewRounds } from "@orbit/types";
 import { Button, ErrorNote, Field, Input, Select, Textarea, dateTimeInput, cx, focusRing } from "@orbit/ui";
+import { useCandidateDraft } from "../../lib/useCandidateDraft";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { missionPath } from "./paths";
 
-interface Job { version: string; title: string; company: string; status: string; next_at: string | null; editable: boolean }
+interface Job { version: string; title: string; company: string; status: string; next_at: string | null; editable: boolean; round_history_enabled?: boolean }
 interface Event { id: string; title: string; start_at: string; time_zone: string; source_quote: string; tentative: boolean }
 interface Preview { version: string; events: Event[]; editable: boolean }
 const link = cx("inline-flex min-h-11 items-center rounded text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
 
-/** Import review only; the existing human-confirmed tracker endpoint remains the sole writer. */
+/** Review before saving. Round-enabled servers retain a dedicated record; legacy servers keep the date writer. */
 export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved: () => void }) {
   const id = useId();
   const base = `/v1/jobs/tracker/${encodeURIComponent(entryId)}`;
   const [job, setJob] = useState<Job | null>(null);
-  const [calendar, setCalendar] = useState("");
+  const [calendar, setCalendar] = useCandidateDraft("invitation", entryId);
   const [proposal, setProposal] = useState<Preview | null>(null);
   const [selected, setSelected] = useState("");
   const [interviewing, setInterviewing] = useState(false);
+  const [useForPrep, setUseForPrep] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState<"load" | "file" | "preview" | "save" | null>("load");
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +31,7 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
   const active = useRef(false);
   const busyRef = useRef(true);
   const heading = useRef<HTMLHeadingElement>(null);
-  const invalidate = () => { setProposal(null); setSelected(""); setConfirmed(false); setInterviewing(false); setSaved(false); };
+  const invalidate = () => { setProposal(null); setSelected(""); setConfirmed(false); setInterviewing(false); setUseForPrep(false); setSaved(false); };
   const refresh = useCallback(async () => {
     const request = ++seq.current; busyRef.current = true; setBusy("load"); setError(null); setProposal(null); setConfirmed(false);
     try { const next = await api.call<Job>(`${base}/message-update`); if (request === seq.current) setJob(next); }
@@ -44,7 +47,7 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
   }, [refresh]);
   const choose = (eventId: string, events = proposal?.events ?? []) => {
     const event = events.find((e) => e.id === eventId);
-    setSelected(event ? eventId : ""); setConfirmed(false); setInterviewing(false);
+    setSelected(event ? eventId : ""); setConfirmed(false); setInterviewing(false); setUseForPrep(false);
   };
   const readFile = async (file: File | undefined) => {
     if (!file || busyRef.current) return;
@@ -73,24 +76,36 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
   const dateChanged = Boolean(nextAt && new Date(nextAt).valueOf() !== new Date(job?.next_at ?? "").valueOf());
   const stageChanged = interviewing && job?.status !== "interviewing";
   const save = async () => {
-    if (!job || !proposal || !event || !confirmed || !nextAt || (!dateChanged && !stageChanged) || busyRef.current) return;
+    if (!job || !proposal || !event || !confirmed || !nextAt || (!job.round_history_enabled && !dateChanged && !stageChanged) || busyRef.current) return;
     const request = ++seq.current; busyRef.current = true; setBusy("save"); setError(null);
     try {
-      const next = await api.call<Job>(`${base}/message-update/confirm`, { method: "POST", body: JSON.stringify({ version: proposal.version,
-        confirmed: true, ...(dateChanged ? { next_at: nextAt } : {}), ...(stageChanged ? { status: "interviewing" } : {}) }) });
+      let next: Job;
+      if (job.round_history_enabled) {
+        const rounds = await api.call<CandidateInterviewRounds>(`${base}/rounds/calendar`, { method: "POST", body: JSON.stringify({
+          tracker_version: proposal.version, event_id: event.id, calendar, confirmed: true,
+          mark_interviewing: interviewing, use_for_preparation: useForPrep,
+        }) });
+        next = { ...job, version: rounds.tracker_version, status: interviewing ? "interviewing" : job.status,
+          next_at: useForPrep ? nextAt : job.next_at };
+      } else {
+        next = await api.call<Job>(`${base}/message-update/confirm`, { method: "POST", body: JSON.stringify({ version: proposal.version,
+          confirmed: true, ...(dateChanged ? { next_at: nextAt } : {}), ...(stageChanged ? { status: "interviewing" } : {}) }) });
+      }
       if (request !== seq.current) return;
       setJob(next); setCalendar(""); invalidate(); setSaved(true); onSaved();
+      window.dispatchEvent(new CustomEvent("orbit:interview-rounds-changed", { detail: { entryId } }));
     } catch (e) { if (request === seq.current) setError(errorText(e)); }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(null); } }
   };
   return <section aria-label="Review a calendar invitation" className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
+    <p className="text-xs text-zinc-600 dark:text-zinc-400">Draft invitation text stays in this tab’s memory while you navigate. It is not a saved calendar connection; review changes again after reopening.</p><Button variant="ghost" disabled={!calendar} onClick={() => { setCalendar(""); invalidate(); }}>Discard invitation draft</Button>
     <header><h3 className="font-display text-lg font-semibold">Invitation → reviewed date → preparation</h3><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Import a calendar file for this job. Review the time and stage before anything changes.</p></header>
     {error && <ErrorNote onRetry={() => void refresh()}>{error} Your pasted invitation stays here for review.</ErrorNote>}
     {!job ? <p role="status">{busy ? "Opening the saved job…" : "Refresh to load this job."}</p> : <>
       <p className="text-sm font-semibold">{job.title} · {job.company}</p>
       <p className="text-xs text-zinc-600 dark:text-zinc-400">Saved stage: {job.status} · Next date: {job.next_at ? new Date(job.next_at).toLocaleString() : "None"}</p>
       {!job.editable && <p className="text-sm">This job is closed. You can preview an invitation; correct or reopen the job in the tracker before saving a new date.</p>}
-      {saved && <div role="status" className="rounded-xl bg-indigo-500/10 p-4 motion-safe:animate-menu-in"><h4 className="font-semibold">Interview update saved</h4><p className="mt-2 text-sm">Your saved-date actions use the reviewed time. The invitation text has been cleared.</p><Link className={link} to={`${missionPath(entryId)}?guide=1&tab=plan`}>Open preparation for this job</Link></div>}
+      {saved && <div role="status" className="rounded-xl bg-indigo-500/10 p-4 motion-safe:animate-menu-in"><h4 className="font-semibold">Interview update saved</h4><p className="mt-2 text-sm">{job.round_history_enabled ? "The reviewed invitation is recorded in this job’s round history. Only a deliberately selected round updates the current preparation date." : "Your saved-date actions use the reviewed time."} The invitation text has been cleared.</p><Link className={link} to={`${missionPath(entryId)}?guide=1&tab=${job.round_history_enabled ? "interview" : "plan"}`}>{job.round_history_enabled ? "Review this job’s interview rounds" : "Open preparation for this job"}</Link></div>}
       <fieldset disabled={Boolean(busy)} className="min-w-0 space-y-3"><legend className="sr-only">Import an invitation</legend>
         <Field htmlFor={`${id}-file`} label="Choose an .ics invitation"><input id={`${id}-file`} type="file" accept=".ics,text/calendar" className="block min-h-11 w-full min-w-0 text-sm" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; void readFile(file); }} /></Field>
         <Field htmlFor={`${id}-text`} label="Or paste iCalendar text"><Textarea id={`${id}-text`} rows={5} maxLength={131072} value={calendar} onChange={(e) => { setCalendar(e.target.value); invalidate(); }} /></Field>
@@ -104,12 +119,13 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
           <Link className={link} to={`${missionPath(entryId)}?guide=1&tab=interview`}>Edit a different time manually in this job</Link>
           <fieldset disabled={Boolean(busy) || !job.editable} className="min-w-0 space-y-3">
             <Field htmlFor={`${id}-date`} label="Invitation time (your browser’s time zone)"><Input id={`${id}-date`} type="datetime-local" value={date} readOnly /></Field>
+            {job.round_history_enabled && <label className="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={useForPrep} onChange={(e) => { setUseForPrep(e.target.checked); setConfirmed(false); }} />Use this reviewed round as the current preparation date. Existing completed preparation stays in history.</label>}
             <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={interviewing} onChange={(e) => { setInterviewing(e.target.checked); setConfirmed(false); }} />Mark this job as interviewing</label>
-            <p className="text-xs text-zinc-600 dark:text-zinc-400">Stage: {job.status} → {stageChanged ? "interviewing" : "keep current"}. Date: {nextAt ? new Date(nextAt).toLocaleString() : "Choose a time"}. Mark interviewing only for a real confirmed interview; the event does not verify its sender or job match.</p>
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">Stage: {job.status} → {stageChanged ? "interviewing" : "keep current"}. {job.round_history_enabled && !useForPrep ? "Current preparation date stays unchanged; this time is saved only on the new round." : `Date: ${nextAt ? new Date(nextAt).toLocaleString() : "Choose a time"}.`} Mark interviewing only for a real confirmed interview; the event does not verify its sender or job match.</p>
             {nextAt && new Date(nextAt).valueOf() < Date.now() && <p className="text-sm">This time is in the past. Check whether a rescheduled invitation is available.</p>}
-            {!dateChanged && !stageChanged && <p className="text-sm">These choices are already saved. No duplicate update is needed.</p>}
+            {!job.round_history_enabled && !dateChanged && !stageChanged && <p className="text-sm">These choices are already saved. No duplicate update is needed.</p>}
             <label className="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />I verified this event belongs to this job and confirm the date and stage above.</label>
-            <Button disabled={!confirmed || !nextAt || (!dateChanged && !stageChanged)} loading={busy === "save"} onClick={() => void save()}>Save reviewed invitation</Button>
+            <Button disabled={!confirmed || !nextAt || (!job.round_history_enabled && !dateChanged && !stageChanged)} loading={busy === "save"} onClick={() => void save()}>Save reviewed invitation</Button>
           </fieldset>
         </>}
       </div>}

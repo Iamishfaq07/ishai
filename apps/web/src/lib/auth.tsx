@@ -45,11 +45,22 @@ export function signedInHereBefore(): boolean {
   }
 }
 
+// Same-origin notification only; the receiving tab still authenticates with the server.
+const authChannel = "orbit-account-change";
+const authSender = Math.random().toString(36);
+function announceAccount(id: string): void {
+  try {
+    const channel = new BroadcastChannel(authChannel);
+    channel.postMessage([authSender, id]); channel.close();
+  } catch { /* Storage events remain available when BroadcastChannel is unsupported. */ }
+}
+
 function acceptAccount(account: User): User {
   try {
     const previous = safeLocal.getItem(ACCOUNT_ID_KEY);
     if (previous && previous !== account.id) forgetAccount();
     safeLocal.setItem(ACCOUNT_ID_KEY, account.id);
+    if (previous !== account.id) announceAccount(account.id);
   } catch { /* Cookie auth works even when browser storage is unavailable. */ }
   return account;
 }
@@ -157,6 +168,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("online", recheck);
   }, [unreachable, recheck]);
 
+  // Cookies are shared across tabs. Discard private state before reading the new authenticated identity.
+  useEffect(() => {
+    const sync = (id: unknown) => {
+      if (typeof id !== "string" || id === (user?.id ?? "")) return;
+      forgetAccount(); setUser(null); recheck();
+    };
+    const changed = (event: StorageEvent) => { if (event.key === ACCOUNT_ID_KEY) sync(event.newValue); };
+    let channel: BroadcastChannel | undefined;
+    try {
+      channel = new BroadcastChannel(authChannel);
+      channel.onmessage = (event: MessageEvent<unknown>) => {
+        if (Array.isArray(event.data) && event.data[0] !== authSender) sync(event.data[1]);
+      };
+    } catch { /* Some browsers disable channels; retain storage-event synchronization. */ }
+    window.addEventListener("storage", changed);
+    return () => { channel?.close(); window.removeEventListener("storage", changed); };
+  }, [user?.id, recheck]);
+
   // Cached page data (and the account's saved bits) belongs to one account: dropped before the user changes, so
   // nobody sees the last person's.
   const login = useCallback(async (req: LoginRequest) => {
@@ -227,6 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.logout();
     } finally {
       forgetAccount();
+      safeLocal.setItem(ACCOUNT_ID_KEY, ""); announceAccount("");
       setUser(null);
     }
   }, []);
@@ -235,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({ user, loading, unreachable, recheck, login, finishSecondStep, loginWithPasskey, register, logout, setUser }),
     [user, loading, unreachable, recheck, login, finishSecondStep, loginWithPasskey, register, logout],
   );
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider key={user?.id ?? "guest"} value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {

@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button, ErrorNote, Field, Input, Select, Textarea, cx, focusRing, dateTimeInput, fromDateTimeInput } from "@orbit/ui";
+import { useCandidateDraft } from "../../lib/useCandidateDraft";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useJobsAi } from "./JobsAi";
@@ -33,7 +34,7 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
   const id = useId();
   const base = `/v1/jobs/tracker/${encodeURIComponent(entryId)}/message-update`;
   const [job, setJob] = useState<SavedJob | null>(null);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useCandidateDraft("reply", entryId);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [stage, setStage] = useState("");
   const [useStage, setUseStage] = useState(false);
@@ -94,8 +95,8 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
       {!job.editable && <p className="text-sm">This job is closed. Keep its current outcome here; use the tracker if you need to correct or reopen it. <Link className={link} to="/jobs/tracker">Open tracker</Link></p>}
       <fieldset disabled={Boolean(busy)} className="min-w-0 space-y-3"><legend className="sr-only">Paste and interpret a message</legend>
         <Field htmlFor={`${id}-message`} label="2. Paste the relevant employer message"><Textarea id={`${id}-message`} value={message} maxLength={10000} rows={5} onChange={(event) => { setMessage(event.target.value); invalidate(); }} placeholder="Paste the latest relevant reply, without unrelated email history." /></Field>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">Free pattern review uses no AI. Ask AI sends this text to the configured provider. The full message is not saved, and links in it are not opened.</p>
-        <div className="flex flex-wrap gap-2"><Button disabled={message.trim().length < 20} loading={busy === "rules"} onClick={() => void analyze("rules")}>Review message for free</Button><Button variant="secondary" disabled={message.trim().length < 20} loading={busy === "ai"} onClick={() => void analyze("ai")}>Ask AI to interpret</Button></div>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">Free pattern review uses no AI. Ask AI sends this text to the configured provider. The full message is not saved on the server, and links in it are not opened. Draft text stays in this tab’s memory for navigation; closing the tab discards it.</p>
+        <div className="flex flex-wrap gap-2"><Button variant="ghost" disabled={!message} onClick={() => { setMessage(""); invalidate(); }}>Discard draft</Button><Button disabled={message.trim().length < 20} loading={busy === "rules"} onClick={() => void analyze("rules")}>Review message for free</Button><Button variant="secondary" disabled={message.trim().length < 20} loading={busy === "ai"} onClick={() => void analyze("ai")}>Ask AI to interpret</Button></div>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">AI: up to 5 requests per UTC day, including failures. A pasted message does not verify the sender or the job match.</p>
       </fieldset>
       {proposal && <div className="space-y-4 rounded-xl bg-zinc-500/5 p-4 motion-safe:animate-menu-in">

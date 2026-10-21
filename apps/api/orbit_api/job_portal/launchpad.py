@@ -18,6 +18,7 @@ from orbit_api.resumes.schema import ResumeData
 from orbit_api.transactions import lock_account
 from orbit_api.workflow_ai import preview
 
+from .candidate_identity import CandidateIdentity, IdentityIn, change_identity, identity
 from .profile import JobPrefs
 from .routes import _profile_out
 
@@ -112,6 +113,18 @@ async def checked(db: AsyncSession, user: User, body: ContextIn) -> dict[str, An
 async def context(user: Annotated[User, Depends(current_user)], db: Annotated[AsyncSession, Depends(get_db)],
                   resume_id: Annotated[str | None, Query(max_length=36)] = None) -> dict[str, Any]:
     return await snapshot(db, user, resume_id)
+
+
+@router.get("/identity", response_model=CandidateIdentity)
+async def get_identity(user: Annotated[User, Depends(current_user)],
+                       db: Annotated[AsyncSession, Depends(get_db)]) -> CandidateIdentity:
+    return await identity(db, user)
+
+
+@router.put("/identity", response_model=CandidateIdentity)
+async def save_identity(body: IdentityIn, user: Annotated[User, Depends(current_user)],
+                        db: Annotated[AsyncSession, Depends(get_db)]) -> CandidateIdentity:
+    return await change_identity(db, user, body)
 
 
 @router.post("/ideas")

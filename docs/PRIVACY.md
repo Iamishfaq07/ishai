@@ -152,3 +152,41 @@ your clipboard for you to share if you choose. It holds measurements, device nam
 ## Personal career continuity
 
 Today, Prepare and My Career reuse the signed-in account's existing records. The per-job application link projects packet identity and delivery state, without another resume/answer store. This navigation update introduces no new analytics content, OAuth permission or retention period. Optional AI plans still require a deliberate request. Existing source records remain covered by account export/delete.
+
+## Implementation note: candidate identity and temporary drafts
+
+The unified journey stores the chosen master resume identifier, reviewed revision/content fingerprint and review timestamp on the existing owned job-search profile. Account export includes this metadata. Existing account deletion removes the profile and its metadata. No new raw voice/video retention or external sharing is introduced by this slice.
+
+Unconfirmed employer-message and calendar input can be retained in this tab’s memory to support navigation. It is not written to local/session storage, expires for restoration after one hour, is bounded to ten inputs, and clears when accounts change. Closing/reloading the tab discards it after the browser’s unsaved-input warning. Review proposals and sending/application approvals are never restored. This technical note does not change legal promises or replace counsel review.
+
+Candidate account transitions also synchronize across same-origin tabs through storage events and opaque BroadcastChannel notifications; server authentication remains authoritative. Blocked browser storage is covered by the channel fallback. Raw resume or draft text is not broadcast.
+
+Reviewed session linking/unlinking records only opaque job/session identifiers and time in the existing audit store. This career activity is included in account export and removed on account deletion. It does not record extra transcript/audio/video, rewrite source reports, or grant an employer access. Deleted job/session identifiers can remain as opaque activity references until account deletion. The optional picker reuses the existing private session history. This is an implementation note, not a new legal approval.
+
+## Draft round-history implementation note
+
+When explicitly enabled and a candidate confirms a save, round records store their label, schedule/time zone, notes, outcome and schedule/status history for an owned opportunity. Old note text is not duplicated into every schedule event. Original calendar content is reparsed during the request and not stored in the round database; input-only draft restoration uses existing bounded tab memory. Export includes owned round data; deleting the account/job cascades round content. Surviving owned sessions may retain opaque original round identifiers/revisions, like other historical source references. No new recording retention, calendar subscription, employer sharing, mailbox scope or analytics containing private content. Implementation is unverified; no new legal/counsel approval claimed.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Origin duplicates only opaque source IDs, revision, structured-content hash, observation/time/status. No new raw audio, confirmation body, screenshot, submitted answers or job/career text stored in this metadata. Existing owned export includes the column; snapshot/job/account deletion removes it. Technical implementation note, not a legal-policy approval.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+This is a visual/navigation-only change. No new profile facts, telemetry, persistence, public sharing or audio/video retention. Journey links carry only opaque job IDs and existing tab keys. Business/candidate data authorities stay separate. Technical note, not a new legal claim.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

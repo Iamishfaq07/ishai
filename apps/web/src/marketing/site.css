@@ -1,5 +1,5 @@
 /* The front door (signed-out pages): html.site, set by PublicLayout / AuthShell while they are mounted (useSiteScope).
-   Enterprise and product-led (DECISIONS D66): a white canvas (a deep blue-grey one in dark mode, the workbench's
+   Enterprise and product-led (DECISIONS D66): a white canvas (a neutral graphite one in dark mode, the workbench's
    twin), ink neutrals, one accent, IBM Plex Sans for every heading, no sky. Only the floating product windows cast a
    shadow. Plain CSS (no @apply) so it reads on its own; the Tailwind classes in the components do the rest. */
 
@@ -7,25 +7,25 @@
    applies it to the page. */
 :root {
   --site-canvas: 255 255 255;
-  --site-subtle: 247 248 250; /* #F7F8FA: alternate bands, the sign-in side panel */
+  --site-subtle: 245 245 244;
   --site-surface: 255 255 255;
-  --site-line: 228 231 236; /* #E4E7EC */
+  --site-line: 228 231 236;
   --site-line-strong: 208 213 221;
 }
 .dark {
-  --site-canvas: 11 15 23; /* #0B0F17 */
-  --site-subtle: 15 20 30; /* #0F141E */
-  --site-surface: 20 27 39; /* #141B27, the workbench's surface */
-  --site-line: 35 44 59; /* #232C3B */
-  --site-line-strong: 54 64 84;
+  --site-canvas: 16 18 20;
+  --site-subtle: 20 23 26;
+  --site-surface: 25 28 32;
+  --site-line: 52 58 65;
+  --site-line-strong: 73 83 94;
 }
 html.site.dark {
-  /* Dark mode is one blue-grey family, as in the workbench (D58): what `dark:` classes paint with matches it, so a
+  /* Dark mode is one neutral graphite family, as in the workbench (D58): what `dark:` classes paint with matches it, so a
      shared component (pricing cards, fields, a dialog) looks the same signed in or out. Text steps keep their values. */
-  --ink-950: 20 27 39;
-  --ink-900: 27 35 50;
-  --ink-800: 35 44 59;
-  --ink-700: 54 64 84;
+  --ink-950: 25 28 32;
+  --ink-900: 35 39 44;
+  --ink-800: 52 58 65;
+  --ink-700: 73 83 94;
 }
 
 /* One still canvas: no sky, no stars, no orbs, no coloured wash. `.dark` twice outranks the body's dark:bg utility. */

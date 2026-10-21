@@ -1,9 +1,16 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { MISSION_STAGES, isSnoozed, missionPath, requirementTone, snooze, stagesDone } from "./mission";
+import { MISSION_STAGES, MISSION_TOOLS, ROOM_SECTIONS, roomSection, isSnoozed, missionPath, requirementTone, snooze, stagesDone } from "./mission";
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Job Mission Room model", () => {
+  it("retains every legacy tool within one of five stable room sections", () => {
+    expect(ROOM_SECTIONS).toHaveLength(5);
+    for (const tool of MISSION_TOOLS) expect(ROOM_SECTIONS.some((section) => section.id === roomSection(tool.id))).toBe(true);
+    expect(roomSection("plan")).toBe("prepare");
+    expect(roomSection("practice")).toBe("prepare");
+    expect(roomSection("timeline")).toBe("application");
+  });
   it("has six stages in the order a job is won, counted from records", () => {
     expect(MISSION_STAGES.map((s) => s.id)).toEqual(["discover", "prove", "prepare", "apply", "interview", "negotiate"]);
     expect(stagesDone({ stages: { discover: true, prove: true, prepare: false, apply: true, interview: false, negotiate: false } })).toBe(3);

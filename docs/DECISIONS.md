@@ -1521,3 +1521,41 @@ a chat-style transcript (the form is the record; the panel keeps a one-line hist
 ## Personal Orbit V6 first integration increment — 20 October 2026
 
 Use existing grounded priority and packet execution systems. Replace the operational home with Today and five candidate tasks, preserve specialist/bookmarked URLs, and project exact owned application identity into the mission rather than introducing a second dossier database. No new dependency, migration, permission or automatic model request. Preview guards cover direct REST/live builds as well as proxy/public employer rendering; empty staging configuration fails closed. Rejected: unrestricted browser agent replacement, production-connected previews, mailbox transport without provider/token lifecycle work, and a new UI kit.
+
+## Unified candidate integration — 21 October 2026
+
+Use one existing Resume as an explicitly selected master, referenced from the existing owned JobSearchProfile. Store review metadata, not a duplicate facts document. Search-specific resume selection is independent. Copy a master/shared resume before job-specific edits. Candidate confirmation binds the exact revision and content digest, and later changes invalidate review. Existing legacy records are not backfilled as approved.
+
+Use LiveSessionRow.application_id for durable association. Unlinked same-company history is only possibly related; candidate review and both owner checks are required to attach a completed session. Retries are idempotent; moving a session from another opportunity is rejected. A general navigation return URL does not establish an association.
+
+Use the existing priority queue and source records for Today, with explicit identity review before ordinary discovery. Saved interview/outcome stages can remain useful before resume setup, preserving nonlinear journeys. Models can explain facts only on request. No new agent framework, broad browser automation or implicit external authorization.
+
+Reviewed session attribution may be undone explicitly after a session ends; source transcript/report/context stay unchanged. Reassignment is two deliberate actions, not a direct move. Existing AuditLog is sufficient for identifier/time-only attribution history; this career subset is exported and deleted with the account. Session progress counts aggregate source rows rather than UI previews. Executor-reported submission is not independently confirmed employer receipt.
+
+## Candidate-recorded round authority
+
+A matching company, a saved next_at or a Saba session does not establish a real employer round. New round history is explicit candidate input. Selection is by owned ID and revision, not by matching time. Existing next_at/type/number remain a compatibility projection for the selected preparation round. Completing/cancelling clears only its matching selected date and never infers a successor or passed interview. Historical legacy dates are not backfilled. Opaque source references follow the existing interview_version pattern; owner checks are server-side and original references remain on session records. Default-OFF rollout and unverified migration; no operator approval implied.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Keep immutable source observations on ResumeSnapshot at creation, with opaque IDs independent of source deletion. Do not infer legacy source, packet master revision or exact-file delivery. Existing current-packet screen is linked with a warning that its contents can change.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Latest owner direction supersedes purple/deep-space default. Keep existing fonts and vector geometry, solid accent, opaque surfaces, thin dividers and restrained emphasis. Legacy Nebula is an alias, not another visible swatch. Job shortcuts retain context; no completion/status inferred from visiting a step.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+
+## Connected Saba preparation — 2026-10-21 (unverified)
+
+Reuse selected interview source/version and existing session context/create, materials and credited question engine inside job Practice. Add10/20-minute ordinary rehearsal, source briefing and navigation/unmount/stale-question guards. No new schema/provider/dependency/background model call or recording/consent policy. Client source checks are not full same-ID content hashes or atomic server guarantees; existing ownership/round revisions stay authoritative. No testing/deployment; rollback via UI revert. [Scope and deferred gates](implementation/UNIFIED_SABA_PREPARATION.md). Technical note, not a new legal/provider certification.

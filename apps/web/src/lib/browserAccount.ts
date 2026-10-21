@@ -1,4 +1,5 @@
 import { safeLocal, safeSession } from "@orbit/ui";
+import { clearCandidateDrafts } from "./candidateDrafts";
 // Things this browser used to keep once for everyone who signed in on it. They are cleared when the account
 // changes (useAsync.ts). New copies are stored per account, so the next person doesn't inherit them.
 const LEGACY_KEYS = [
@@ -20,6 +21,7 @@ function drop(storage: Pick<Storage, "removeItem">, keys: readonly string[]): vo
 }
 
 export function clearLegacyBrowserAccount(): void {
+  clearCandidateDrafts();
   try {
     drop(safeLocal, LEGACY_KEYS);
   } catch {

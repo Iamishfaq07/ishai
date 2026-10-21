@@ -22,15 +22,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.job_portal.timeline import timeline
-from orbit_api.models import ApplicationPacket, JobApplication, JobFitCheck, JobOffer, Resume, ResumeSnapshot, User
+from orbit_api.models import (
+    ApplicationPacket,
+    JobApplication,
+    JobFitCheck,
+    JobOffer,
+    LiveSessionRow,
+    Resume,
+    ResumeSnapshot,
+    User,
+)
 from orbit_api.ratelimit import limit_user
 from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
+from orbit_api.transactions import lock_account
 
 from .requirement_practice import RequirementPractice, practice_source
-from .resume_lineage import VersionComparison, comparison
-from .source_review import SourceReview, review as review_source
+from .resume_binding import for_job, needs_copy
+from .resume_lineage import SnapshotOrigin, VersionComparison, capture_origin, comparison, snapshot_origin
+from .source_review import SourceReview
+from .source_review import review as review_source
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["jobs"])
 read_limit = Depends(limit_user("jobs-mission", rate_per_s=3, burst=60))
@@ -70,7 +81,8 @@ class SnapshotOut(BaseModel):
     title: str
     score: int
     note: str
-    resume_id: str | None  # null once the resume it came from is deleted (the snapshot stays)
+    resume_id: str | None  # live link only; immutable origin survives deletion
+    origin: SnapshotOrigin | None = None
     created_at: datetime
 
 
@@ -107,6 +119,7 @@ class MissionOut(BaseModel):
     fit: FitSummary | None
     resume: LinkedResume | None
     resume_missing: bool  # a resume was linked and has since been deleted
+    resume_requires_copy: bool = False
     snapshots: list[SnapshotOut]
     offer: OfferRef | None
     offers: list[OfferRef]  # the account's offers not linked to another job, for the user to pick from
@@ -156,7 +169,7 @@ def next_step(f: Facts, listing_path: str) -> NextStep | None:
                         to="link_offer")
     if f.upcoming_days == 0 and f.status == "interviewing":
         return NextStep(key="interview_day", title="Your interview is today", action="Open interview prep",
-                        why="It's today. The job post, the selected resume version and your stories are in one place, and "
+                        why="It's today. The job post, selected resume version and stories are in one place, and "
                             "the copilot starts with them loaded.", to="interview")
     if f.upcoming_days is not None and f.upcoming_days <= 7 and f.status == "interviewing":
         when = "tomorrow" if f.upcoming_days == 1 else f"in {f.upcoming_days} days"
@@ -224,9 +237,11 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
 
     resume = None
     missing = False
+    requires_copy = False
     if entry.resume_id:
         row = await db.get(Resume, entry.resume_id)
         if row is not None and row.user_id == user.id:
+            requires_copy = await needs_copy(db, user, entry, row)
             score = await asyncio.to_thread(_score, row.data, row.design, row.job_text or "")
             resume = LinkedResume(id=row.id, title=row.title, score=score, updated_at=_aware(row.updated_at))
         else:
@@ -238,9 +253,12 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
     offers = (await db.scalars(select(JobOffer).where(JobOffer.user_id == user.id)
                                .order_by(JobOffer.created_at.desc()))).all()
     linked = next((o for o in offers if o.application_id == entry.id), None)
-    events = await timeline(db, entry, now)
-    rounds = [e for e in events if e.kind == "round"]
-    practice = sum(1 for e in rounds if e.title == "Practice round")
+    # Counts are source aggregates, not the bounded timeline preview (which may show only ten sessions).
+    counts = {kind: count for kind, count in (await db.execute(select(LiveSessionRow.type, func.count()).where(
+        LiveSessionRow.user_id == user.id, LiveSessionRow.application_id == entry.id,
+        LiveSessionRow.status == "ended").group_by(LiveSessionRow.type))).all()}
+    practice = counts.get("mock", 0)
+    live_rounds = sum(counts.values()) - practice
     upcoming = None
     shift = timedelta(minutes=tz_offset)
     today = (now + shift).date()
@@ -258,16 +276,16 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
         submission_uncertain=packet.submission_started_at is not None and packet.status not in ("submitted", "applied"),
         updated_at=_aware(packet.updated_at)) if packet else None
     facts = Facts(status=entry.status, fit=fit is not None, resume=resume is not None, snapshot=bool(snaps),
-                  applied=entry.applied_at is not None, practice_rounds=practice, live_rounds=len(rounds) - practice,
+                  applied=entry.applied_at is not None, practice_rounds=practice, live_rounds=live_rounds,
                   offer=linked is not None, upcoming_days=upcoming, prep_doc=entry.document_id is not None)
     return MissionOut(
         entry_id=entry.id, application=application, stages=stages_for(facts), fit=fit,
-        resume=resume, resume_missing=missing,
+        resume=resume, resume_missing=missing, resume_requires_copy=requires_copy,
         snapshots=[SnapshotOut(id=s.id, title=s.title, score=s.score, note=s.note, resume_id=s.resume_id,
-                               created_at=_aware(s.created_at)) for s in snaps],
+                               created_at=_aware(s.created_at), origin=snapshot_origin(s)) for s in snaps],
         offer=_offer_ref(linked) if linked else None,
         offers=[_offer_ref(o) for o in offers if o.application_id in (None, entry.id)],
-        practice_rounds=practice, live_rounds=len(rounds) - practice,
+        practice_rounds=practice, live_rounds=live_rounds,
         next=next_step(facts, f"/jobs/listing/{entry.listing_id}"))
 
 
@@ -317,18 +335,23 @@ class LinkResumeIn(BaseModel):
 async def link_resume(entry_id: str, body: LinkResumeIn, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     """Link the resume for this job (or unlink with null). Only one of the account's own resumes."""
+    await lock_account(db, user.id)
     entry = await _entry(db, entry_id, user)
     if body.resume_id is not None:
         r = await db.get(Resume, body.resume_id)
         if r is None or r.user_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Resume not found")
-    entry.resume_id = body.resume_id
+        entry.resume_id = (await for_job(db, user, entry, r)).id
+    else:
+        entry.resume_id = None
     await db.commit()
     return await mission(db, user, entry, tz_offset=tz_offset)
 
 
 class SnapshotIn(BaseModel):
     note: str = Field("", max_length=200)
+    resume_id: str | None = Field(None, max_length=36)
+    updated_at: datetime | None = None
 
 
 @router.post("/{entry_id}/mission/snapshots", response_model=MissionOut, status_code=status.HTTP_201_CREATED,
@@ -336,10 +359,16 @@ class SnapshotIn(BaseModel):
 async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     """Keep a copy of the linked resume. Saving is not evidence of submission or delivery."""
+    await lock_account(db, user.id)
     entry = await _entry(db, entry_id, user)
-    r = await db.get(Resume, entry.resume_id) if entry.resume_id else None
+    r = await db.scalar(select(Resume).where(Resume.id == entry.resume_id, Resume.user_id == user.id)
+        .with_for_update().execution_options(populate_existing=True)) if entry.resume_id else None
     if r is None or r.user_id != user.id:
         raise HTTPException(status.HTTP_409_CONFLICT, "Link the resume you want to save first.")
+    if (body.resume_id is not None and body.resume_id != r.id) or (
+        body.updated_at is not None and _aware(body.updated_at) != _aware(r.updated_at)
+    ):
+        raise HTTPException(status.HTTP_409_CONFLICT, "The linked resume changed. Refresh and review it before saving.")
     count = len((await db.scalars(select(ResumeSnapshot.id).where(ResumeSnapshot.application_id == entry.id))).all())
     if count >= MAX_SNAPSHOTS:
         raise HTTPException(status.HTTP_409_CONFLICT, f"This job already keeps {MAX_SNAPSHOTS} versions. "
@@ -347,8 +376,9 @@ async def freeze_resume(entry_id: str, body: SnapshotIn, user: Annotated[User, D
     score = await asyncio.to_thread(_score, r.data, r.design, r.job_text or "")
     db.add(ResumeSnapshot(user_id=user.id, application_id=entry.id, resume_id=r.id, title=r.title,
                           data=dict(r.data or {}), design=dict(r.design or {}), job_text=r.job_text or "",
-                          score=score, note=body.note.strip()))
-    entry.interview_version = None  # interview prep and the copilot use the version just sent (job_portal/interview.py)
+                          score=score, note=body.note.strip(), origin=capture_origin(r, kind="resume",
+                              source_id=r.id, source_revision=r.revision)))
+    entry.interview_version = None  # preparation defaults to the newly saved copy, not a delivery claim
     await db.commit()
     return await mission(db, user, entry, tz_offset=tz_offset)
 
@@ -390,7 +420,9 @@ async def copy_snapshot(entry_id: str, snapshot_id: str, user: Annotated[User, D
         raise HTTPException(status.HTTP_409_CONFLICT, f"You can keep up to {MAX_RESUMES} resumes. Delete one first.")
     date = (_aware(s.created_at) + timedelta(minutes=tz_offset)).strftime("%d %b %Y")  # their own day
     copy = Resume(user_id=user.id, title=f"{s.title} (saved {date})"[:160], data=dict(s.data or {}),
-                  design=dict(s.design or {}), job_text=s.job_text or "")
+                  design=dict(s.design or {}), job_text=s.job_text or "",
+                  prep_context={"source_snapshot_id": s.id, "application_id": entry.id,
+                                "snapshot_origin": s.origin})
     db.add(copy)
     await db.commit()
     return RestoredOut(resume_id=copy.id)

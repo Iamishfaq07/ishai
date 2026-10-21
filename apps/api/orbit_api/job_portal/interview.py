@@ -35,16 +35,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email, require_verified_user
 from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.documents.routes import ORIGIN_ORBIT, Origin, _check_quota, _ingest
 from orbit_api.documents.uploads import sanitize_text
-from orbit_api.job_portal import manual
+from orbit_api.job_portal import manual, session_associations
+from orbit_api.job_portal.round_journal import context_round
 from orbit_api.job_portal.mission import _score
+from orbit_api.job_portal.resume_binding import for_job
 from orbit_api.job_portal.rounds import MAX_ROUND, RoundType, as_round_type, review_score, round_label
 from orbit_api.job_portal.routes import Status, _full_text, _job_text, _move
 from orbit_api.live import company_styles
 from orbit_api.live.events import QuestionType
 from orbit_api.models import (
+    AuditLog,
     Document,
     DocumentChunk,
     JobApplication,
@@ -66,6 +70,7 @@ from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import SessionIndex
 from orbit_api.stories.routes import DOC_KIND as STORY_KIND
 from orbit_api.stories.routes import MAX_STORIES, index_chunk
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["jobs"])
 read_limit = Depends(limit_user("jobs-interview", rate_per_s=3, burst=60))
@@ -133,6 +138,7 @@ class SavedQuestionsOut(BaseModel):
 
 
 class InterviewOut(BaseModel):
+    round_history_enabled: bool = False
     entry_id: str
     status: Status
     company: str
@@ -297,6 +303,7 @@ async def interview_out(db: AsyncSession, user: User, entry: JobApplication) -> 
     matches = await asyncio.to_thread(_story_matches, stories, requirements) if stories and requirements else []
     round_type = as_round_type(entry.round_type)
     return InterviewOut(
+        round_history_enabled=get_settings().personal_interview_rounds,
         entry_id=entry.id, status=entry.status, company=entry.company, title=entry.title,
         round=RoundOut(type=round_type, number=entry.round_number, label=round_label(round_type, entry.round_number),
                        at=_aware(entry.next_at) if entry.next_at else None),
@@ -307,6 +314,57 @@ async def interview_out(db: AsyncSession, user: User, entry: JobApplication) -> 
         version=version, versions=versions, resume_missing=missing, requirements=requirements,
         stories=matches, stories_total=len(stories), rounds=await _rounds(db, user, entry),
         guide=_guide(entry.company), questions=_saved_questions(entry, chosen))
+
+
+class SessionAssociationIn(BaseModel):
+    session_id: str = Field(min_length=1, max_length=36)
+    confirmed: Literal[True]
+
+
+@router.post("/{entry_id}/sessions/link", dependencies=[read_limit])
+async def link_reviewed_session(entry_id: str, body: SessionAssociationIn,
+                                user: Annotated[User, Depends(current_user)],
+                                db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
+    """A candidate-reviewed existing session association; never infer it from a company or URL."""
+    await lock_account(db, user.id)
+    entry = await _entry(db, entry_id, user)
+    session = await db.scalar(select(LiveSessionRow).where(LiveSessionRow.id == body.session_id,
+        LiveSessionRow.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+    if session is None:
+        raise HTTPException(404, "Session not found")
+    if session.application_id and session.application_id != entry.id:
+        raise HTTPException(409, "This session already belongs to another opportunity.")
+    if session.status != "ended":
+        raise HTTPException(409, "Finish the session before reviewing its association.")
+    if session.application_id != entry.id:
+        db.add(AuditLog(user_id=user.id, action=session_associations.LINK,
+            target=session_associations.target(entry.id, session.id)))
+        session.application_id = entry.id
+    await db.commit()
+    return {"session_id": session.id, "application_id": entry.id}
+
+
+@router.post("/{entry_id}/sessions/unlink", dependencies=[read_limit])
+async def unlink_reviewed_session(entry_id: str, body: SessionAssociationIn,
+                                  user: Annotated[User, Depends(current_user)],
+                                  db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str | None]:
+    """Remove attribution only. Recorded transcript, context and report remain unchanged."""
+    await lock_account(db, user.id)
+    entry = await _entry(db, entry_id, user)
+    session = await db.scalar(select(LiveSessionRow).where(LiveSessionRow.id == body.session_id,
+        LiveSessionRow.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+    if session is None:
+        raise HTTPException(404, "Session not found")
+    if session.application_id not in (None, entry.id):
+        raise HTTPException(409, "This session belongs to another opportunity. Refresh before changing it.")
+    if session.status != "ended":
+        raise HTTPException(409, "Finish the session before changing its association.")
+    if session.application_id == entry.id:
+        db.add(AuditLog(user_id=user.id, action=session_associations.UNLINK,
+            target=session_associations.target(entry.id, session.id)))
+        session.application_id = None
+    await db.commit()
+    return {"session_id": session.id, "application_id": session.application_id}
 
 
 @router.get("/{entry_id}/interview", response_model=InterviewOut, dependencies=[read_limit])
@@ -362,8 +420,11 @@ class InterviewIn(BaseModel):
 @router.put("/{entry_id}/interview", response_model=InterviewOut, dependencies=[read_limit])
 async def update_interview(entry_id: str, body: InterviewIn, user: Annotated[User, Depends(current_user)],
                            db: Annotated[AsyncSession, Depends(get_db)]) -> InterviewOut:
+    await lock_account(db, user.id)
     entry = await _entry(db, entry_id, user)
     sent = body.model_fields_set
+    if {"at", "round_type", "round_number"} & sent:
+        entry.preparation_round_id = entry.preparation_round_revision = None
     if "at" in sent:
         entry.next_at = body.at
     if "round_type" in sent:
@@ -378,7 +439,7 @@ async def update_interview(entry_id: str, body: InterviewIn, user: Annotated[Use
         r = await db.get(Resume, body.resume_id)
         if r is None or r.user_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Resume not found")
-        entry.resume_id = r.id
+        entry.resume_id = (await for_job(db, user, entry, r)).id
         if "version" not in sent:  # use it: as it is now if versions of another one were sent, else by default
             snaps = await db.scalar(select(ResumeSnapshot.id).where(ResumeSnapshot.application_id == entry.id).limit(1))
             entry.interview_version = LINKED_RESUME if snaps else None
@@ -442,6 +503,8 @@ class ContextDoc(BaseModel):
 class SessionContextOut(BaseModel):
     """What a session for this interview starts with. Create it with these fields and `application_id`."""
     application_id: str
+    interview_round_id: str | None = None
+    interview_round_revision: int | None = None
     title: str
     role: str
     company: str
@@ -537,17 +600,21 @@ async def session_context(entry_id: str, user: Annotated[User, Depends(require_v
     if chosen is not None:
         text = resume_document_text(ResumeData.model_validate(chosen.data or {}))
         if len(text) >= 20:
-            resume_doc = await _saved(db, user, "resume", _version_title(chosen, tz), text, "the selected resume version",
-                                      notes, update=not isinstance(chosen, ResumeSnapshot))
+            resume_doc = await _saved(
+                db, user, "resume", _version_title(chosen, tz), text, "the selected resume version",
+                notes, update=not isinstance(chosen, ResumeSnapshot))
     else:
         notes.append("No resume is linked to this job, so the copilot uses the resumes you tick in setup.")
     await db.commit()
     requirements = await _requirements(db, user, entry, listing, doc)
     round_type = as_round_type(entry.round_type)
-    label = round_label(round_type, entry.round_number)
+    selected_round = await context_round(db, entry)
+    label = selected_round.label if selected_round else round_label(round_type, entry.round_number)
     docs = [d for d in (doc, resume_doc) if d is not None]
     return SessionContextOut(
         application_id=entry.id,
+        interview_round_id=selected_round.id if selected_round else None,
+        interview_round_revision=selected_round.revision if selected_round else None,
         title=f"{entry.company} — {label or entry.title}"[:300],
         role=entry.title[:300], company=entry.company[:120],
         interview_stage=(label or "Interview")[:80],
@@ -580,6 +647,7 @@ async def wrap_up(entry_id: str, body: WrapUpIn, user: Annotated[User, Depends(c
     are the upcoming round's: a next round is the one after this (its number from the round set, else from the live
     rounds started from the job); waiting, an offer or not this time has none, and the date is then a follow-up's."""
     entry = await _entry(db, entry_id, user)
+    entry.preparation_round_id = entry.preparation_round_revision = None
     s = await db.get(LiveSessionRow, body.session_id)
     if s is None or s.user_id != user.id or s.application_id != entry.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Session not found")

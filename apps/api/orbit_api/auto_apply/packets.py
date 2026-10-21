@@ -199,9 +199,11 @@ def _png(b64: str) -> bytes:
 
 async def track_applied(db: AsyncSession, user: User, packet: ApplicationPacket, *, by_orbit: bool) -> str | None:
     """The tracker entry for this job, moved to applied ("Applied (Orbit Apply)" when Orbit sent it), with the
-    tailored resume kept as the version sent. None when the tracker is full."""
+    prepared resume kept with the result source (not independently verified delivery). None when the tracker is full."""
     from orbit_api.job_portal import routes as portal
 
+    if packet.user_id != user.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Application not found")
     now = datetime.now(UTC)
     entry = await db.scalar(select(JobApplication).where(JobApplication.user_id == user.id,
                                                          JobApplication.listing_id == packet.listing_id))
@@ -229,13 +231,18 @@ async def track_applied(db: AsyncSession, user: User, packet: ApplicationPacket,
     if note not in (entry.notes or ""):
         entry.notes = f"{entry.notes}\n{note}".strip() if entry.notes else note
     data = ResumeData.model_validate(packet.resume_data or {})
-    from orbit_api.job_portal.routes import _job_text
+    from orbit_api.job_portal.resume_lineage import capture_origin
 
-    listing = await db.get(JobListing, packet.listing_id)
-    job_text = _job_text(listing, listing.description) if listing is not None else ""
-    db.add(ResumeSnapshot(user_id=user.id, application_id=entry.id, title=packet.resume_title or "Resume",
-                          data=packet.resume_data or {}, job_text=job_text[:20_000],
-                          score=score_resume(data, job_text=job_text).score, note="Sent by Orbit Apply"))
+    # Keep the description captured with these materials, never today's mutable listing.
+    job_text = (packet.posting_text or "")[:20_000]
+    saved = ResumeSnapshot(user_id=user.id, application_id=entry.id, title=packet.resume_title or "Resume",
+        data=dict(packet.resume_data or {}), design={}, job_text=job_text[:20_000],
+        score=score_resume(data, job_text=job_text).score,
+        note="Executor reported submission" if by_orbit else "Candidate recorded applying from Orbit Apply")
+    saved.origin = capture_origin(saved, kind="packet", source_id=packet.id,
+        observation="executor_reported" if by_orbit else "candidate_recorded",
+        packet_status=packet.status, packet_result=packet.result_status, design_captured=False)
+    db.add(saved)
     packet.application_id = entry.id
     return entry.id
 

@@ -3,7 +3,7 @@ import { API, a11y, seed } from "./business-fixtures";
 test.use({ actionTimeout: 10_000 });
 
 for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: "mobile", width: 360, height: 800 }]) {
-  test(`Guided opportunity: resume handoff, grounded help and next steps (${viewport.name})`, async ({ page, context }, info) => {
+  test(`Opportunity room: resume handoff, grounded help and next steps (${viewport.name})`, async ({ page, context }, info) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
@@ -17,25 +17,25 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     let modelCalls = 0;
     page.on("request", (request) => { if (request.url().endsWith(`/coach/plan`)) modelCalls++; });
     await page.goto(`/jobs/mission/${job.id}`);
-    const guide = page.getByRole("region", { name: "Guided opportunity", exact: true });
-    await expect(guide.getByRole("heading", { name: "Resume, one step at a time", exact: true })).toBeVisible();
+    const guide = page.getByRole("region", { name: "Opportunity context", exact: true });
+    await expect(guide.getByRole("heading", { name: "Resume", exact: true })).toBeVisible();
     await page.getByLabel("Link a resume", { exact: true }).selectOption(resume.id);
-    await expect(guide.getByRole("link", { name: "Edit this resume and return to this job", exact: true })).toBeVisible();
-    await guide.getByRole("link", { name: "Edit this resume and return to this job", exact: true }).click();
+    await expect(page.getByRole("link", { name: "My projects", exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "My projects", exact: true }).click();
     const editor = page.getByRole("region", { name: "Guided resume editor", exact: true });
     await editor.getByLabel("Full name", { exact: true }).fill("Robin Graduate");
     await editor.getByLabel("Jump to a section").selectOption("6");
     await editor.getByRole("button", { name: "Save & return to job", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/jobs/mission/${job.id}\\?guide=1&tab=resume$`));
     expect((await (await context.request.get(`${API}/v1/resumes/${resume.id}`)).json()).data.basics.name).toBe("Robin Graduate");
-    await page.getByRole("navigation", { name: "Continue opportunity", exact: true }).getByRole("button", { name: "Next: Fit", exact: true }).click();
-    const heading = guide.getByRole("heading", { name: "Fit, one step at a time", exact: true });
+    await page.getByRole("navigation", { name: "Opportunity room", exact: true }).getByRole("button", { name: "Overview", exact: true }).click();
+    const heading = guide.getByRole("heading", { name: "Fit", exact: true });
     await expect(heading).toBeFocused();
     const bounds = await heading.boundingBox();
     const headerBottom = await page.locator("header.sticky").evaluate((el) => el.getBoundingClientRect().bottom);
     expect(bounds!.y).toBeGreaterThanOrEqual(headerBottom);
     expect(bounds!.y + bounds!.height).toBeLessThan(viewport.height - 80);
-    await guide.getByText("Get help with this step", { exact: true }).click();
+    await guide.locator("summary").filter({ hasText: "Help and updates for this job" }).click();
     await expect(guide.getByRole("button", { name: "Help me with this step", exact: true })).toBeEnabled();
     expect(modelCalls).toBe(0);
     await guide.getByRole("button", { name: "Help me with this step", exact: true }).click();
@@ -43,24 +43,23 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await expect(guide.getByRole("link", { name: "Open fit", exact: true })).toHaveAttribute("href", `/jobs/mission/${job.id}?guide=1&tab=fit`);
     expect(modelCalls).toBe(1);
     await a11y(page);
-    await page.getByRole("button", { name: "Next: Application", exact: true }).click();
-    await expect(guide.getByRole("heading", { name: "Application, one step at a time", exact: true })).toBeFocused();
+    await page.getByRole("navigation", { name: "Opportunity room", exact: true }).getByRole("button", { name: "Application", exact: true }).click();
+    await expect(guide.getByRole("heading", { name: "Resume", exact: true })).toBeFocused();
     await expect(guide.getByText("Demo opportunity guidance", { exact: true })).toHaveCount(0);
     const record = (await (await context.request.get(`${API}/v1/jobs/tracker`)).json()).find((entry: { id: string }) => entry.id === job.id);
     expect(record.status).toBe("saved");
     expect((await (await context.request.get(`${API}/v1/jobs/tracker/${job.id}/mission`)).json()).snapshots).toEqual([]);
     await page.getByRole("button", { name: "Open job details", exact: true }).click();
-    await expect(guide.getByRole("heading", { name: "Interview, one step at a time", exact: true })).toBeFocused();
+    await expect(guide.getByRole("heading", { name: "Interview", exact: true })).toBeFocused();
     await a11y(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`opportunity-guide-${viewport.name}.png`), fullPage: true });
-    await page.getByRole("button", { name: "Open all job tools", exact: true }).click();
-    await expect(page.getByLabel("Workspace tool", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("Workspace tool", { exact: true })).toHaveValue("interview");
-    await page.getByRole("button", { name: "Follow guided steps", exact: true }).click();
-    await page.getByRole("button", { name: "Next: Outcome", exact: true }).click();
-    await expect(guide.getByRole("heading", { name: "Outcome, one step at a time", exact: true })).toBeFocused();
-    await expect(page.getByRole("link", { name: "Back to career launchpad", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open all job tools", exact: true })).toHaveCount(0);
+    await page.locator("summary").filter({ hasText: "More tools ·" }).click();
+    await expect(page.getByLabel("Opportunity tool", { exact: true })).toHaveValue("interview");
+    await page.getByRole("navigation", { name: "Opportunity room", exact: true }).getByRole("button", { name: /^Offer/ }).click();
+    await expect(guide.getByRole("heading", { name: "Outcome", exact: true })).toBeFocused();
+    await expect(page.getByRole("link", { name: "Today", exact: true }).first()).toBeVisible();
   });
 }
 
@@ -71,15 +70,15 @@ test("An expired coach source is discarded on returning to the tab", async ({ pa
   expect(response.status(), await response.text()).toBe(201);
   const job = await response.json();
   await page.goto(`/jobs/mission/${job.id}`);
-  const guide = page.getByRole("region", { name: "Guided opportunity", exact: true });
-  await guide.getByText("Get help with this step", { exact: true }).click();
+  const guide = page.getByRole("region", { name: "Opportunity context", exact: true });
+  await guide.locator("summary").filter({ hasText: "Help and updates for this job" }).click();
   await guide.getByRole("button", { name: "Help me with this step", exact: true }).click();
   await expect(guide.getByText("Demo opportunity guidance", { exact: true })).toBeVisible();
   expect((await context.request.patch(`${API}/v1/jobs/tracker/${job.id}`, { data: { status: "withdrawn" } })).ok()).toBe(true);
   await page.evaluate(() => window.dispatchEvent(new Event("focus")));
   await expect(guide.getByText("Demo opportunity guidance", { exact: true })).toHaveCount(0);
   await expect(guide.getByRole("button", { name: "Help me with this step", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "Next: Outcome", exact: true }).click();
-  await expect(guide.getByRole("heading", { name: "Outcome, one step at a time", exact: true })).toBeVisible();
+  await page.getByRole("navigation", { name: "Opportunity room", exact: true }).getByRole("button", { name: /^Offer/ }).click();
+  await expect(guide.getByRole("heading", { name: "Outcome", exact: true })).toBeVisible();
   await expect(guide.getByText("withdrawn", { exact: true })).toBeVisible();
 });

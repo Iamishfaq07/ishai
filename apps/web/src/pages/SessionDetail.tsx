@@ -121,7 +121,7 @@ export function SessionDetailPage() {
 
   return (
     <div>
-      <OpportunityReturn />
+      {session.application_id ? <Link className={nextLink} to={`/jobs/mission/${encodeURIComponent(session.application_id)}?tab=${session.type === "mock" ? "practice" : "interview"}`}>Back to this opportunity</Link> : <OpportunityReturn />}
       <PageHeader
         title={session.title}
         icon={SESSION_TYPE_ICON[session.type]}

@@ -316,6 +316,8 @@ export interface CreateSessionRequest {
   instructions?: string;
   /** Started from a tracked job (its interview prep): the round shows on that job. */
   application_id?: string;
+  interview_round_id?: string;
+  interview_round_revision?: number;
 }
 
 /** A saved interview setup ("Google — Senior Security Engineer"). */
@@ -388,6 +390,8 @@ export interface OrbitSession {
   video?: boolean;
   /** The tracked job it was started from. */
   application_id?: string | null;
+  interview_round_id?: string | null;
+  interview_round_revision?: number | null;
 }
 
 export interface SessionTurn {
@@ -1443,12 +1447,18 @@ export interface ContactRequest {
 
 /** GET /v1/jobs/tracker/{id}/timeline: one event of a tracked job's journey. */
 export interface JobTimelineEvent {
-  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "stage" | "next";
+  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "related_round" | "association" | "application" | "interview_round" | "stage" | "next";
   at: string;
   title: string;
   detail: string;
   link: string | null;
   upcoming: boolean;
+  /** Record provenance, not an employer-confirmed receipt or hiring estimate. */
+  provenance?: "saved_record" | "candidate_recorded" | "executor_reported" | "outcome_uncertain" | "suggestion";
+  /** Owned session available for explicit association review. */
+  session_id?: string | null;
+  /** Only an explicitly linked ended session can count as completed practice. */
+  completed?: boolean;
 }
 
 /** GET /v1/sessions/loop-memory?company=: the candidate's earlier rounds with that company. */
@@ -2740,8 +2750,22 @@ export interface MissionResume {
   updated_at: string;
 }
 
+/** Creation-time source observation; an executor report is not independent employer delivery proof. */
+export interface SnapshotOrigin {
+  kind: "resume" | "packet";
+  source_id: string;
+  source_revision: number | null;
+  content_digest: string;
+  recorded_at: string;
+  observation: "saved_copy" | "candidate_recorded" | "executor_reported";
+  packet_status: string | null;
+  packet_result: string | null;
+  design_captured: boolean;
+}
+
 /** Candidate-saved immutable resume copy; saving alone is not evidence of submission or delivery. */
 export interface MissionSnapshot {
+  origin?: SnapshotOrigin | null;
   id: string;
   title: string;
   score: number;
@@ -2751,6 +2775,7 @@ export interface MissionSnapshot {
 }
 
 export interface ResumeVersionComparison {
+  origin?: SnapshotOrigin | null;
   entry_id: string;
   snapshot_id: string;
   version: string;
@@ -2822,6 +2847,32 @@ export interface RequirementPractice {
 }
 
 /** Owned navigation context only; opening a library tool does not attach its records to this job. */
+export interface CandidateIdentityUpdate {
+  version: string;
+  action: "select" | "approve" | "revoke";
+  resume_id: string;
+  resume_revision: number;
+  independent_copy?: boolean;
+}
+
+export interface CandidateIdentity {
+  version: string;
+  master: { id: string; title: string; revision: number; job_specific: boolean } | null;
+  resumes: { id: string; title: string; revision: number; job_specific: boolean }[];
+  review: "not_selected" | "missing" | "needs_review" | "reviewed" | "job_copy";
+  reviewed_at: string | null;
+  name: string;
+  headline: string;
+  skills: string[];
+  education_count: number;
+  project_count: number;
+  experience_count: number;
+  target_roles: string[];
+  locations: string[];
+  workplace: string[];
+  search_uses_master: boolean;
+}
+
 export interface OpportunityContext {
   entry_id: string;
   title: string;
@@ -2837,6 +2888,8 @@ export interface JobMission {
   fit: MissionFit | null;
   resume: MissionResume | null;
   resume_missing: boolean;
+  /** Legacy shared/master bindings must be copied before job-specific editing. */
+  resume_requires_copy?: boolean;
   snapshots: MissionSnapshot[];
   offer: MissionOffer | null;
   offers: MissionOffer[];
@@ -3016,6 +3069,7 @@ export interface InterviewRoundRef {
 
 /** GET /v1/jobs/tracker/{id}/interview: a tracked job's interview prep. No AI call. */
 export interface InterviewPrepView {
+  round_history_enabled?: boolean;
   entry_id: string;
   status: JobStatus;
   company: string;
@@ -3057,6 +3111,8 @@ export interface InterviewPrepUpdate {
 /** POST /v1/jobs/tracker/{id}/session-context: what a session for this interview starts with (no AI, no credit). */
 export interface InterviewSessionContext {
   application_id: string;
+  interview_round_id?: string | null;
+  interview_round_revision?: number | null;
   title: string;
   role: string;
   company: string;
@@ -3084,4 +3140,34 @@ export interface InterviewWrapUp {
   round_type?: InterviewRoundType | null;
   /** The next round's date and time, or when to follow up. */
   at?: string | null;
+}
+
+
+/** Candidate-recorded employer round; mock/live sessions remain separate execution records. */
+export interface CandidateInterviewRound {
+  id: string;
+  revision: number;
+  label: string;
+  round_type: InterviewRoundType | null;
+  number: number | null;
+  scheduled_at: string | null;
+  time_zone: string;
+  status: "planned" | "completed" | "cancelled";
+  notes: string;
+  outcome: "awaiting_reply" | "next_round" | "offer" | "not_selected" | "other" | null;
+  completed_at: string | null;
+  source: "candidate" | "calendar_review";
+  selected_for_preparation: boolean;
+  selection_stale: boolean;
+  practice_sessions: number;
+  earlier_practice_sessions: number;
+  history: Array<{ revision: number; action: string; at: string; scheduled_at: string | null;
+    time_zone: string; status: string; label: string; previous?: { scheduled_at: string | null; time_zone: string; status: string } }>;
+}
+export interface CandidateInterviewRounds {
+  enabled: boolean;
+  tracker_version: string;
+  editable?: boolean;
+  preparation_round_id?: string | null;
+  rounds: CandidateInterviewRound[];
 }

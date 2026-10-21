@@ -329,12 +329,12 @@ export function PageHeader({
   art?: ReactNode;
 }) {
   const head = (
-    <div className={cx("flex flex-wrap items-center justify-between gap-x-6 gap-y-3", !back && "mb-6")}>
+    <div className={cx("workspace-heading", !back && "mb-6")}>
       <div className="flex min-w-0 flex-1 basis-[20rem] items-center gap-3">
         {Icon && <IconTile icon={Icon} className="hidden sm:flex" />}
         <div className="min-w-0">
           <h1 className="break-words font-display text-2xl font-semibold tracking-tight">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>}
+          {subtitle && <p className="workspace-description">{subtitle}</p>}
         </div>
       </div>
       {art && <div aria-hidden="true" className="scene-host -my-5 hidden w-36 shrink-0 lg:block">{art}</div>}

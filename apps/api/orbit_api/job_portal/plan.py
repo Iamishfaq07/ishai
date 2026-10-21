@@ -158,7 +158,11 @@ async def plan_for(db: AsyncSession, user: User, entry: JobApplication, now: dat
     if entry.status not in ("saved", "applied", "interviewing"):
         return PlanOut(mode="closed", interview_at=None, days_left=None, starts_on=None,
                        days=[], done=0, total=0, completed=history, completed_total=len(checks))
-    at = _aware(entry.next_at) if entry.next_at and entry.status in ("applied", "interviewing") else None
+    from .round_journal import context_round
+
+    round_context = await context_round(db, entry)
+    at = _aware(entry.next_at) if entry.next_at and (
+        entry.status in ("applied", "interviewing") or round_context is not None) else None
     today = (now + shift).date()
     day = (at + shift).date() if at else None
     scheduled = day is not None and day >= today
@@ -186,7 +190,10 @@ async def plan_for(db: AsyncSession, user: User, entry: JobApplication, now: dat
         days = days[:3]
         for rehearsal_day in days:
             rehearsal_day.days_before = None
-    schedule = hashlib.sha256((at.isoformat() if scheduled and at else "rehearsal").encode()).hexdigest()[:16]
+    schedule_source = at.isoformat() if scheduled and at else "rehearsal"
+    if round_context is not None:
+        schedule_source += f":round:{entry.preparation_round_id}:{entry.preparation_round_revision}"
+    schedule = hashlib.sha256(schedule_source.encode()).hexdigest()[:16]
     ticked = {row.item_key for row in checks}
     for d in days:
         for item in d.items:

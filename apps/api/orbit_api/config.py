@@ -168,6 +168,7 @@ class Settings(BaseSettings):
     live_languages: bool = Field(True, validation_alias=AliasChoices("ORBIT_LIVE_LANGUAGES"))
     # The camera coach in mock interviews (sessions/camera.py): on-device numbers about facing the camera. Off until
     # the owner has tried it on their own devices.
+    personal_interview_rounds: bool = Field(False, validation_alias=AliasChoices("ORBIT_PERSONAL_INTERVIEW_ROUNDS"))
     video_mock: bool = Field(False, validation_alias=AliasChoices("ORBIT_VIDEO_MOCK"))
     natural_voice: bool = Field(True, validation_alias=AliasChoices("ORBIT_NATURAL_VOICE"))
     tts_daily_chars: int = Field(20000, ge=0, validation_alias=AliasChoices("ORBIT_TTS_DAILY_CHARS"))
