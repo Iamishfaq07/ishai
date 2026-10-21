@@ -516,7 +516,8 @@ class MockLLMProvider(LLMProvider):
             section = body.split("References, with", 1)[-1].split("Candidate's resume", 1)[0]
             names = re.findall(r"^- (.+?) \(", section, flags=re.M)
             return json.dumps({"references": [
-                {"name": name, "ask": f"[mock] Hi {name}, I'm interviewing for a role and would love you as a reference.",
+                {"name": name,
+                 "ask": f"[mock] Hi {name}, I'm interviewing for a role and would love you as a reference.",
                  "brief": ["[mock] The payments project you saw me lead", "[mock] [a result you both remember]"]}
                 for name in names], "tips": ["[mock] Thank them after the call."]})
         if request.request_type == "first_ninety":

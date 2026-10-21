@@ -1,6 +1,7 @@
 """Career Ops-inspired job networking: saved leads first, grounded discovery, capture and draft-only outreach."""
 import hashlib
 import json
+import logging
 import re
 import time
 from collections import Counter
@@ -25,18 +26,29 @@ from orbit_api.job_portal.contact_sources import (
     page_source,
     public_url,
     search_error,
+    search_failure_detail,
     search_off_reason,
     search_provider,
     search_providers,
     search_sources,
 )
-from orbit_api.models import AutoApplySetup, Document, JobApplication, JobContact, JobListing, ProviderRequest, Resume, User
+from orbit_api.models import (
+    AutoApplySetup,
+    Document,
+    JobApplication,
+    JobContact,
+    JobListing,
+    ProviderRequest,
+    Resume,
+    User,
+)
 from orbit_api.prep.job_link import JobLinkError
 from orbit_api.ratelimit import limit_user
 from orbit_api.sessions.loop_memory import same_company
 from orbit_api.transactions import lock_account
 from orbit_api.workflow_ai import preview
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/jobs/network", tags=["jobs"])
 Read = Depends(limit_user("job-network-read", rate_per_s=2, burst=30))
 Write = Depends(limit_user("job-network-write", rate_per_s=1, burst=20))
@@ -125,7 +137,8 @@ async def context(db: AsyncSession, user: User, job: JobApplication) -> dict[str
     history = [j for j in rows[:2000] if same_company(j.company, job.company)]
     listing = await db.get(JobListing, job.listing_id, populate_existing=True)
     document = await db.get(Document, job.document_id, populate_existing=True) if job.document_id else None
-    posting = ((document.source_text or "") if document and document.user_id == user.id and document.kind == "job_description"
+    own_post = document is not None and document.user_id == user.id and document.kind == "job_description"
+    posting = ((document.source_text or "") if document and own_post
                else (listing.description or "") if listing else "")[:10000]
     snapshot = {"job": [job.id, job.company, job.title, job.status, job.updated_at, posting],
         "contacts": [[c.id, c.updated_at] for c in warm], "history": [[j.id, j.status, j.updated_at] for j in history]}
@@ -254,6 +267,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
                             used = selected_provider
                         except (httpx.HTTPError, JobLinkError, ValueError, TypeError, TimeoutError) as exc:
                             errors.append(search_error(selected_provider, exc))
+                            log.warning("contact search failed: %s", search_failure_detail(selected_provider, exc))
                             # A service that rejected the key or ran out of balance won't recover this run.
                             if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (401, 402, 403):
                                 providers.remove(selected_provider)
@@ -271,7 +285,8 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
                     for source in found:
                         if source.url not in urls and room:
                             sources.append(source)
-                            urls.add(source.url)
+                            if source.url:
+                                urls.add(source.url)
                             room -= 1
                     for message in errors:
                         if message not in warnings:
@@ -280,7 +295,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
                         "status": "failed" if used is None else "completed" if found else "empty",
                         "source_count": len(found)})
                     if used is None:
-                        warnings.append("Live search stopped here. Any sources already found were still checked.")
+                        warnings.append("Search stopped early. Anything already found was still checked.")
                         break
         return json.dumps({"company": job.company, "job_title": job.title,
             "sources": [s.model_dump() for s in sources]})

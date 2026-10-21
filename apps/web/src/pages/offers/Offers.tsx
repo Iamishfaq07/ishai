@@ -10,6 +10,7 @@ import { useAsync, useSettledOnce } from "../../lib/useAsync";
 import { useCountry } from "../../lib/country";
 import { jobPath } from "../jobs/paths";
 import { OfferForm } from "./OfferForm";
+import { DecisionMatrix } from "./DecisionMatrix";
 import { MarketBar } from "./MarketBar";
 import { compareRows, emptyOffer, money, offerPath, offerTerms } from "./model";
 
@@ -107,6 +108,7 @@ export function OffersPage() {
               ))}
             </Reveal>
             {list.length > 1 && <Compare offers={list} />}
+            {list.length > 1 && <DecisionMatrix offers={list} />}
           </div>
         )}
         <PayCheck />

@@ -74,26 +74,26 @@ def search_off_reason() -> str | None:
     return "no_key"
 
 
+SNIPPET_FIELD = {"deepseek": "snippet", "searxng": "content", "brave": "description"}
 NAMES = {"searxng": "SearXNG", "brave": "Brave Search", "deepseek": "DeepSeek Search"}
 
 
 def search_error(provider: str, exc: Exception) -> str:
-    """A specific, safe explanation of a failed search (no key, query or response body)."""
-    name = NAMES.get(provider, "Web search")
-    if isinstance(exc, httpx.HTTPStatusError):
-        code = exc.response.status_code
-        if code in (401, 403):
-            return f"{name} rejected the server's API key. The site owner needs to check it."
-        if code == 402:
-            return f"{name} has no balance left. The site owner needs to top up the account."
-        if code == 429:
-            return f"{name} is rate-limited right now. Try again in a minute."
-        if code == 404:
-            return f"{name} isn't available for this account."
-        return f"{name} returned an error ({code})."
+    """A candidate-facing note for a failed search: never keys, balances or server setup. The specific cause is logged
+    for the operator (contact_research logs provider and status)."""
+    if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code == 429:
+        return "Live search is busy right now. Try again in a minute."
     if isinstance(exc, TimeoutError | httpx.TimeoutException):
-        return f"{name} took too long to answer."
-    return f"{name} couldn't be reached."
+        return "Live search took too long. Try again, or check a company page below."
+    return "Live search isn't available right now. You can still check a company page or a recruiter's message."
+
+
+def search_failure_detail(provider: str, exc: Exception) -> str:
+    """The operator's view of a failed search, for the server log only."""
+    name = NAMES.get(provider, provider)
+    if isinstance(exc, httpx.HTTPStatusError):
+        return f"{name} HTTP {exc.response.status_code}"
+    return f"{name} {type(exc).__name__}"
 
 
 def contact_queries(company: str, title: str) -> list[tuple[str, str]]:
@@ -159,7 +159,7 @@ async def search_sources(company: str, title: str, *, query: str | None = None,
         kind = "search_content" if isinstance(content, str) and content.strip() else "search_snippet"
         # Provider summaries are not literal published evidence: use returned content/snippet only.
         text = html_to_text(str(row.get("title", "")) + "\n" + str(content if kind == "search_content" else
-            row.get("snippet" if provider == "deepseek" else "content" if provider == "searxng" else "description", "")))
+            row.get(SNIPPET_FIELD.get(provider, "description"), "")))
         text = text[:3000 if kind == "search_content" else 1500]
         if not text.strip():
             continue
