@@ -505,6 +505,18 @@ class MockLLMProvider(LLMProvider):
                 {"question": f"[mock] What would success look like in the first 90 days? ({i + 1})",
                  "why": "[mock] Shows you're thinking about delivering, not just landing the job."}
                 for i in range(4)]})
+        if request.request_type == "interview_debrief":
+            return json.dumps({"questions": [
+                {"question": "[mock] Tell me about a time you handled a production incident.", "kind": "behavioral",
+                 "went": "okay"},
+                {"question": "[mock] How would you design a rate limiter?", "kind": "technical", "went": "weak"}],
+                "promises": ["[mock] Send the link to the project you mentioned."],
+                "focus": ["[mock] Practise one system design question end to end."],
+                "thank_you_points": ["[mock] The discussion about the team's on-call rotation."],
+                "stories": [{"title": "[mock] Handled a checkout outage",
+                             "situation": "[mock] Checkout failed at peak.",
+                             "task": "[mock] I was on call.", "action": "[mock] I rolled back and [what you did next].",
+                             "result": "[mock] Service recovered in [how long].", "competencies": ["ownership"]}]})
         if request.request_type == "story_draft":
             body = request.messages[-1].content if request.messages else ""
             m = re.search(r"Number of stories: (\d+)", body)

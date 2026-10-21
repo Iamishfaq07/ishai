@@ -7,6 +7,7 @@ import { api } from "../../../lib/api";
 import { useCandidateDraft } from "../../../lib/useCandidateDraft";
 import { errorText } from "../../../lib/format";
 import { missionPath } from "../paths";
+import { InterviewDebrief } from "./InterviewDebrief";
 
 function when(at: string | null, zone: string): string {
   if (!at) return "Time not recorded";
@@ -27,6 +28,7 @@ function OwnedRounds({ entryId, onSaved }: Props) {
   const base = `/v1/jobs/tracker/${encodeURIComponent(entryId)}/rounds`;
   const [data, setData] = useState<CandidateInterviewRounds | null>(null);
   const [editing, setEditing] = useState<CandidateInterviewRound | "new" | null>(null);
+  const [debriefing, setDebriefing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -99,12 +101,16 @@ function OwnedRounds({ entryId, onSaved }: Props) {
       {row.outcome === "next_round" && <Button variant="secondary" disabled={busy || !data.editable || editing !== null} onClick={() => setEditing("new")}>Record the next confirmed round</Button>}
       {row.outcome === "offer" && <Link to={`${missionPath(entryId)}?tab=offer`} className={cx("inline-flex min-h-11 items-center rounded text-sm font-semibold underline", focusRing)}>Record offer terms for this opportunity</Link>}
       {row.selected_for_preparation && <Link to={`${missionPath(entryId)}?tab=practice`} className={cx("inline-flex min-h-11 items-center rounded text-sm font-semibold underline", focusRing)}>Practise this round with Saba</Link>}
+      {row.status !== "cancelled" && <Button variant="secondary" aria-expanded={debriefing === row.id} onClick={() => setDebriefing(debriefing === row.id ? null : row.id)}>{debriefing === row.id ? "Close debrief" : "Debrief with AI"}</Button>}
     </div>
+    {debriefing === row.id && <InterviewDebrief entryId={entryId} roundId={row.id} label={row.label} initialNotes={row.notes} />}
     <details><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-medium", focusRing)}>Schedule and change history</summary><ol className="space-y-3 border-l border-zinc-200 pl-3 dark:border-white/10">{row.history.map((event, index) => <li key={`${event.revision}-${index}`} className="break-words text-xs"><p>Version {event.revision} · {new Date(event.at).toLocaleString()} · {event.action.replaceAll("_", " ")}</p>{event.previous && <p>Previously: {when(event.previous.scheduled_at, event.previous.time_zone)} · {event.previous.status}</p>}<p>{when(event.scheduled_at, event.time_zone)} · {event.status}</p></li>)}</ol></details>
   </li>;
   return <Card>
     <header className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-display text-lg font-semibold">Interview rounds</h2><p className="mt-2 max-w-prose text-sm text-zinc-600 dark:text-zinc-400">One opportunity, separate employer rounds. Record a date, prepare with Saba, then capture what actually happened. No round is inferred from practice or a company name.</p></div><Button disabled={busy || !data.editable || editing !== null} onClick={() => { setEditing("new"); setNotice(""); }}>Add interview round</Button></header>
+    <Button className="mt-3" variant="secondary" aria-expanded={debriefing === "any"} onClick={() => setDebriefing(debriefing === "any" ? null : "any")}>{debriefing === "any" ? "Close debrief" : "Debrief an interview"}</Button>
     <Button className="mt-3" variant="ghost" disabled={busy} onClick={() => void refresh()}>Refresh round records</Button>
+    {debriefing === "any" && <div className="mt-4"><InterviewDebrief entryId={entryId} label="Interview" /></div>}
     {data.preparation_round_id && <Button className="mt-3" variant="ghost" disabled={busy || !data.editable} onClick={() => void clearPreparation()}>Clear preparation selection</Button>}
     {notice && <p role="status" className="mt-3 text-sm">{notice}</p>}
     {error && <div className="mt-3"><ErrorNote onRetry={() => void refresh()}>{error} Unsaved form inputs remain in this tab; refresh the records and review again.</ErrorNote></div>}

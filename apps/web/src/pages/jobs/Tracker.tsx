@@ -71,6 +71,7 @@ import { MAX_COMPARE } from "./compare";
 import { Journey } from "./Journey";
 import { missionPath } from "./mission";
 import { SafetyCard } from "./SafetyCard";
+import { ShortlistSkills } from "./ShortlistSkills";
 import { interviewPrepPath } from "./interview/links";
 
 /**
@@ -117,6 +118,7 @@ export function JobTrackerPage() {
         }
       />
       {tracker.data && <SearchInsightsPanel entries={tracker.data} />}
+      {tracker.data && tracker.data.length > 1 && <div className="mt-6"><ShortlistSkills revision={tracker.data.length} /></div>}
       <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />
       <SafetyCard compact className="mt-6" />
       <AddJob
