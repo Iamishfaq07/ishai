@@ -1,4 +1,6 @@
-# Design system — "Deep Space"
+> Current direction, 2026-10-21: the owner explicitly replaces the purple/deep-space default with warm paper, graphite, restrained Slate blue, opaque surfaces and editorial hierarchy. This supersedes older colour-direction statements below. New default/legacy alias, shared headers/logo and Today layout are implemented but unverified; no tests or visual checks were run. See [enterprise visual slice](implementation/UNIFIED_ENTERPRISE_DESIGN.md).
+
+# Design system — Orbit enterprise workbench
 
 Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.preset.ts` and
 `packages/ui/src/design/base.css`.
@@ -11,11 +13,11 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   restrained motion. No sky, no glass, no glows, no gradient headlines. Its rules are "The front door" below.
 - **The workbench** (everything signed in: `html.app-shell`, set by the web Layout and by the live session page) is
   where people run their job search every day, so it reads as professional software: one still canvas (`--canvas`,
-  #F5F6F8 / #0D121C), opaque surfaces (`--surface`) with a hairline border (`--line`) and no shadow, headings in the
+  #F5F5F4 / #101214), opaque surfaces (`--surface`) with a hairline border (`--line`) and no shadow, headings in the
   product face, and no gradients, glows, sheens or decorative blobs. Only things that float (a menu, a dialog, a
   toast) cast a shadow. The live session (`/live/:id`) is the workbench too: no sky behind the panel, no glow around
   it.
-- **Dark mode is the light theme's twin** (D58): inside the workbench the ink's darkest steps are the same blue-grey
+- **Dark mode is the light theme's twin** (D58): inside the workbench the ink's darkest steps are the same graphite
   family as the canvas: `zinc-950` (what `dark:` pairs with `bg-white`: the bars, fields, dialogs, the live panel) is
   the surface, `zinc-900` a raised step above it, `zinc-800` the line. The front door's dark mode is the same family
   (D66).
@@ -24,7 +26,7 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   product's own content (its mark, its row on Home), not the nav.
 - **Corners say how a thing behaves**: controls 8 px (`rounded-xl`), cards 12 px (`rounded-2xl`), large panels 16 px
   (`rounded-3xl`).
-- **Buttons**: primary is the solid accent (white on accent-600 passes AA in every accent), secondary is bordered,
+- **Buttons**: primary is the solid accent (foreground/background combinations require palette-specific contrast validation), secondary is bordered,
   ghost is plain, danger is rose-700 text, destructive is solid rose (inside a confirm), link is inline text. Nothing
   on a button moves except the press, and buttons cast no shadow. How each feels (hover, press, focus, busy, done)
   is "Interaction" below.
@@ -46,19 +48,18 @@ Components use plain Tailwind names; the preset maps them to CSS variables (RGB 
 
 | Tailwind name | Variable        | Meaning                                                                 |
 | ------------- | --------------- | ----------------------------------------------------------------------- |
-| `indigo-*`    | `--accent-*`    | The accent. Default **Nebula**; users can pick another in Settings.     |
-| `zinc-*`      | `--ink-*`       | Neutrals: surfaces, borders, secondary text. Cool, slightly violet.     |
-| `aurora-*`    | `--aurora-*`    | Cyan. Brand gradients only (logo, hero glows) — never UI state.         |
+| `indigo-*`    | `--accent-*`    | The accent. Default **Slate blue**; legacy Nebula resolves to Slate blue. Other explicit choices remain.     |
+| `zinc-*`      | `--ink-*`       | Neutrals: surfaces, borders, secondary text. Graphite neutrals on warm paper.     |
+| `aurora-*`    | `--aurora-*`    | Legacy illustration cyan only — not the product logo or UI state.         |
 | `stage-*`     | `--stage-*`     | A job's stage: `saved`, `applied`, `interviewing`, `offer`, `rejected`. |
 
 Status colours stay Tailwind's own (`emerald` live, `amber` warning, `rose` error).
 **Stage colours** are fixed (not the accent, so a stage looks the same for everyone and never meets a status colour
-that means something else): saved → applied → interviewing is one ordered violet ramp, further along = more ink
+that means something else): saved → applied → interviewing uses a neutral/steel ramp, further along = more ink
 (darker in light mode, lighter in dark mode); an offer is the status green; "not this time" a quiet grey. They're
 marks only (`STATUS_MARK` in `pages/jobs/model.ts`: the dot in a `StagePill`, a tracker card's edge, the Home pipeline
-bar), never text, and always beside the stage's name. Both themes' steps passed the dataviz palette validator
-(ordinal, colour-blind separation, contrast); re-run it if you change one.
-Contrast: secondary text is remapped in `base.css` so it passes WCAG AA on every surface in both themes, and so are
+bar), never text, and always beside the stage's name. The current enterprise stage palette is IMPLEMENTED / UNVERIFIED; contrast and colour-blind validation are deferred by the owner. Earlier palette results do not validate these values.
+Contrast: secondary text uses deeper neutrals in `base.css`; the new palette needs later validation. Existing status remaps also apply to
 `text-emerald-600` / `text-amber-600` in light mode (they draw in -700). Small text never takes `opacity-80`; text on
 amber is `text-amber-950` (white on amber is 2.1:1). Figures are tabular by default (`tnum`, web), so columns of
 numbers line up; a stat's big number (a tile, a ring) takes `stat-value`, the font's proportional figures.
@@ -77,8 +78,7 @@ Score rings: the fill says how it went, the track is a pale step of the same col
 
 `font-sans` is **IBM Plex Sans** everywhere: body, numbers (tabular) and, in the workbench, headings too (base.css
 maps `h1`–`h3` and `font-display` to it inside `html.app-shell`). Its engineered, institutional shapes read as a
-serious tool. The front door uses it for every heading too (`html.site`); Space Grotesk lives on only inside the logo's
-wordmark, outlined (`BrandLogo`), so no page loads it for text. `font-mono` (JetBrains Mono) is
+serious tool. The front door and shared heading/wordmark defaults use Plex too. Existing Space Grotesk font assets are not removed in this unverified slice; no bundle saving is claimed. `font-mono` (JetBrains Mono) is
 for code only, never for small data labels. Self-hosted via Fontsource (`apps/web/src/fonts.css`, Latin only).
 
 ## Surfaces

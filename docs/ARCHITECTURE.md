@@ -158,3 +158,10 @@ JobInterviewRound extends the existing owned opportunity with employer-round rec
 ResumeSnapshot remains the sole saved-copy authority. New nullable origin records creation-time source ID/revision and content digest; live resume_id remains a separate nullable FK. No new artifact store or dashboard. Application snapshots use packet-captured JD and distinguish candidate/executor observations.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Reuse shared accent/ink tokens, preference loader, PageHeader/OrbitLogo and workspace surface/heading roles. No competing design system or data authority. Today contextual rail uses current owned room IDs/tab aliases; global next-action planner remains authoritative.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.

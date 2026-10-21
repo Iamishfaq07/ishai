@@ -1,3 +1,7 @@
+## 2026-10-21 — enterprise visual language / connected Today
+
+Shared tokens/theme/preferences/headers/logo now provide paper/graphite/Slate blue; existing utilities and web/desktop/business consumers reuse them. Today owns next-action + priority queue + opportunities and job-bound journey shortcuts. My Career/Prepare/identity/Discover/Opportunity Room/timeline reuse existing routes and data. No new records or primary tab; legacy preference/deep links retained. Implementation only, no testing. [Scope and remaining asset/visual work](UNIFIED_ENTERPRISE_DESIGN.md).
+
 ## 2026-10-21 — saved-material source continuity (unverified)
 
 - Opportunity Room saved-version list and comparison: `JobMission.tsx`, `ResumeVersionReview.tsx`, shared `SnapshotSource.tsx`; source disclosure replaces misleading universal “original deleted” labeling. Existing five destinations and room routes retained.

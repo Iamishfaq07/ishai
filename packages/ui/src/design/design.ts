@@ -3,7 +3,7 @@ import { safeLocal } from "../storage";
 import { initInteractions } from "./interactions";
 
 /** User-chosen look & feel, shared by the web and desktop apps (stored per device). */
-export type AccentName = "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
+export type AccentName = "slate" | "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
 export type TextSize = "sm" | "md" | "lg";
 /** Interface animation: everything (`full`), fades only with nothing moving (`reduced`, "Gentle"), or none. */
 export type MotionLevel = "full" | "reduced" | "off";
@@ -15,14 +15,16 @@ export interface DesignPrefs {
   motion: MotionLevel;
 }
 
-export const DEFAULT_DESIGN: DesignPrefs = { accent: "nebula", textSize: "md", motion: "full" };
+export const DEFAULT_DESIGN: DesignPrefs = { accent: "slate", textSize: "md", motion: "full" };
 
 type Palette = [string, string, string, string, string, string, string, string, string, string, string];
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
-/** Accent palettes as RGB triplets (50 → 950). "Nebula" is Orbit's own violet; the rest are Tailwind's. */
+/** Shared enterprise accent; nebula remains a compatibility alias for the former default. */
+const SLATE: Palette = ["245 248 251", "231 238 245", "207 223 237", "168 191 214", "123 155 185", "83 124 159", "54 95 128", "41 75 104", "35 63 86", "32 53 72", "18 35 50"];
 export const ACCENTS: Record<AccentName, { label: string; palette: Palette }> = {
-  nebula: { label: "Nebula", palette: ["245 243 255", "236 233 255", "221 214 254", "196 181 253", "164 139 250", "134 102 255", "112 72 245", "94 56 214", "76 46 170", "58 38 128", "32 20 80"] },
+  slate: { label: "Slate blue", palette: SLATE },
+  nebula: { label: "Slate blue (legacy)", palette: SLATE },
   indigo: { label: "Indigo", palette: ["238 242 255", "224 231 255", "199 210 254", "165 180 252", "129 140 248", "99 102 241", "79 70 229", "67 56 202", "55 48 163", "49 46 129", "30 27 75"] },
   violet: { label: "Violet", palette: ["245 243 255", "237 233 254", "221 214 254", "196 181 253", "167 139 250", "139 92 246", "124 58 237", "109 40 217", "91 33 182", "76 29 149", "46 16 101"] },
   sky: { label: "Sky", palette: ["240 249 255", "224 242 254", "186 230 253", "125 211 252", "56 189 248", "14 165 233", "2 132 199", "3 105 161", "7 89 133", "12 74 110", "8 47 73"] },
@@ -81,7 +83,7 @@ export function loadDesign(env: MotionEnv = motionEnv()): DesignPrefs {
     const raw = safeLocal.getItem(STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
     return {
-      accent: typeof parsed.accent === "string" && parsed.accent in ACCENTS ? (parsed.accent as AccentName) : DEFAULT_DESIGN.accent,
+      accent: parsed.accent === "nebula" ? "slate" : typeof parsed.accent === "string" && Object.prototype.hasOwnProperty.call(ACCENTS, parsed.accent) ? (parsed.accent as AccentName) : DEFAULT_DESIGN.accent,
       textSize: TEXT_SIZES.some((t) => t.value === parsed.textSize) ? (parsed.textSize as TextSize) : "md",
       motion: parseMotion(parsed.motion, env),
     };

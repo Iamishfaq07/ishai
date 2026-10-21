@@ -442,3 +442,10 @@ Closed/stale context conflicts use409; foreign/missing owned resources404; unsup
 MissionSnapshot and ResumeVersionComparison add nullable SnapshotOrigin; old rows return null. POST mission/snapshots accepts optional resume_id and updated_at guards; legacy clients may omit them. Origin is server-captured, not client-writable. Packet source observation distinguishes candidate_recorded and executor_reported; neither proves delivery.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+No backend/API/schema change. Today reuses /jobs/mission/:entryId with existing tab=resume/practice/interview/offer; existing old URLs remain. Device preference adds slate; legacy nebula resolves to slate without rewriting resume template colours or other explicit accent choices.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.

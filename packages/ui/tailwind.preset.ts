@@ -1,9 +1,9 @@
 /**
- * Shared Tailwind preset for the web and desktop apps — the "Deep Space" design system.
+ * Shared Tailwind preset for the web and desktop apps — the enterprise workbench design system.
  *
  * Colours are CSS variables (RGB triplets, see design/base.css), so components keep using plain Tailwind names:
  * - `indigo-*` is the ACCENT (`--accent-50` … `--accent-950`, set by `applyDesign` from the user's choice).
- * - `zinc-*` is INK: the cool, blue-violet neutrals every surface, border and secondary text is drawn with.
+ * - `zinc-*` is INK: the paper/graphite neutrals every surface, border and secondary text is drawn with.
  * - `aurora-*` is the fixed cyan the brand gradients fade into (logo, hero glows) — never used for UI state.
  * - `stage-*` is a job's stage (saved … rejected): fixed colours, not the accent.
  * Motion is tokens too (`--dur-*`, `--ease-*` in base.css): `duration-quick`, `ease-enter`, and the animations below.
@@ -39,7 +39,7 @@ export default {
         // reaches them when every Latin face before lacks it, so English text renders exactly as before.
         sans: ["IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", "Inter", "ui-sans-serif", "system-ui",
                "-apple-system", "Segoe UI", ...SCRIPT_FALLBACKS, "sans-serif"],
-        display: ["Space Grotesk Variable", "Space Grotesk", "Inter Variable", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", "Inter", "ui-sans-serif", "system-ui", ...SCRIPT_FALLBACKS, "sans-serif"],
         mono: ["JetBrains Mono Variable", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       boxShadow: {

@@ -1,3 +1,7 @@
+## 2026-10-21 — visual and navigation-only slice
+
+No new data authority/association/schema. The selected Today opportunity is ephemeral component state; existing account-owned room routes receive opaque ID plus existing tab key. It does not scope the global server recommendation, count progress, link artifacts, create offers or change statuses. Existing source models own every displayed status/date. Legacy design preference nebula loads as slate; no resume content/template, profile approval, employer/business record or consent is migrated. No new telemetry/storage. Source inspection only; all behavior unverified.
+
 ## 2026-10-21 — immutable source observation on new snapshots
 
 `ResumeSnapshot.origin` now captures server-observed source kind/opaque ID/revision where known, structured-content digest/time and saved/candidate/executor observation. It is not a receipt. Packet snapshots use captured packet.posting_text, never current listing content; design/exact PDF and master revision stay unknown. Legacy rows remain null. Existing owned export includes the new column; job/account cascade removes it; explicit snapshot delete removes history with a clearer confirmation. Restored copies retain reference in prep_context without modifying master. [Contract and limits](UNIFIED_SNAPSHOT_ORIGIN.md). Source changes only; all data/export/security behavior UNVERIFIED.

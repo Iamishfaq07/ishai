@@ -1,3 +1,11 @@
+# Active visual checkpoint — enterprise workbench, 2026-10-21
+
+**IMPLEMENTED / UNVERIFIED. NO VISUAL TESTING.** Owner explicitly prohibits testing. No runtime/browser/screenshot/contrast/accessibility check was performed. Existing screenshot matrices below are historical and do not depict the new palette/layout.
+
+Changed: paper/graphite/Slate blue shared palette, opaque panels, solid logo/SVG favicon/offline, shared page headers, Today editorial columns/opportunity rows/contextual journey rail, My Career/Prepare/identity/Discover/Opportunity Room headings/timeline. Existing binary icons/social assets not regenerated. Full viewport/theme/motion/zoom/keyboard/screen-reader matrix remains open, including business/desktop inheritance. [Design and deferred evidence recipe](UNIFIED_ENTERPRISE_DESIGN.md).
+
+---
+
 ## 2026-10-21 — saved-version source disclosure
 
 IMPLEMENTED / UNVERIFIED: responsive, wrapping native disclosure in saved-version list and comparison; existing focus-ring/touch-height patterns reused. Distinguishes saved/candidate-recorded/executor-reported/legacy source and links the current packet. No new animation/dependency. No browser checks, screenshots, contrast/layout/keyboard/motion checks were run, per owner instruction. Existing screenshots are historical and do not show this slice. Full viewport/theme/motion/zoom matrix remains open.

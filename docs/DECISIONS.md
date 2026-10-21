@@ -1542,3 +1542,10 @@ A matching company, a saved next_at or a Saba session does not establish a real 
 Keep immutable source observations on ResumeSnapshot at creation, with opaque IDs independent of source deletion. Do not infer legacy source, packet master revision or exact-file delivery. Existing current-packet screen is linked with a warning that its contents can change.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Latest owner direction supersedes purple/deep-space default. Keep existing fonts and vector geometry, solid accent, opaque surfaces, thin dividers and restrained emphasis. Legacy Nebula is an alias, not another visible swatch. Job shortcuts retain context; no completion/status inferred from visiting a step.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.

@@ -7,7 +7,6 @@ import {
   RefreshCw,
   Search,
   SlidersHorizontal,
-  Sparkles,
   X,
   CosmicEmptyState,
   LoadGate,
@@ -56,8 +55,8 @@ export function JobMatchesPage() {
   return (
     <>
       <PageHeader
-        icon={Sparkles}
-        title="Jobs matched to your resume"
+        icon={Search}
+        title="Discover opportunities"
         subtitle="From companies' own career pages and remote job boards. You apply on the original site."
         actions={
           profile.data && (

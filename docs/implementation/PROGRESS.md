@@ -1,3 +1,9 @@
+# Current checkpoint — enterprise design, 2026-10-21
+
+Owner merged PR448. Continuing with paper/graphite/Slate blue shared visual language and connected Today/core candidate layout. IMPLEMENTED / UNVERIFIED; no testing under explicit owner instruction. No backend/schema/dependency change or deployment. Full scope/remaining work: [enterprise slice](UNIFIED_ENTERPRISE_DESIGN.md), [current progress](UNIFIED_JOURNEY_PROGRESS.md). Older entries below are historical.
+
+---
+
 # V6 progress
 
 ## Owned round continuity — base3d9fa3b8,2026-10-21

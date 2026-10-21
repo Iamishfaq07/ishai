@@ -198,3 +198,10 @@ Deferred gates include migration fixtures/head contracts, populated PostgreSQL/S
 Migration a84b0f2d573e follows f73a9e1c462d and adds nullable resume_snapshots.origin without backfill. Schema must precede backend deployment regardless of interview-round flag. Neither migration was executed in this slice. Older backend can ignore the column; dropping it loses provenance and requires export/backup/operator approval. Production NO-GO.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+No schema/migration or provider configuration required by this visual slice. Prior pending migration/operator gates remain separate. Revert code to roll back palette/layout; source records unaffected. SVG/favicon/theme-init changes need ordinary existing web asset/CSP build pipeline later; no build/deploy was run. Binary/native/social icons are not regenerated.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
