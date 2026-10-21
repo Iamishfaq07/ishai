@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import type { InterviewOutcome, InterviewPrepView, InterviewRoundType, OrbitSession } from "@orbit/types";
 import {
   ArrowRight,
-  BookmarkCheck,
   CircleCheck,
   LoadGate,
   OUTCOMES,
@@ -107,10 +106,7 @@ function WrapUpForm({
       <Card>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
-              <BookmarkCheck className="h-3.5 w-3.5" aria-hidden /> Wrap-up
-            </p>
-            <h2 id="wrap-title" className="mt-1 font-display text-lg font-semibold">
+            <h2 id="wrap-title" className="font-display text-lg font-semibold">
               {view.company} · {view.title}
             </h2>
             <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">

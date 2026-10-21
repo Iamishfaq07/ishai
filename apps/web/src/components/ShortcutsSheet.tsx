@@ -55,7 +55,7 @@ export function ShortcutsSheet({ open, onClose }: { open: boolean; onClose: () =
     >
       <div className="px-5 py-4">
       <section aria-labelledby="keys-anywhere">
-        <h3 id="keys-anywhere" className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <h3 id="keys-anywhere" className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
           Anywhere
         </h3>
         <ul className="divide-y divide-zinc-100 dark:divide-white/10">
@@ -65,7 +65,7 @@ export function ShortcutsSheet({ open, onClose }: { open: boolean; onClose: () =
         </ul>
       </section>
       <section aria-labelledby="keys-resume" className="mt-5">
-        <h3 id="keys-resume" className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <h3 id="keys-resume" className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
           Resume editor
         </h3>
         <ul className="divide-y divide-zinc-100 dark:divide-white/10">
@@ -74,7 +74,7 @@ export function ShortcutsSheet({ open, onClose }: { open: boolean; onClose: () =
         </ul>
       </section>
       <section aria-labelledby="keys-live" className="mt-5">
-        <h3 id="keys-live" className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+        <h3 id="keys-live" className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
           In a live session
         </h3>
         <ul className="divide-y divide-zinc-100 dark:divide-white/10">

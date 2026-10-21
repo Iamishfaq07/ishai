@@ -72,6 +72,7 @@ async def sweeper(interval_s: float) -> None:
     from orbit_api.contact.routes import purge_expired_messages
     from orbit_api.entitlements import roll_due_grants
     from orbit_api.job_portal.alerts import send_due
+    from orbit_api.job_portal.digest import send_due as send_digests
     from orbit_api.support.routes import purge_idle_threads_now
 
     while True:
@@ -110,6 +111,13 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("job alerts sweep failed")
+        # Weekly progress emails the candidate turned on (job_portal/digest.py).
+        try:
+            await send_digests()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("weekly digest sweep failed")
         # Orbit Apply (auto_apply/planner.py): leases that ran out go back, and the setups due are planned.
         try:
             await plan_apply_due()

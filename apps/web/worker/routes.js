@@ -36,6 +36,7 @@ export const APP_ROUTES = [
   /^\/jobs\/(?:matches|tracker|outreach|profile|auto-apply|applications|journey|actions|weekly)$/,
   /^\/jobs\/(?:listing|mission)\/[^/]+$/,
   /^\/jobs\/alerts\/off$/,
+  /^\/jobs\/digest\/off$/,
   /^\/code\/[^/]+$/,
   /^\/offers\/[^/]+$/,
   /^\/extension\/connect$/,

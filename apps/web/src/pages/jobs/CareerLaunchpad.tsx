@@ -98,7 +98,7 @@ export function CareerLaunchpad() {
   return <section aria-labelledby="launchpad-title" className="min-w-0 space-y-5 break-words">
     <header className="relative overflow-hidden rounded-2xl bg-indigo-950 p-5 text-white sm:p-7">
       <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full border-[22px] border-indigo-400/15 motion-safe:animate-pulse" />
-      <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">Search setup · Step {step + 1} of 3</p>
+      <p className="text-xs font-semiboldst text-indigo-200">Search setup · Step {step + 1} of 3</p>
       <h2 id="launchpad-title" className="relative mt-2 text-2xl font-semibold">A clear start. A next step you can take.</h2>
       <p className="relative mt-2 max-w-xl text-sm text-indigo-100">Bring what you have, even if it is your first project. Build a resume, explore roles and start a focused search.</p>
       <ol aria-label="Getting started" className="relative mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-indigo-100">

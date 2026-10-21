@@ -76,8 +76,7 @@ export function JobOutreachPage() {
         subtitle="Keep your contacts, find someone at a company and write a thoughtful message—all in one place."
       />
       <Card className="my-5 p-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Your job network</p>
-        <h2 className="mt-2 text-xl font-semibold">Find the right person for a job</h2>
+        <h2 className="text-xl font-semibold">Find the right person for a job</h2>
         <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">Check saved contacts at the company, research public leads, capture a recruiter reply and draft a personal introduction—with source evidence and your company history together.</p>
         <Button variant="secondary" className="mt-3" aria-expanded={networkOpen} aria-controls="contact-finder-content" onClick={() => {
           const next = new URLSearchParams(params);

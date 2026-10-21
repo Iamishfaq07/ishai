@@ -62,3 +62,11 @@ or removes a job; the candidate drafts, reviews and sends.
 Also in this round: the launchpad and daily actions merged into Today (`/jobs`, `/jobs/actions` redirect to `/`),
 the Applications area reads Tracker · Auto-apply · Needs you · People, and auto-apply no longer needs the extension
 (docs/HOSTED_APPLY.md).
+
+### Weekly progress email (21 October 2026)
+
+Opt-in in "Your workflow rules" (`job_portal/digest.py`, migration `d3a5c7e9f1b4`). Once a week it summarises what the
+candidate recorded (applications, confirmed replies, interviews in the next 7 days, applications Orbit sent) and the
+top five actions from Today, with links. A week with nothing new sends nothing. It needs a verified email, runs in the
+existing background sweeper next to job alerts, and every email carries a sign-in-free stop link
+(`/jobs/digest/off`, a random token like job alerts). Counts are the candidate's own records, never a prediction.

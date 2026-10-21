@@ -46,7 +46,7 @@ export function FromTrackerBanner({ state }: { state: TrackerContext }) {
     <section aria-label="From your tracker" className="flex items-start gap-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 px-4 py-3">
       <CompanyLogo company={ctx.company} size="md" />
       <div className="min-w-0 flex-1 text-sm">
-        <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+        <p className="flex items-center gap-1.5 text-xs font-mediumr text-indigo-700 dark:text-indigo-300">
           <BookmarkCheck className="h-3.5 w-3.5" aria-hidden /> From your tracker
         </p>
         <p className="mt-0.5 font-medium">
