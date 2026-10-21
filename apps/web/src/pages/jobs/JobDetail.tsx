@@ -55,6 +55,7 @@ import { linkButton, textLink } from "./links";
 import { STATUSES, STATUS_LABEL, jobFacts, matchBasis, postedAgo, safeUrl, shortDate, stillOpenAt } from "./model";
 import { StagePill } from "./StagePill";
 import { SafetyCard } from "./SafetyCard";
+import { ScamCheck } from "./ScamCheck";
 import { EditEntry } from "./Tracker";
 import { JOBS_MATCHES, outreachPath } from "./paths";
 import { useJobActions } from "./useJobActions";
@@ -287,6 +288,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
 
           <PostingCheck checks={detail.checks ?? []} />
           <Provenance job={job} also={detail.also_listed ?? []} />
+          <ScamCheck posting={[job.title, job.company, job.salary ?? "", job.snippet ?? ""].join("\n")} />
           <SafetyCard job={{ id: job.id, title: job.title, company: job.company, url: job.url }} />
           {isSecurityRole(job.title) && <KashSecContext placement="listing" />}
         </aside>

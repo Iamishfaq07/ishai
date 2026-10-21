@@ -63,16 +63,23 @@ const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 const JOBS_TASK: NavItem = { ...JOBS, label: "Jobs", tab: "Jobs", to: "/jobs/matches", icon: Search,
   current: (p) => /^\/jobs(\/|$)/.test(p) };
 const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
-  current: (p) => /^\/(prepare|mock|interview|learn|code)(\/|$)/.test(p) };
+  current: (p) => /^\/(prepare|mock|interview|warmup)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: IdCard,
-  current: (p) => /^\/(career|resume-ai|linkedin|offers)(\/|$)/.test(p) };
+  current: (p) => /^\/career(\/|$)/.test(p) };
 
 /** Four task destinations; specialist tools remain available through More and search. */
-export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, _country: string = INDIA): NavGroup[] {
-  return [{ label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] }, { label: "More", items: [COPILOT] }];
+export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
+  return [
+    { label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] },
+    // The tools people open on their own get their own tabs; the rest live inside the tab they belong to.
+    { label: "Tools", items: [RESUME, LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD, LEARNING] },
+    { label: "Live", items: [COPILOT] },
+  ];
 }
 export function allNavItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
-  return [...navGroups(mock, country).flatMap((g) => g.items), ...specialists(mock, country)];
+  const seen = new Set<string>();
+  return [...navGroups(mock, country).flatMap((g) => g.items), ...specialists(mock, country)]
+    .filter((item) => !seen.has(item.id) && Boolean(seen.add(item.id)));
 }
 function specialists(mock: boolean, country: string): NavItem[] {
   return [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING, LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD];
