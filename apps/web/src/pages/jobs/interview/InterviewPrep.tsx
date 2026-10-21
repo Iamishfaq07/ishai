@@ -82,7 +82,7 @@ export function InterviewPrepPanel({ entry, onEntry }: { entry: JobTrackerEntry;
       ) : v ? (
         <div className="space-y-4">
           {roundsEnabled && <InterviewRounds entryId={entry.id} onSaved={() => { prep.reload(); onEntry(); }} />}
-          {!roundsEnabled && <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Debrief an interview you’ve had</summary><div className="mt-3"><InterviewDebrief entryId={entry.id} label="Interview" /></div></details>}
+          {!roundsEnabled && <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Debrief an interview you’ve had</summary><div className="mt-3"><InterviewDebrief entryId={entry.id} label="Interview" listingId={entry.listing_id} /></div></details>}
           {roundsEnabled ? <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Existing tracker date and manual controls</summary><p className="mb-3 text-xs text-zinc-600 dark:text-zinc-400">These controls remain available for historical dates and follow-ups. Editing them clears the selected round reference; saved round and preparation history stay intact.</p><WhenCard view={v} onSave={save} /></details> : <WhenCard view={v} onSave={save} />}
           <LaunchCard view={v} onRefresh={prep.reload} />
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">

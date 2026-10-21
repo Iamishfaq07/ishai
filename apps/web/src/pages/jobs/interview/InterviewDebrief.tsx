@@ -26,8 +26,10 @@ const link = cx("inline-flex min-h-11 items-center rounded text-sm font-semibold
  * next and story drafts (POST /v1/jobs/tracker/{id}/debrief). Nothing is saved until they choose: a story goes to the
  * story bank; the summary can be copied into the round's notes through the normal edit form.
  */
-export function InterviewDebrief({ entryId, roundId, label, initialNotes = "" }: {
+export function InterviewDebrief({ entryId, roundId, label, initialNotes = "", listingId }: {
   entryId: string; roundId?: string; label: string; initialNotes?: string;
+  /** The job's feed listing, so the thank-you writer opens on this job. */
+  listingId?: string;
 }) {
   const [copied, copy] = useCopy();
   const id = useId();
@@ -89,7 +91,8 @@ export function InterviewDebrief({ entryId, roundId, label, initialNotes = "" }:
         <Link className={link} to={`/jobs/mission/${encodeURIComponent(entryId)}?tab=practice`}>Practise these with Saba</Link></div>}
       {result.thank_you_points.length > 0 && <div><h5 className="text-sm font-semibold">Worth mentioning in a thank-you note</h5>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{result.thank_you_points.map((p, i) => <li key={i}>{p}</li>)}</ul>
-        <Link className={link} to="/jobs/outreach?view=messages">Draft a thank-you note</Link></div>}
+        <Link className={link} to={`/jobs/outreach?${new URLSearchParams({ view: "messages", kind: "thank_you",
+          details: result.thank_you_points.join("; "), ...(listingId ? { job: listingId } : {}) })}`}>Draft a thank-you note with these</Link></div>}
       {result.stories.length > 0 && <div><h5 className="text-sm font-semibold">Story drafts for your story bank</h5>
         <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Fill any [bracketed] gaps with what really happened after saving.</p>
         <ul className="mt-2 space-y-3">{result.stories.map((s, i) => <li key={i} className="rounded-lg border border-zinc-200 p-3 text-sm dark:border-white/10">

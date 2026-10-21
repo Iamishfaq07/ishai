@@ -18,14 +18,18 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db, sessionmaker
 from orbit_api.models import ApplicationPacket, CareerPlaybook, JobApplication, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, get_email_sender
-from orbit_api.ratelimit import limit
+from orbit_api.ratelimit import limit, limit_user
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/jobs/playbook/digest", tags=["career playbook"])
+# The same numbers on Today, as a strip at the top (no actions: Today lists those itself).
+week_router = APIRouter(prefix="/v1/jobs/week", tags=["career playbook"],
+                        dependencies=[Depends(limit_user("career-week", rate_per_s=1, burst=20))])
 WEEK = timedelta(days=7)
 SLACK = timedelta(hours=2)  # a sweep that runs a little early still sends this week's email
 BATCH = 50
@@ -139,3 +143,11 @@ async def turn_off(body: OffIn, db: Annotated[AsyncSession, Depends(get_db)]) ->
     row.weekly_digest = False
     row.revision += 1
     await db.commit()
+
+
+@week_router.get("")
+async def this_week(user: Annotated[User, Depends(current_user)],
+                    db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    """This week's numbers from the candidate's records, for the strip at the top of Today."""
+    s = await summary(db, user, datetime.now(UTC))
+    return {k: v for k, v in s.items() if k != "actions"}
