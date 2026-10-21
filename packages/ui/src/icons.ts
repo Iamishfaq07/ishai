@@ -172,3 +172,6 @@ export { Bell, Flag, GripVertical, List, Tag as TagIcon, UserPlus } from "lucide
 export { ArrowLeftRight } from "lucide-react";
 // Aptitude practice.
 export { Brain } from "lucide-react";
+
+// GitHub projects: a repository's stars.
+export { Star } from "lucide-react";

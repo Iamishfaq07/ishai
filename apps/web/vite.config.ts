@@ -32,6 +32,8 @@ export function contentSecurityPolicy(inlineScripts: string[], env: Record<strin
     TURNSTILE,
     ...RAZORPAY_CONNECT.split(" "),
     CF_ANALYTICS_CONNECT,
+    // GitHub's public REST API, read-only: the GitHub projects tool lists a user's public repositories by username.
+    "https://api.github.com",
     ...origins(env.VITE_API_URL),
     ...origins(env.VITE_LIVE_URL),
     ...origins(env.VITE_API_DIRECT_URL),
