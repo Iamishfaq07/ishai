@@ -345,7 +345,12 @@ export function SessionSetupPage() {
         document_ids: sessionDocumentIds(selectedDocs ?? new Set(), docs.data ?? null),
         ...(workspaceId ? { workspace_id: workspaceId } : {}),
         ...(instructions.trim() ? { instructions: instructions.trim() } : {}),
-        ...(fromJob.ctx ? { application_id: fromJob.ctx.application_id } : {}),
+        ...(fromJob.ctx ? { application_id: fromJob.ctx.application_id,
+          ...(fromJob.ctx.interview_round_id && fromJob.ctx.interview_round_revision ? {
+            interview_round_id: fromJob.ctx.interview_round_id,
+            interview_round_revision: fromJob.ctx.interview_round_revision,
+          } : {}),
+        } : {}),
       });
       const launch: LiveLaunchState = { systemAudio: systemAudio && supportsDisplayAudio(), ...(micId ? { micDeviceId: micId } : {}) };
       navigate(`/live/${session.id}`, { state: launch });

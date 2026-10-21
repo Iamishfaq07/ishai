@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.models import JobApplication, User
 from orbit_api.ratelimit import limit_user
@@ -104,6 +105,7 @@ def state(row: JobApplication) -> dict[str, Any]:
     material = [row.id, str(row.updated_at), row.status, str(row.next_at), str(row.applied_at)]
     return {"version": hashlib.sha256(json.dumps(material).encode()).hexdigest(), "id": row.id,
         "title": row.title, "company": row.company, "status": row.status,
+        "round_history_enabled": get_settings().personal_interview_rounds,
         "next_at": (row.next_at.replace(tzinfo=UTC) if row.next_at.tzinfo is None else row.next_at).isoformat()
         if row.next_at else None, "editable": row.status not in CLOSED}
 
@@ -176,6 +178,8 @@ async def confirm(entry_id: str, body: ConfirmIn, user: Annotated[User, Depends(
         changes.update(status=body.status, status_at=now)
         if body.status == "applied" and row.applied_at is None:
             changes["applied_at"] = now
+    if body.clear_next or body.next_at is not None:
+        changes.update(preparation_round_id=None, preparation_round_revision=None)
     if body.clear_next:
         changes["next_at"] = None
     elif body.next_at is not None:

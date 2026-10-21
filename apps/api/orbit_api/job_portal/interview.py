@@ -35,10 +35,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email, require_verified_user
 from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.documents.routes import ORIGIN_ORBIT, Origin, _check_quota, _ingest
 from orbit_api.documents.uploads import sanitize_text
 from orbit_api.job_portal import manual, session_associations
+from orbit_api.job_portal.round_journal import context_round
 from orbit_api.job_portal.mission import _score
 from orbit_api.job_portal.resume_binding import for_job
 from orbit_api.job_portal.rounds import MAX_ROUND, RoundType, as_round_type, review_score, round_label
@@ -136,6 +138,7 @@ class SavedQuestionsOut(BaseModel):
 
 
 class InterviewOut(BaseModel):
+    round_history_enabled: bool = False
     entry_id: str
     status: Status
     company: str
@@ -300,6 +303,7 @@ async def interview_out(db: AsyncSession, user: User, entry: JobApplication) -> 
     matches = await asyncio.to_thread(_story_matches, stories, requirements) if stories and requirements else []
     round_type = as_round_type(entry.round_type)
     return InterviewOut(
+        round_history_enabled=get_settings().personal_interview_rounds,
         entry_id=entry.id, status=entry.status, company=entry.company, title=entry.title,
         round=RoundOut(type=round_type, number=entry.round_number, label=round_label(round_type, entry.round_number),
                        at=_aware(entry.next_at) if entry.next_at else None),
@@ -419,6 +423,8 @@ async def update_interview(entry_id: str, body: InterviewIn, user: Annotated[Use
     await lock_account(db, user.id)
     entry = await _entry(db, entry_id, user)
     sent = body.model_fields_set
+    if {"at", "round_type", "round_number"} & sent:
+        entry.preparation_round_id = entry.preparation_round_revision = None
     if "at" in sent:
         entry.next_at = body.at
     if "round_type" in sent:
@@ -497,6 +503,8 @@ class ContextDoc(BaseModel):
 class SessionContextOut(BaseModel):
     """What a session for this interview starts with. Create it with these fields and `application_id`."""
     application_id: str
+    interview_round_id: str | None = None
+    interview_round_revision: int | None = None
     title: str
     role: str
     company: str
@@ -600,10 +608,13 @@ async def session_context(entry_id: str, user: Annotated[User, Depends(require_v
     await db.commit()
     requirements = await _requirements(db, user, entry, listing, doc)
     round_type = as_round_type(entry.round_type)
-    label = round_label(round_type, entry.round_number)
+    selected_round = await context_round(db, entry)
+    label = selected_round.label if selected_round else round_label(round_type, entry.round_number)
     docs = [d for d in (doc, resume_doc) if d is not None]
     return SessionContextOut(
         application_id=entry.id,
+        interview_round_id=selected_round.id if selected_round else None,
+        interview_round_revision=selected_round.revision if selected_round else None,
         title=f"{entry.company} — {label or entry.title}"[:300],
         role=entry.title[:300], company=entry.company[:120],
         interview_stage=(label or "Interview")[:80],
@@ -636,6 +647,7 @@ async def wrap_up(entry_id: str, body: WrapUpIn, user: Annotated[User, Depends(c
     are the upcoming round's: a next round is the one after this (its number from the round set, else from the live
     rounds started from the job); waiting, an offer or not this time has none, and the date is then a follow-up's."""
     entry = await _entry(db, entry_id, user)
+    entry.preparation_round_id = entry.preparation_round_revision = None
     s = await db.get(LiveSessionRow, body.session_id)
     if s is None or s.user_id != user.id or s.application_id != entry.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Session not found")

@@ -46,3 +46,7 @@ No claim that every supported browser/provider/OS combination or every historica
 - U12 — tracker timeline said Sent from your browser by Orbit Apply based only on legacy applied_via. It now labels that record conservatively, and explicit packet events separately show candidate/manual, executor report and uncertain outcome. Four parameterized owner/redaction tests verify state and no private receipt text/URL disclosure. Immutable snapshot source revision/actual delivery association remains an unresolved separate gap.
 
 Local PostgreSQL absence was an environment limitation at the first checkpoint; now cleared with a portable isolated runtime, full graph rollback proof and46 targeted contract/concurrency tests. Deployed staging and full release gates remain unverified.
+
+## Round continuity increment — implementation only
+
+The prior tracker’s single upcoming date lacked independent real-round records and original IANA zone/history. Draft implementation adds owned rounds, deliberate preparation selection, source-revision-bound Saba/session context and reschedule/debrief controls. This addresses the design/data gap in code only; no runtime regression, migration, ownership, UI or DST validation was performed under the latest no-testing instruction. Existing historical date values are not backfilled into asserted interviews. Shared migration fixtures/head contracts and all release gates remain pending.

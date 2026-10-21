@@ -316,6 +316,8 @@ export interface CreateSessionRequest {
   instructions?: string;
   /** Started from a tracked job (its interview prep): the round shows on that job. */
   application_id?: string;
+  interview_round_id?: string;
+  interview_round_revision?: number;
 }
 
 /** A saved interview setup ("Google — Senior Security Engineer"). */
@@ -388,6 +390,8 @@ export interface OrbitSession {
   video?: boolean;
   /** The tracked job it was started from. */
   application_id?: string | null;
+  interview_round_id?: string | null;
+  interview_round_revision?: number | null;
 }
 
 export interface SessionTurn {
@@ -1443,7 +1447,7 @@ export interface ContactRequest {
 
 /** GET /v1/jobs/tracker/{id}/timeline: one event of a tracked job's journey. */
 export interface JobTimelineEvent {
-  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "related_round" | "association" | "application" | "stage" | "next";
+  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "related_round" | "association" | "application" | "interview_round" | "stage" | "next";
   at: string;
   title: string;
   detail: string;
@@ -3050,6 +3054,7 @@ export interface InterviewRoundRef {
 
 /** GET /v1/jobs/tracker/{id}/interview: a tracked job's interview prep. No AI call. */
 export interface InterviewPrepView {
+  round_history_enabled?: boolean;
   entry_id: string;
   status: JobStatus;
   company: string;
@@ -3091,6 +3096,8 @@ export interface InterviewPrepUpdate {
 /** POST /v1/jobs/tracker/{id}/session-context: what a session for this interview starts with (no AI, no credit). */
 export interface InterviewSessionContext {
   application_id: string;
+  interview_round_id?: string | null;
+  interview_round_revision?: number | null;
   title: string;
   role: string;
   company: string;
@@ -3118,4 +3125,34 @@ export interface InterviewWrapUp {
   round_type?: InterviewRoundType | null;
   /** The next round's date and time, or when to follow up. */
   at?: string | null;
+}
+
+
+/** Candidate-recorded employer round; mock/live sessions remain separate execution records. */
+export interface CandidateInterviewRound {
+  id: string;
+  revision: number;
+  label: string;
+  round_type: InterviewRoundType | null;
+  number: number | null;
+  scheduled_at: string | null;
+  time_zone: string;
+  status: "planned" | "completed" | "cancelled";
+  notes: string;
+  outcome: "awaiting_reply" | "next_round" | "offer" | "not_selected" | "other" | null;
+  completed_at: string | null;
+  source: "candidate" | "calendar_review";
+  selected_for_preparation: boolean;
+  selection_stale: boolean;
+  practice_sessions: number;
+  earlier_practice_sessions: number;
+  history: Array<{ revision: number; action: string; at: string; scheduled_at: string | null;
+    time_zone: string; status: string; label: string; previous?: { scheduled_at: string | null; time_zone: string; status: string } }>;
+}
+export interface CandidateInterviewRounds {
+  enabled: boolean;
+  tracker_version: string;
+  editable?: boolean;
+  preparation_round_id?: string | null;
+  rounds: CandidateInterviewRound[];
 }

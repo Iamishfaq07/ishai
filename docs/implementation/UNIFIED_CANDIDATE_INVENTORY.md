@@ -170,3 +170,7 @@ Today now owns the highest-priority action and active opportunity rows; optional
 ## Follow-on integration status
 
 Opportunity timeline/session review now includes on-demand existing-session selection, safe report return, reviewed unlink/reassignment, owned attribution history and source-based completion totals. No new frontend route, navigation destination, tracker or session engine. Added backend action: POST /v1/jobs/tracker/{entry_id}/sessions/unlink. Existing link endpoint now writes idempotent attribution history. Account export/delete includes the new activity references. Existing application packet state is projected into the same timeline with conservative provenance and no private payloads. Local PostgreSQL/migration validation status is recorded in current progress; the route inventory remains broader than runtime certification.
+
+## Interview-round slice (base3d9fa3b8) — IMPLEMENTED / UNVERIFIED
+
+No new frontend destination. Existing Opportunity Room/InterviewPrep gains a default-OFF round editor/history; calendar intake can record a reviewed round, and existing Saba/session setup carries explicit source revision. New owned backend round actions are documented in UNIFIED_INTERVIEW_ROUNDS.md. Existing tracker-date controls remain in progressive disclosure. All current-slice verification is deferred by the latest owner instruction; prior route/runtime evidence is historical.

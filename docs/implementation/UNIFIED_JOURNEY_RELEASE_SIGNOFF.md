@@ -1,3 +1,15 @@
+# Current release decision — owned round slice
+
+**NO-GO / IMPLEMENTED, UNVERIFIED.** Base3d9fa3b8,2026-10-21. Owner explicitly prohibited further testing. No current-slice tests, builds, lint/typechecks, database/migration operations, browser screenshots, provider or hardware checks were run. Prior PR445 was merged only after a later explicit owner merge instruction; those earlier pass counts do not validate this new code.
+
+Experimental ORBIT_PERSONAL_INTERVIEW_ROUNDS remains default OFF. Additive migration f73a9e1c462d and new shared model fields are unverified; backend deployment requires schema rollout even if the UI feature stays disabled. Do not enable/deploy based on the earlier green local results. Current slice requires migration/contract/owner/isolation/timezone/plan/session/export/delete and visual verification when the owner reauthorizes it, plus existing staging/provider/operator gates.
+
+Review scope and rollback: [UNIFIED_INTERVIEW_ROUNDS.md](UNIFIED_INTERVIEW_ROUNDS.md). No new real environment/secret, application submission, recruiter send, charge, merge or manual deployment performed in this slice. Existing GitHub CI gates were not weakened; any automatically triggered hosted status is separate from checks executed here.
+
+---
+
+## Historical pre-merge checkpoint for PR445
+
 # Unified journey release decision — 2026-10-21
 
 Draft PR: https://github.com/Iamishfaq07/ishai/pull/445. Hosted CI run39521859957 could not execute any steps; six jobs report failure. API and desktop annotations identify account payment/spending-limit blocking. Owner must resolve GitHub Billing & plans and rerun CI. Local evidence does not replace hosted gates. Existing Cloudflare Workers integration was building when inspected; no manual deployment was issued or provider/staging proof inferred.

@@ -19,6 +19,7 @@ const DOT: Record<JobTimelineEvent["kind"], string> = {
   related_round: "bg-zinc-400",
   association: "bg-zinc-400",
   application: "bg-sky-500",
+  interview_round: "bg-violet-500",
   stage: "bg-emerald-500",
   next: "bg-emerald-400",
 };

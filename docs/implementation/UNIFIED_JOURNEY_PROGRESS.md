@@ -1,3 +1,21 @@
+# Active increment — interview-round continuity, 2026-10-21
+
+Base3d9fa3b8 after explicit owner-authorized merge of PR445. Branch orbit-interview-round-continuity-2026-10-21.
+
+**IMPLEMENTED / UNVERIFIED. NO TESTING.** The latest owner instruction supersedes the earlier validation requirement. No tests, lint, typechecks, builds, migration execution, browser checks, screenshots or provider/hardware validation were performed. Source reads/edits and Git/PR operations only; prior passing results below belong to earlier commits.
+
+Implemented in code: default-OFF owned round history with revision/status constraints, manual UTC/IANA schedule resolution, reviewed calendar record/deduplication, explicit current-preparation select/clear, reschedule/completion/cancellation/debrief, next-round/offer continuations, existing legacy-date controls, source-revision-bound Saba/session creation/replay, round-aware plan keys and preserved completion history, timeline projection, export/cascade semantics. Input drafts reuse existing bounded tab memory; no consent/state-change approval is restored. No new provider/dependency/global tab or external send.
+
+Migration f73a9e1c462d drafted, not applied. No historical round inference. Feature flag remains OFF in example configuration and no actual environment was changed. Earlier PostgreSQL proof does not validate this migration. Schema is required before this backend can be deployed, even with the experience flag off. Deferred migration fixture/head expectations and every runtime/security/visual gate remain open.
+
+No automated checks or migration fixture changes were used to manufacture a green result; deferred head/fixture maintenance is explicitly recorded for later verification. Historical migration helper seeding was adapted to avoid depending on newer ORM columns when inserting into its older checkpoint schema, but the helper was not executed.
+
+Details: [scope, authority, guards and rollback](UNIFIED_INTERVIEW_ROUNDS.md). Production NO-GO. No merge/deployment authorized for this new branch; open the next draft PR for review.
+
+---
+
+## Historical evidence — prior PR445 (not current-slice validation)
+
 # Unified journey progress — review checkpoint
 
 ## Draft PR and hosted CI

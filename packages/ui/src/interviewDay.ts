@@ -125,6 +125,9 @@ export function contextDocumentIds(ctx: Pick<InterviewSessionContext, "document_
 export function contextSessionFields(ctx: InterviewSessionContext) {
   return {
     application_id: ctx.application_id,
+    ...(ctx.interview_round_id && ctx.interview_round_revision ? {
+      interview_round_id: ctx.interview_round_id, interview_round_revision: ctx.interview_round_revision,
+    } : {}),
     role: ctx.role,
     company: ctx.company,
     interview_stage: ctx.interview_stage,

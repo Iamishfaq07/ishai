@@ -22,7 +22,7 @@ if (url.drivername != "postgresql+asyncpg" or url.host not in ("localhost", "127
     raise SystemExit("Use an empty local orbit_unified_* disposable PostgreSQL database only.")
 os.environ["ORBIT_ENV"] = "test"
 
-from orbit_api.models import JobApplication, Resume, User  # noqa: E402
+from orbit_api.models import Resume, User  # noqa: E402
 
 cfg = Config("alembic.ini")
 uid, rid, jid = [str(uuid.uuid4()) for _ in range(3)]
@@ -51,8 +51,12 @@ async def seed() -> None:
         await db.flush()
         db.add(Resume(id=rid, user_id=uid, title="Original source", data=content))
         await db.flush()
-        db.add(JobApplication(id=jid, user_id=uid, listing_id=jid, source="manual",
-            company="Fixture company", title="Fixture role", url="", apply_url="", resume_id=rid))
+        # Seed the historical schema explicitly; today's ORM may contain newer additive columns.
+        await db.execute(text("INSERT INTO job_applications "
+            "(id,user_id,listing_id,source,company,title,location,url,apply_url,status,notes,resume_id,"
+            "status_at,updated_at,created_at) VALUES (:jid,:uid,:jid,'manual','Fixture company','Fixture role',"
+            "'','','','saved','',:rid,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"),
+            {"jid": jid, "uid": uid, "rid": rid})
         await db.execute(text("INSERT INTO job_search_profiles (user_id,prefs,resume_id,created_at,updated_at) "
                               "VALUES (:uid,CAST(:prefs AS JSON),:rid,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"),
                          {"uid": uid, "rid": rid, "prefs": json.dumps(prefs)})

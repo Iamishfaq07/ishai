@@ -32,6 +32,7 @@ from orbit_api.models import (
     JobApplication,
     JobContact,
     JobFitCheck,
+    JobInterviewRound,
     JobOffer,
     JobPlanCheck,
     JobSearchProfile,
@@ -95,6 +96,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             LinkedInProfileRow.user_id == user_id))).all()],
         "code_attempts": [_row(r) for r in (await db.scalars(select(CodeAttempt).where(CodeAttempt.user_id == user_id)
                                                               .order_by(CodeAttempt.created_at))).all()],
+        "interview_rounds": [_row(r) for r in (await db.scalars(select(JobInterviewRound).where(
+            JobInterviewRound.user_id == user_id).order_by(JobInterviewRound.created_at))).all()],
         "job_offers": [_row(o) for o in (await db.scalars(select(JobOffer).where(JobOffer.user_id == user_id)
                                                            .order_by(JobOffer.created_at))).all()],
         "evidence": [_row(e) for e in (await db.scalars(select(EvidenceItem).where(EvidenceItem.user_id == user_id)
