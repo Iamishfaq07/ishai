@@ -13,6 +13,7 @@ import { missionPath } from "./jobs/paths";
 import { WeekStrip } from "./WeekStrip";
 import { StagePill } from "./jobs/StagePill";
 import { Stat } from "./prepare/parts";
+import { MoreTools } from "./tools/MoreTools";
 const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
 // The seven-day action queue (interviews, follow-ups, applications to review) lives here; /jobs/actions redirects.
 const Actions = lazy(() => import("./jobs/ActionDesk").then((m) => ({ default: m.JobActionDeskPage })));
@@ -102,5 +103,6 @@ export function HomePage() {
           <Button variant="ghost" size="sm" className="mt-2" onClick={reload}>Refresh opportunities</Button></section>
       </aside>
     </div>
+    <MoreTools home="today" shown={["/", ...QUICK.map((q) => q.to)]} title="Tools for your day" />
   </div>;
 }

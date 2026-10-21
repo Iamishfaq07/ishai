@@ -44,6 +44,7 @@ import {
 import { getShownMore, setShownMore } from "../../lib/jobsSession";
 import { JOBS_PROFILE } from "./paths";
 import { Sheet } from "./Sheet";
+import { MoreTools } from "../tools/MoreTools";
 
 /**
  * Jobs → Matches: the latest openings that match the user's resume (from companies' own career pages and
@@ -74,6 +75,7 @@ export function JobMatchesPage() {
         <Matches profile={profile.data} />
       ) : null}
       </LoadGate>
+      <div className="mt-10"><MoreTools home="jobs" shown={["/jobs/matches"]} title="Jobs tools" /></div>
     </>
   );
 }

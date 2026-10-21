@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
 import {
   ArrowRight, BookOpen, Building2, CalendarPlus, ClipboardCheck, Code2, ErrorNote, GraduationCap, Headphones,
-  ListChecks, MOCK_INTERVIEW_ENABLED, MessageSquareQuote, Mic, NotebookPen, Play, Reveal, ShieldCheck, Sparkles,
+  ListChecks, MOCK_INTERVIEW_ENABLED, Mic, NotebookPen, Play, Reveal, ShieldCheck, Sparkles,
   Target, UsersRound, Video, Zap, cx, focusRing,
 } from "@orbit/ui";
 import { api } from "../../lib/api";
@@ -13,6 +13,7 @@ import { STATUS_LABEL } from "../jobs/model";
 import { missionPath } from "../jobs/paths";
 import { StagePill } from "../jobs/StagePill";
 import { Stat, Tool, type ToolCard } from "./parts";
+import { MoreTools } from "../tools/MoreTools";
 
 const CLOSED = new Set(["hired", "withdrawn", "rejected"]);
 const MINUTE = 60_000;
@@ -148,12 +149,14 @@ export function PreparePage() {
       <Reveal as="ul" stagger className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
     </section>)}
 
+    <MoreTools home="prepare" shown={[...groups.flatMap((g) => g.items.map((t) => t.to)), "/jobs/tracker", "/prepare"]} />
+
     <section aria-labelledby="live-help" className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-5">
       <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"><ShieldCheck className="h-4 w-4" aria-hidden /></span>
         <div><h2 id="live-help" className="font-semibold">Live interview copilot</h2>
           <p className="mt-0.5 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">For real conversations only where the employer permits AI assistance. Separate from rehearsal.</p></div></div>
       <div className="flex flex-wrap gap-2"><Link to="/start" className={linkButton("secondary")}><Sparkles className="h-4 w-4" aria-hidden /> Open copilot</Link>
-        <Link to="/tools" className={linkButton("ghost")}><MessageSquareQuote className="h-4 w-4" aria-hidden /> All tools</Link></div>
+</div>
     </section>
   </div>;
 }
