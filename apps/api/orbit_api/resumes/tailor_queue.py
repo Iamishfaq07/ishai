@@ -155,6 +155,28 @@ async def enqueue(resume_id: str, body: QueueIn, user: Annotated[User, Depends(r
     return [_item(j) for j in made]
 
 
+async def on_save(db: AsyncSession, user: User, listing: JobListing, source: Resume | None) -> bool:
+    """The "tailor each job I save" workflow rule (job_portal/playbooks.py): queues one item for a job just saved from
+    the feed, under the same limits as queuing by hand. Never raises: when there is no resume, no room or not enough
+    credit it simply doesn't queue, and the save itself is unaffected. The caller commits."""
+    if source is None or not user.email_verified:
+        return False
+    pending = await db.scalar(select(func.count()).select_from(Job).where(
+        Job.kind == KIND, Job.dedupe_key.like(f"{_prefix(user.id)}%"), Job.status.in_(("queued", "running")))) or 0
+    count = await db.scalar(select(func.count()).select_from(Resume).where(Resume.user_id == user.id)) or 0
+    if pending >= MAX_PENDING or count + pending + 1 > MAX_RESUMES:
+        return False
+    allowance = await allowance_for(db, user)
+    if not allowance.unlimited and (await allowance.status()).credits_left <= pending:
+        return False
+    item_id = str(uuid.uuid4())
+    db.add(Job(id=item_id, kind=KIND, dedupe_key=f"{_prefix(user.id)}{item_id}", payload={
+        "item": item_id, "user_id": user.id, "source_id": source.id,
+        "label": f"{listing.title} · {listing.company}"[:120], "job_text": "", "listing_id": listing.id,
+        "automatic": True}))
+    return True
+
+
 @router.delete("/tailor-queue/{item_id}", status_code=204)
 async def remove(item_id: str, user: Annotated[User, Depends(current_user)],
                  db: Annotated[AsyncSession, Depends(get_db)]) -> None:

@@ -8,7 +8,7 @@ import { useAsync } from "../../lib/useAsync";
 interface Playbook {
   revision: number; follow_up_days: number | null; prep_hours: number | null;
   thank_you_hours: number | null; stale_days: number | null; saved_days: number | null;
-  weekly_digest: boolean;
+  weekly_digest: boolean; auto_tailor: boolean;
 }
 export function PlaybookEditor({ onChanged }: { onChanged: (saved: boolean) => void }) {
   const { hash } = useLocation();
@@ -77,6 +77,10 @@ function Editor({ initial, onSaved, onReload }: { initial: Playbook; onSaved: (n
     <label className="flex items-start gap-2 rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10">
       <input type="checkbox" className="mt-1" checked={draft.weekly_digest} disabled={busy} onChange={(e) => setDraft({ ...draft, weekly_digest: e.target.checked })} />
       <span><span className="font-medium">Weekly progress email</span><span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">Once a week: what you recorded, replies, interviews coming up and your next actions. Skipped when there is nothing new. Needs a verified email; every email has a one-click stop link.</span></span>
+    </label>
+    <label className="flex items-start gap-2 rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10">
+      <input type="checkbox" className="mt-1" checked={draft.auto_tailor} disabled={busy} onChange={(e) => setDraft({ ...draft, auto_tailor: e.target.checked })} />
+      <span><span className="font-medium">Tailor a resume for each job I save</span><span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">When you save a new job from Discover, Orbit makes a tailored copy of your search resume in the background, ready in Resume AI. Uses resume credits like tailoring by hand, and skips quietly when credits run out. Claims your resume can’t back are never added; they wait for you to confirm.</span></span>
     </label>
     <div className="flex flex-wrap gap-2"><Button type="submit" loading={busy}>Save workflow rules</Button>
       <Button type="button" variant="secondary" disabled={busy} onClick={() => void reload()}>Reload saved rules</Button></div>

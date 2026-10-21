@@ -505,6 +505,11 @@ class MockLLMProvider(LLMProvider):
                 {"question": f"[mock] What would success look like in the first 90 days? ({i + 1})",
                  "why": "[mock] Shows you're thinking about delivering, not just landing the job."}
                 for i in range(4)]})
+        if request.request_type == "first_look":
+            return json.dumps({"impression": "[mock] Reads as a backend engineer; the job's main platform skill isn't "
+                               "visible until the second role.",
+                               "headline": "[mock] Backend Engineer · Python, Go",
+                               "summary": "[mock] I build backend services in Python and Go, with 99 [what you led]."})
         if request.request_type == "interview_debrief":
             return json.dumps({"questions": [
                 {"question": "[mock] Tell me about a time you handled a production incident.", "kind": "behavioral",

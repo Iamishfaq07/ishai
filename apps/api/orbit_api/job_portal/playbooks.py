@@ -33,6 +33,7 @@ class Rules(BaseModel):
     stale_days: int | None = Field(None, ge=14, le=90, strict=True)
     saved_days: int | None = Field(None, ge=3, le=60, strict=True)
     weekly_digest: StrictBool = False  # the weekly progress email (digest.py)
+    auto_tailor: StrictBool = False  # a tailored resume for each job saved from the feed (tailor_queue.on_save)
 
 
 class Save(Rules):
@@ -42,7 +43,7 @@ class Save(Rules):
 async def settings(db: AsyncSession, user_id: str) -> dict[str, Any]:
     row = await db.get(CareerPlaybook, user_id, populate_existing=True)
     return {"revision": row.revision if row else 0, **{key: getattr(row, key) if row else None for key in RULES},
-            "weekly_digest": bool(row and row.weekly_digest)}
+            "weekly_digest": bool(row and row.weekly_digest), "auto_tailor": bool(row and row.auto_tailor)}
 
 
 RULES = ("follow_up_days", "prep_hours", "thank_you_hours", "stale_days", "saved_days")
@@ -170,6 +171,7 @@ async def save(body: Save, user: Annotated[User, Depends(current_user)],
         row.digest_token = row.digest_token or new_token()
         row.digest_sent_at = None  # the first email goes out on the next pass, then weekly
     row.weekly_digest = body.weekly_digest
+    row.auto_tailor = body.auto_tailor
     row.revision += 1
     await db.commit()
     return await settings(db, user.id)

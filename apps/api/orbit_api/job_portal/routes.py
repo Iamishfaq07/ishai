@@ -900,11 +900,25 @@ async def track(body: TrackIn, user: Annotated[User, Depends(current_user)],
                 db: Annotated[AsyncSession, Depends(get_db)]) -> TrackerOut:
     """Save a job (or mark it applied) from the feed. Saving one that's already tracked moves it to `status`."""
     row = await _listing(db, body.listing_id)
+    new = row.id not in await _tracked(db, user, [row.id])
     entry = await _track(db, user, row, body.status)
     _move(entry, body.status)
+    if new and body.status in ("saved", "applied"):
+        await _tailor_on_save(db, user, row)
     await db.commit()
     await db.refresh(entry)
     return _tracker_out(entry, True, _still_listed(row.source, row.fetched_at))
+
+
+async def _tailor_on_save(db: AsyncSession, user: User, row: JobListing) -> None:
+    """The opt-in "tailor each job I save" rule: a tailored copy of the search resume, in the background queue."""
+    from orbit_api.job_portal.playbooks import settings
+    from orbit_api.resumes.tailor_queue import on_save
+
+    if not (await settings(db, user.id))["auto_tailor"]:
+        return
+    profile = await db.get(JobSearchProfile, user.id)
+    await on_save(db, user, row, await _resume_for(db, user, profile))
 
 
 def _move(entry: JobApplication, to: Status) -> None:

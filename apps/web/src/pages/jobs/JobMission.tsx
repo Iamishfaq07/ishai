@@ -41,6 +41,7 @@ import { JobSabaPractice, InterviewPrepPanel } from "./interview/InterviewPrep";
 
 import { opportunityStart } from "./opportunity";
 import { careerToolHref } from "../../lib/opportunityTrail";
+import { FirstLook } from "./FirstLook";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
@@ -162,6 +163,7 @@ export function JobMissionPage() {
                   {tab === "plan" && <PrepPlanPanel key={entry.id} entry={entry} onOpenInterview={() => setTab("interview")} />}
                   {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel key={entry.id} mission={m} entry={entry} onMission={update} />}
+                  {tab === "resume" && <FirstLook key={`first-look:${entry.id}`} entryId={entry.id} resumeId={m.resume?.id} />}
                   {tab === "company" && <CompanyPanel key={entry.id} entry={entry} />}
                   {tab === "practice" && <PracticePanel key={entry.id} mission={m} entry={entry} onLinked={mission.reload} />}
                   {tab === "timeline" && (

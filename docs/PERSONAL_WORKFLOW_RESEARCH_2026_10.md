@@ -89,3 +89,14 @@ driven tailoring, AGPL; concept only). No code reused.
   skills the postings ask for that the resume and profile show or don't, ranked by how many jobs ask. Deterministic,
   the feed's own matcher, no AI request. Shown on the Tracker once two or more jobs are tracked. "Not shown" is worded as
   not on the resume, never as "you lack it".
+
+## Round four, 21 October 2026: recruiter first look and tailor on save
+
+- **Recruiter first look** (`job_portal/first_look.py`, `POST /v1/jobs/tracker/{id}/first-look`): for one job, where
+  its most-asked skills appear in the resume (in the top third a first pass reads, further down, or not at all) with
+  the feed's matcher, then an AI first impression and a headline and summary written from the resume's own facts.
+  Any number the resume doesn't contain is replaced with a [number] prompt. Nothing is saved. In the job's Resume tab.
+- **Tailor on save** (workflow rule, migration `e5b7d9f1a3c6`): each new job saved from Discover queues a tailored
+  copy of the search resume in the existing background tailoring queue, with the same limits and credits as queuing by
+  hand. It skips quietly when there is no resume, room or credit, and never blocks the save. Inspired by the
+  "tailor every application" loops in career-ops and ai-job-search, without auto-submitting anything.
