@@ -121,3 +121,13 @@ export function scoreJob(auto: Scores, ratings: Scores, weights: Weights) {
   const weakest = [...weighted].sort((a, b) => (a.value ?? 0) - (b.value ?? 0))[0];
   return { score: rounded, grade: grade(rounded), parts, strongest, weakest, unknown: parts.filter((p) => !p.known).length };
 }
+
+/** The candidate's deal-breakers ("night shift", "bond", "relocation") found in a job's title, place or post, whole
+ *  words, any case. A hit vetoes the job (career-ops and ai-job-search treat deal-breakers the same way). */
+export function dealBreakers(text: string, terms: string[]): string[] {
+  const lower = text.toLowerCase();
+  return terms.map((t) => t.trim()).filter((t) => t.length >= 2).filter((t) => {
+    const escaped = t.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+    return new RegExp(`(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "u").test(lower);
+  });
+}
