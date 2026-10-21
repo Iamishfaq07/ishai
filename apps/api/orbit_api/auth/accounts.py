@@ -98,6 +98,9 @@ async def delete_account(db: AsyncSession, user: User, audit: AuditLog) -> None:
     from orbit_api.business.companies import hand_over_on_account_deletion
 
     await hand_over_on_account_deletion(db, user_id)
+    # Career attribution history is candidate data, unlike the retained security audit.
+    await db.execute(delete(AuditLog).where(AuditLog.user_id == user_id,
+        AuditLog.action.in_(("career.session.link", "career.session.unlink"))))
     await db.delete(user)
     await db.execute(update(AuditLog).where(AuditLog.user_id == user_id).values(ip=None))
     await db.execute(update(ProviderRequest).where(ProviderRequest.user_id == user_id).values(user_id=None))

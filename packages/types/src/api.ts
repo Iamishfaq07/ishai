@@ -1443,12 +1443,14 @@ export interface ContactRequest {
 
 /** GET /v1/jobs/tracker/{id}/timeline: one event of a tracked job's journey. */
 export interface JobTimelineEvent {
-  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "related_round" | "stage" | "next";
+  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "related_round" | "association" | "application" | "stage" | "next";
   at: string;
   title: string;
   detail: string;
   link: string | null;
   upcoming: boolean;
+  /** Record provenance, not an employer-confirmed receipt or hiring estimate. */
+  provenance?: "saved_record" | "candidate_recorded" | "executor_reported" | "outcome_uncertain" | "suggestion";
   /** Owned session available for explicit association review. */
   session_id?: string | null;
   /** Only an explicitly linked ended session can count as completed practice. */

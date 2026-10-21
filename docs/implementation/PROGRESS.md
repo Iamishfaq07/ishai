@@ -2,7 +2,7 @@
 
 ## Unified candidate foundation — 2026-10-21
 
-The current detailed owner instruction re-enabled verification. Fresh local evidence: API3798 passed/17 skipped, final affected provenance/identity suites39 passed; workspace tests/typecheck/lint/build and22 bundle budgets pass; root browser86 and deferred V6 browser21 pass. This is a bounded identity/Today/Opportunity Room/Saba foundation, not completion of V6 or the full redesign. See [current progress](UNIFIED_JOURNEY_PROGRESS.md), [visual evidence](UNIFIED_JOURNEY_VISUAL_QA.md) and [NO-GO production sign-off](UNIFIED_JOURNEY_RELEASE_SIGNOFF.md). Earlier skipped/unverified entries below are retained as history. Draft PR for review; no merge/deploy.
+Follow-on: full API3807/17 skipped, root browser87, targeted SQLite/PostgreSQL46 each, and local migration rollback proof PASS; reviewed session unlink/history and truthful packet evidence now implemented. The current detailed owner instruction re-enabled verification. Fresh local evidence: API3798 passed/17 skipped, final affected provenance/identity suites39 passed; workspace tests/typecheck/lint/build and22 bundle budgets pass; root browser86 and deferred V6 browser21 pass. This is a bounded identity/Today/Opportunity Room/Saba foundation, not completion of V6 or the full redesign. See [current progress](UNIFIED_JOURNEY_PROGRESS.md), [visual evidence](UNIFIED_JOURNEY_VISUAL_QA.md) and [NO-GO production sign-off](UNIFIED_JOURNEY_RELEASE_SIGNOFF.md). Earlier skipped/unverified entries below are retained as history. Draft PR for review; no merge/deploy.
 
 
 ## Increment 7 — connected opportunity tools (base `ddc03794`)

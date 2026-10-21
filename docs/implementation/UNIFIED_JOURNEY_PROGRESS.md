@@ -75,3 +75,44 @@ Screenshot manifest contains88 runtime PNGs with hashes. Manual filled320 inspec
 NO-GO production. PostgreSQL, deployed isolated staging, live providers, real screen reader/zoom, backup/restore, hardware/signing/updater and remaining phase2–7 authority/journey work require further evidence. No merge, deploy, real send or credentials/provider result manufactured.
 
 Final mobile refinement: reviewed-identity import/master/Discover/two-job/Saba browser journey1 PASS17.9s; web build151 pages PASS and22 budgets PASS. Updated populated320/390 screenshots copied byte-for-byte from unified-mobile-final; manifest regenerated88 PNGs. No further production edits after this checkpoint.
+
+## Follow-on slice — reversible attribution and source evidence
+
+PR445 remains OPEN/DRAFT; origin/main is still e1426076 and no review requested code changes. Continued on the same review branch; no merge or force-push.
+
+Implemented:
+
+- Ended owned sessions can be explicitly unlinked, reviewed and linked to a different owned opportunity. Foreign IDs, active sessions and stale actions targeting another job are rejected; repeated same-state requests are idempotent. Transcript, report, role, company, instructions and document context are not rewritten. Existing session list supplies the optional on-demand picker (latest200); no second session index or primary navigation.
+- Link/unlink history uses existing AuditLog with only owned opaque job/session references and action/time. Export includes those exact references; account deletion removes this career attribution history. Existing retained security-audit policy remains unchanged. No legacy association history is fabricated/backfilled.
+- Related and picker reports retain safe return navigation without automatically associating a report. Journey components remount per opportunity and reject late mutation/picker writes after leaving.
+- Linked timeline sessions are queried separately from recent unlinked suggestions:90 newer unrelated sessions no longer evict older job-linked history. Mission practice/live counts aggregate all owned ended sessions rather than the ten-row timeline preview (13 fixture practices count13, not10).
+- Timeline application evidence reads only explicit owned packet/application associations and projects identity/status/time, not private fields/answers/confirmation text/URLs. Candidate-recorded, executor-reported and uncertain outcomes stay distinct; no employer receipt is inferred. Long evidence descriptions wrap instead of hiding the qualification in an ellipsis.
+
+Verification and corrections:
+
+- Initial targeted API run28 PASS/1 new fixture failure: the new fixture tried saving identical manual jobs twice; the real duplicate guard correctly returned409. Corrected second fixture company. Targeted29 PASS14.89s.
+- Ruff initially identified import/line formatting; configured mypy caught SQLAlchemy Row-to-dict typing and an implicit re-export. Fixed with explicit imports and typed row comprehension; Ruff PASS, mypy PASS291 source files.
+- New browser initially selected dialog while shared confirmation correctly exposes alertdialog. Corrected the semantic selector; cross-job review/link/unlink/report-preservation journey1 PASS13.9s, then expanded actual report navigation/return proof1 PASS15.7s. No production dialog behavior weakened.
+- Workspace suite PASS (web601, UI595, desktop82, extension41, worker7+5); typecheck PASS; lint PASS with the same two existing SupportChat/SessionSetup warnings. Build151 pages and22 unchanged budgets PASS; entry169kB gzip, CSS32.5. Full current API/browser integration results are recorded below when complete.
+
+### Local PostgreSQL gate unblocked
+
+Provisioned portable PostgreSQL16.15 from the official EDB archive outside the repository, compiled official pgvector tagv0.8.7 (f37c13f68b57d2c3472b2214fbcff699d6d34876) using existing Visual Studio Build Tools. No system service, production URL/credential or application dependency was introduced. Temporary cluster listens only on127.0.0.1:55463 and uses synthetic fixture data. Archive SHA256 computed locally:25e6fcdfb8caec38691bf461125e7564508760666f7b8e5dc6a5f0818f58f81e (not an independent publisher signature verification).
+
+- Initial PostgreSQL target39 PASS24.06s; expanded owner/export/delete/master/job/session/optimistic-concurrency checks46 PASS24.81s, including competing session links and same-version master selection. Same final group on SQLite46 PASS24.65s. These are local database-contract results, not deployed staging evidence.
+- Full migration graph upgrade/head → downgrade/base → parent, then realistic synthetic user/profile/resume/job fixture → identity upgrade → downgrade → upgrade: PASS. Original source content, source ID, job link and preferences survive identity rollback; metadata is not automatically restored as approval. Initial new fixture exceeded listing_id's36-character constraint; corrected fixture ID rather than changing the real schema.
+- Reproducible tool: tools/check_candidate_identity_postgres.py. Requires an empty local PostgreSQL database named orbit_unified_* and refuses any existing public application rows. Guard refusal on a populated fixture DB was verified; final fresh fixture proof PASS. It quotes table identifiers through SQLAlchemy expressions, not raw dynamic SQL.
+- Existing hosted PostgreSQL CI race step now includes candidate identity, session association and timeline regressions. No required check was removed or skipped. GitHub billing remains an external hosted-CI gate until a fresh run proves otherwise.
+
+Logs in Windows TEMP: orbit-unified-next-api.log, orbit-unified-next-browser.log, orbit-unified-attribution-{workspace,build,budget,sqlite-targeted,full-api,browser-full}.log, orbit-unified-postgres-final.log, orbit-unified-postgres-identity-migration-verified.log and orbit-unified-postgres-guard.log. The completed full suite reports3807 passes (the prior3798 plus all9 new association/provenance/race cases); the same races are also included in the separate46-case SQLite/PostgreSQL groups.
+
+### Final follow-on integration gate
+
+- `uv run pytest -q`:3807 PASS,17 skipped,1 existing TestClient deprecation warning,876.46s (14m36s). Backend source unchanged after this run. Fresh targeted group46 PASS on each SQLite and PostgreSQL; no skips or weakened fixtures were used to claim concurrency proof.
+- `corepack pnpm exec playwright test --output=test-results/unified-attribution-final`:87 PASS10.1m. Includes the existing flows, new association review/cancel/unlink/reassignment/report return and refreshed seven-width/two-theme/Full-Off matrix. New screenshot-only wait was refined separately to await actual confirmation DOM removal (an exiting inert dialog disappears from the accessibility tree before its visual animation ends); no arbitrary sleeps or altered dialog behavior. The final focused journey/proof result is recorded with visual QA.
+- Workspace tests/typecheck/lint PASS; same601/595/82/41/7+5 counts, two preexisting lint warnings. Build151 pages and22 unchanged bundle budgets PASS. Ruff including standalone migration tool PASS; mypy291 source files PASS.
+- Local PostgreSQL runtime verified version16.15/vector0.8.7 and listen address127.0.0.1:55463. Stopped successfully using pg_ctl fast shutdown after tests; no background database/service left running. Synthetic cluster and binaries remain outside the repository for reproducibility.
+
+Current scope remains phased: attribution controls/source counts and application evidence projection are complete for this slice; immutable snapshot/actual receipt lineage, owned rounds/IANA history, offer/joining and full approval-consumer migration remain next. No new schema, provider charge, generalized agent, real application/email or production deploy. Production NO-GO remains for incomplete journey and external/operator gates.
+
+Final V6 continuity gate21 PASS2.4m, isolated output unified-attribution-v6. Final attribution proof1 PASS15.9s after waiting for actual confirmation DOM unmount; both screenshots recopied and manifest updated90 files. No application-source changes followed the successful gates.

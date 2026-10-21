@@ -38,7 +38,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
 from orbit_api.documents.routes import ORIGIN_ORBIT, Origin, _check_quota, _ingest
 from orbit_api.documents.uploads import sanitize_text
-from orbit_api.job_portal import manual
+from orbit_api.job_portal import manual, session_associations
 from orbit_api.job_portal.mission import _score
 from orbit_api.job_portal.resume_binding import for_job
 from orbit_api.job_portal.rounds import MAX_ROUND, RoundType, as_round_type, review_score, round_label
@@ -46,6 +46,7 @@ from orbit_api.job_portal.routes import Status, _full_text, _job_text, _move
 from orbit_api.live import company_styles
 from orbit_api.live.events import QuestionType
 from orbit_api.models import (
+    AuditLog,
     Document,
     DocumentChunk,
     JobApplication,
@@ -331,9 +332,35 @@ async def link_reviewed_session(entry_id: str, body: SessionAssociationIn,
         raise HTTPException(409, "This session already belongs to another opportunity.")
     if session.status != "ended":
         raise HTTPException(409, "Finish the session before reviewing its association.")
-    session.application_id = entry.id
+    if session.application_id != entry.id:
+        db.add(AuditLog(user_id=user.id, action=session_associations.LINK,
+            target=session_associations.target(entry.id, session.id)))
+        session.application_id = entry.id
     await db.commit()
     return {"session_id": session.id, "application_id": entry.id}
+
+
+@router.post("/{entry_id}/sessions/unlink", dependencies=[read_limit])
+async def unlink_reviewed_session(entry_id: str, body: SessionAssociationIn,
+                                  user: Annotated[User, Depends(current_user)],
+                                  db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str | None]:
+    """Remove attribution only. Recorded transcript, context and report remain unchanged."""
+    await lock_account(db, user.id)
+    entry = await _entry(db, entry_id, user)
+    session = await db.scalar(select(LiveSessionRow).where(LiveSessionRow.id == body.session_id,
+        LiveSessionRow.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+    if session is None:
+        raise HTTPException(404, "Session not found")
+    if session.application_id not in (None, entry.id):
+        raise HTTPException(409, "This session belongs to another opportunity. Refresh before changing it.")
+    if session.status != "ended":
+        raise HTTPException(409, "Finish the session before changing its association.")
+    if session.application_id == entry.id:
+        db.add(AuditLog(user_id=user.id, action=session_associations.UNLINK,
+            target=session_associations.target(entry.id, session.id)))
+        session.application_id = None
+    await db.commit()
+    return {"session_id": session.id, "application_id": session.application_id}
 
 
 @router.get("/{entry_id}/interview", response_model=InterviewOut, dependencies=[read_limit])

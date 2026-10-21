@@ -18,3 +18,15 @@ Replies/invitation input is retained only in bounded tab memory, keyed by authen
 ## Remaining lineage work
 
 Existing ResumeSnapshot content is preserved, but immutable origin revision/reference and actual submission receipt associations require a later migration. Do not reconstruct historical delivered versions. The new master review is one candidate-confirmed version, not field-by-field external verification. Every legacy specialist/automation consumer has not yet been migrated to require this approval projection. Complete source-version orchestration and audit-event coverage remain required for the full redesign.
+
+## Reviewed attribution follow-on
+
+POST /v1/jobs/tracker/{entry_id}/sessions/unlink accepts session_id and confirmed=true. It removes only the owned ended session's current opportunity association. Its source transcript/report/setup remain unchanged. Reassignment requires unlink then a fresh reviewed link; a stale prior room cannot remove a different job's association. No prior event is invented from company text.
+
+Existing AuditLog stores career.session.link/unlink with opaque application:session IDs, owner and timestamp, only when state actually changes. Repeated operations do not duplicate events. Account export includes opportunity_session_associations with both IDs; account deletion explicitly deletes these career rows, unlike the existing retained security audit. History of deleted job/session IDs can remain as opaque activity references until account deletion; no titles/transcript/raw content are copied into audit. No change to recording consent, retention of actual session source records or external sends.
+
+Timeline reads up to20 attribution changes and ten linked session previews; mission totals aggregate all owned ended sessions. Related-name suggestions remain bounded and uncounted. Optional review picker uses the existing most-recent200 owned sessions and only offers ended unbound ones; it does not imply exhaustiveness. Report return query carries navigation only, not artifact attribution.
+
+Application timeline labels describe stored state only: candidate-recorded, executor-reported, uncertain or saved/prepared. Explicit owned packet.application_id is required. No raw packet answers, private confirmation text or final URLs are returned; no historical employer receipt or submitted resume version is reconstructed.
+
+Local PostgreSQL16.15/pgvector0.8.7 migration round-trip and46 ownership/concurrency/lifecycle checks now PASS. Deployed PostgreSQL staging, backup/restore and remaining receipt/source-version migration remain separate gates.

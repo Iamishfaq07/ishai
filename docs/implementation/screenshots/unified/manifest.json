@@ -48,8 +48,8 @@
       "file": "after-career-dark-320-full.png",
       "width": 320,
       "height": 1606,
-      "bytes": 95579,
-      "sha256": "dd408cb25d0004a2860949bea191fde5cc7869ae9f0522a6697b4daf9e329e04"
+      "bytes": 95582,
+      "sha256": "c2100b98913eebceadc7ffca7f53cbcd7d27ed0b76851b2d2fe919210fb0d73d"
     },
     {
       "file": "after-career-dark-320.png",
@@ -62,8 +62,8 @@
       "file": "after-career-dark-360-full.png",
       "width": 360,
       "height": 1466,
-      "bytes": 90537,
-      "sha256": "d5e9550ed13d1354fa43065e32e30793c2d688d6bd35af23cbf9ea65f9fce95f"
+      "bytes": 90533,
+      "sha256": "9f050837c0f19ca9cb67f2554dea1675f145199635ffbd9daf61fb3b995daf82"
     },
     {
       "file": "after-career-dark-360.png",
@@ -76,8 +76,8 @@
       "file": "after-career-dark-390-full.png",
       "width": 390,
       "height": 1418,
-      "bytes": 90005,
-      "sha256": "1fb740d17639eedb8889bd923114c28843e22cafcd33fb812bd41953dc10eff7"
+      "bytes": 90008,
+      "sha256": "d7e6e9a2ac9cefa0ed803af2b5f62259a00036a9aa92f92d318968d9345150b8"
     },
     {
       "file": "after-career-dark-390.png",
@@ -146,8 +146,8 @@
       "file": "after-career-light-320-full.png",
       "width": 320,
       "height": 1606,
-      "bytes": 91826,
-      "sha256": "9d1349b583ff20571290e6a08ac5443866a5684a037ce8d75a095cfaab46ab70"
+      "bytes": 91835,
+      "sha256": "3f281c0168615335f3d34bd1da0d9a9ffa3a7d8c144ab392eb2fc1b2fbbe2786"
     },
     {
       "file": "after-career-light-320.png",
@@ -160,8 +160,8 @@
       "file": "after-career-light-360-full.png",
       "width": 360,
       "height": 1466,
-      "bytes": 87104,
-      "sha256": "fe162f3754a5ab6ca29f8c9ab418718e756928960be38d4fe33d2794e28bcba8"
+      "bytes": 87115,
+      "sha256": "3fd55b568fd437cde96aea65a7773ad668295a36307abcd93e155ebc21740c27"
     },
     {
       "file": "after-career-light-360.png",
@@ -174,8 +174,8 @@
       "file": "after-career-light-390-full.png",
       "width": 390,
       "height": 1418,
-      "bytes": 86518,
-      "sha256": "6da9e582ceb67463432b08d721bcf7dfca64966e3b40e3831ea8753fc77e8527"
+      "bytes": 86522,
+      "sha256": "e2319a9f4020b2b16a29638c0ff488ddc8dd28944671c01b1ca593bf3a538b3e"
     },
     {
       "file": "after-career-light-390.png",
@@ -188,8 +188,8 @@
       "file": "after-career-light-768-full.png",
       "width": 768,
       "height": 1134,
-      "bytes": 94104,
-      "sha256": "50b06657637820c6215cd13799aec5df30ec1e4924f36ac26eb01863eeada3d8"
+      "bytes": 94115,
+      "sha256": "d2036df8630d0e7c702628e0d45c4a0e4997c91a7bb34f81e71eb182f3b41b5f"
     },
     {
       "file": "after-career-light-768.png",
@@ -202,36 +202,50 @@
       "file": "after-career-reviewed-320.png",
       "width": 320,
       "height": 1795,
-      "bytes": 84389,
-      "sha256": "54944ed3e221bd3ec887b273fda2179f47e361dfbbff2c10188ea19427c329f2"
+      "bytes": 84136,
+      "sha256": "bb3e0aa6d7b9c2bc722f34c27a49f3889cd76f9ae6a8ba0bc97e36fbb1ee2c52"
     },
     {
       "file": "after-opportunity-saba-390.png",
       "width": 390,
       "height": 2234,
-      "bytes": 138968,
-      "sha256": "d9e8be32fe9fdb267da6c04449a2b01971d53a717c23cb6875853c42114311d5"
+      "bytes": 138620,
+      "sha256": "b4a3d0474be0cef2636a91ebaeb489a0d1a7b6b30cc81d9b5664ffe5bd81494c"
+    },
+    {
+      "file": "after-session-reviewed-linked-390.png",
+      "width": 390,
+      "height": 2527,
+      "bytes": 162715,
+      "sha256": "a5f8f0fa6aa35a366573e2f934264168c9325d91dace19254c0d66fc5257edc7"
+    },
+    {
+      "file": "after-session-unlinked-390.png",
+      "width": 390,
+      "height": 2461,
+      "bytes": 159094,
+      "sha256": "2383ae402121a4c419b99bc84ac0116a703cf02ce8837a8d80ecc873f777fa34"
     },
     {
       "file": "after-today-20-opportunities-320.png",
       "width": 320,
       "height": 1588,
-      "bytes": 76539,
-      "sha256": "871183a2482bcc057cb70f234b145e03a7b36dd02ad8a11bc6d086f5d75928ca"
+      "bytes": 76549,
+      "sha256": "aeb3056df4f3def3eac3f43e7de2843eda4a62035fccd8b7a63e342eacc34460"
     },
     {
       "file": "after-today-css-200-percent.png",
       "width": 1440,
       "height": 2322,
-      "bytes": 205222,
-      "sha256": "83bfc3ee48dbf7c50d431419b652cfcc81e1f0a46932216dc6de1384729fc761"
+      "bytes": 205214,
+      "sha256": "f33fa2f9c2081890749b6149beaeb30526ecdffa29c4cdf54c79c61dff2deeef"
     },
     {
       "file": "after-today-dark-1024-full.png",
       "width": 1024,
       "height": 1134,
-      "bytes": 87084,
-      "sha256": "3d4c78220f1928d1606f367f023dc3f06f7b6e456c664b4238c4b16d5245ca12"
+      "bytes": 87046,
+      "sha256": "4230273d8a828544758f4f646608d54ae4cda90f4309ef4b2d066d403612f424"
     },
     {
       "file": "after-today-dark-1024.png",
@@ -272,8 +286,8 @@
       "file": "after-today-dark-320-full.png",
       "width": 320,
       "height": 1600,
-      "bytes": 78872,
-      "sha256": "92bae26533b639c3af436c2011be6023e08870e99a01b0871db1b6f6dff2b626"
+      "bytes": 78875,
+      "sha256": "d8a21eebd778422890330aaa85ae2d4533cb0340f949a0e59aa7337325bda92c"
     },
     {
       "file": "after-today-dark-320.png",
@@ -300,8 +314,8 @@
       "file": "after-today-dark-390-full.png",
       "width": 390,
       "height": 1468,
-      "bytes": 81231,
-      "sha256": "aa66bdf9d48c42212ce2e40e68dc96344f03aa000d0c5cf80150ccf5fa38f74b"
+      "bytes": 81230,
+      "sha256": "a478bd2cbfbe3d989fe11032a44456b7ac0464de8551c822f1815e96b0ea06f6"
     },
     {
       "file": "after-today-dark-390.png",
@@ -314,8 +328,8 @@
       "file": "after-today-dark-768-full.png",
       "width": 768,
       "height": 1134,
-      "bytes": 84589,
-      "sha256": "760067e02c29b5cfb4f0f1294e0d9b941c6f89d565cb8c5269e7cffb0861b0e3"
+      "bytes": 84558,
+      "sha256": "b45564e3a6b0bea7efa0569bb81c76f0a53a0494e5906da37889dc974ca3311e"
     },
     {
       "file": "after-today-dark-768.png",
@@ -370,8 +384,8 @@
       "file": "after-today-light-320-full.png",
       "width": 320,
       "height": 1600,
-      "bytes": 76293,
-      "sha256": "6f4d7d355fcd5bcf911e6aa9d4ed7abbb2bea6fbb76a224deec0d91f46435f8a"
+      "bytes": 76289,
+      "sha256": "19c9bdba38a31ff79b5e124c8a7401001a2516eeb2e059381d958374336801f4"
     },
     {
       "file": "after-today-light-320.png",
@@ -384,8 +398,8 @@
       "file": "after-today-light-360-full.png",
       "width": 360,
       "height": 1492,
-      "bytes": 78786,
-      "sha256": "952172828209dbadafb311d40fd8c6ad421d6eeab3636910a553bebd5b39ea48"
+      "bytes": 78788,
+      "sha256": "829cd242182cd7d3e4825c9ab109a085ff7b0b33f30b0a25b44c85021ff6f54a"
     },
     {
       "file": "after-today-light-360.png",
@@ -398,8 +412,8 @@
       "file": "after-today-light-390-full.png",
       "width": 390,
       "height": 1468,
-      "bytes": 78332,
-      "sha256": "834098faf678c45d811f72107d6e4a9d91bfe652abedd0e6f6de90f4158633f1"
+      "bytes": 78334,
+      "sha256": "6a56f764fbad2f4ad3b385234921d02b39b02bbfcc113843e8750935418f3753"
     },
     {
       "file": "after-today-light-390.png",

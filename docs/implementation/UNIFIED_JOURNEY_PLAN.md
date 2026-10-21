@@ -51,3 +51,7 @@ flowchart LR
 ```
 
 This is an implementation dependency graph; candidates can move between their career stages in any order.
+
+## Follow-on checkpoint
+
+Phase3 association controls now include reviewed unlink/reassignment and minimal source-history/export/delete, still using existing session and AuditLog authorities. Phase2 timeline evidence now distinguishes existing packet records without inventing delivered material lineage. No new schema in this follow-on. Local PostgreSQL gate is now verified for the existing identity migration and targeted ownership/concurrency contracts, including full graph round-trip and realistic fixture preservation. This clears the earlier local-runtime prerequisite for designing subsequent round/receipt migrations; it does not clear deployed-staging/provider/operator release gates. Next persisted slice remains explicit owned round/IANA calendar history and actual snapshot/receipt provenance, followed by offer/joining continuity.

@@ -302,3 +302,5 @@ Identity selection/review endpoints derive the user from authentication, check o
 PostgreSQL concurrency/staging, real speech providers, Windows hardware/signing and production backup/rollback remain separate operator gates; see implementation/UNIFIED_JOURNEY_RELEASE_SIGNOFF.md.
 
 Candidate account transitions also synchronize across same-origin tabs through storage events and opaque BroadcastChannel notifications; server authentication remains authoritative. Blocked browser storage is covered by the channel fallback. Raw resume or draft text is not broadcast.
+
+Session attribution link/unlink serializes through existing account and session-row locks. Both resources are checked against authenticated ownership; ended-only transitions reject cross-job stale actions. No inferred reassignment or raw provider context in audit targets. PostgreSQL16.15/pgvector0.8.7 local tests now cover competing links/master selection and export/delete. Hosted CI, deployed staging and live provider/hardware proof remain separate.

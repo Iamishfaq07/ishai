@@ -10,7 +10,13 @@ Phase 1 foundation: explicit owned master resume and source-bound candidate revi
 
 This is not the complete seven-phase transformation. Complete kit/receipt lineage and approval-consumer migration, real round/calendar authority, replay/provider orchestration, offer/joining continuity and all-screen design remain PARTIAL. See UNIFIED_JOURNEY_PLAN.md.
 
-## Checks actually completed
+## Current follow-on validation
+
+The follow-on source passes full API3807/17 skipped (876.46s), root browser87 (10.1m), V6 continuity21 (2.4m), final attribution proof1 (15.9s), and46 targeted contract/concurrency tests on each SQLite and portable PostgreSQL16.15/pgvector0.8.7. Full graph rollback and synthetic profile/resume/job preservation across identity downgrade/upgrade PASS; the safety tool refuses a populated or nonlocal/nonmatching database. Workspace tests/typecheck/lint/build/budgets PASS, with two existing lint warnings. Ruff PASS; mypy PASS291 modules. This supersedes the earlier local PostgreSQL block below; deployed staging, backup/restore, full-provider/hardware and hosted CI remain unverified.
+
+Reviewed session unlink/reassignment and minimal association-history export/delete are now implemented; no source transcript/report/context is rewritten. Application timeline provenance distinguishes stored state from employer receipt. Immutable actual delivered-material lineage and full phase4+ are not complete.
+
+## Initial foundation validation (historical checkpoint)
 
 - API full suite: `uv run pytest -q` from apps/api: **3798 passed, 17 skipped, 1 warning**, 832.12 seconds. After this run a final text-only provenance correction distinguished candidate-recorded manual application from Orbit-executed delivery; affected suites `tests/test_auto_apply.py tests/test_candidate_identity.py tests/test_job_timeline.py tests/test_candidate_identity_migration.py`: **39 passed**, 29.66 seconds. The full suite was not rerun after that note-only correction.
 - API `uv run ruff check .`: PASS. `uv run mypy orbit_api`: PASS, 290 source files. `uv run alembic heads`: single head `e62f8d0b351c`. SQLite full-graph upgrade/downgrade/upgrade, ownership, export/delete and master/job isolation are covered; PostgreSQL locking and migrations are not thereby certified.
@@ -31,10 +37,10 @@ Migration adds nullable review metadata to existing job_search_profiles; no dest
 
 ## Remaining release gates and owner actions
 
-- Provide an isolated PostgreSQL environment; validate locking, migration/rollback and realistic concurrent edits there. API tests use **ORBIT_TEST_DATABASE_URL**, not merely ORBIT_DATABASE_URL. Use a separate disposable DB with ORBIT_DATABASE_URL and test environment for Alembic, never production. A runnable command is `uv run alembic upgrade head`, then downgrade to d51e7c9a240b and upgrade head on that disposable DB; verify original rows and review metadata behavior.
+- Local isolated PostgreSQL migration/locking tests now PASS for the current identity/association slice. Validate the deployment-specific PostgreSQL environment and any subsequent persisted round/receipt migrations before release. API tests use **ORBIT_TEST_DATABASE_URL**, not merely ORBIT_DATABASE_URL. Use a separate disposable DB with ORBIT_DATABASE_URL and test environment for Alembic, never production. A runnable command is `uv run alembic upgrade head`, then downgrade to d51e7c9a240b and upgrade head on that disposable DB; verify original rows and review metadata behavior.
 - Provision isolated deployed staging with verified nonproduction endpoints/secrets and backup/restore evidence; run remaining J01–J16 and release gates there.
 - Verify real LLM/STT/TTS, camera/mic denial/reconnect, costs/latency, permitted live assistance, Windows audio/signing/updater hardware and billing reconciliation with operator-approved resources.
-- Finish immutable receipt/source lineage, all approved-identity consumers, explicit owned rounds/IANA/DST calendar history, offer/joining, reversible session unlink/audit and remaining screen redesign.
+- Finish immutable receipt/source lineage, all approved-identity consumers, explicit owned rounds/IANA/DST calendar history, offer/joining, remaining screen redesign and complete immutable association/source lineage.
 - Complete real screen-reader/manual accessibility, actual browser200% zoom, all-state visual audit and field performance evidence. Counsel/operator review remains external where required.
 
 Historical GitHub billing/spending blocks are not proof of current PR status. Inspect the new PR checks independently. Review approval does not remove the above production NO-GO.

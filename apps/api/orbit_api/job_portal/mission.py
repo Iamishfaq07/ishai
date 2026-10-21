@@ -22,8 +22,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.job_portal.timeline import timeline
-from orbit_api.models import ApplicationPacket, JobApplication, JobFitCheck, JobOffer, Resume, ResumeSnapshot, User
+from orbit_api.models import (
+    ApplicationPacket,
+    JobApplication,
+    JobFitCheck,
+    JobOffer,
+    LiveSessionRow,
+    Resume,
+    ResumeSnapshot,
+    User,
+)
 from orbit_api.ratelimit import limit_user
 from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
@@ -244,9 +252,12 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
     offers = (await db.scalars(select(JobOffer).where(JobOffer.user_id == user.id)
                                .order_by(JobOffer.created_at.desc()))).all()
     linked = next((o for o in offers if o.application_id == entry.id), None)
-    events = await timeline(db, entry, now)
-    rounds = [e for e in events if e.kind == "round" and e.completed]
-    practice = sum(1 for e in rounds if e.title == "Practice round")
+    # Counts are source aggregates, not the bounded timeline preview (which may show only ten sessions).
+    counts = {kind: count for kind, count in (await db.execute(select(LiveSessionRow.type, func.count()).where(
+        LiveSessionRow.user_id == user.id, LiveSessionRow.application_id == entry.id,
+        LiveSessionRow.status == "ended").group_by(LiveSessionRow.type))).all()}
+    practice = counts.get("mock", 0)
+    live_rounds = sum(counts.values()) - practice
     upcoming = None
     shift = timedelta(minutes=tz_offset)
     today = (now + shift).date()
@@ -264,7 +275,7 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
         submission_uncertain=packet.submission_started_at is not None and packet.status not in ("submitted", "applied"),
         updated_at=_aware(packet.updated_at)) if packet else None
     facts = Facts(status=entry.status, fit=fit is not None, resume=resume is not None, snapshot=bool(snaps),
-                  applied=entry.applied_at is not None, practice_rounds=practice, live_rounds=len(rounds) - practice,
+                  applied=entry.applied_at is not None, practice_rounds=practice, live_rounds=live_rounds,
                   offer=linked is not None, upcoming_days=upcoming, prep_doc=entry.document_id is not None)
     return MissionOut(
         entry_id=entry.id, application=application, stages=stages_for(facts), fit=fit,
@@ -273,7 +284,7 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
                                created_at=_aware(s.created_at)) for s in snaps],
         offer=_offer_ref(linked) if linked else None,
         offers=[_offer_ref(o) for o in offers if o.application_id in (None, entry.id)],
-        practice_rounds=practice, live_rounds=len(rounds) - practice,
+        practice_rounds=practice, live_rounds=live_rounds,
         next=next_step(facts, f"/jobs/listing/{entry.listing_id}"))
 
 
