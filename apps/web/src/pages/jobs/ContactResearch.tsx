@@ -103,7 +103,8 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
       {busy && <p role="status" className="mt-3 text-sm">Researching public sources and checking contact evidence. This can take up to two minutes.</p>}
       <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Up to {data.automatic_search_limit ?? 3} searches and one AI extraction per run; provider usage applies. Only company and role are used as public search queries. Up to 5 runs per UTC day, including failed runs. Review before saving; nothing is sent.</p>
       {data.web_search_provider === "deepseek" && <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Uses the server’s DeepSeek Search API configuration. No key is entered or stored in your browser.</p>}
-      {!data.web_search_enabled && <p className="mt-3 text-sm text-amber-800 dark:text-amber-200">Automatic search needs the server’s DeepSeek key, SearXNG or Brave configuration. You can still check a supplied source below.</p>}
+      {!data.web_search_enabled && <SearchOff reason={data.web_search_off_reason} known={"web_search_off_reason" in data} />}
+      {(data.web_search_providers?.length ?? 0) > 1 && <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">If one search service fails, the next one is tried automatically.</p>}
       <details className="mt-5 border-t border-zinc-200 pt-3 dark:border-white/10"><summary className={`min-h-11 cursor-pointer rounded py-2 text-sm font-semibold ${focusRing}`}>Supply a source or use a single search</summary>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Optional: add a specific public page or paste the relevant part of a recruiter reply.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -128,6 +129,24 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
       {validResearch.people.map((person) => <Lead key={`${person.source_id}:${person.name}`} person={person} source={validResearch.sources.find((s) => s.id === person.source_id)} applicationId={id} jobVersion={validResearch.job_version} onSaved={saved} />)}
     </div>}
     {target && <ContactDraft key={target.id} contact={target} applicationId={id} />}
+  </div>;
+}
+
+const OFF_REASON: Record<NonNullable<NetworkContext["web_search_off_reason"]>, string> = {
+  no_key: "The API server has no DeepSeek key. Set DEEPSEEK_API_KEY on the API service and redeploy, or add the key in Settings while signed in as an admin.",
+  mock_mode: "The API server is in demo AI mode (LLM_PROVIDER=mock), so live search stays off. Set LLM_PROVIDER to auto or deepseek and redeploy.",
+  deepseek_off: "DeepSeek search is switched off on the API server (ORBIT_CONTACT_DEEPSEEK_SEARCH=false). Remove that setting and redeploy.",
+};
+
+/** Automatic search is off: say exactly why. A server older than the DeepSeek search update doesn't send a reason. */
+function SearchOff({ reason, known }: { reason: NetworkContext["web_search_off_reason"]; known: boolean }) {
+  const why = !known
+    ? "The API server is running an older version. Redeploy the API: the update searches with your existing DeepSeek key, nothing new to add."
+    : reason ? OFF_REASON[reason] : "No search service is configured on the API server.";
+  return <div className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
+    <p className="font-medium">Automatic search is off on this server</p>
+    <p className="mt-1">{why}</p>
+    <p className="mt-1 text-xs">Meanwhile you can still check a public page or a pasted reply below.</p>
   </div>;
 }
 
