@@ -47,8 +47,8 @@ export function CareerIdentity({ userId }: { userId: string }) {
     {identity.error && <ErrorNote onRetry={reload}>{errorText(identity.error)}</ErrorNote>}
     {error && <ErrorNote onRetry={reload}>{error}</ErrorNote>}
     <section className="workspace-panel overflow-hidden">
-      <header className="border-b border-zinc-200 p-5 sm:p-6 dark:border-white/10"><p className="workspace-eyebrow">Career identity</p>
-        <h2 className="mt-3 font-display text-2xl font-semibold">{master ? current.name || master.title : "Start with your story."}</h2>
+      <header className="border-b border-zinc-200 p-5 sm:p-6 dark:border-white/10">
+        <h2 className="font-display text-2xl font-semibold">{master ? current.name || master.title : "Start with your story."}</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{master ? current.headline || "Your master resume is the reusable starting point for your career. Job copies stay separate." : "Bring a resume, build your first one, or explore opportunities while you decide. You can start anywhere."}</p>
         {!master && <div className="mt-5 flex flex-wrap items-center gap-3"><Link className={buttonClass("primary")} to="/resume-ai?start=import&guide=1">Import my resume</Link><Link className={buttonClass("secondary")} to="/resume-ai?start=new&guide=1">Build from scratch</Link><Link className={link} to="/jobs/matches">Explore jobs first</Link></div>}
       </header>

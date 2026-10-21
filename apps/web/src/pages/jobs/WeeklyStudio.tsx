@@ -48,7 +48,7 @@ export function WeeklyStudioPage() {
     finally { setBusy(false); }
   };
   return <div className="space-y-6">
-    <WorkspaceHero eyebrow="Personal growth, measured honestly" title="Your weekly studio"
+    <WorkspaceHero title="Your weekly studio"
       description="Choose a sustainable rhythm. Orbit counts saved applications, completed mock interviews and contacts you have reached, so your plan stays connected to real activity."
       labels={["Applications", "Practice", "Relationships"]} />
     {error && <Callout tone="error">{error}</Callout>}

@@ -70,8 +70,7 @@ export function CareerCompanion({ mode, resumeId, onSelect }: { mode: "resume" |
         </>}
       </div>}
       <section aria-label="Suggested next action" className={mode === "home" ? "workspace-panel workspace-next" : "workspace-panel p-4"}>
-        {mode === "home" && <p className="workspace-eyebrow">Recommended next action</p>}
-        <ActionHeading className={mode === "home" ? "mt-3 max-w-xl text-2xl font-semibold leading-tight tracking-tight sm:text-3xl" : "font-semibold"}>{source.next_step.action}</ActionHeading><p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{source.next_step.text}</p><Link className={mode === "home" ? buttonClass("primary", "md", "mt-5 min-h-11") : link} to={source.next_step.path}>Continue</Link>
+        <ActionHeading className={mode === "home" ? "max-w-xl text-2xl font-semibold leading-tight tracking-tight sm:text-3xl" : "font-semibold"}>{source.next_step.action}</ActionHeading><p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{source.next_step.text}</p><Link className={mode === "home" ? buttonClass("primary", "md", "mt-5 min-h-11") : link} to={source.next_step.path}>Continue</Link>
         {mode === "home" && <><p className="mt-4 text-xs text-zinc-600 dark:text-zinc-400">Chosen from your saved records. No AI request is made to choose this action.</p>
           {source.activity.next_at && <p className="mt-1 text-xs">Saved date: {new Date(source.activity.next_at).toLocaleString()}</p>}
           {!source.resumes.length && <div className="mt-2 flex flex-wrap gap-x-4"><Link className={link} to="/jobs/matches">Explore jobs first</Link><Link className={link} to="/jobs/profile">Choose a career goal</Link></div>}</>}

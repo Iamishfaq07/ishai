@@ -43,7 +43,7 @@ export function ControlRoom() {
   const link = (path: string, label: string) => <Link to={path} className={cx("inline-flex items-center gap-2 rounded text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>{label}<ArrowRight className="h-4 w-4" /></Link>;
   return <div className="space-y-6">
     <PageTitle title="Hiring control room" subtitle="One view of readiness, response delays and panel commitments in the jobs you can access." />
-    <WorkspaceHero eyebrow="Orbit for Business · Operations" title="Build a hiring rhythm your team can sustain"
+    <WorkspaceHero title="Build a hiring rhythm your team can sustain"
       description="Prepare roles before interviews, spot aging stages and see the next week's booked panel workload. Every signal connects to the workspace where your team can act."
       labels={["Role readiness", "Pipeline response", "Panel capacity"]} />
     {error && <Callout tone="error">{error.message}</Callout>}

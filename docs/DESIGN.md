@@ -39,6 +39,8 @@ Shared by the web and desktop apps. Source of truth: `packages/ui/tailwind.prese
   chip in the workbench (the front door's product pages keep theirs).
 - **Labels are sentence case**: small labels, eyebrows and table headings are `text-xs font-medium` ink, never
   tracked capitals (`uppercase tracking-*`). The resume templates keep their own type.
+- **No eyebrows in the app** (21 Oct 2026): a signed-in page heading stands alone, with no small label above it.
+  Field labels (`dt`, form labels) stay. The marketing pages keep `Eyebrow` as described under the front door.
 - **No new gradients in the app.** A highlighted block (the Windows app, the video interview) is a solid ink panel
   (`bg-zinc-900 text-white`); an icon tile is neutral (`IconTile`, `bg-zinc-100 ring-zinc-200`) or the solid accent.
 

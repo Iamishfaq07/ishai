@@ -7,18 +7,18 @@ import { errorText } from "../lib/format";
 export interface WorkflowFact { id: string; label: string; text: string; path: string }
 interface Advice { version: string; source: "ai" | "mock"; tips: { fact_id: string; source_quote: string; suggestion: string; success_check: string }[] }
 
-export function WorkspaceHero({ eyebrow, title, description, labels }: {
-  eyebrow: string; title: string; description: string; labels: [string, string, string];
+export function WorkspaceHero({ title, description, labels }: {
+  title: string; description: string; labels: [string, string, string];
 }) {
+  const gradient = `flow-${title.replace(/\W/g, "")}`;
   return <section className="grid items-center gap-5 rounded-2xl bg-zinc-950 p-6 text-white md:grid-cols-2">
-    <div><p className="text-xs font-medium uppercase tracking-widest text-indigo-300">{eyebrow}</p>
-      <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight">{title}</h2>
+    <div><h2 className="font-display text-3xl font-semibold tracking-tight">{title}</h2>
       <p className="mt-3 text-sm text-zinc-300">{description}</p></div>
     <svg viewBox="0 0 360 160" className="w-full" role="img" aria-label={labels.join(" connects to ")}>
-      <defs><linearGradient id={`flow-${eyebrow.replace(/\W/g, "")}`}><stop stopColor="#818cf8" /><stop offset="1" stopColor="#c4b5fd" /></linearGradient></defs>
+      <defs><linearGradient id={gradient}><stop stopColor="#818cf8" /><stop offset="1" stopColor="#c4b5fd" /></linearGradient></defs>
       <circle cx="180" cy="80" r="70" fill="none" stroke="#818cf8" opacity=".16" />
       <circle cx="180" cy="80" r="45" fill="none" stroke="#818cf8" opacity=".24" />
-      <path d="M80 42Q180 5 280 42M80 118Q180 155 280 118M80 80H280" stroke={`url(#flow-${eyebrow.replace(/\W/g, "")})`} fill="none" opacity=".4" />
+      <path d="M80 42Q180 5 280 42M80 118Q180 155 280 118M80 80H280" stroke={`url(#${gradient})`} fill="none" opacity=".4" />
       {[44, 80, 116].map((y, i) => <g key={y}>
         <rect x="15" y={y - 13} width="115" height="26" rx="8" fill="#27272a" stroke="#6366f1" />
         <text x="72" y={y + 4} textAnchor="middle" fill="#e4e4e7" fontSize="11">{labels[i]}</text>
