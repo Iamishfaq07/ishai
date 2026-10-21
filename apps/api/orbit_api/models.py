@@ -929,6 +929,8 @@ class ResumeSnapshot(TimestampMixin, Base):
     job_text: Mapped[str] = mapped_column(Text, default="")
     score: Mapped[int] = mapped_column(Integer, default=0)
     note: Mapped[str] = mapped_column(String(200), default="")
+    # Captured at creation, never reconstructed from current sources. Opaque IDs survive source deletion.
+    origin: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
 
 
 class UserTwoFactor(TimestampMixin, Base):

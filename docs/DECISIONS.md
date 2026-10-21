@@ -1535,3 +1535,10 @@ Reviewed session attribution may be undone explicitly after a session ends; sour
 ## Candidate-recorded round authority
 
 A matching company, a saved next_at or a Saba session does not establish a real employer round. New round history is explicit candidate input. Selection is by owned ID and revision, not by matching time. Existing next_at/type/number remain a compatibility projection for the selected preparation round. Completing/cancelling clears only its matching selected date and never infers a successor or passed interview. Historical legacy dates are not backfilled. Opaque source references follow the existing interview_version pattern; owner checks are server-side and original references remain on session records. Default-OFF rollout and unverified migration; no operator approval implied.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Keep immutable source observations on ResumeSnapshot at creation, with opaque IDs independent of source deletion. Do not infer legacy source, packet master revision or exact-file delivery. Existing current-packet screen is linked with a warning that its contents can change.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).

@@ -681,3 +681,10 @@ Opportunity history offers optional review/link controls and confirmed unlink wi
 ## Interview rounds — implementation only
 
 Opportunity Room > Interviews gains owned planned/completed/cancelled round history, explicit preparation choice, time-zone-labelled schedules and a short debrief. Completed/cancelled history and legacy date controls are disclosed rather than new global destinations. Next-round and offer actions return to the same opportunity. Existing focus/field/card/motion primitives are reused. No new browser, responsive, accessibility or screenshot proof was collected because the latest owner instruction prohibits validation.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Saved-version list and comparison share SnapshotSource disclosure with existing focus/touch patterns, wrapping digest and packet evidence link. Legacy unknown and packet file/design limits are explicit. No additional primary navigation or animation dependency. No current screenshots or visual validation.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).

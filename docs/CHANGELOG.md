@@ -3587,3 +3587,10 @@ per-app capture: it needs a desktop release to reach users.
 - Select/clear a preparation round; keep old completion history and bind Saba context to source revision.
 - Contextual next-round/offer actions and retained legacy manual controls.
 - Export/cascade semantics and additive migration drafted; experimental flag OFF. No tests, builds, lint, typechecks, migration execution or screenshots run under latest owner instruction.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+Added saved-resume source/revision history, optional displayed-source conflict guard, restored-copy references and packet-source disclosure. Fixed packet snapshots reading mutable current job descriptions and packet copies being mislabeled as deleted original resumes.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).

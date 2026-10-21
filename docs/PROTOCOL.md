@@ -435,3 +435,10 @@ POST /v1/jobs/tracker/{entry_id}/sessions/unlink uses the same session_id/confir
 GET /v1/jobs/tracker/{entry_id}/rounds returns enabled, tracker_version and owned rounds. Manual POST /rounds takes label/category/number, optional local_time with IANA time_zone, notes, request_id, strict confirmed=true and tracker_version; explicit use_for_preparation and mark_interviewing default false. PUT /rounds/{round_id} additionally takes round revision, planned/completed/cancelled and optional candidate outcome. POST /rounds/{round_id}/prepare selects a dated planned round with source/job versions. POST /rounds/preparation/clear explicitly releases selection. POST /rounds/calendar reparses full reviewed input and chosen event_id, preserving a hashed source key without storing calendar text.
 
 Closed/stale context conflicts use409; foreign/missing owned resources404; unsupported time or consent422. Existing interview view/message state expose round_history_enabled. Session context/create/output optionally include interview_round_id/revision; creating against a stale/nonselected/foreign round is rejected. Timeline adds interview_round as candidate-recorded employer history, distinct from completed mock/live execution. Account export adds interview_rounds. No old source/history is inferred or rewritten. No current contract verification has run.
+
+
+## Saved-material source continuity — 2026-10-21 (IMPLEMENTED / UNVERIFIED)
+
+MissionSnapshot and ResumeVersionComparison add nullable SnapshotOrigin; old rows return null. POST mission/snapshots accepts optional resume_id and updated_at guards; legacy clients may omit them. Origin is server-captured, not client-writable. Packet source observation distinguishes candidate_recorded and executor_reported; neither proves delivery.
+
+Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).

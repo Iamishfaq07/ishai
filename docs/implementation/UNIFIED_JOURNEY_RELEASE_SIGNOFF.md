@@ -1,3 +1,13 @@
+# Current checkpoint — saved-material provenance, 2026-10-21
+
+**NO-GO for production. IMPLEMENTED / UNVERIFIED.** Base4a49967d; latest owner instruction is NO TESTING. No tests/build/lint/typecheck/migration/browser/screenshots/provider/security checks were run for this slice. No prior pass validates it. No deployment or application send performed.
+
+Added nullable ResumeSnapshot origin, owned source capture/version guard, captured-packet JD, copy lineage and honest in-room source UI. Migration a84b0f2d573e (parent f73a9e1c462d) is drafted, not run, and required before this backend deploys. No historical backfill or employer-delivery claim. Exact-file receipt and complete packet-to-master lineage remain open. [Scope/rollback/deferred acceptance](UNIFIED_SNAPSHOT_ORIGIN.md).
+
+Owner/operator gates: authorize later validation; migrate/verify staging with backups; resolve existing GitHub billing and dependency gates; finish remaining redesign/provider/native gates. Open draft PR only; do not merge or deploy automatically.
+
+---
+
 # Current release decision — owned round slice
 
 **NO-GO / IMPLEMENTED, UNVERIFIED.** Base3d9fa3b8,2026-10-21. Owner explicitly prohibited further testing. No current-slice tests, builds, lint/typechecks, database/migration operations, browser screenshots, provider or hardware checks were run. Prior PR445 was merged only after a later explicit owner merge instruction; those earlier pass counts do not validate this new code.

@@ -1,3 +1,7 @@
+## Next vertical slice: saved-material provenance (2026-10-21)
+
+Decision: extend existing ResumeSnapshot with a nullable creation-time origin; retain its live resume FK separately. Source IDs survive source deletion as historical opaque references, never as authorization. Reuse current owned mission/comparison/packet routes and copy flow. Capture no unsupported historical master/submission association. Add optional displayed-source guard to the current save action. Single additive migration follows owned-round history; older backend can roll back with extra column retained. See [rollout and deferred acceptance](UNIFIED_SNAPSHOT_ORIGIN.md). Implemented / unverified, no testing.
+
 # Unified candidate journey — architecture and delivery
 
 2026-10-21, base `e1426076` (PR444 merged). Active repository takes precedence; no ZIP archive was supplied for this run. The latest detailed owner prompt explicitly authorizes tests and supersedes the former no-tests instruction. No `[skip ci]` on new commits. No production deployment or real external sends authorized.

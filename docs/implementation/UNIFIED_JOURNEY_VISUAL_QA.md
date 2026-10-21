@@ -1,3 +1,7 @@
+## 2026-10-21 — saved-version source disclosure
+
+IMPLEMENTED / UNVERIFIED: responsive, wrapping native disclosure in saved-version list and comparison; existing focus-ring/touch-height patterns reused. Distinguishes saved/candidate-recorded/executor-reported/legacy source and links the current packet. No new animation/dependency. No browser checks, screenshots, contrast/layout/keyboard/motion checks were run, per owner instruction. Existing screenshots are historical and do not show this slice. Full viewport/theme/motion/zoom matrix remains open.
+
 # Unified journey visual QA — 2026-10-21
 
 Base `e1426076`; local mock-provider API, real Chromium/React/HTTP, synthetic test accounts. Images are runtime captures, not Figma mockups or production-user data. Historical screenshots elsewhere remain historical.

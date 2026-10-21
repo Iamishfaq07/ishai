@@ -1,3 +1,7 @@
+## 2026-10-21 — immutable source observation on new snapshots
+
+`ResumeSnapshot.origin` now captures server-observed source kind/opaque ID/revision where known, structured-content digest/time and saved/candidate/executor observation. It is not a receipt. Packet snapshots use captured packet.posting_text, never current listing content; design/exact PDF and master revision stay unknown. Legacy rows remain null. Existing owned export includes the new column; job/account cascade removes it; explicit snapshot delete removes history with a clearer confirmation. Restored copies retain reference in prep_context without modifying master. [Contract and limits](UNIFIED_SNAPSHOT_ORIGIN.md). Source changes only; all data/export/security behavior UNVERIFIED.
+
 # Unified journey data authority and lineage
 
 - Resume owns content/design/job text and optimistic revision. New CandidateIdentity is a typed projection, not a shadow facts store. A user-confirmed revision is not independent verification of employment or qualifications.

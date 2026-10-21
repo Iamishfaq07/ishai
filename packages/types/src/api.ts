@@ -2750,8 +2750,22 @@ export interface MissionResume {
   updated_at: string;
 }
 
+/** Creation-time source observation; an executor report is not independent employer delivery proof. */
+export interface SnapshotOrigin {
+  kind: "resume" | "packet";
+  source_id: string;
+  source_revision: number | null;
+  content_digest: string;
+  recorded_at: string;
+  observation: "saved_copy" | "candidate_recorded" | "executor_reported";
+  packet_status: string | null;
+  packet_result: string | null;
+  design_captured: boolean;
+}
+
 /** Candidate-saved immutable resume copy; saving alone is not evidence of submission or delivery. */
 export interface MissionSnapshot {
+  origin?: SnapshotOrigin | null;
   id: string;
   title: string;
   score: number;
@@ -2761,6 +2775,7 @@ export interface MissionSnapshot {
 }
 
 export interface ResumeVersionComparison {
+  origin?: SnapshotOrigin | null;
   entry_id: string;
   snapshot_id: string;
   version: string;

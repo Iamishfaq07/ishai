@@ -33,6 +33,7 @@ import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
 import { ROOM_SECTIONS, roomSection, MISSION_TOOLS, MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone, type MissionTool } from "./mission";
 import { StagePill } from "./StagePill";
+import { SnapshotSource } from "./SnapshotSource";
 import { JOBS_TRACKER, jobPath } from "./paths";
 import { JobSabaPractice, InterviewPrepPanel } from "./interview/InterviewPrep";
 
@@ -46,7 +47,7 @@ type Tab = MissionTool;
 
 /**
  * Job Mission Room: one tracked job as a workspace. Its stages (each done only on a record), the next step with the
- * reason, what the job asks for against what the resume shows, the resume linked to it and the exact versions sent,
+ * reason, what the job asks for against what the resume shows, the resume linked to it and saved source observations,
  * practice rounds, the journey so far and the offer. Nothing is linked by guessing: resumes and offers are picked.
  */
 export function JobMissionPage() {
@@ -383,7 +384,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
             disabled={!r || busy}
             onClick={() =>
               void run(async () => {
-                const next = await api.freezeMissionResume(entry.id, note);
+                const next = await api.freezeMissionResume(entry.id, note, r ? { resume_id: r.id, updated_at: r.updated_at } : undefined);
                 setNote("");
                 return next;
               }, "Version kept")
@@ -402,8 +403,9 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
                   <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
                     Saved {formatDate(s.created_at)}
                     {s.note ? ` · ${s.note}` : ""}
-                    {s.resume_id ? "" : " · original deleted"}
+                    {s.origin?.kind === "resume" && !s.resume_id ? " · source resume deleted; saved content retained" : ""}
                   </p>
+                  <SnapshotSource origin={s.origin} />
                 </div>
                 <Button size="sm" variant="secondary" aria-pressed={selectedSnapshot?.id === s.id} disabled={busy} onClick={() => { const next = new URLSearchParams(params); next.set("snapshot", s.id); setParams(next); }}>Compare with linked resume</Button>
                 <Button
@@ -426,7 +428,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
                   label={`Delete the version saved ${formatDate(s.created_at)}`}
                   disabled={busy}
                   onClick={async () => {
-                    if (!(await confirmDialog({ title: "Delete this saved version?", body: "The resume itself stays.", confirmLabel: "Delete", danger: true }))) return;
+                    if (!(await confirmDialog({ title: "Delete this saved version?", body: "This saved content and its source history will be removed. The editable resume and application packet stay. This cannot be undone.", confirmLabel: "Delete", danger: true }))) return;
                     void run(() => api.deleteMissionSnapshot(entry.id, s.id));
                   }}
                   className="text-zinc-500 hover:!bg-rose-500/10 hover:!text-rose-700 dark:hover:!text-rose-300"

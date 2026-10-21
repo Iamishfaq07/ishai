@@ -1,3 +1,9 @@
+## 2026-10-21 — saved-material source continuity (unverified)
+
+- Opportunity Room saved-version list and comparison: `JobMission.tsx`, `ResumeVersionReview.tsx`, shared `SnapshotSource.tsx`; source disclosure replaces misleading universal “original deleted” labeling. Existing five destinations and room routes retained.
+- Existing master/job resume and snapshot writers: `mission.freeze_resume`, `resume_lineage`, `auto_apply.packets.track_applied`; authority remains Resume/ResumeSnapshot/ApplicationPacket, no duplicate store.
+- Existing packet detail and export/delete retained. Restored copies carry historical reference without selecting master. See [scope and deferred acceptance](UNIFIED_SNAPSHOT_ORIGIN.md). IMPLEMENTED / UNVERIFIED; no testing.
+
 # Unified candidate inventory
 
 2026-10-21. Active base e1426076; no supplied ZIP inspected. The static route list below is extracted with the TypeScript JSX AST from the actual App and BusinessRoutes declarations, including nested prefixes. It is source inventory, not proof every route passed runtime validation. Index/path duplicates and wildcards intentionally retained. The separate BusinessApp/CompanyLayout nested routes are expanded in the appendix below.
