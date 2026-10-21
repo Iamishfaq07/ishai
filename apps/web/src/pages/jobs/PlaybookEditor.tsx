@@ -8,7 +8,8 @@ import { useAsync } from "../../lib/useAsync";
 interface Playbook {
   revision: number; follow_up_days: number | null; prep_hours: number | null;
   thank_you_hours: number | null; stale_days: number | null; saved_days: number | null;
-  weekly_digest: boolean; auto_tailor: boolean;
+  rejection_days: number | null;
+  weekly_digest: boolean; auto_tailor: boolean; interview_eve_email: boolean;
 }
 export function PlaybookEditor({ onChanged }: { onChanged: (saved: boolean) => void }) {
   const { hash } = useLocation();
@@ -43,6 +44,8 @@ const RULES = [
     detail: "After a recorded interview round, suggests drafting a thank-you note. Logging a contact with the company clears it. You review and send it yourself." },
   { key: "stale_days", name: "Decide on quiet applications", label: "No reply or next step for (days)", min: 14, max: 90, initial: 30,
     detail: "When an application has had no reply, next step or contact for this long: one last follow-up, keep waiting, or record it as closed. Replaces its follow-up reminder." },
+  { key: "rejection_days", name: "A gracious note after a no", label: "Suggest within (days of the rejection)", min: 1, max: 14, initial: 3,
+    detail: "After you record a rejection, suggests a short note asking for feedback and keeping the door open. Logging a contact clears it. You decide whether to send it." },
   { key: "saved_days", name: "Apply or let go of saved jobs", label: "Saved without applying for (days)", min: 3, max: 60, initial: 7,
     detail: "Saved jobs you have not applied to: apply, prepare it with auto-apply, or remove it to keep your shortlist focused." },
 ] as const;
@@ -77,6 +80,10 @@ function Editor({ initial, onSaved, onReload }: { initial: Playbook; onSaved: (n
     <label className="flex items-start gap-2 rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10">
       <input type="checkbox" className="mt-1" checked={draft.weekly_digest} disabled={busy} onChange={(e) => setDraft({ ...draft, weekly_digest: e.target.checked })} />
       <span><span className="font-medium">Weekly progress email</span><span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">Once a week: what you recorded, replies, interviews coming up and your next actions. Skipped when there is nothing new. Needs a verified email; every email has a one-click stop link.</span></span>
+    </label>
+    <label className="flex items-start gap-2 rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10">
+      <input type="checkbox" className="mt-1" checked={draft.interview_eve_email} disabled={busy} onChange={(e) => setDraft({ ...draft, interview_eve_email: e.target.checked })} />
+      <span><span className="font-medium">Email me the day before an interview</span><span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">For jobs marked interviewing with a recorded date: one email with links to the job’s prep, your “Tell me about yourself” answer, Saba practice and anything you promised to send. Needs a verified email.</span></span>
     </label>
     <label className="flex items-start gap-2 rounded-xl border border-zinc-200 p-4 text-sm dark:border-white/10">
       <input type="checkbox" className="mt-1" checked={draft.auto_tailor} disabled={busy} onChange={(e) => setDraft({ ...draft, auto_tailor: e.target.checked })} />

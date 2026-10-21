@@ -15,6 +15,7 @@ interface Action {
 const RULE_NAMES = {
   application_follow_up: "Application follow-up", interview_preparation: "Interview preparation",
   interview_thank_you: "Thank-you note", application_quiet: "Quiet application", saved_job_decision: "Saved job",
+  commitment: "Promise to keep", after_rejection: "After a no",
 } as const;
 interface Queue { version: string; items: Action[]; focus_id?: string | null; truncated: boolean; as_of: string; horizon_days: number }
 interface Brief { version: string; source: "ai" | "mock"; steps: { action_id: string; source_quote: string; suggestion: string }[] }

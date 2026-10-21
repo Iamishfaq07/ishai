@@ -121,3 +121,14 @@ driven tailoring, AGPL; concept only). No code reused.
 - **"Tell me about yourself"** (`job_portal/pitch.py`, `POST /v1/jobs/tracker/{id}/pitch`): 30, 60 and 90 second
   answers for one job from the resume's facts, shaped present, past, future; unproven numbers become [number] prompts.
   On the job's Practice tab, above Saba practice.
+
+## Round seven, 21 October 2026: offer deadlines, a note after a no, the interview-eve email
+
+- **Offer deadlines on Today**: offers still being considered whose recorded response date is within a week or past
+  show on Today, linking to the offer (`playbooks.offer_deadlines`). Always on: it's the candidate's own record.
+- **A gracious note after a no** (rule `rejection_days`, 1-14): after a recorded rejection with no contact logged
+  since, Today suggests a short note asking for feedback and keeping the door open, opening the message writer.
+- **Interview-eve email** (rule `interview_eve_email`, `job_portal/interview_eve.py`): the day before an interview
+  recorded on a job marked interviewing, one email linking the job's prep, the "Tell me about yourself" answer, Saba
+  practice and the resume's first look, plus any open promises for that employer. Once per interview time.
+- Migration `a7d9f1b3c5e8`. Today now labels promise to-dos ("Promise to keep") and the after-a-no suggestion.
