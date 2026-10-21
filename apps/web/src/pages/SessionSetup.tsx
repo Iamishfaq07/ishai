@@ -373,7 +373,7 @@ export function SessionSetupPage() {
 
   return (
     <div>
-      <PageHeader icon={Rocket} title="New live session" subtitle="Pick your context and audio, then start. You can change answer length live." />
+      <PageHeader eyebrow="Interview copilot" icon={Rocket} title="New live session" subtitle="Pick your context and audio, then start. You can change answer length live." />
       <form
         ref={formRef}
         onSubmit={(e) => void start(e)}

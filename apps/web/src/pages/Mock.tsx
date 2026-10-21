@@ -69,7 +69,7 @@ export function MockPage() {
   if (!MOCK_INTERVIEW_ENABLED) {
     return (
       <div className="mx-auto max-w-md py-16 text-center">
-        <PageHeader icon={Target} title="Mock interview" subtitle="Coming soon" />
+        <PageHeader eyebrow="Interview preparation" icon={Target} title="Mock interview" subtitle="Coming soon" />
         <p className="mt-4 text-sm text-zinc-500">
           The AI interviewer that asks you questions is still in the works. For now, start a normal session and
           use Orbit live, or practice by pasting questions into Chat.
@@ -148,7 +148,7 @@ function MockSetup() {
   return (
     <div className="xl:grid xl:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] xl:gap-10">
       <div className="max-w-3xl space-y-8">
-        <PageHeader icon={Target} title="Practice" subtitle="Practise out loud with an AI interviewer, then read your report." />
+        <PageHeader eyebrow="Interview preparation" icon={Target} title="Practice" subtitle="Practise out loud with an AI interviewer, then read your report." />
         <Link
           to="/interview"
           className={cx(

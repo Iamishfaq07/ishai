@@ -36,7 +36,7 @@ export function CodeHomePage() {
   return (
     <>
       <OpportunityReturn />
-      <PageHeader icon={Code2} title="Coding practice" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<CodeScene />} />
+      <PageHeader eyebrow="Interview preparation" icon={Code2} title="Coding practice" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<CodeScene />} />
       <LoadGate loading={data.loading && !d} variant="card" count={3} label="Getting the problems">
         {data.error && !d ? (
           <ErrorNote onRetry={data.reload}>{errorText(data.error)}</ErrorNote>
