@@ -145,7 +145,11 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   // 400 jobs. Long lists come a batch at a time (lib/useProgressive.ts), so the page answers while they draw.
   const wide = useMediaQuery("(min-width: 1024px)");
   const drawn = useProgressiveCount(tracker.data?.length ?? 0);
-  const [filter, setFilter] = useState<JobStatus | "all">("all");
+  // Today's pipeline tiles link here with ?status= so the phone list opens filtered.
+  const [filter, setFilter] = useState<JobStatus | "all">(() => {
+    const asked = new URLSearchParams(window.location.search).get("status");
+    return STATUSES.find((s) => s === asked) ?? "all";
+  });
   const [error, setError] = useState<string | null>(null);
   const entries = tracker.data ?? [];
   const columns = byStatus(entries);
