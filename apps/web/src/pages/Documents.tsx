@@ -106,7 +106,7 @@ export function DocumentsPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageHeader eyebrow="Your materials"
         icon={FolderOpen}
         title="Documents"
         subtitle="Your resume, job descriptions, and notes. Pick which ones each session can use."

@@ -160,7 +160,7 @@ export function AnswersPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageHeader eyebrow="Interview copilot"
         icon={MessageSquareQuote}
         title="My answers"
         subtitle="Your own answers to the questions you expect. When one comes up in an interview, the copilot starts from yours instead of starting over."

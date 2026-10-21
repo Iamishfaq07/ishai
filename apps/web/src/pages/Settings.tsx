@@ -48,7 +48,7 @@ export function SettingsPage() {
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,48rem)_11rem] lg:gap-10">
       <div className="max-w-3xl space-y-6">
-        <PageHeader icon={SettingsIcon} title="Settings" />
+        <PageHeader eyebrow="Account" icon={SettingsIcon} title="Settings" />
         <Link
           to="/billing"
           className={cx(

@@ -460,7 +460,7 @@ export function StoriesPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageHeader eyebrow="Interview preparation"
         icon={BookOpen}
         title="Story bank"
         subtitle="Your real examples, in STAR form. When an interviewer asks “Tell me about a time…”, live answers use the story that fits."
