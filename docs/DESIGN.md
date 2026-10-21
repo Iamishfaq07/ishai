@@ -182,18 +182,18 @@ class string; `/dev/components` (development builds) shows each in its states, i
 
 One definition, `apps/web/src/components/nav.ts`, feeds the desktop sidebar, the phone tab bar and the phone's Explore
 sheet (drawn by `components/Layout.tsx`). Addresses never change when the nav does.
-- **Desktop sidebar** (personal shell), five tasks: **Today**, **Discover**, **Applications**, **Prepare** and **My
-  Career**, then **More** (Copilot, All tools). Specialist tools (Practice, Video interview, Resume, Learning,
+- **Desktop sidebar** (personal shell), four tasks: **Today**, **Jobs**, **Prepare** and **My Career** (Discover and
+  Applications merged into Jobs, 21 Oct 2026), then **More** (Copilot, All tools). Specialist tools (Practice, Video interview, Resume, Learning,
   LinkedIn, Offers) stay reachable from All tools, the phone's Explore sheet and search. Plan & credits, Settings,
   Admin (admins only) and Support sit at its foot. One ink icon each, no repeats (All tools is a grid, Today a house).
   It collapses to icons; the choice is kept on the device (`orbit.sidebar`), and with none it starts collapsed under
   1280 px.
 - **One navigation layer per screen** (21 Oct 2026): where the sidebar already names an area, a page does not repeat
-  it as tabs. Job pages show only their area's tools (Discover: Launchpad, Matches, Search preferences; Applications:
-  Tracker, Auto-apply agent, Review queue, People); the Jobs area tabs remain only where there is no sidebar.
+  it as tabs. Every Jobs page shows the same one tab row: Discover, Tracker, Auto-apply, Needs you, People
+  (`workspace.ts`, `jobsTabs`); the older area tabs remain only where there is no sidebar.
 - **Top bar**: a wide "Search or jump to…" (Ctrl K, the command palette), a **New** menu (live session, mock
   interview, resume, job search, offer) and the account menu.
-- **Phones**: the same five tasks as tabs (Today, Discover, Apply, Prepare, Me); the other tools are in the top bar's
+- **Phones**: the same four tasks as tabs (Today, Jobs, Prepare, Me); the other tools are in the top bar's
   Explore sheet, then plan, settings, admin, support and sign out. The support
   button keeps the bottom-right corner above the tab bar; a page's own floating button (Resume AI's Preview) sits
   centred, clear of it.

@@ -7,7 +7,7 @@ import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { PRODUCTS, type ProductId } from "./products";
 
 /**
- * Five career tasks shared by the desktop sidebar and phone tab bar. Existing specialist routes remain
+ * Four career tasks shared by the desktop sidebar and phone tab bar. Existing specialist routes remain
  * accessible through the More sheet and search; Prepare/My Career collect them in context.
  */
 export interface NavItem {
@@ -58,19 +58,19 @@ const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offers", icon: Ba
 // Outside India, the offer tool's mark is money in general, not the rupee.
 const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 
-const DISCOVER: NavItem = { ...JOBS, label: "Discover", tab: "Discover", to: "/jobs/matches", icon: Search,
-  current: (p) => /^\/jobs(?:\/(?:matches|profile|listing(?:\/[^/]+)?))?\/?$/.test(p) };
-const APPLICATIONS: NavItem = { id: "applications", label: "Applications", tab: "Apply", to: "/jobs/tracker", icon: PRODUCTS.jobs.icon,
-  current: (p) => /^\/jobs\/(tracker|mission|applications|journey|auto-apply|outreach)(\/|$)/.test(p) };
+// Discover and Applications are one place: finding a job and following it through are the same search. Its tabs
+// (pages/jobs/workspace.ts, jobsTabs) are Discover, Tracker, Auto-apply, Needs you and People.
+const JOBS_TASK: NavItem = { ...JOBS, label: "Jobs", tab: "Jobs", to: "/jobs/matches", icon: Search,
+  current: (p) => /^\/jobs(\/|$)/.test(p) };
 const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
   current: (p) => /^\/(prepare|mock|interview|learn|code)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: IdCard,
   current: (p) => /^\/(career|resume-ai|linkedin|offers)(\/|$)/.test(p) };
 const TOOLS: NavItem = { id: "tools", to: "/tools", label: "All tools", icon: LayoutGrid, current: under("/tools") };
 
-/** Five task destinations; specialist tools remain available through More and search. */
+/** Four task destinations; specialist tools remain available through More and search. */
 export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, _country: string = INDIA): NavGroup[] {
-  return [{ label: null, items: [HOME, DISCOVER, APPLICATIONS, PREPARE, CAREER] }, { label: "More", items: [COPILOT, TOOLS] }];
+  return [{ label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] }, { label: "More", items: [COPILOT, TOOLS] }];
 }
 export function allNavItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
   return [...navGroups(mock, country).flatMap((g) => g.items), ...specialists(mock, country)];
@@ -79,7 +79,7 @@ function specialists(mock: boolean, country: string): NavItem[] {
   return [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING, LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD];
 }
 export function phoneTabs(_mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
-  return [HOME, DISCOVER, APPLICATIONS, PREPARE, CAREER];
+  return [HOME, JOBS_TASK, PREPARE, CAREER];
 }
 export function exploreItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
   const tabs = new Set(phoneTabs(mock).map((t) => t.id));

@@ -44,10 +44,19 @@ export function workspaceTools(group: JobWorkspace) {
   return tools;
 }
 
+/** The one tab row for Jobs (Discover and Applications merged): finding a job and following it through. */
+export function jobsTabs() {
+  return [
+    { to: JOBS_MATCHES, label: "Discover" }, { to: JOBS_TRACKER, label: "Tracker" },
+    { to: "/jobs/journey", label: "Auto-apply" }, { to: JOBS_APPLICATIONS, label: "Needs you" },
+    { to: JOBS_OUTREACH, label: "People" },
+  ];
+}
+
 export function currentJobTool(pathname: string) {
   const path = pathname.replace(/\/+$/, "");
   if (path.startsWith("/jobs/mission/")) return JOBS_TRACKER;
-  if (path.startsWith("/jobs/listing/")) return JOBS_MATCHES;
+  if (path.startsWith("/jobs/listing/") || path === JOBS_PROFILE) return JOBS_MATCHES;
   if (path === JOBS_AUTO_APPLY) return "/jobs/journey";
   return path;
 }

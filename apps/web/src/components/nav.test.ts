@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import { allNavItems, exploreItems, navGroups, phoneTabs, sidebarCollapsed } from "./nav";
 
 describe("app navigation", () => {
-  it("has five task destinations with specialist tools behind More", () => {
-    expect(navGroups(true)[0]!.items.map((i) => i.label)).toEqual(["Today", "Discover", "Applications", "Prepare", "My Career"]);
+  it("has four task destinations with specialist tools behind More", () => {
+    expect(navGroups(true)[0]!.items.map((i) => i.label)).toEqual(["Today", "Jobs", "Prepare", "My Career"]);
     const ids = allNavItems(true).map((i) => i.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).toContain("resume"); expect(ids).toContain("copilot");
   });
-  it("uses the same five phone tasks with every specialist available in More", () => {
-    expect(phoneTabs(true).map((t) => t.id)).toEqual(["home", "jobs", "applications", "prepare", "career"]);
+  it("uses the same four phone tasks with every specialist available in More", () => {
+    expect(phoneTabs(true).map((t) => t.id)).toEqual(["home", "jobs", "prepare", "career"]);
     expect(phoneTabs(false).map((t) => t.id)).toEqual(phoneTabs(true).map((t) => t.id));
     expect(exploreItems(true).map((t) => t.id)).toContain("resume");
     expect(exploreItems(false).map((t) => t.id)).not.toContain("practice");
@@ -19,8 +19,9 @@ describe("app navigation", () => {
     const current = (p: string) => navGroups(true)[0]!.items.filter((i) => i.current(p)).map((i) => i.id);
     expect(current("/")).toEqual(["home"]);
     expect(current("/jobs/listing/example")).toEqual(["jobs"]);
-    expect(current("/jobs/mission/example")).toEqual(["applications"]);
-    expect(current("/jobs/applications")).toEqual(["applications"]);
+    expect(current("/jobs/mission/example")).toEqual(["jobs"]);
+    expect(current("/jobs/applications")).toEqual(["jobs"]);
+    expect(current("/jobs/matches")).toEqual(["jobs"]);
     expect(current("/code/two-sum")).toEqual(["prepare"]);
     expect(current("/mock")).toEqual(["prepare"]);
     expect(current("/interview")).toEqual(["prepare"]);
