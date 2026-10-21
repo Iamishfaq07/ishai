@@ -1,3 +1,15 @@
+# Current release decision — owned round slice
+
+**NO-GO / IMPLEMENTED, UNVERIFIED.** Base3d9fa3b8,2026-10-21. Owner explicitly prohibited further testing. No current-slice tests, builds, lint/typechecks, database/migration operations, browser screenshots, provider or hardware checks were run. Prior PR445 was merged only after a later explicit owner merge instruction; those earlier pass counts do not validate this new code.
+
+Experimental ORBIT_PERSONAL_INTERVIEW_ROUNDS remains default OFF. Additive migration f73a9e1c462d and new shared model fields are unverified; backend deployment requires schema rollout even if the UI feature stays disabled. Do not enable/deploy based on the earlier green local results. Current slice requires migration/contract/owner/isolation/timezone/plan/session/export/delete and visual verification when the owner reauthorizes it, plus existing staging/provider/operator gates.
+
+Review scope and rollback: [UNIFIED_INTERVIEW_ROUNDS.md](UNIFIED_INTERVIEW_ROUNDS.md). No new real environment/secret, application submission, recruiter send, charge, merge or manual deployment performed in this slice. Existing GitHub CI gates were not weakened; any automatically triggered hosted status is separate from checks executed here.
+
+---
+
+## Historical pre-merge checkpoint for PR445
+
 # Unified journey release decision — 2026-10-21
 
 Draft PR: https://github.com/Iamishfaq07/ishai/pull/445. Hosted CI run39521859957 could not execute any steps; six jobs report failure. API and desktop annotations identify account payment/spending-limit blocking. Owner must resolve GitHub Billing & plans and rerun CI. Local evidence does not replace hosted gates. Existing Cloudflare Workers integration was building when inspected; no manual deployment was issued or provider/staging proof inferred.
@@ -46,3 +58,10 @@ Migration adds nullable review metadata to existing job_search_profiles; no dest
 Historical GitHub billing/spending blocks are not proof of current PR status. Inspect the new PR checks independently. Review approval does not remove the above production NO-GO.
 
 Follow-on implementation commit be0c739b pushed to draft PR445. Its Actions run39565059170 executed no steps across six jobs; API check annotation again identifies account payments/spending-limit blocking. Resolve GitHub Billing & plans and rerun normal CI. No workflow was weakened, merge performed or manual deployment issued.
+
+
+## PR447 and external metadata
+
+Draft PR https://github.com/Iamishfaq07/ishai/pull/447 opened for implementation commit7c97580e; no merge. Existing GitHub Actions run39569955776 was automatically created by the integration, but all six jobs have no executed steps; API annotation reports failed account payments or spending-limit blocking. No CI rerun, test or scan was requested here.
+
+GitHub's existing Dependabot metadata reports10 open dependency alerts on main (2 critical,6 high,2 medium), involving Pillow and certifi in apps/api/uv.lock. This is read-only platform metadata, not an executed audit or proof of exploitability. Existing Dependabot PR446 addresses certifi; do not duplicate or merge it without review. Pillow/dependency remediation is a separate release gate. No lockfile/dependency change was mixed into this round-history slice. No current security pass is claimed.

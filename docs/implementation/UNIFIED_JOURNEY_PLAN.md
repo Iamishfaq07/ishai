@@ -55,3 +55,9 @@ This is an implementation dependency graph; candidates can move between their ca
 ## Follow-on checkpoint
 
 Phase3 association controls now include reviewed unlink/reassignment and minimal source-history/export/delete, still using existing session and AuditLog authorities. Phase2 timeline evidence now distinguishes existing packet records without inventing delivered material lineage. No new schema in this follow-on. Local PostgreSQL gate is now verified for the existing identity migration and targeted ownership/concurrency contracts, including full graph round-trip and realistic fixture preservation. This clears the earlier local-runtime prerequisite for designing subsequent round/receipt migrations; it does not clear deployed-staging/provider/operator release gates. Next persisted slice remains explicit owned round/IANA calendar history and actual snapshot/receipt provenance, followed by offer/joining continuity.
+
+## Next branch: owned interview-round continuity
+
+Base3d9fa3b8 after the owner-authorized merge of PR445. Phase4 first slice implemented behind ORBIT_PERSONAL_INTERVIEW_ROUNDS=false: owned real-round records, UTC+IANA scheduling/history, reviewed intake/debrief, explicit prep selection/clear and source-bound Saba/session context. The migration is additive but unverified. Existing single-date projection remains the compatibility authority; selection is explicit/versioned and legacy writers clear it. No second calendar sync or automatic round matching.
+
+Latest owner instruction: do not run any tests/validation. Earlier test gates are deferred for this slice, not weakened or represented as passed. No migration, browser, screenshot, lint, typecheck or build commands were executed. Next work after review/verification remains immutable resume/receipt provenance, complete offer/joining continuity and remaining all-screen journey work.

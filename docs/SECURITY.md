@@ -304,3 +304,7 @@ PostgreSQL concurrency/staging, real speech providers, Windows hardware/signing 
 Candidate account transitions also synchronize across same-origin tabs through storage events and opaque BroadcastChannel notifications; server authentication remains authoritative. Blocked browser storage is covered by the channel fallback. Raw resume or draft text is not broadcast.
 
 Session attribution link/unlink serializes through existing account and session-row locks. Both resources are checked against authenticated ownership; ended-only transitions reject cross-job stale actions. No inferred reassignment or raw provider context in audit targets. PostgreSQL16.15/pgvector0.8.7 local tests now cover competing links/master selection and export/delete. Hosted CI, deployed staging and live provider/hardware proof remain separate.
+
+## Draft owned interview-round boundaries
+
+Authenticated ownership is checked for job and round actions. Strict confirmation, source revisions, tracker-version conditional updates, existing account locks, per-job limits and source-key uniqueness are implemented. Session creation with round context rechecks the current owned selected planned round/revision. Calendar input uses the existing bounded nonexecuting parser; URLs/attachments/organizers are not fetched or trusted. No business record is merged into Personal Orbit. These statements describe code intent only: no security, race, migration or runtime validation was run for this increment under the latest owner instruction.

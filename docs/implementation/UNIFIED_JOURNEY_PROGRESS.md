@@ -1,3 +1,21 @@
+# Active increment — interview-round continuity, 2026-10-21
+
+Base3d9fa3b8 after explicit owner-authorized merge of PR445. Branch orbit-interview-round-continuity-2026-10-21.
+
+**IMPLEMENTED / UNVERIFIED. NO TESTING.** The latest owner instruction supersedes the earlier validation requirement. No tests, lint, typechecks, builds, migration execution, browser checks, screenshots or provider/hardware validation were performed. Source reads/edits and Git/PR operations only; prior passing results below belong to earlier commits.
+
+Implemented in code: default-OFF owned round history with revision/status constraints, manual UTC/IANA schedule resolution, reviewed calendar record/deduplication, explicit current-preparation select/clear, reschedule/completion/cancellation/debrief, next-round/offer continuations, existing legacy-date controls, source-revision-bound Saba/session creation/replay, round-aware plan keys and preserved completion history, timeline projection, export/cascade semantics. Input drafts reuse existing bounded tab memory; no consent/state-change approval is restored. No new provider/dependency/global tab or external send.
+
+Migration f73a9e1c462d drafted, not applied. No historical round inference. Feature flag remains OFF in example configuration and no actual environment was changed. Earlier PostgreSQL proof does not validate this migration. Schema is required before this backend can be deployed, even with the experience flag off. Deferred migration fixture/head expectations and every runtime/security/visual gate remain open.
+
+No automated checks or migration fixture changes were used to manufacture a green result; deferred head/fixture maintenance is explicitly recorded for later verification. Historical migration helper seeding was adapted to avoid depending on newer ORM columns when inserting into its older checkpoint schema, but the helper was not executed.
+
+Details: [scope, authority, guards and rollback](UNIFIED_INTERVIEW_ROUNDS.md). Production NO-GO. No merge/deployment authorized for this new branch; open the next draft PR for review.
+
+---
+
+## Historical evidence — prior PR445 (not current-slice validation)
+
 # Unified journey progress — review checkpoint
 
 ## Draft PR and hosted CI
@@ -118,3 +136,10 @@ Current scope remains phased: attribution controls/source counts and application
 Final V6 continuity gate21 PASS2.4m, isolated output unified-attribution-v6. Final attribution proof1 PASS15.9s after waiting for actual confirmation DOM unmount; both screenshots recopied and manifest updated90 files. No application-source changes followed the successful gates.
 
 Follow-on implementation commit be0c739b pushed to draft PR445. Its Actions run39565059170 executed no steps across six jobs; API check annotation again identifies account payments/spending-limit blocking. Resolve GitHub Billing & plans and rerun normal CI. No workflow was weakened, merge performed or manual deployment issued.
+
+
+## PR447 and external metadata
+
+Draft PR https://github.com/Iamishfaq07/ishai/pull/447 opened for implementation commit7c97580e; no merge. Existing GitHub Actions run39569955776 was automatically created by the integration, but all six jobs have no executed steps; API annotation reports failed account payments or spending-limit blocking. No CI rerun, test or scan was requested here.
+
+GitHub's existing Dependabot metadata reports10 open dependency alerts on main (2 critical,6 high,2 medium), involving Pillow and certifi in apps/api/uv.lock. This is read-only platform metadata, not an executed audit or proof of exploitability. Existing Dependabot PR446 addresses certifi; do not duplicate or merge it without review. Pillow/dependency remediation is a separate release gate. No lockfile/dependency change was mixed into this round-history slice. No current security pass is claimed.

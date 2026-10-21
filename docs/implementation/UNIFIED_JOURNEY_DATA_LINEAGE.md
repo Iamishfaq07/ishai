@@ -30,3 +30,7 @@ Timeline reads up to20 attribution changes and ten linked session previews; miss
 Application timeline labels describe stored state only: candidate-recorded, executor-reported, uncertain or saved/prepared. Explicit owned packet.application_id is required. No raw packet answers, private confirmation text or final URLs are returned; no historical employer receipt or submitted resume version is reconstructed.
 
 Local PostgreSQL16.15/pgvector0.8.7 migration round-trip and46 ownership/concurrency/lifecycle checks now PASS. Deployed PostgreSQL staging, backup/restore and remaining receipt/source-version migration remain separate gates.
+
+## Draft round authority — unverified
+
+JobInterviewRound stores candidate-recorded employer-round history, distinct from LiveSessionRow execution. Explicit job preparation reference/revision projects into existing next_at/type/number; matching dates/companies are not associations. Session source round ID/revision is checked at creation and preserved through replay; reschedule does not rewrite old practice. Preparation keys include selected round/version and keep historical completion snapshots. Legacy date/wrap-up writers clear selection. Export adds owned round rows and references; account/job cascade removes round content. Opaque historical references can remain on surviving owned sessions after job removal. No raw invitation/audio/video retained. Migration f73a9e1c462d has not been run. See UNIFIED_INTERVIEW_ROUNDS.md for guards, limits and deferred checks.

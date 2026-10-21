@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api.config import get_settings
 from orbit_api.job_portal import session_associations
 from orbit_api.models import (
     ApplicationPacket,
@@ -19,13 +20,14 @@ from orbit_api.models import (
     JobApplication,
     JobContact,
     JobFitCheck,
+    JobInterviewRound,
     LiveSessionRow,
     Resume,
 )
 from orbit_api.sessions.loop_memory import same_company
 
 Kind = Literal["saved", "fit", "resume", "prep_doc", "contact", "outreach", "applied", "round",
-               "related_round", "association", "application", "stage", "next"]
+               "related_round", "association", "application", "interview_round", "stage", "next"]
 STAGE_LABEL = {"interviewing": "Interviewing", "offer": "Offer", "rejected": "Not this time"}
 ROUND_LABEL = {"mock": "Practice round", "interview": "Live interview", "coding": "Live coding interview",
                "system_design": "Live system design interview", "phone": "Phone interview"}
@@ -138,6 +140,18 @@ async def timeline(db: AsyncSession, entry: JobApplication, now: datetime | None
                 "saved_record")
         events.append(TimelineEvent(kind="application", at=packet.updated_at, title=title, detail=detail,
             provenance=source, link=f"/jobs/applications?packet={packet.id}"))
+
+    if get_settings().personal_interview_rounds:
+        recorded_rounds = (await db.scalars(select(JobInterviewRound).where(
+            JobInterviewRound.user_id == entry.user_id, JobInterviewRound.application_id == entry.id)
+            .order_by(JobInterviewRound.created_at.desc()).limit(60))).all()
+        for recorded in recorded_rounds:
+            at = recorded.completed_at or recorded.scheduled_at or recorded.created_at
+            events.append(TimelineEvent(kind="interview_round", at=at,
+                title=f"{recorded.label} — {recorded.status}",
+                detail=f"Candidate-recorded employer round; {recorded.time_zone}. Separate from Saba practice.",
+                provenance="candidate_recorded", upcoming=recorded.status == "planned" and recorded.scheduled_at is not None and _aware(at) > now,
+                link=f"/jobs/mission/{entry.id}?tab=interview"))
 
     if entry.status in STAGE_LABEL:
         events.append(TimelineEvent(kind="stage", at=entry.status_at, title=STAGE_LABEL[entry.status]))

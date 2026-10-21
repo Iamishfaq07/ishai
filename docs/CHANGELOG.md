@@ -3579,3 +3579,11 @@ per-app capture: it needs a desktop release to reach users.
 - Preserve older linked sessions despite unrelated recent activity; count all completed linked practice rather than a ten-row preview.
 - Separate candidate-recorded/executor-reported/uncertain application evidence in the job timeline.
 - Validate identity migration/rollback and46 targeted lifecycle/concurrency checks on isolated local PostgreSQL; production gates remain open.
+
+### Draft interview-round continuity — UNVERIFIED
+
+- Owned employer rounds with UTC instant, IANA zone, revisioned schedule/status history, notes and candidate debrief.
+- Reviewed calendar event recording, duplicate-source guard and explicit preparation/stage choices.
+- Select/clear a preparation round; keep old completion history and bind Saba context to source revision.
+- Contextual next-round/offer actions and retained legacy manual controls.
+- Export/cascade semantics and additive migration drafted; experimental flag OFF. No tests, builds, lint, typechecks, migration execution or screenshots run under latest owner instruction.

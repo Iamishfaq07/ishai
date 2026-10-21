@@ -910,6 +910,7 @@ async def track(body: TrackIn, user: Annotated[User, Depends(current_user)],
 def _move(entry: JobApplication, to: Status) -> None:
     if to in ("withdrawn", "hired"):
         entry.next_at = None
+        entry.preparation_round_id = entry.preparation_round_revision = None
     if entry.status != to:
         entry.status, entry.status_at = to, datetime.now(UTC)
     if to == "applied" and entry.applied_at is None:
@@ -936,6 +937,7 @@ async def update_tracker(entry_id: str, body: TrackPatch, user: Annotated[User, 
     if body.applied_at is not None or body.clear_applied:
         entry.applied_at = None if body.clear_applied else body.applied_at
     if body.next_at is not None or body.clear_next:
+        entry.preparation_round_id = entry.preparation_round_revision = None
         entry.next_at = None if body.clear_next else body.next_at
     await db.commit()
     await db.refresh(entry)
@@ -1080,6 +1082,7 @@ async def track_manual(body: ManualIn, user: Annotated[User, Depends(current_use
     elif entry.applied_at is None and body.status in ("applied", "interviewing", "offer", "hired"):
         entry.applied_at = now
     entry.next_at = body.next_at
+    entry.preparation_round_id = entry.preparation_round_revision = None
     entry.notes = manual.clean_notes(body.notes)
     if doc is not None:
         entry.document_id = doc.id

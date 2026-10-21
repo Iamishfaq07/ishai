@@ -31,3 +31,7 @@ New actual-runtime files: after-session-reviewed-linked-390.png and after-sessio
 Both new390px captures were opened and manually inspected. The current root87-pass run refreshed the Today/My Career after matrix; before captures remain the original baseline. Additional populated identity/job/20-opportunity/CSS-zoom proofs were refreshed from that same run. Manifest SHA256/dimensions updated90 files. AXE and no-overflow assertions pass on the linked review state; full manual screen-reader/all-state/real-zoom certification remains outstanding.
 
 Final attribution screenshot proof1 PASS15.9s; actual exiting dialog DOM was absent before capture. Both final copied images were re-opened for review. V6 continuity21 PASS2.4m; these are mocked local runtime checks, not live speech/provider certification.
+
+## New round editor branch — NO NEW VISUAL VALIDATION
+
+Owned round editor/history, legacy-date disclosure and revised invitation options were implemented after PR445. The owner has prohibited testing; no browser rendering, screenshots, accessibility/scroll/motion/viewport checks were performed. The90-image manifest above belongs to PR445’s prior source and does not certify these screens. Current visual status: UNVERIFIED.

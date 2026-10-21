@@ -46,6 +46,7 @@ import { scoreTone } from "../../resume/product";
 import { linkButton, textLink } from "../links";
 import { jobPath } from "../paths";
 import { copilotPath } from "./links";
+import { InterviewRounds } from "./InterviewRounds";
 
 /**
  * The Mission Room's Interview tab: one tracked job prepared for its interview (apps/api/orbit_api/job_portal/
@@ -58,6 +59,7 @@ export function InterviewPrepPanel({ entry, onEntry }: { entry: JobTrackerEntry;
   const styles = useAsync(() => api.interviewStyles(), [], "interview-styles");
   const guide = matchStyle(styles.data ?? [], entry.company);
   const v = prep.data;
+  const roundsEnabled = v?.round_history_enabled === true;
   const save = async (patch: InterviewPrepUpdate, done?: string): Promise<boolean> => {
     try {
       const next = await api.updateInterviewPrep(entry.id, patch);
@@ -77,7 +79,8 @@ export function InterviewPrepPanel({ entry, onEntry }: { entry: JobTrackerEntry;
         <ErrorNote onRetry={prep.reload}>{errorText(prep.error)}</ErrorNote>
       ) : v ? (
         <div className="space-y-4">
-          <WhenCard view={v} onSave={save} />
+          {roundsEnabled && <InterviewRounds entryId={entry.id} onSaved={() => { prep.reload(); onEntry(); }} />}
+          {roundsEnabled ? <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10"><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Existing tracker date and manual controls</summary><p className="mb-3 text-xs text-zinc-600 dark:text-zinc-400">These controls remain available for historical dates and follow-ups. Editing them clears the selected round reference; saved round and preparation history stay intact.</p><WhenCard view={v} onSave={save} /></details> : <WhenCard view={v} onSave={save} />}
           <LaunchCard view={v} />
           <div className="grid grid-cols-[minmax(0,1fr)] gap-4 xl:grid-cols-2">
             <JobPostCard view={v} onSave={save} />
