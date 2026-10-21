@@ -462,27 +462,17 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
 
 function PracticePanel({ mission, entry, onLinked }: { mission: JobMission; entry: JobTrackerEntry; onLinked: () => void }) {
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const context = new URLSearchParams(params); context.set("job", entry.id); context.set("career_from", "practice");
   return (
-    <Card>
-      <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="mic" />Practice for {entry.company}</h2>
-      <dl className="mt-3 grid grid-cols-2 gap-3 sm:max-w-sm">
-        <div>
-          <dt className="text-xs text-zinc-600 dark:text-zinc-400">Completed practice</dt>
-          <dd className="font-display text-2xl font-semibold tabular-nums">{mission.practice_rounds}</dd>
-        </div>
-        <div>
-          <dt className="text-xs text-zinc-600 dark:text-zinc-400">Completed live sessions</dt>
-          <dd className="font-display text-2xl font-semibold tabular-nums">{mission.live_rounds}</dd>
-        </div>
-      </dl>
-      <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">Only sessions explicitly linked to this opportunity count here. Company-name matches require your review.</p>
-      <JobSabaPractice entryId={entry.id} />
-      <Button variant="secondary" className="mt-3" onClick={() => { const next = new URLSearchParams(params); next.set("tab", "plan"); setParams(next); }}>Review preparation plan</Button>
-      <div className="mt-4 flex flex-wrap gap-x-5"><Link className={textLink} to={careerToolHref("/documents/stories", context)}>Review real examples in your story bank</Link><Link className={textLink} to={careerToolHref("/learn", context)}>Work on a skill before rehearsing</Link></div>
-      <details className="mt-4" onToggle={(event) => setReviewOpen(event.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Review previous rounds, then try again</summary><p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Linked rounds count toward this opportunity. Possible company-name matches are shown separately for review. Open a completed session to review your recorded answers and existing retry tools.</p>{reviewOpen && <Journey key={entry.id} entryId={entry.id} roundsOnly onLinked={onLinked} />}</details>
-    </Card>
+    <div className="min-w-0 space-y-4">
+      <JobSabaPractice entryId={entry.id} onChanged={onLinked} />
+      <section aria-label="Build your answers" className="workspace-panel p-5"><h2 className="text-base font-semibold">Strengthen an answer before you rehearse</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Use your own examples or study a missing topic. Learning does not automatically become a career claim.</p><div className="mt-3 flex flex-wrap gap-x-5"><Link className={textLink} to={careerToolHref("/documents/stories", context)}>Review my real examples</Link><Link className={textLink} to={careerToolHref("/learn", context)}>Work on a skill gap</Link><Link className={textLink} to={careerToolHref("/code", context)}>Practice explaining code</Link></div></section>
+      <details className="workspace-panel p-5" onToggle={(event) => setReviewOpen(event.currentTarget.open)}><summary className={cx("min-h-11 cursor-pointer rounded py-2 text-sm font-semibold", focusRing)}>Review previous sessions and try again</summary>
+        <dl className="mt-3 grid grid-cols-2 gap-3"><div><dt className="workspace-eyebrow">Completed practice</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{mission.practice_rounds}</dd></div><div><dt className="workspace-eyebrow">Completed live sessions</dt><dd className="mt-1 text-2xl font-semibold tabular-nums">{mission.live_rounds}</dd></div></dl>
+        <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">These counts include explicitly linked sessions only. Practice and live sessions are separate. Possible company-name matches remain unconfirmed until you review and link them. Open a completed session for its report and targeted retry tools.</p>{reviewOpen && <Journey key={entry.id} entryId={entry.id} roundsOnly onLinked={onLinked} />}
+      </details>
+    </div>
   );
 }
 

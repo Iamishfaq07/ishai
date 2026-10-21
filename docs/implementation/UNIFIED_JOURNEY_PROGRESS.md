@@ -1,3 +1,11 @@
+# Current increment — Saba preparation workspace, 2026-10-21
+
+Base24e29789 after read-only confirmation PR450 was owner-merged. Branch orbit-saba-preparation-workspace-2026-10-21. Source reads/edits and Git/PR only; no tests/build/lint/typecheck/browser/screenshot/migration/provider/hardware/scans. Code adds Saba source briefing and10/20-minute options, in-room existing materials/questions, plan/round/tool continuation, disclosed report history, visible-source comparison and active/duplicate/stale-drill guards. No new backend/schema/dependency/AI-on-mount. [Scope/known limits](UNIFIED_SABA_PREPARATION.md). Production NO-GO.
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Opportunity Room continuity, 2026-10-21
 
 Basebb66a5c2 after read-only confirmation PR449 was merged by owner. Branch orbit-opportunity-room-continuity-2026-10-21. Implementation commitbb040a7c. Draft [PR450](https://github.com/Iamishfaq07/ishai/pull/450) opened and attached for owner review; not merged. Source reads/edits and Git/PR operations only; no testing/validation. Implemented contextual room sections preserving old tabs; owned-list job switching; honest resume/next-date briefing; lazy existing application review with expected-room check; keyed panels, visit-bound save guard and bounded note drafts. No new schema/dependency/LLM call or send authorization. [Scope and remaining work](UNIFIED_OPPORTUNITY_CONTINUITY.md). Production NO-GO.

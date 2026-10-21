@@ -1,3 +1,11 @@
+# Current increment — Saba preparation workspace, 2026-10-21
+
+SOURCE-CONFIRMED: ordinary Saba practice was hardcoded20 minutes, material/question selection lived elsewhere, old view.round.type was used after fetching fresh context, and saved stale questions could launch drills. New UI duration/source controls and client source/unmount/drill guards implemented, not runtime reproduced. Full same-ID content/hash and atomic session-source validation remains RISK/open; provider/audio/visual behavior unverified. [Details](UNIFIED_SABA_PREPARATION.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Opportunity Room continuity, 2026-10-21
 
 SOURCE-CONFIRMED: local room sections still required an eight-tool select; Company/Plan/History discovery was indirect. SOURCE-CONFIRMED: version notes used transient component state; late mission saves lacked per-visit response guard. Updated contextual navigation, keyed panels, bounded note draft and per-visit guard are IMPLEMENTED / UNVERIFIED. Packet job-return links ALREADY EXISTED and are reused. Full reproduction/acceptance deferred. [Details](UNIFIED_OPPORTUNITY_CONTINUITY.md).

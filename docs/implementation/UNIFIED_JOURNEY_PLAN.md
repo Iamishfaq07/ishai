@@ -1,3 +1,11 @@
+# Current increment — Saba preparation workspace, 2026-10-21
+
+Decision: reuse existing interview prep projection/material writers/question engine and session context. Bring them into job Practice progressively; add short/full options and source identity comparison before creation. Keep existing server ownership/round-revision checks and quotas; no new engine/table/primary tab. Full body hashes/atomic source binding are remaining work. [Rollback/gates](UNIFIED_SABA_PREPARATION.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Opportunity Room continuity, 2026-10-21
 
 Decision: URL tab remains room panel authority. Derive contextual tools from existing roomSection/MISSION_TOOLS, retain all aliases, and reuse PacketDetail under explicit lazy disclosure. Switch job via owned tracker ID with current tool only; drop foreign-job context keys. Per-visit guard and keyed editors prevent stale mutation responses from replacing another room. No schema/dependency. [Rollback/deferred acceptance](UNIFIED_OPPORTUNITY_CONTINUITY.md).

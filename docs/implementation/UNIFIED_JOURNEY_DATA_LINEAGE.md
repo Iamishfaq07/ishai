@@ -1,3 +1,11 @@
+# Current increment — Saba preparation workspace, 2026-10-21
+
+Displayed source: existing selected InterviewVersion kind/id/at, job document and recorded round fields. Fresh owned session context is compared before practice; fresh round drives persona. UI identity guard is not full content-hash/atomic enforcement. Source provisioning can write existing private Documents before later rejection. Practice/real rounds remain distinct; no new association/status/claims. [Limits](UNIFIED_SABA_PREPARATION.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Opportunity Room continuity, 2026-10-21
 
 No new artifact association. Existing owned listing + null/matching packet.application_id drives mission preparation context; embedded packet expected tracker check is client defense, not proof of delivery or server mutation scope. Resume note is raw input in existing account/job bounded tab-memory; no restored consent. Saved sources/master/receipts remain separate. [Contract](UNIFIED_OPPORTUNITY_CONTINUITY.md).

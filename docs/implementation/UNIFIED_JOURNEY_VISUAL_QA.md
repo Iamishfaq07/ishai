@@ -1,3 +1,11 @@
+# Current increment — Saba preparation workspace, 2026-10-21
+
+New Saba briefing/source grid, duration/format choices, progressive material/question controls and disclosed history use enterprise shared styles. No new screenshots/browser/contrast/accessibility/motion/viewport checks; prior screenshots do not depict this slice. Source/permission/loading/failure layouts remain unverified. [Design intent](UNIFIED_SABA_PREPARATION.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Opportunity Room continuity, 2026-10-21
 
 Current room slice uses merged enterprise tokens, wrapping canonical/context navigation, opportunity switcher, source briefing and lazy packet review. No new browser visits/screenshots/contrast/layout/accessibility/motion checks; earlier screenshots are historical. Complete responsive/light/dark/motion/zoom/keyboard matrix remains open. [Design intent](UNIFIED_OPPORTUNITY_CONTINUITY.md).
