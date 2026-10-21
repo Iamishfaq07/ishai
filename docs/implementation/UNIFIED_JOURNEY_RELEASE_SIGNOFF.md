@@ -1,3 +1,11 @@
+# Current release checkpoint — enterprise visual language, 2026-10-21
+
+**NO-GO for production. IMPLEMENTED / UNVERIFIED.** Owner instruction: no testing. No tests/build/lint/typecheck/browser/screenshots/accessibility/contrast/native/provider/migration checks were run for this slice. Earlier evidence is historical.
+
+Implemented shared neutral palette/preferences/surfaces/logo/header and connected Today layout/core candidate screen treatment. No new schema/dependency/AI cost or production deployment. Existing binary assets, full redesigned screen matrix and earlier backend/migration/provider/security/dependency/operator gates remain open. [Scope/rollback/deferred acceptance](UNIFIED_ENTERPRISE_DESIGN.md). Draft PR for owner review; no auto-merge or deploy.
+
+---
+
 # Current checkpoint — saved-material provenance, 2026-10-21
 
 **NO-GO for production. IMPLEMENTED / UNVERIFIED.** Base4a49967d; latest owner instruction is NO TESTING. No tests/build/lint/typecheck/migration/browser/screenshots/provider/security checks were run for this slice. No prior pass validates it. No deployment or application send performed.

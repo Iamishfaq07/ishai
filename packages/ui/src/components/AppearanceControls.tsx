@@ -22,7 +22,7 @@ function radioKeys<T>(values: readonly T[], current: T, choose: (value: T) => vo
   };
 }
 
-const ACCENT_NAMES = Object.keys(ACCENTS) as AccentName[];
+const ACCENT_NAMES = (Object.keys(ACCENTS) as AccentName[]).filter((name) => name !== "nebula");
 const MOTION_HINTS: Record<MotionLevel, string> = {
   full: "Things slide, spin and celebrate.",
   reduced: "Fades only. Nothing moves across the screen.",
@@ -41,7 +41,7 @@ export function AppearanceControls({ prefs, onChange }: AppearanceControlsProps)
         <div
           role="radiogroup"
           aria-labelledby="accent-label"
-          className="flex gap-2"
+          className="flex flex-wrap gap-2"
           onKeyDown={radioKeys(ACCENT_NAMES, prefs.accent, (accent) => onChange({ accent }))}
         >
           {ACCENT_NAMES.map((name) => {
@@ -63,7 +63,7 @@ export function AppearanceControls({ prefs, onChange }: AppearanceControlsProps)
                   // The focus outline sits outside the chosen swatch's ring rather than on top of it.
                   "focus-visible:outline-offset-4",
                 )}
-                style={{ background: `linear-gradient(135deg, rgb(${ACCENTS[name].palette[3]}), rgb(${ACCENTS[name].palette[6]}))` }}
+                style={{ backgroundColor: `rgb(${ACCENTS[name].palette[6]})` }}
               >
                 {selected && <Check className="mx-auto h-3.5 w-3.5 text-white motion-ok:animate-pop" strokeWidth={3} />}
               </button>

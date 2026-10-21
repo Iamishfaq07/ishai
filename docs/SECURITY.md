@@ -315,3 +315,10 @@ Authenticated ownership is checked for job and round actions. Strict confirmatio
 New save uses account and owned resume locks; supplied displayed ID/timestamp mismatches return409. track_applied explicitly rejects a foreign packet owner. References grant no authorization; existing destination routes recheck owner. Hash is neither signature nor receipt. Security behavior remains unverified; no scan was run.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Existing authenticated ownership boundaries and safe room routes remain. Appearance loading now accepts own palette keys, avoiding inherited object-key values. No provider/send/browser automation permission change. Security behavior and new preference paths remain unverified.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.

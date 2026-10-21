@@ -1,3 +1,11 @@
+## 2026-10-21 — design and navigation source findings
+
+DESIGN OPPORTUNITY, owner-confirmed: default Nebula plus violet-tinted neutrals make even neutral UI read purple. Shared palette, stage marks, legacy-default alias and solid surfaces/logo now replace that direction. Source evidence: design.ts defaults/palettes, base.css ink/accent/stage variables; no new runtime reproduction claimed.
+
+SOURCE-CONFIRMED NAVIGATION GAP: Home horizontal stage shortcuts used generic tracker/prepare/offers routes even after selecting a role. New secondary rail carries that owned opportunity ID into existing resume/practice/interview/offer tabs; selection remains list scope and global recommendation is clearly separate. No automatic source association or status change. Acceptance deferred.
+
+REMAINING: binary PWA/native/social assets retain their prior artwork; full specialist-screen layout overhaul, contrast, screenshot/browser/motion/scroll/account-switch verification are open. All current changes IMPLEMENTED / UNVERIFIED. [Details](UNIFIED_ENTERPRISE_DESIGN.md).
+
 ## 2026-10-21 — source findings, no runtime reproduction
 
 SOURCE-CONFIRMED: `mission.freeze_resume` stored only a nullable live resume FK, which is SET NULL on deletion, without original revision. Reproduction recipe for later: save revision, edit/delete source, inspect version. Impact: missing durable provenance. New creation-time origin captures ID/revision; legacy provenance remains unknown. Acceptance deferred.

@@ -3594,3 +3594,10 @@ per-app capture: it needs a desktop release to reach users.
 Added saved-resume source/revision history, optional displayed-source conflict guard, restored-copy references and packet-source disclosure. Fixed packet snapshots reading mutable current job descriptions and packet copies being mislabeled as deleted original resumes.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+Replace purple default/violet neutrals with paper/graphite/Slate blue; legacy Nebula resolves to Slate blue. Restructure Today into primary action/opportunity rows and contextual journey rail. Update core candidate headings, shared surfaces/logo/SVG favicon/offline. Explicit user accents remain selectable.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.

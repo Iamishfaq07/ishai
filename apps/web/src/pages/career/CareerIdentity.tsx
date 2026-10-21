@@ -46,8 +46,8 @@ export function CareerIdentity({ userId }: { userId: string }) {
   return <section aria-label="Your career identity" className="min-w-0 space-y-5">
     {identity.error && <ErrorNote onRetry={reload}>{errorText(identity.error)}</ErrorNote>}
     {error && <ErrorNote onRetry={reload}>{error}</ErrorNote>}
-    <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-white/10 dark:bg-zinc-900">
-      <header className="border-b border-zinc-200 p-5 sm:p-6 dark:border-white/10"><p className="text-xs font-semibold uppercase tracking-widest text-indigo-700 dark:text-indigo-300">One identity. Every opportunity.</p>
+    <section className="workspace-panel overflow-hidden">
+      <header className="border-b border-zinc-200 p-5 sm:p-6 dark:border-white/10"><p className="workspace-eyebrow">Career identity</p>
         <h2 className="mt-3 font-display text-2xl font-semibold">{master ? current.name || master.title : "Start with your story."}</h2>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{master ? current.headline || "Your master resume is the reusable starting point for your career. Job copies stay separate." : "Bring a resume, build your first one, or explore opportunities while you decide. You can start anywhere."}</p>
         {!master && <div className="mt-4 flex flex-wrap gap-3"><Link className={link} to="/resume-ai?start=import&guide=1">Import my resume</Link><Link className={link} to="/resume-ai?start=new&guide=1">Build from scratch</Link><Link className={link} to="/jobs/matches">Explore jobs first</Link></div>}
@@ -72,7 +72,7 @@ export function CareerIdentity({ userId }: { userId: string }) {
         </div>
       </div>
     </section>
-    <section aria-labelledby="career-direction" className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your direction</p><h2 id="career-direction" className="mt-2 font-display text-xl font-semibold">{current.target_roles.length ? current.target_roles.join(" · ") : "What would you like to do next?"}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{current.target_roles.length || current.locations.length ? [...current.locations, ...current.workplace].join(" · ") : "Choose your target roles, locations and work preferences when you are ready."}</p></div><Link className={link} to="/jobs/profile">Edit career goals</Link></div>
+    <section aria-labelledby="career-direction" className="workspace-panel p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your direction</p><h2 id="career-direction" className="mt-2 font-display text-xl font-semibold">{current.target_roles.length ? current.target_roles.join(" · ") : "What would you like to do next?"}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{current.target_roles.length || current.locations.length ? [...current.locations, ...current.workplace].join(" · ") : "Choose your target roles, locations and work preferences when you are ready."}</p></div><Link className={link} to="/jobs/profile">Edit career goals</Link></div>
       <div className="mt-4 flex flex-wrap gap-x-5"><Link className={link} to="/jobs/matches">Discover opportunities</Link><Link className={link} to="/">Return to Today</Link></div>
       {master && !current.search_uses_master && <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Discover currently uses a different resume. Review search preferences before continuing; your master has not changed.</p>}
     </section>

@@ -1,4 +1,3 @@
-import { useId } from "react";
 import { cx } from "./cx";
 
 export interface OrbitLogoProps {
@@ -15,9 +14,8 @@ export interface OrbitLogoProps {
 const RING = "M51.41 20.84 A23 23 0 1 1 43.16 12.59";
 const SPARK = "M48.26 6.76 L50.34 13.66 L57.24 15.74 L50.34 17.82 L48.26 24.72 L46.18 17.82 L39.28 15.74 L46.18 13.66Z";
 
-/** The Orbit mark. Ring and planet follow the accent colour into the aurora cyan; the spark is always starlight. */
-export function OrbitLogo({ size = 20, animated = true, busy = false, className }: OrbitLogoProps) {
-  const id = useId().replace(/:/g, "");
+/** The Orbit mark, in one solid accent. Decorative motion is opt-in; busy still represents real work. */
+export function OrbitLogo({ size = 20, animated = false, busy = false, className }: OrbitLogoProps) {
   return (
     <svg
       width={size}
@@ -27,21 +25,10 @@ export function OrbitLogo({ size = 20, animated = true, busy = false, className 
       aria-hidden="true"
       focusable="false"
     >
-      <defs>
-        <linearGradient id={`${id}-ring`} x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stopColor="rgb(var(--accent-600))" />
-          <stop offset="0.5" stopColor="rgb(var(--accent-400))" />
-          <stop offset="1" stopColor="rgb(var(--aurora-400))" />
-        </linearGradient>
-        <linearGradient id={`${id}-core`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="rgb(var(--accent-300))" />
-          <stop offset="1" stopColor="rgb(var(--accent-600))" />
-        </linearGradient>
-      </defs>
       <g className={cx(busy && "origin-center animate-orbit-fast")} style={{ transformBox: "view-box" }}>
-        <path d={RING} fill="none" stroke={`url(#${id}-ring)`} strokeWidth="8" strokeLinecap="round" />
+        <path d={RING} fill="none" stroke="rgb(var(--accent-600))" strokeWidth="8" strokeLinecap="round" />
       </g>
-      <circle cx="32" cy="32" r="8.5" fill={`url(#${id}-core)`} />
+      <circle cx="32" cy="32" r="8.5" fill="rgb(var(--accent-600))" />
       <path
         d={SPARK}
         className={cx("fill-zinc-900 dark:fill-white", animated && "animate-spark")}
@@ -54,7 +41,7 @@ export function OrbitLogo({ size = 20, animated = true, busy = false, className 
 /** Mark + "orbit" wordmark, for headers and sign-in screens. */
 export function OrbitWordmark({
   size = 24,
-  animated = true,
+  animated = false,
   className,
 }: {
   size?: number;

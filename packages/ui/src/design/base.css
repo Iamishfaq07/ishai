@@ -1,37 +1,37 @@
-/* Orbit "Deep Space" — shared look & feel for the web and desktop apps. Plain CSS (no @apply) so either app can
+/* Orbit enterprise workbench — shared look & feel for the web and desktop apps. Plain CSS (no @apply) so either app can
    @import it. Colour scales are RGB triplets so Tailwind's `/ <alpha>` modifiers work (see tailwind.preset.ts). */
 
 :root {
-  --bg-void: #04060C;
-  --surface-glass: rgba(11, 16, 30, 0.78);
-  --surface-raised: rgba(21, 29, 48, 0.9);
+  --bg-void: #101214;
+  --surface-glass: #191c20;
+  --surface-raised: #23272c;
   --specular-border: rgba(255, 255, 255, 0.07);
   --specular-top: rgba(148, 163, 184, 0.24);
-  /* Accent (Tailwind `indigo-*`). Default = Nebula; applyDesign() overrides these per user. */
-  --accent-50: 245 243 255;
-  --accent-100: 236 233 255;
-  --accent-200: 221 214 254;
-  --accent-300: 196 181 253;
-  --accent-400: 164 139 250;
-  --accent-500: 134 102 255;
-  --accent-600: 112 72 245;
-  --accent-700: 94 56 214;
-  --accent-800: 76 46 170;
-  --accent-900: 58 38 128;
-  --accent-950: 32 20 80;
+  /* Accent (Tailwind `indigo-*`). Default = Slate blue; applyDesign() overrides these per user. */
+  --accent-50: 245 248 251;
+  --accent-100: 231 238 245;
+  --accent-200: 207 223 237;
+  --accent-300: 168 191 214;
+  --accent-400: 123 155 185;
+  --accent-500: 83 124 159;
+  --accent-600: 54 95 128;
+  --accent-700: 41 75 104;
+  --accent-800: 35 63 86;
+  --accent-900: 32 53 72;
+  --accent-950: 18 35 50;
 
-  /* Ink (Tailwind `zinc-*`): cool neutrals with a hint of violet, from starlight to deep space. */
-  --ink-50: 246 247 251;
-  --ink-100: 238 239 247;
-  --ink-200: 223 225 239;
-  --ink-300: 196 199 221;
-  --ink-400: 151 156 188;
-  --ink-500: 110 115 150;
-  --ink-600: 80 85 118;
-  --ink-700: 56 60 90;
-  --ink-800: 35 38 66;
-  --ink-900: 20 22 45;
-  --ink-950: 8 9 24;
+  /* Ink (Tailwind `zinc-*`): neutral graphite on warm paper; no violet cast in text or surfaces. */
+  --ink-50: 250 250 249;
+  --ink-100: 245 245 244;
+  --ink-200: 228 230 232;
+  --ink-300: 199 203 208;
+  --ink-400: 145 152 161;
+  --ink-500: 102 112 122;
+  --ink-600: 73 83 94;
+  --ink-700: 52 58 65;
+  --ink-800: 36 40 46;
+  --ink-900: 25 28 32;
+  --ink-950: 16 18 20;
 
   /* Aurora (Tailwind `aurora-*`): the cyan the brand gradients fade into. */
   --aurora-50: 236 254 255;
@@ -61,16 +61,13 @@
   --ease-pop: cubic-bezier(0.3, 1.4, 0.55, 1); /* a tick or a dot arriving: a hair past, then home */
   --stagger-step: 35ms; /* list entrances, first 6 items only */
 
-  /* A job's stage (Tailwind `stage-*`): the tracker's edges, the Home pipeline bar, the dot in every stage pill. Fixed,
-     not the user's accent, so a stage looks the same for everyone and never collides with the status colours. Saved →
-     applied → interviewing is one ordered violet ramp (further along = more ink); an offer is the status green; "not
-     this time" is a quiet grey. Checked with the dataviz palette validator (ordinal, colour-blind, contrast) in both
-     themes; a stage always shows its name next to the colour. */
-  --stage-saved: 164 139 250; /* #A48BFA */
-  --stage-applied: 112 72 245; /* #7048F5 */
-  --stage-interviewing: 76 46 170; /* #4C2EAA */
-  --stage-offer: 5 150 105; /* #059669 */
-  --stage-rejected: 161 161 170; /* #A1A1AA */
+  /* Fixed stage marks remain separate from personal accents and always accompany a text label.
+     Neutral/steel sequence, green for an offer; new values are not yet visually validated. */
+  --stage-saved: 148 163 184;
+  --stage-applied: 71 85 105;
+  --stage-interviewing: 30 58 77;
+  --stage-offer: 5 150 105;
+  --stage-rejected: 161 161 170;
 
   /* Elevation (Tailwind shadow-menu / -popover / -dialog / -toast): floating things only, softer and wider the higher
      they sit. Each pairs with a hairline border, so an edge holds where a shadow can't be seen (dark mode). */
@@ -90,9 +87,9 @@
   --shadow-dialog: 0 4px 12px rgb(0 0 0 / 0.45), 0 32px 72px -20px rgb(0 0 0 / 0.75);
   --shadow-toast: 0 4px 12px rgb(0 0 0 / 0.45), 0 18px 44px -14px rgb(0 0 0 / 0.7);
   /* Dark mode's own steps: lighter means further along against the dark surface. */
-  --stage-saved: 94 56 214; /* #5E38D6 */
-  --stage-applied: 134 102 255; /* #8666FF */
-  --stage-interviewing: 196 181 253; /* #C4B5FD */
+  --stage-saved: 71 85 105;
+  --stage-applied: 100 116 139;
+  --stage-interviewing: 186 210 233;
   --stage-offer: 52 211 153; /* #34D399 */
   --stage-rejected: 82 82 91; /* #52525B */
 }
@@ -103,22 +100,9 @@
   }
 }
 
-/* The sky behind everything: a soft aurora wash on deep space (dark) or a pale dawn (light). */
-body {
-  background-color: rgb(var(--ink-50));
-  background-image:
-    radial-gradient(60rem 40rem at 85% -10%, rgb(var(--accent-300) / 0.28), transparent 60%),
-    radial-gradient(50rem 36rem at -10% 10%, rgb(var(--aurora-200) / 0.3), transparent 60%);
-  background-attachment: fixed;
-}
-.dark body {
-  background-color: var(--bg-void);
-  background-image:
-    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(56, 189, 248, 0.10), rgba(99, 102, 241, 0.05), transparent),
-    radial-gradient(60rem 40rem at 85% -10%, rgb(var(--accent-600) / 0.22), transparent 60%),
-    radial-gradient(50rem 36rem at -10% 10%, rgb(var(--aurora-500) / 0.1), transparent 60%),
-    radial-gradient(70rem 50rem at 50% 120%, rgb(var(--accent-900) / 0.35), transparent 60%);
-}
+/* A still, neutral canvas in every shell. Accent belongs to actions, not the page backdrop. */
+body { background-color: rgb(var(--ink-50)); background-image: none; }
+.dark body { background-color: var(--bg-void); background-image: none; }
 
 /* Taps: no 300 ms double-tap-zoom wait and no grey flash on controls (focus rings mark keyboard focus). */
 a,
@@ -134,25 +118,10 @@ summary,
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Specular glass over a static sky. Reduced motion disables the blur as well as decorative movement. */
-.glass-panel {
-  background-color: rgb(255 255 255 / 0.86);
-  border: 1px solid rgb(var(--ink-200) / 0.9);
-  box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.9) inset,
-    0 12px 32px -20px rgb(var(--ink-900) / 0.25);
-}
-.dark .glass-panel {
-  background-color: var(--surface-glass);
-  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.01));
-  border-color: var(--specular-border);
-  border-top-color: var(--specular-top);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-/* The blur lives on a layer of its own, not on the panel: an element with backdrop-filter becomes the backdrop root
-   for everything inside it, so a glass card (or a menu) inside a blurred panel blurred nothing and looked broken in
-   Chrome and WebView2. ::after (::before is .gradient-border's) sits under the content and under that border.
-   position comes through :where() (no specificity), so .absolute / .fixed / .sticky utilities still win. */
+/* Compatibility surface names, now opaque. Floating overlays own their elevation separately. */
+.glass-panel { background-color: #fff; border: 1px solid rgb(var(--ink-200)); box-shadow: none; }
+.dark .glass-panel { background: var(--surface-glass); border-color: rgb(255 255 255 / .12); box-shadow: none; }
+/* Retain existing panel stacking contexts without backdrop blur. Position uses :where() so explicit utilities win. */
 :where(.glass-panel, .orbit-card, .orbit-panel) {
   position: relative;
   isolation: isolate;
@@ -164,8 +133,8 @@ summary,
   z-index: -2;
   border-radius: inherit;
   pointer-events: none;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 body { font-variant-numeric: tabular-nums; }
@@ -1063,16 +1032,14 @@ input[type="checkbox"]:checked::before {
   }
 }
 
-/* Accessibility (WCAG AA 4.5:1). ink-500 secondary text is ~4.2:1 on the dark sky, so in dark mode secondary text
-   without its own dark colour uses ink-400 (~7.3:1 on ink-950, 6.6:1 on ink-900 panels). */
+/* Secondary text fallback. Current enterprise palette contrast still requires later validation. */
 .dark .text-zinc-500:not([class*="dark:text-"]) {
   color: rgb(var(--ink-400));
 }
-/* Light mode: ink-400 is too faint on white. Secondary text uses a deeper ink that passes on every light surface
-   (white 6.8:1, ink-100 5.9:1). */
+/* Use the deeper neutral for small secondary text on light surfaces. */
 html:not(.dark) .text-zinc-500,
 html:not(.dark) .text-zinc-400 {
-  color: rgb(84 89 122);
+  color: rgb(73 83 94);
 }
 /* Light mode: the -600 status shades are too pale for small text on white (emerald 3.8:1, amber 3.2:1), so they
    draw in -700 (5.5:1, 5.0:1). Dark mode keeps its own dark: colours. */
@@ -1133,22 +1100,9 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
   to { transform: translate3d(8vmax, 6vmax, 0) scale(1.08); }
 }
 
-/* Glass 2.0: light from the top-left. A brighter top edge, a softer left edge, and a near-black bottom. */
-.orbit-card,
-.orbit-panel {
-  background: linear-gradient(135deg, rgb(255 255 255 / 0.92), rgb(255 255 255 / 0.84));
-  border: 1px solid rgb(var(--ink-200) / 0.9);
-  box-shadow: 0 1px 0 0 rgb(255 255 255 / 0.9) inset, 0 12px 32px -20px rgb(var(--ink-900) / 0.25);
-}
-.dark .orbit-card,
-.dark .orbit-panel {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.055) 0%, rgba(11, 16, 30, 0.8) 45%, rgba(5, 8, 17, 0.92) 100%);
-  border-top: 1px solid rgba(186, 230, 253, 0.26);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
-}
+/* Legacy panel names remain compatible with the shared neutral surface. */
+.orbit-card, .orbit-panel { background: #fff; border: 1px solid rgb(var(--ink-200)); box-shadow: none; }
+.dark .orbit-card, .dark .orbit-panel { background: var(--surface-glass); border-color: rgb(255 255 255 / .12); box-shadow: none; }
 /* The spotlight follows the pointer on primary cards (spotlightMove sets --mouse-x / --mouse-y). Painted under the
    content (z-index -1 in the card's own stacking context), only on devices that hover. */
 .orbit-spotlight::before {
@@ -1218,10 +1172,10 @@ html:not(.dark) .cosmic-dots { background-image: radial-gradient(rgba(35, 38, 66
    dark blue-grey family (D58) whatever the page's theme, so it looks the same in light mode. Saba's voice is the
    canvas (VoiceVisualizer); what's here is the room around it. */
 .video-room {
-  --ink-950: 20 27 39;
-  --ink-900: 27 35 50;
-  --ink-800: 35 44 59;
-  --ink-700: 54 64 84;
+  --ink-950: 25 28 32;
+  --ink-900: 35 39 44;
+  --ink-800: 52 58 65;
+  --ink-700: 73 83 94;
 }
 /* Light mode deepens secondary text for white pages; the room is dark, so it keeps the light steps (AA on it). */
 html:not(.dark) .video-room :is(.text-zinc-400, .text-zinc-500) { color: rgb(var(--ink-400)); }
@@ -1388,22 +1342,22 @@ html:not(.dark) .video-room :is(.text-zinc-400, .text-zinc-500) { color: rgb(var
    shell (html.app-shell, set by the web Layout) there is one still canvas, surfaces are opaque with a hairline border
    and no shadow (only things that float, a menu or a dialog, cast one), and headings use the product face. */
 html.app-shell {
-  --canvas: 245 246 248; /* #F5F6F8 */
+  --canvas: 245 245 244; /* paper */
   --surface: 255 255 255;
-  --line: 226 229 235; /* #E2E5EB */
+  --line: 228 230 232;
 }
 html.app-shell.dark {
-  --canvas: 13 18 28; /* #0D121C */
-  --surface: 20 27 39; /* #141B27 */
-  --line: 35 44 59; /* #232C3B */
-  /* Dark mode is one blue-grey family, the light theme's twin (DECISIONS D58). The ink's darkest steps are what
+  --canvas: 16 18 20; /* graphite */
+  --surface: 25 28 32;
+  --line: 52 58 65;
+  /* Dark mode uses the same neutral graphite family (DECISIONS D58). The ink's darkest steps are what
      `dark:` classes paint panels with: zinc-950 (paired with bg-white everywhere: the bars, fields, dialogs, the live
-     panel) is the surface, zinc-900 a raised step above it, zinc-800 the line. Not the front door's violet night.
+     panel) is the surface, zinc-900 a raised step above it, zinc-800 the line. No tinted canvas.
      The lighter steps (text) keep their values. */
-  --ink-950: 20 27 39;
-  --ink-900: 27 35 50;
-  --ink-800: 35 44 59;
-  --ink-700: 54 64 84;
+  --ink-950: 25 28 32;
+  --ink-900: 35 39 44;
+  --ink-800: 52 58 65;
+  --ink-700: 73 83 94;
 }
 /* .dark twice outranks the body's own `dark:bg-zinc-950` utility, so the dark canvas is the canvas too. */
 html.app-shell body,
@@ -1510,7 +1464,7 @@ html.app-shell .sheet-sweep { display: none; }
     text-align: left;
     font-size: 0.75rem;
     font-weight: 500;
-    color: rgb(84 89 122);
+    color: rgb(73 83 94);
   }
   .dark .table-stack td[data-label]::before {
     color: rgb(var(--ink-400));
@@ -1555,3 +1509,25 @@ html.app-shell .sheet-sweep { display: none; }
     transform: translate(-50%, -50%);
   }
 }
+
+/* Enterprise workspace structure: shared roles, not page-specific colour overrides. */
+.workspace-page { min-width: 0; display: flex; flex-direction: column; gap: 1.5rem; overflow-wrap: anywhere; }
+.workspace-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 1rem; padding-block: .25rem 1.5rem; border-bottom: 1px solid rgb(var(--ink-200)); }
+.workspace-heading h1 { margin-top: .5rem; font-size: clamp(1.75rem, 1.4rem + 1vw, 2.25rem); line-height: 1.15; font-weight: 600; letter-spacing: -.025em; }
+.workspace-eyebrow { font-size: .75rem; line-height: 1.5; font-weight: 500; color: rgb(var(--ink-600)); }
+.workspace-description { margin-top: .75rem; max-width: 42rem; font-size: .9375rem; line-height: 1.65; color: rgb(var(--ink-600)); }
+.workspace-panel { min-width: 0; border: 1px solid rgb(var(--ink-200)); border-radius: .75rem; background: #fff; }
+.workspace-next { position: relative; padding: clamp(1.25rem, 3vw, 2rem); border-top: 3px solid rgb(var(--accent-600)); }
+.workspace-section-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem; }
+.workspace-text-link { display: inline-flex; min-height: 2.75rem; align-items: center; gap: .5rem; border-radius: .25rem; font-size: .875rem; font-weight: 600; color: rgb(var(--accent-700)); text-decoration: underline; text-underline-offset: .25rem; }
+.workspace-opportunity-row { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding: 1.25rem; }
+.workspace-status { display: inline-flex; align-items: center; padding: .25rem .625rem; border: 1px solid rgb(var(--ink-200)); border-radius: .375rem; font-size: .75rem; line-height: 1.5; color: rgb(var(--ink-600)); }
+.workspace-journey-step { position: relative; display: flex; gap: .875rem; padding-block: .5rem 1rem; }
+.workspace-journey-step:not(:last-child)::before { content: ""; position: absolute; inset-inline-start: .8125rem; top: 2.25rem; bottom: 0; border-inline-start: 1px solid rgb(var(--ink-200)); }
+.workspace-step-number { flex: 0 0 1.75rem; height: 1.75rem; display: grid; place-items: center; margin-top: .125rem; border: 1px solid rgb(var(--ink-200)); border-radius: .375rem; font-size: .6875rem; font-variant-numeric: tabular-nums; color: rgb(var(--ink-600)); }
+.dark .workspace-panel { background: rgb(var(--ink-950)); border-color: rgb(255 255 255 / .12); }
+.dark :is(.workspace-heading, .workspace-status, .workspace-step-number) { border-color: rgb(255 255 255 / .15); }
+.dark :is(.workspace-eyebrow, .workspace-description, .workspace-status, .workspace-step-number) { color: rgb(var(--ink-400)); }
+.dark .workspace-text-link { color: rgb(var(--accent-300)); }
+.dark .workspace-journey-step::before { border-color: rgb(255 255 255 / .15); }
+@media (min-width: 640px) { .workspace-section-heading, .workspace-opportunity-row { padding: 1.5rem; } }

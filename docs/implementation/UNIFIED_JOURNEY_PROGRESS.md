@@ -1,3 +1,13 @@
+# Active increment — enterprise visual language / connected Today, 2026-10-21
+
+Base982099e5 after read-only confirmation PR448 was owner-merged. Branch orbit-enterprise-visual-language-2026-10-21. Implementation commit10812552; draft [PR449](https://github.com/Iamishfaq07/ishai/pull/449) opened and attached for owner review, not merged.
+
+**IMPLEMENTED / UNVERIFIED. NO TESTING.** Pulled origin, created fresh branch, read current source/docs, researched official Atlassian/Carbon foundations, edited source/docs. No tests, lint, typechecks, build, migration, runtime/browser/screenshot/contrast/provider/native checks. Historical passes and visuals do not validate this increment.
+
+Code: paper/graphite/Slate blue default and legacy Nebula compatibility; neutral stage marks; opaque shared surfaces/headers; solid logo/SVG favicon/offline; Today primary action + opportunity rows + job-bound secondary journey rail; core career/preparation/room headings and Discover copy. Existing deterministic recommendation, account/tenant boundaries, five primary destinations, specialist routes and AI/automation consent unchanged. No new dependency/server schema/provider request. Binary app/social assets and full V6 work remain. [Detailed design/rollback/deferred acceptance](UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO; draft PR only.
+
+---
+
 # Active increment — saved-material provenance, 2026-10-21
 
 Fresh branch orbit-application-material-lineage-2026-10-21 from origin/main4a49967d after read-only confirmation PR447 was merged by owner. Implementation commit387bdf99. Draft [PR448](https://github.com/Iamishfaq07/ishai/pull/448) opened and attached for owner review; not merged.

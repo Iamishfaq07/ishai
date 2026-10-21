@@ -1,3 +1,7 @@
+## 2026-10-21 — owner-directed enterprise design slice
+
+Decision: change shared visual foundations before adding more tools. Reuse accent/ink utilities and preference API, keep old nebula as a Slate blue compatibility alias, preserve other explicit user colours and resume template design. Consolidate Today into next action/main opportunity list + contextual secondary journey rail. Extend shared headers/surfaces to core candidate screens and public/desktop consumers. No data migration. Rollback is code revert; source records and legacy query routes unchanged. [Detailed scope, risks and later gates](UNIFIED_ENTERPRISE_DESIGN.md). No testing by owner instruction.
+
 ## Next vertical slice: saved-material provenance (2026-10-21)
 
 Decision: extend existing ResumeSnapshot with a nullable creation-time origin; retain its live resume FK separately. Source IDs survive source deletion as historical opaque references, never as authorization. Reuse current owned mission/comparison/packet routes and copy flow. Capture no unsupported historical master/submission association. Add optional displayed-source guard to the current save action. Single additive migration follows owned-round history; older backend can roll back with extra column retained. See [rollout and deferred acceptance](UNIFIED_SNAPSHOT_ORIGIN.md). Implemented / unverified, no testing.

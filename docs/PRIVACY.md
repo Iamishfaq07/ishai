@@ -173,3 +173,10 @@ When explicitly enabled and a candidate confirms a save, round records store the
 Origin duplicates only opaque source IDs, revision, structured-content hash, observation/time/status. No new raw audio, confirmation body, screenshot, submitted answers or job/career text stored in this metadata. Existing owned export includes the column; snapshot/job/account deletion removes it. Technical implementation note, not a legal-policy approval.
 
 Owner instruction: no tests, builds, lint, typechecks, migrations or browser checks. [Scope, rollback and deferred acceptance](implementation/UNIFIED_SNAPSHOT_ORIGIN.md).
+
+
+## Enterprise visual language — 2026-10-21 (unverified)
+
+This is a visual/navigation-only change. No new profile facts, telemetry, persistence, public sharing or audio/video retention. Journey links carry only opaque job IDs and existing tab keys. Business/candidate data authorities stay separate. Technical note, not a new legal claim.
+
+No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
