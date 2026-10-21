@@ -68,6 +68,7 @@ import { StagePill } from "./StagePill";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
 import { CompareDrawer } from "./CompareDrawer";
 import { SearchInsightsPanel } from "./SearchInsightsPanel";
+import { ActivityMap } from "./ActivityMap";
 import { MAX_COMPARE } from "./compare";
 import { Journey } from "./Journey";
 import { missionPath } from "./mission";
@@ -125,6 +126,7 @@ export function JobTrackerPage() {
         }
       />
       {tracker.data && <SearchInsightsPanel entries={tracker.data} />}
+      {tracker.data && <div className="mt-6"><ActivityMap entries={tracker.data} /></div>}
       {tracker.data && tracker.data.length > 1 && <div className="mt-6"><ShortlistSkills revision={tracker.data.length} /></div>}
       {tracker.data && tracker.data.length > 2 && <div className="mt-4"><WhatsWorking revision={tracker.data.length} /></div>}
       <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />

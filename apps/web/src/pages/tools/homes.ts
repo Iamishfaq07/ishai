@@ -13,7 +13,7 @@ const HOMES: Record<string, Home> = {
   matches: "jobs", agent: "jobs", review: "jobs", network: "jobs", outreach: "jobs", "auto-tailor": "jobs",
   "whats-working": "jobs", "skill-gaps": "jobs", "scam-check": "jobs", "first-look": "jobs", "first-90": "jobs",
   saba: "prepare", debrief: "prepare", pitch: "prepare", references: "prepare", promises: "prepare", learn: "prepare",
-  stories: "prepare", "interview-checklist": "prepare", video: "prepare", warmup: "prepare", code: "prepare", aptitude: "prepare", "star-check": "prepare", priority: "jobs", "group-discussion": "prepare", readiness: "prepare",
+  stories: "prepare", "interview-checklist": "prepare", video: "prepare", warmup: "prepare", code: "prepare", aptitude: "prepare", "star-check": "prepare", priority: "jobs", "group-discussion": "prepare", readiness: "prepare", campus: "prepare",
   resume: "career", linkedin: "career", offers: "career", "decision-matrix": "career", "bullet-builder": "career", "career-gap": "career", "salary-scripts": "career", resign: "career",
   copilot: "copilot",
 };
@@ -24,7 +24,7 @@ const TOOL_ICONS: Record<string, typeof Search> = {
   review: ClipboardCheck, weekly: Gauge, network: Users, actions: CalendarPlus, outreach: Send, saba: Headphones,
   debrief: NotebookPen, "skill-gaps": Target, "first-look": Sparkles, "auto-tailor": FileText, "whats-working": Gauge,
   "first-90": Briefcase, pitch: Mic, references: UsersRound, promises: ClipboardCheck, learn: GraduationCap,
-  offers: Wallet, "decision-matrix": ClipboardCheck, "interview-checklist": ClipboardCheck, aptitude: Brain, "star-check": ListChecks, priority: Gauge, "group-discussion": UsersRound, readiness: Gauge, "bullet-builder": Wand2, "career-gap": Route, "salary-scripts": MessagesSquare, resign: LogOut, copilot: Sparkles, "scam-check": ShieldCheck, stories: BookOpen, video: Video, warmup: Zap, code: Code2, linkedin: IdCard,
+  offers: Wallet, "decision-matrix": ClipboardCheck, "interview-checklist": ClipboardCheck, aptitude: Brain, "star-check": ListChecks, priority: Gauge, "group-discussion": UsersRound, readiness: Gauge, campus: GraduationCap, "bullet-builder": Wand2, "career-gap": Route, "salary-scripts": MessagesSquare, resign: LogOut, copilot: Sparkles, "scam-check": ShieldCheck, stories: BookOpen, video: Video, warmup: Zap, code: Code2, linkedin: IdCard,
   "wrap-up": BookmarkCheck, team: Users, pipeline: ListChecks, "interview-plan": NotebookPen, "business-saba": Headphones,
   decision: ClipboardCheck, post: Building2,
 };

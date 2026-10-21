@@ -52,6 +52,7 @@ const loaders = {
   starCheck: () => import("./pages/star/StarCheck"),
   kit: () => import("./pages/kit/KitPages"),
   readiness: () => import("./pages/readiness/Readiness"),
+  campus: () => import("./pages/campus/Campus"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
   extensionConnect: () => import("./pages/ExtensionConnect"),
@@ -119,6 +120,7 @@ export const BulletBuilderPage = page(loaders.kit, (m) => m.BulletBuilderPage);
 export const GapExplainerPage = page(loaders.kit, (m) => m.GapExplainerPage);
 export const GroupDiscussionPage = page(loaders.kit, (m) => m.GroupDiscussionPage);
 export const ReadinessPage = page(loaders.readiness, (m) => m.ReadinessPage);
+export const CampusPage = page(loaders.campus, (m) => m.CampusPage);
 export const CodeHomePage = page(loaders.code, (m) => m.CodeHomePage);
 export const CodeProblemPage = page(loaders.code, (m) => m.CodeProblemPage);
 export const LinkedInPage = page(loaders.linkedin, (m) => m.LinkedInPage);
@@ -183,6 +185,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/star-check\/?$/, "starCheck"],
   [/^\/(?:bullet-builder|career-gap|group-discussion)\/?$/, "kit"],
   [/^\/readiness\/?$/, "readiness"],
+  [/^\/campus\/?$/, "campus"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];
