@@ -45,6 +45,8 @@ import { Commitments } from "./Commitments";
 import { FirstLook } from "./FirstLook";
 import { PitchBuilder } from "./Pitch";
 import { FirstNinety } from "./FirstNinety";
+import { ReferenceBrief } from "./ReferenceBrief";
+import { WithdrawNote } from "./WithdrawNote";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
@@ -164,6 +166,7 @@ export function JobMissionPage() {
                       }}
                     />
                   )}
+                  {tab === "interview" && (entry.status === "interviewing" || entry.status === "offer") && <ReferenceBrief key={`references:${entry.id}`} entryId={entry.id} company={entry.company} />}
                   {tab === "plan" && <PrepPlanPanel key={entry.id} entry={entry} onOpenInterview={() => setTab("interview")} />}
                   {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel key={entry.id} mission={m} entry={entry} onMission={update} />}
@@ -177,6 +180,7 @@ export function JobMissionPage() {
                       <Journey key={entry.id} entryId={entry.id} />
                     </Card>
                   )}
+                  {tab === "timeline" && <WithdrawNote key={`withdraw:${entry.id}`} entry={entry} open={params.get("withdraw") === "1"} onDone={() => { tracker.reload(); mission.reload(); }} />}
                   {tab === "offer" && <OfferPanel key={entry.id} mission={m} entry={entry} onMission={update} />}
                   {tab === "offer" && (entry.status === "offer" || entry.status === "hired") && <FirstNinety key={`first-90:${entry.id}`} entryId={entry.id} role={`${entry.title} at ${entry.company}`} />}
                 </section>

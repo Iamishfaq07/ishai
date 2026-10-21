@@ -865,6 +865,9 @@ class JobApplication(TimestampMixin, Base):
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     next_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # the next interview or follow-up
     status_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)  # when it last moved
+    # The interview time (next_at) the interview-eve email was last sent for (job_portal/interview_eve.py): one email
+    # per scheduled interview, again only when the date changes.
+    eve_reminded_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # The resume tailored for this job and the job description saved for interview prep, when made from here.
     resume_id: Mapped[str | None] = mapped_column(ForeignKey("resumes.id", ondelete="SET NULL"), index=True)
     document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"), index=True)
@@ -1029,6 +1032,8 @@ class CareerPlaybook(Base):
     digest_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     digest_token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)  # the email's stop link
     auto_tailor: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())  # tailor_queue.on_save
+    rejection_days: Mapped[int | None] = mapped_column(Integer)  # suggest a note within this many days of a "no"
+    interview_eve_email: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())  # interview_eve
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

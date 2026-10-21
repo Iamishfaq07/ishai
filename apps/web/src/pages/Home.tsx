@@ -6,6 +6,7 @@ import { useAsync } from "../lib/useAsync";
 import { CareerCompanion } from "./jobs/CareerCompanion";
 import { missionPath } from "./jobs/paths";
 import { STATUS_LABEL } from "./jobs/model";
+import { WeekStrip } from "./WeekStrip";
 const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
 // The seven-day action queue (interviews, follow-ups, applications to review) lives here; /jobs/actions redirects.
 const Actions = lazy(() => import("./jobs/ActionDesk").then((m) => ({ default: m.JobActionDeskPage })));
@@ -44,6 +45,7 @@ export function HomePage() {
   return <div className="workspace-page">
     <header className="workspace-heading"><div className="min-w-0"><h1>Today</h1><p className="workspace-description">Your next move, with the whole search in view.</p></div><Link className={link} to="/career">My career identity <ArrowRight aria-hidden className="h-4 w-4" /></Link></header>
     <Suspense fallback={null}><SecurityNotice /></Suspense>
+    <WeekStrip />
     <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="min-w-0 space-y-6">
         <CareerCompanion mode="home" onSelect={() => undefined} />

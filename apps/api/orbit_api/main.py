@@ -86,6 +86,7 @@ from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contact_research import router as job_network_router
 from orbit_api.job_portal.contacts import router as job_contacts_router
 from orbit_api.job_portal.digest import router as weekly_digest_router
+from orbit_api.job_portal.digest import week_router as career_week_router
 from orbit_api.job_portal.first_look import router as first_look_router
 from orbit_api.job_portal.first_ninety import router as first_ninety_router
 from orbit_api.job_portal.interview import router as job_interview_router
@@ -95,6 +96,7 @@ from orbit_api.job_portal.message_updates import router as message_updates_route
 from orbit_api.job_portal.mission import router as job_mission_router
 from orbit_api.job_portal.opportunity_coach import router as opportunity_coach_router
 from orbit_api.job_portal.pitch import router as pitch_router
+from orbit_api.job_portal.references import router as references_router
 from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.playbooks import router as job_playbook_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
@@ -409,6 +411,7 @@ def create_app() -> FastAPI:
     app.include_router(resume_kit_router)
     app.include_router(job_alerts_router)
     app.include_router(weekly_digest_router)
+    app.include_router(career_week_router)
     app.include_router(interview_debrief_router)
     app.include_router(skill_gaps_router)
     app.include_router(first_look_router)
@@ -416,6 +419,7 @@ def create_app() -> FastAPI:
     app.include_router(resume_performance_router)
     app.include_router(commitments_router)
     app.include_router(pitch_router)
+    app.include_router(references_router)
     app.include_router(devices_router)
     app.include_router(two_factor_router)
     app.include_router(security_alerts_router)

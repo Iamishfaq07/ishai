@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { useEffect, useState, type ReactNode } from "react";
 import type { JobStatus, LinkedInProfile, NaukriProfile, OutreachInputs, OutreachKind, OutreachMessage, Resume } from "@orbit/types";
 import {
@@ -214,17 +215,25 @@ export function MessagesPart({
   const country = useCountry();
   const kinds = kindsFor(country);
   const example = regionExamples(country);
-  const [kind, setKind] = useState<OutreachKind>(() => outreachKindFor(job?.status) ?? "referral");
+  // A link can open a message kind with details to mention (an interview debrief's thank-you points:
+  // /jobs/outreach?view=messages&job=…&kind=thank_you&details=…). Nothing is written until the candidate asks.
+  const [params] = useSearchParams();
+  const askedKind = kinds.find((k) => k.id === params.get("kind"))?.id;
+  const askedDetails = (params.get("details") ?? "").slice(0, 600);
+  const [kind, setKind] = useState<OutreachKind>(() => askedKind ?? outreachKindFor(job?.status) ?? "referral");
   // A job (another one, or the one asked for once it's read) opens on the message for how far along it is.
   const [kindFor, setKindFor] = useState(job?.id ?? null);
   if (job && kindFor !== job.id) {
     setKindFor(job.id);
-    setKind(outreachKindFor(job.status) ?? kind);
+    setKind(askedKind ?? outreachKindFor(job.status) ?? kind);
   }
   const meta = kinds.find((k) => k.id === kind) ?? kinds[0]!;
   const current = slot.messages?.[kind];
   // For a job, its company and role until something's typed for it.
-  const inputs: OutreachInputs = slot.inputs ?? (job ? { company: job.company.slice(0, 120), role: job.title.slice(0, 120) } : {});
+  const inputs: OutreachInputs = slot.inputs ?? {
+    ...(job ? { company: job.company.slice(0, 120), role: job.title.slice(0, 120) } : {}),
+    ...(askedDetails ? { details: askedDetails } : {}),
+  };
   const set = (patch: Partial<OutreachInputs>) => onSlot(() => ({ inputs: { ...inputs, ...patch } }));
   const onMessage = (m: OutreachMessage) => onSlot((s) => ({ messages: { ...s.messages, [m.kind]: m } }));
   // The job post pasted on the resume counts only when no job from Jobs AI is asked for.
