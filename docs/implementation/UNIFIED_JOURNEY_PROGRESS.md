@@ -1,6 +1,6 @@
 # Current increment — automatic job contact finder, 2026-10-21
 
-Owner narrowed scope to automatic in-browser job contact finder. Fresh branch orbit-automatic-contact-finder-2026-10-21 from origin/main a48b3512 after confirming PR451 merged. Read existing finder/search/provider/source guards; researched Career-Ops, JobScout and official DeepSeek Search. Implemented existing-key fallback, bounded three-query workflow + one source-validated extraction, dedupe/ranking/activity/usage metadata, manual JD context, exact job room entry and stale/unmount guards. No testing/validation/provider smoke or deployment. [Full scope](AUTOMATIC_JOB_CONTACT_FINDER.md).
+Owner narrowed scope to automatic in-browser job contact finder. Fresh branch orbit-automatic-contact-finder-2026-10-21 from origin/main a48b3512 after confirming PR451 merged. Implementation commitcd843969; draft [PR458](https://github.com/Iamishfaq07/ishai/pull/458) opened and attached for owner review, not merged. Read existing finder/search/provider/source guards; researched Career-Ops, JobScout and official DeepSeek Search. Implemented existing-key fallback, bounded three-query workflow + one source-validated extraction, dedupe/ranking/activity/usage metadata, manual JD context, exact job room entry and stale/unmount guards. No testing/validation/provider smoke or deployment. [Full scope](AUTOMATIC_JOB_CONTACT_FINDER.md).
 
 **IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
 
