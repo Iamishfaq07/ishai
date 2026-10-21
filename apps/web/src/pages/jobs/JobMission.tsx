@@ -7,6 +7,7 @@ import {
   Check,
   CompanyLogo,
   LoadGate,
+  Reveal,
   Skeleton,
   Sparkles,
   Trash2,
@@ -14,6 +15,7 @@ import {
   cx,
   focusRing,
   toast,
+  useInView,
 } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
 import { KashSecContext } from "../../components/KashSec";
@@ -154,7 +156,7 @@ export function JobMissionPage() {
               <div className="min-w-0 space-y-4">
                 <Suspense fallback={<p role="status">Opening opportunity context…</p>}><Guided key={entry.id} entry={entry} mission={m} tab={tab} onSaved={() => { tracker.reload(); mission.reload(); }} /></Suspense>
 
-                <section id="mission-tool-panel" aria-label={selected.label}>
+                <section key={tab} id="mission-tool-panel" aria-label={selected.label} className="motion-safe:animate-fade-up">
                   {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
                   {tab === "interview" && <Commitments key={`commitments:${entry.id}`} entryId={entry.id} />}
                   {tab === "interview" && (
@@ -194,13 +196,23 @@ export function JobMissionPage() {
   );
 }
 
+/** "in 3 days", "in 5 h", "in 20 min" until a recorded date; null once it has passed. */
+export function dueIn(at: string | null, now = Date.now()): string | null {
+  const ms = at ? Date.parse(at) - now : Number.NaN;
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const mins = Math.round(ms / 60000), hours = Math.round(mins / 60), days = Math.round(hours / 24);
+  return days >= 2 ? `in ${days} days` : hours >= 2 ? `in ${hours} h` : `in ${Math.max(1, mins)} min`;
+}
+
 function Header({ entry }: { entry: JobTrackerEntry }) {
+  const due = dueIn(entry.next_at);
   return (
-    <header className="workspace-heading">
-      <div className="flex min-w-0 items-center gap-3">
+    <header className="workspace-heading animate-fade-up">
+      <div className="flex min-w-0 items-center gap-4">
         <CompanyLogo company={entry.company} size="lg" />
         <div className="min-w-0">
-          <h1 className="break-words font-display text-xl font-semibold tracking-tight sm:text-2xl">{entry.title}</h1>
+          <p className="workspace-eyebrow">Opportunity</p>
+          <h1 className="break-words font-display">{entry.title}</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {[entry.company, entry.location, `added ${formatDate(entry.created_at)}`].filter(Boolean).join(" · ")}
           </p>
@@ -208,6 +220,9 @@ function Header({ entry }: { entry: JobTrackerEntry }) {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <StagePill status={entry.status} className="px-2.5 py-1" />
+        {due && <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-800 ring-1 ring-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-200 dark:ring-indigo-400/20">
+          <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-600" /></span>
+          Next step {due}</span>}
         {entry.live && (
           <Link to={jobPath(entry.listing_id)} className={linkButton("secondary", "sm")}>
             Job page
@@ -227,12 +242,19 @@ function Header({ entry }: { entry: JobTrackerEntry }) {
 /** Six stages, each done only on a record (named in its tooltip and for screen readers). */
 function Stages({ mission }: { mission: JobMission }) {
   const done = stagesDone(mission);
+  const [ref, inView] = useInView<HTMLElement>();
   return (
-    <section aria-labelledby="stages-title">
+    <section ref={ref} aria-labelledby="stages-title">
       <h2 id="stages-title" className="sr-only">
         Stages: {done} of {MISSION_STAGES.length} have a record
       </h2>
-      <ol className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div aria-hidden className="mb-3 flex items-center gap-3 text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10">
+          <div className="h-full rounded-full bg-emerald-500 motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out" style={{ width: `${inView ? (done / MISSION_STAGES.length) * 100 : 0}%` }} />
+        </div>
+        <span className="tabular-nums">{done}/{MISSION_STAGES.length} stages</span>
+      </div>
+      <Reveal as="ol" stagger className="grid grid-cols-3 gap-2 sm:grid-cols-6">
         {MISSION_STAGES.map((s, i) => {
           const ok = mission.stages[s.id];
           return (
@@ -258,7 +280,7 @@ function Stages({ mission }: { mission: JobMission }) {
             </li>
           );
         })}
-      </ol>
+      </Reveal>
     </section>
   );
 }

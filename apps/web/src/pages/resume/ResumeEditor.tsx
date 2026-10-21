@@ -716,7 +716,7 @@ function ResumeEditor() {
   return (
     <AllowanceContext.Provider value={allowance}>
     <div>
-      <div className="mb-5 flex flex-wrap items-center gap-3">
+      <div className="workspace-panel animate-fade-up mb-5 flex flex-wrap items-center gap-3 p-3 sm:p-4">
         <Link to={RESUME_AI_HOME} aria-label="All resumes" className={cx("rounded-lg p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -825,13 +825,14 @@ function ResumeEditor() {
                   onClick={() => setTab(id)}
                   className={cx(
                     "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1 py-1.5 xl:px-2 text-sm font-medium",
-                    tab === id ? "bg-white text-zinc-900 shadow-sm dark:bg-white/10 dark:text-white" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                    "motion-safe:transition-[background-color,color,box-shadow] motion-safe:duration-200",
+                    tab === id ? "bg-white text-indigo-700 shadow-sm ring-1 ring-zinc-200 dark:bg-white/10 dark:text-indigo-300 dark:ring-white/10" : "text-zinc-500 hover:bg-white/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
                     focusRing,
                   )}
                 >
                   {/* Icons alone on phones, labels from there up (seven items leave no room for both), short ones where
                       the editor sits beside the preview; a column too narrow even for those wraps onto a second row. */}
-                  <Icon className="h-4 w-4 shrink-0 sm:hidden" aria-hidden />
+                  <Icon className="h-4 w-4 shrink-0 sm:max-xl:hidden" aria-hidden />
                   <span className={cx("hidden sm:inline", short && "lg:hidden")}>{label}</span>
                   {short && <span className="hidden lg:inline">{short}</span>}
                   {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
@@ -854,6 +855,7 @@ function ResumeEditor() {
             </Link>
           </div>}
 
+          <div key={tab} role="tabpanel" aria-label={TABS.find((t) => t.id === tab)?.label} className="motion-safe:animate-fade-up">
           {tab === "content" && (
             <div
               onFocus={(e) => setEditing((e.target as HTMLElement).closest("[data-path]")?.getAttribute("data-path") ?? null)}
@@ -930,6 +932,7 @@ function ResumeEditor() {
             />
           )}
           {tab === "prep" && <InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} />}
+          </div>
         </div>
 
         <PreviewJump letter={tab === "letter"} />
