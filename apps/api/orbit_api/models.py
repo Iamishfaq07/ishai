@@ -1043,6 +1043,18 @@ class CareerWeeklyGoal(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class JobCommitment(TimestampMixin, Base):
+    """Something the candidate said they'd do for one job (send a portfolio link, a reference): a dated to-do on Today
+    until they tick it off (job_portal/commitments.py). Nothing is sent for them."""
+    __tablename__ = "job_commitments"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"), index=True)
+    text: Mapped[str] = mapped_column(String(300))
+    due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class JobContact(TimestampMixin, Base):
     """A person in the user's job search: a referrer, a recruiter, an alum, the hiring manager. Who they are, how to
     reach them, notes, when the user last got in touch and when to follow up; optionally linked to a tracked job

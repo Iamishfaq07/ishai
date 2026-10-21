@@ -41,7 +41,9 @@ import { JobSabaPractice, InterviewPrepPanel } from "./interview/InterviewPrep";
 
 import { opportunityStart } from "./opportunity";
 import { careerToolHref } from "../../lib/opportunityTrail";
+import { Commitments } from "./Commitments";
 import { FirstLook } from "./FirstLook";
+import { PitchBuilder } from "./Pitch";
 import { FirstNinety } from "./FirstNinety";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
@@ -152,6 +154,7 @@ export function JobMissionPage() {
 
                 <section id="mission-tool-panel" aria-label={selected.label}>
                   {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
+                  {tab === "interview" && <Commitments key={`commitments:${entry.id}`} entryId={entry.id} />}
                   {tab === "interview" && (
                     <InterviewPrepPanel key={entry.id}
                       entry={entry}
@@ -166,6 +169,7 @@ export function JobMissionPage() {
                   {tab === "resume" && <ResumePanel key={entry.id} mission={m} entry={entry} onMission={update} />}
                   {tab === "resume" && <FirstLook key={`first-look:${entry.id}`} entryId={entry.id} resumeId={m.resume?.id} />}
                   {tab === "company" && <CompanyPanel key={entry.id} entry={entry} />}
+                  {tab === "practice" && <PitchBuilder key={`pitch:${entry.id}`} entryId={entry.id} />}
                   {tab === "practice" && <PracticePanel key={entry.id} mission={m} entry={entry} onLinked={mission.reload} />}
                   {tab === "timeline" && (
                     <Card>

@@ -4,6 +4,7 @@ import { Copy, Sparkles, cx, focusRing, useCopy } from "@orbit/ui";
 import { Button, ErrorNote, Field, Textarea } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import { errorText } from "../../../lib/format";
+import { addCommitment, tomorrowMorning } from "../Commitments";
 
 interface Story { title: string; situation: string; task: string; action: string; result: string; competencies: string[] }
 interface Debrief {
@@ -36,12 +37,21 @@ export function InterviewDebrief({ entryId, roundId, label, initialNotes = "" }:
   const [result, setResult] = useState<Debrief | null>(null);
   const [saved, setSaved] = useState<Record<number, "saving" | "saved" | string>>({});
   const run = async () => {
-    setBusy(true); setError(null); setResult(null); setSaved({});
+    setBusy(true); setError(null); setResult(null); setSaved({}); setPromised("idle");
     try {
       setResult(await api.call<Debrief>(`/v1/jobs/tracker/${encodeURIComponent(entryId)}/debrief`, {
         method: "POST", body: JSON.stringify({ notes, round_id: roundId ?? null }) }));
     } catch (e) { setError(errorText(e)); }
     finally { setBusy(false); }
+  };
+  const [promised, setPromised] = useState<"idle" | "saving" | "saved">("idle");
+  const keepPromises = async (items: string[]) => {
+    setPromised("saving");
+    try {
+      const due = tomorrowMorning();
+      for (const text of items) await addCommitment(entryId, text, due);
+      setPromised("saved");
+    } catch (e) { setError(errorText(e)); setPromised("idle"); }
   };
   const saveStory = async (index: number, story: Story) => {
     setSaved((s) => ({ ...s, [index]: "saving" }));
@@ -71,7 +81,9 @@ export function InterviewDebrief({ entryId, roundId, label, initialNotes = "" }:
           <span className="min-w-0 flex-1 break-words">{q.question}</span>
           <span className={cx("rounded-full px-2 py-0.5 text-xs", WENT_TONE[q.went])}>{WENT[q.went]}</span></li>)}</ul></div>}
       {result.promises.length > 0 && <div><h5 className="text-sm font-semibold">You said you would send</h5>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{result.promises.map((p, i) => <li key={i}>{p}</li>)}</ul></div>}
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{result.promises.map((p, i) => <li key={i}>{p}</li>)}</ul>
+        <Button size="sm" variant="secondary" className="mt-2" disabled={promised !== "idle"} onClick={() => void keepPromises(result.promises)}>
+          {promised === "saved" ? "Added to Promises to keep" : promised === "saving" ? "Adding…" : "Add to my to-dos, due tomorrow"}</Button></div>}
       {result.focus.length > 0 && <div><h5 className="text-sm font-semibold">Prepare before the next round</h5>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{result.focus.map((f, i) => <li key={i}>{f}</li>)}</ul>
         <Link className={link} to={`/jobs/mission/${encodeURIComponent(entryId)}?tab=practice`}>Practise these with Saba</Link></div>}
