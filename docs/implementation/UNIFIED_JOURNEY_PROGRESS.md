@@ -136,3 +136,10 @@ Current scope remains phased: attribution controls/source counts and application
 Final V6 continuity gate21 PASS2.4m, isolated output unified-attribution-v6. Final attribution proof1 PASS15.9s after waiting for actual confirmation DOM unmount; both screenshots recopied and manifest updated90 files. No application-source changes followed the successful gates.
 
 Follow-on implementation commit be0c739b pushed to draft PR445. Its Actions run39565059170 executed no steps across six jobs; API check annotation again identifies account payments/spending-limit blocking. Resolve GitHub Billing & plans and rerun normal CI. No workflow was weakened, merge performed or manual deployment issued.
+
+
+## PR447 and external metadata
+
+Draft PR https://github.com/Iamishfaq07/ishai/pull/447 opened for implementation commit7c97580e; no merge. Existing GitHub Actions run39569955776 was automatically created by the integration, but all six jobs have no executed steps; API annotation reports failed account payments or spending-limit blocking. No CI rerun, test or scan was requested here.
+
+GitHub's existing Dependabot metadata reports10 open dependency alerts on main (2 critical,6 high,2 medium), involving Pillow and certifi in apps/api/uv.lock. This is read-only platform metadata, not an executed audit or proof of exploitability. Existing Dependabot PR446 addresses certifi; do not duplicate or merge it without review. Pillow/dependency remediation is a separate release gate. No lockfile/dependency change was mixed into this round-history slice. No current security pass is claimed.

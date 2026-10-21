@@ -80,7 +80,6 @@ from orbit_api.geo import router as region_router
 from orbit_api.job_portal.actions import router as job_actions_router
 from orbit_api.job_portal.alerts import router as job_alerts_router
 from orbit_api.job_portal.calendar_intake import router as calendar_intake_router
-from orbit_api.job_portal.round_journal import router as round_journal_router
 from orbit_api.job_portal.career_progress import router as career_progress_router
 from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contact_research import router as job_network_router
@@ -93,6 +92,7 @@ from orbit_api.job_portal.opportunity_coach import router as opportunity_coach_r
 from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.playbooks import router as job_playbook_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
+from orbit_api.job_portal.round_journal import router as round_journal_router
 from orbit_api.job_portal.routes import router as jobs_router
 from orbit_api.job_portal.weekly import router as job_weekly_router
 from orbit_api.linkedin.routes import router as linkedin_router
