@@ -42,6 +42,7 @@ import { JobSabaPractice, InterviewPrepPanel } from "./interview/InterviewPrep";
 import { opportunityStart } from "./opportunity";
 import { careerToolHref } from "../../lib/opportunityTrail";
 import { FirstLook } from "./FirstLook";
+import { FirstNinety } from "./FirstNinety";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
@@ -173,6 +174,7 @@ export function JobMissionPage() {
                     </Card>
                   )}
                   {tab === "offer" && <OfferPanel key={entry.id} mission={m} entry={entry} onMission={update} />}
+                  {tab === "offer" && (entry.status === "offer" || entry.status === "hired") && <FirstNinety key={`first-90:${entry.id}`} entryId={entry.id} role={`${entry.title} at ${entry.company}`} />}
                 </section>
               </div>
 
