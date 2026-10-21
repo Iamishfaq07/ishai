@@ -46,6 +46,7 @@ import { FirstLook } from "./FirstLook";
 import { PitchBuilder } from "./Pitch";
 import { FirstNinety } from "./FirstNinety";
 import { ReferenceBrief } from "./ReferenceBrief";
+import { WithdrawNote } from "./WithdrawNote";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
@@ -179,6 +180,7 @@ export function JobMissionPage() {
                       <Journey key={entry.id} entryId={entry.id} />
                     </Card>
                   )}
+                  {tab === "timeline" && <WithdrawNote key={`withdraw:${entry.id}`} entry={entry} open={params.get("withdraw") === "1"} onDone={() => { tracker.reload(); mission.reload(); }} />}
                   {tab === "offer" && <OfferPanel key={entry.id} mission={m} entry={entry} onMission={update} />}
                   {tab === "offer" && (entry.status === "offer" || entry.status === "hired") && <FirstNinety key={`first-90:${entry.id}`} entryId={entry.id} role={`${entry.title} at ${entry.company}`} />}
                 </section>

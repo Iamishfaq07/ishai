@@ -168,6 +168,25 @@ async def after_rejection(db: AsyncSession, user_id: str, days: int | None, now:
         "rule": "after_rejection"} for job in rows]
 
 
+async def wrap_up(db: AsyncSession, user_id: str, now: datetime) -> list[dict[str, Any]]:
+    """After a hire is recorded (in the last 30 days), the other applications still open: telling those employers
+    you've accepted another role is a courtesy that keeps doors open. One item each; a note template is on the job's
+    page. Nothing is sent, and a tracker change never notifies an employer."""
+    hired = await db.scalar(select(JobApplication.status_at).where(JobApplication.user_id == user_id,
+        JobApplication.status == "hired", JobApplication.status_at >= now - timedelta(days=30))
+        .order_by(JobApplication.status_at.desc()).limit(1))
+    if hired is None:
+        return []
+    rows = await db.scalars(select(JobApplication).where(JobApplication.user_id == user_id,
+        JobApplication.status.in_(("applied", "interviewing", "offer")))
+        .order_by(JobApplication.status_at.desc()).limit(20))
+    return [{"id": f"wrap-up:{job.id}", "kind": "application", "title": f"{job.title} · {job.company}",
+        "detail": "You've accepted a role. Let this employer know you're withdrawing, so they can move on and "
+            "remember you well. A short note is ready to edit on the job's page; then mark it withdrawn.",
+        "due_at": None, "overdue": False, "path": f"/jobs/mission/{job.id}?tab=timeline&withdraw=1",
+        "action_label": "Write the note", "rule": "wrap_up"} for job in rows]
+
+
 async def gone_postings(db: AsyncSession, user_id: str) -> list[dict[str, Any]]:
     """Saved jobs from a company's own careers board whose post is no longer there: a board's fetch replaces its
     listings (refresh.py), so a post taken down drops out. Worth checking before preparing an application. Always
