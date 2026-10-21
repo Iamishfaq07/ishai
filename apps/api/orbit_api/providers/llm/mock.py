@@ -511,6 +511,14 @@ class MockLLMProvider(LLMProvider):
                          "services handling 7 million requests, and I want to bring that to your platform team.",
                 "standard": "[mock] I'm a backend engineer. " * 12, "long": "[mock] I'm a backend engineer. " * 18,
                 "hooks": ["[mock] Python services at PayNest", "[mock] REST APIs for partner banks"]})
+        if request.request_type == "reference_brief":
+            body = request.messages[-1].content
+            section = body.split("References, with", 1)[-1].split("Candidate's resume", 1)[0]
+            names = re.findall(r"^- (.+?) \(", section, flags=re.M)
+            return json.dumps({"references": [
+                {"name": name, "ask": f"[mock] Hi {name}, I'm interviewing for a role and would love you as a reference.",
+                 "brief": ["[mock] The payments project you saw me lead", "[mock] [a result you both remember]"]}
+                for name in names], "tips": ["[mock] Thank them after the call."]})
         if request.request_type == "first_ninety":
             return json.dumps({"phases": [
                 {"name": name, "goals": [f"[mock] {name}: learn how the team ships", "[mock] Meet the people below"]}

@@ -45,6 +45,7 @@ import { Commitments } from "./Commitments";
 import { FirstLook } from "./FirstLook";
 import { PitchBuilder } from "./Pitch";
 import { FirstNinety } from "./FirstNinety";
+import { ReferenceBrief } from "./ReferenceBrief";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
@@ -164,6 +165,7 @@ export function JobMissionPage() {
                       }}
                     />
                   )}
+                  {tab === "interview" && (entry.status === "interviewing" || entry.status === "offer") && <ReferenceBrief key={`references:${entry.id}`} entryId={entry.id} company={entry.company} />}
                   {tab === "plan" && <PrepPlanPanel key={entry.id} entry={entry} onOpenInterview={() => setTab("interview")} />}
                   {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel key={entry.id} mission={m} entry={entry} onMission={update} />}
