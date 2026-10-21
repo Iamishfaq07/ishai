@@ -168,6 +168,29 @@ async def after_rejection(db: AsyncSession, user_id: str, days: int | None, now:
         "rule": "after_rejection"} for job in rows]
 
 
+async def gone_postings(db: AsyncSession, user_id: str) -> list[dict[str, Any]]:
+    """Saved jobs from a company's own careers board whose post is no longer there: a board's fetch replaces its
+    listings (refresh.py), so a post taken down drops out. Worth checking before preparing an application. Always
+    shown: it's what the employer's own board says. Feeds and searches don't count (their cache simply ages out)."""
+    from orbit_api.job_portal.sources import source_named
+    from orbit_api.models import JobListing
+
+    rows = await db.scalars(select(JobApplication).where(JobApplication.user_id == user_id,
+        JobApplication.status == "saved",
+        ~select(JobListing.id).where(JobListing.id == JobApplication.listing_id).exists())
+        .order_by(JobApplication.status_at.desc()).limit(40))
+    out = []
+    for job in rows:
+        source = source_named(job.source)
+        if source is None or not source.direct:
+            continue
+        out.append({"id": f"gone:{job.id}", "kind": "application", "title": f"{job.title} · {job.company}",
+            "detail": "This post is no longer on the company's careers page. It may have closed: check before "
+                "spending time on it, or remove it from your shortlist.",
+            "due_at": None, "overdue": False, "path": f"/jobs/mission/{job.id}", "action_label": "Check or remove"})
+    return out[:20]
+
+
 async def offer_deadlines(db: AsyncSession, user_id: str, now: datetime) -> list[dict[str, Any]]:
     """Offers still being considered whose response deadline is within a week or past: always shown, from the offer
     the candidate recorded in Offer AI."""
