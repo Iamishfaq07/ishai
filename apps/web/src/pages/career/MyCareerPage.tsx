@@ -16,7 +16,7 @@ const identityPath = "/v1/jobs/launchpad/identity";
 interface Step { label: string; done: boolean; to: string; action: string }
 
 /** Setup steps from the candidate's own records. A checklist of what's in place, not a readiness score. */
-export function setupSteps(identity: CandidateIdentity | undefined, stories: number | null, contacts: number | null,
+export function setupSteps(identity: CandidateIdentity | null | undefined, stories: number | null, contacts: number | null,
                            linkedin: boolean | null): Step[] {
   const steps: (Step | null)[] = [
     { label: "Choose a master resume", done: Boolean(identity?.master), to: "/resume-ai?start=import&guide=1", action: "Choose" },
