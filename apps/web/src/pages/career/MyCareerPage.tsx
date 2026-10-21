@@ -4,6 +4,7 @@ import {
   BadgeCheck, BookOpen, Briefcase, CreditCard, Database, FileText, Gauge, IdCard, LockKeyhole, Reveal,
   Search, Target, Users, Wallet, cx, focusRing, useInView,
   Wand2, Route,
+  Code2,
 } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -65,6 +66,7 @@ export function MyCareerPage() {
       { title: "Source documents", detail: "The files you choose to let Orbit read.", icon: Database, to: "/documents" },
       ...(user?.evidence_vault ? [{ title: "Evidence", detail: "The sources behind each claim you make.", icon: BadgeCheck, to: "/documents/evidence" }] : []),
       { title: "LinkedIn profile", detail: "Import, score and review headline and About suggestions.", icon: IdCard, to: "/linkedin", ai: true },
+      { title: "GitHub projects", detail: "Public repositories turned into resume projects, skills and stories.", icon: Code2, to: "/github-projects" },
       { title: "Bullet builder", detail: "Turn what you did into a resume line: result, number, and how.", icon: Wand2, to: "/bullet-builder" },
       { title: "Career gap explainer", detail: "An honest resume line and a 30-second answer for a break.", icon: Route, to: "/career-gap" },
     ] },

@@ -119,6 +119,7 @@ export const StarCheckPage = page(loaders.starCheck, (m) => m.StarCheckPage);
 export const BulletBuilderPage = page(loaders.kit, (m) => m.BulletBuilderPage);
 export const GapExplainerPage = page(loaders.kit, (m) => m.GapExplainerPage);
 export const GroupDiscussionPage = page(loaders.kit, (m) => m.GroupDiscussionPage);
+export const GitHubProjectsPage = page(loaders.kit, (m) => m.GitHubProjectsPage);
 export const ReadinessPage = page(loaders.readiness, (m) => m.ReadinessPage);
 export const CampusPage = page(loaders.campus, (m) => m.CampusPage);
 export const CodeHomePage = page(loaders.code, (m) => m.CodeHomePage);
@@ -183,7 +184,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/learn(\/|$)/, "learn"],
   [/^\/aptitude\/?$/, "aptitude"],
   [/^\/star-check\/?$/, "starCheck"],
-  [/^\/(?:bullet-builder|career-gap|group-discussion)\/?$/, "kit"],
+  [/^\/(?:bullet-builder|career-gap|group-discussion|github-projects)\/?$/, "kit"],
   [/^\/readiness\/?$/, "readiness"],
   [/^\/campus\/?$/, "campus"],
   [/^\/billing/, "billing"],

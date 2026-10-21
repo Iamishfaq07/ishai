@@ -28,7 +28,7 @@ export const CAREERS_ROUTES = [/^\/company\/[a-z0-9-]+$/, /^\/company\/[a-z0-9-]
  */
 export const APP_ROUTES = [
   /^\/(?:login|register|forgot-password|reset-password|verify-email|confirm-email-change|companion|welcome)$/,
-  /^\/(?:career|prepare|start|sessions|documents|mock|interview|billing|settings|linkedin|learn|code|offers|aptitude|star-check|bullet-builder|career-gap|group-discussion|readiness|campus)$/,
+  /^\/(?:career|prepare|start|sessions|documents|mock|interview|billing|settings|linkedin|learn|code|offers|aptitude|star-check|bullet-builder|career-gap|group-discussion|readiness|campus|github-projects)$/,
   /^\/live\/[^/]+$/,
   /^\/sessions\/[^/]+$/,
   /^\/documents\/(?:stories|evidence|answers)$/,
@@ -74,6 +74,7 @@ export const ROBOTS_DISALLOW_EXACT = [
   "/group-discussion",
   "/readiness",
   "/campus",
+  "/github-projects",
   "/code",
   "/offers",
   "/welcome",

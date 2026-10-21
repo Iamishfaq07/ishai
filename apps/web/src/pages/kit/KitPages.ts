@@ -2,3 +2,4 @@
 export { BulletBuilderPage } from "./BulletBuilder";
 export { GapExplainerPage } from "./GapExplainer";
 export { GroupDiscussionPage } from "./GroupDiscussion";
+export { GitHubProjectsPage } from "./GitHubProjects";
