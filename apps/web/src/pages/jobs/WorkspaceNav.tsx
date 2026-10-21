@@ -7,7 +7,7 @@ import { currentJobTool, JOB_WORKSPACES, jobsTabs, jobWorkspace, workspaceTools 
 const ToolFinder = lazy(() => import("./ToolFinder"));
 const ICONS = [Gauge, Search, BookmarkCheck, Send];
 /** Icons for the Jobs tab row (jobsTabs), by label. */
-const TAB_ICONS: Record<string, typeof Search> = { Discover: Search, Tracker: BookmarkCheck, "Auto-apply": Zap, "Needs you": Send, People: Users };
+const TAB_ICONS: Record<string, typeof Search> = { Discover: Search, Tracker: BookmarkCheck, Priority: Gauge, "Auto-apply": Zap, "Needs you": Send, People: Users };
 
 export function JobsWorkspaceNav({ personalShell = true }: { personalShell?: boolean } = {}) {
   const { pathname } = useLocation();

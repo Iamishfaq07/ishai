@@ -31,6 +31,7 @@ import {
   celebrate,
   useMediaQuery,
   useFlip,
+  Gauge,
 } from "@orbit/ui";
 import { Button, ErrorNote, Field, IconButton, Input, PageHeader, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -101,6 +102,11 @@ export function JobTrackerPage() {
             <Button onClick={() => setAdding(true)} aria-haspopup="dialog">
               <Plus className="h-4 w-4" aria-hidden /> Add a job
             </Button>
+            {tracker.data?.some((e) => e.status === "saved") && (
+              <Link to="/jobs/priority" className={linkButton("secondary")}>
+                <Gauge className="h-4 w-4" aria-hidden /> Apply priority
+              </Link>
+            )}
             {has && (
               <Link to={JOBS_MATCHES} className={linkButton("secondary")}>
                 <Sparkles className="h-4 w-4" aria-hidden /> Find more jobs

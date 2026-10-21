@@ -4,7 +4,7 @@ export const JOB_WORKSPACES = [
   // The launchpad and daily actions merged into Today ("/"); /jobs and /jobs/actions redirect there.
   { id: "today", label: "Today", to: "/", paths: /^\/jobs(?:\/(?:actions|weekly))?\/?$/ },
   { id: "find", label: "Find jobs", to: JOBS_MATCHES, paths: /^\/jobs\/(?:matches|profile|listing(?:\/[^/]+)?)\/?$/ },
-  { id: "applications", label: "Applications", to: JOBS_TRACKER, paths: /^\/jobs\/(?:tracker|applications|auto-apply|journey|mission(?:\/[^/]+)?)\/?$/ },
+  { id: "applications", label: "Applications", to: JOBS_TRACKER, paths: /^\/jobs\/(?:tracker|priority|applications|auto-apply|journey|mission(?:\/[^/]+)?)\/?$/ },
   { id: "people", label: "People", to: JOBS_OUTREACH, paths: /^\/jobs\/outreach\/?$/ },
 ] as const;
 export type JobWorkspace = typeof JOB_WORKSPACES[number]["id"];
@@ -23,6 +23,7 @@ export const JOB_TOOLS: { group: JobWorkspace; to: string; label: string; descri
   { group: "find", to: JOBS_MATCHES, label: "Matches", description: "Discover jobs, check fit and save your shortlist.", keywords: "search listings openings" },
   { group: "find", to: JOBS_PROFILE, label: "Search preferences", description: "Choose your resume, roles, locations and job filters.", keywords: "profile settings skills" },
   { group: "applications", to: JOBS_TRACKER, label: "Tracker", description: "Open one job's connected resume, requirements, practice, application and outcome steps.", keywords: "mission practice company evidence fit timeline learning workshop project story interview replay review rounds tools source" },
+  { group: "applications", to: "/jobs/priority", label: "Apply priority", description: "Every saved job scored and graded A to F on match, level, pay and what matters to you.", keywords: "rank score grade evaluate shortlist which job first career ops scorecard" },
   { group: "applications", to: "/jobs/journey", label: "Auto-apply", description: "Orbit finds matching jobs, prepares each application and sends what it can.", keywords: "application agent hosted automatic apply for me" },
   { group: "applications", to: JOBS_APPLICATIONS, label: "Needs you", description: "Applications to approve, answer or send, with receipts for the ones sent.", keywords: "review queue inbox search filter statuses receipts packets sent approval answers send yourself" },
   { group: "applications", to: JOBS_AUTO_APPLY, label: "Auto-apply settings", description: "Approve your facts, limits, consent and execution mode.", keywords: "setup resume answers bank permissions" },
@@ -47,7 +48,7 @@ export function workspaceTools(group: JobWorkspace) {
 /** The one tab row for Jobs (Discover and Applications merged): finding a job and following it through. */
 export function jobsTabs() {
   return [
-    { to: JOBS_MATCHES, label: "Discover" }, { to: JOBS_TRACKER, label: "Tracker" },
+    { to: JOBS_MATCHES, label: "Discover" }, { to: JOBS_TRACKER, label: "Tracker" }, { to: "/jobs/priority", label: "Priority" },
     { to: "/jobs/journey", label: "Auto-apply" }, { to: JOBS_APPLICATIONS, label: "Needs you" },
     { to: JOBS_OUTREACH, label: "People" },
   ];

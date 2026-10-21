@@ -68,6 +68,7 @@ export function PreparePage() {
     ] },
     { title: "Build your answers", about: "Your own material, ready before the questions come.", items: [
       { title: "Tell me about yourself", detail: "30, 60 and 90 second answers from your resume, pointed at this job.", icon: Mic, to: jobTab("practice"), ai: true, perJob: true },
+      { title: "STAR answer check", detail: "Paste an answer and see which parts of Situation, Task, Action, Result it covers.", icon: ListChecks, to: "/star-check" },
       { title: "Story bank", detail: "Truthful STAR stories from your projects, reused across interviews.", icon: BookOpen, to: "/documents/stories" },
       { title: "Evidence & fit", detail: "Each requirement matched to your experience, with practice for the gaps.", icon: Target, to: jobTab("fit"), ai: true, perJob: true },
       { title: "Learning", detail: "Close a gap without claiming a skill you haven't finished.", icon: GraduationCap, to: "/learn" },

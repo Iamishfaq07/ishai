@@ -67,6 +67,8 @@ import {
   CodeHomePage,
   LearningPage,
   AptitudePage,
+  ApplyPriorityPage,
+  StarCheckPage,
   CodeProblemPage,
   OfferDetailPage,
   AdminUsersPage,
@@ -328,6 +330,7 @@ export function App() {
           <Route path="tracker" element={<JobTrackerPage />} />
           <Route path="actions" element={<JobActionDeskPage />} />
           <Route path="weekly" element={<WeeklyStudioPage />} />
+          <Route path="priority" element={<ApplyPriorityPage />} />
           <Route path="outreach" element={<JobOutreachPage />} />
           <Route path="profile" element={<JobProfilePage />} />
           <Route path="auto-apply" element={<AutoApplySetupPage />} />
@@ -338,6 +341,7 @@ export function App() {
         <Route path="linkedin" element={<LinkedInPage />} />
         <Route path="learn" element={<LearningPage />} />
         <Route path="aptitude" element={<AptitudePage />} />
+        <Route path="star-check" element={<StarCheckPage />} />
         <Route path="code" element={<CodeHomePage />} />
         <Route path="code/:problemId" element={<CodeProblemPage />} />
         <Route path="offers" element={<OffersPage />} />
