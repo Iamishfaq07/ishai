@@ -1028,6 +1028,7 @@ class CareerPlaybook(Base):
     weekly_digest: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     digest_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     digest_token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)  # the email's stop link
+    auto_tailor: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())  # tailor_queue.on_save
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 

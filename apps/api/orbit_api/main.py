@@ -85,6 +85,7 @@ from orbit_api.job_portal.companies import boards as configured_boards
 from orbit_api.job_portal.contact_research import router as job_network_router
 from orbit_api.job_portal.contacts import router as job_contacts_router
 from orbit_api.job_portal.digest import router as weekly_digest_router
+from orbit_api.job_portal.first_look import router as first_look_router
 from orbit_api.job_portal.interview import router as job_interview_router
 from orbit_api.job_portal.interview_debrief import router as interview_debrief_router
 from orbit_api.job_portal.launchpad import router as job_launchpad_router
@@ -406,6 +407,7 @@ def create_app() -> FastAPI:
     app.include_router(weekly_digest_router)
     app.include_router(interview_debrief_router)
     app.include_router(skill_gaps_router)
+    app.include_router(first_look_router)
     app.include_router(devices_router)
     app.include_router(two_factor_router)
     app.include_router(security_alerts_router)
