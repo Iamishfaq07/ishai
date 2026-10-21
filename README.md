@@ -109,7 +109,7 @@ For real answers and transcription, set `DEEPSEEK_API_KEY` and `DEEPGRAM_API_KEY
 server and are never shipped to the desktop or web clients. With the mock STT provider, the live screen offers
 **Dev · simulate**, which replays a recorded interview through the whole pipeline without a microphone.
 
-## Frontend
+## Frontend:
 
 Requires Node 22.12+ and pnpm 9 (plus Rust stable for the desktop app):
 
