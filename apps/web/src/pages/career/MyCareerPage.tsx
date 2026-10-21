@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { CandidateIdentity } from "@orbit/types";
 import {
-  BadgeCheck, BookOpen, Briefcase, CreditCard, Database, FileText, Gauge, IdCard, LayoutGrid, LockKeyhole, Reveal,
+  BadgeCheck, BookOpen, Briefcase, CreditCard, Database, FileText, Gauge, IdCard, LockKeyhole, Reveal,
   Search, Target, Users, Wallet, cx, focusRing, useInView,
 } from "@orbit/ui";
 import { api } from "../../lib/api";
@@ -10,6 +10,7 @@ import { useAsync } from "../../lib/useAsync";
 import { linkButton } from "../jobs/links";
 import { Stat, Tool, type ToolCard } from "../prepare/parts";
 import { CareerIdentity } from "./CareerIdentity";
+import { MoreTools } from "../tools/MoreTools";
 
 const identityPath = "/v1/jobs/launchpad/identity";
 
@@ -73,7 +74,6 @@ export function MyCareerPage() {
     { title: "Account & privacy", about: "Your data, your sessions, your plan.", items: [
       { title: "Settings & privacy", detail: "Sessions, permissions, export and account deletion.", icon: LockKeyhole, to: "/settings" },
       { title: "Credits & usage", detail: "Your plan, AI usage and purchase history.", icon: CreditCard, to: "/billing" },
-      { title: "All tools", detail: "Search the full catalogue for a specialist tool.", icon: LayoutGrid, to: "/tools" },
     ] },
   ];
 
@@ -117,6 +117,8 @@ export function MyCareerPage() {
       <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{g.about}</p>
       <Reveal as="ul" stagger className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
     </section>)}
+
+    <MoreTools home="career" shown={[...groups.flatMap((g) => g.items.map((t) => t.to)), "/resume-ai"]} />
 
     <section aria-labelledby="next-move" className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-5">
       <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"><Briefcase className="h-4 w-4" aria-hidden /></span>
