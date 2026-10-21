@@ -50,6 +50,7 @@ const loaders = {
   learn: () => import("./pages/learn/Learning"),
   aptitude: () => import("./pages/aptitude/Aptitude"),
   starCheck: () => import("./pages/star/StarCheck"),
+  kit: () => import("./pages/kit/KitPages"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
   extensionConnect: () => import("./pages/ExtensionConnect"),
@@ -113,6 +114,9 @@ export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
 export const LearningPage = page(loaders.learn, (m) => m.LearningPage);
 export const AptitudePage = page(loaders.aptitude, (m) => m.AptitudePage);
 export const StarCheckPage = page(loaders.starCheck, (m) => m.StarCheckPage);
+export const BulletBuilderPage = page(loaders.kit, (m) => m.BulletBuilderPage);
+export const GapExplainerPage = page(loaders.kit, (m) => m.GapExplainerPage);
+export const GroupDiscussionPage = page(loaders.kit, (m) => m.GroupDiscussionPage);
 export const CodeHomePage = page(loaders.code, (m) => m.CodeHomePage);
 export const CodeProblemPage = page(loaders.code, (m) => m.CodeProblemPage);
 export const LinkedInPage = page(loaders.linkedin, (m) => m.LinkedInPage);
@@ -175,6 +179,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/learn(\/|$)/, "learn"],
   [/^\/aptitude\/?$/, "aptitude"],
   [/^\/star-check\/?$/, "starCheck"],
+  [/^\/(?:bullet-builder|career-gap|group-discussion)\/?$/, "kit"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];

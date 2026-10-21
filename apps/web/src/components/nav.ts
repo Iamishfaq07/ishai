@@ -63,9 +63,9 @@ const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 const JOBS_TASK: NavItem = { ...JOBS, label: "Jobs", tab: "Jobs", to: "/jobs/matches", icon: Search,
   current: (p) => /^\/jobs(\/|$)/.test(p) };
 const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
-  current: (p) => /^\/(prepare|mock|interview|warmup|aptitude|star-check)(\/|$)/.test(p) };
+  current: (p) => /^\/(prepare|mock|interview|warmup|aptitude|star-check|group-discussion)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: IdCard,
-  current: (p) => /^\/career(\/|$)/.test(p) };
+  current: (p) => /^\/(?:career|career-gap)(\/|$)/.test(p) };
 
 /** Four task destinations; specialist tools remain available through More and search. */
 export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {

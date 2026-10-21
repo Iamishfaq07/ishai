@@ -31,6 +31,7 @@ import {
   focusRing,
   isIndia,
   regionWords,
+  Wand2,
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, IconButton, Input, Select, Textarea } from "../../components/ui";
 import { Stat, Tool, type ToolCard } from "../prepare/parts";
@@ -68,6 +69,7 @@ function ScoreRing({ score }: { score: number }) {
 const RESUME_TOOLS: ToolCard[] = [
   { title: "Find jobs that fit", detail: "Match your resume to live openings and save a shortlist.", icon: Search, to: JOBS_AI_HOME + "/matches", ai: true },
   { title: "LinkedIn profile", detail: "Bring your profile in line with your resume, reviewed before anything changes.", icon: IdCard, to: "/linkedin", ai: true },
+  { title: "Bullet builder", detail: "Result, number and how: resume lines recruiters read in seconds.", icon: Wand2, to: "/bullet-builder" },
   { title: "Story bank", detail: "Turn resume bullets into interview stories.", icon: BookOpen, to: "/documents/stories" },
   { title: "Documents", detail: "Cover letters and files you saved from your resumes.", icon: FolderOpen, to: "/documents" },
 ];
