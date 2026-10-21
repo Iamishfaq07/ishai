@@ -73,6 +73,7 @@ import {
   GapExplainerPage,
   GroupDiscussionPage,
   ReadinessPage,
+  CampusPage,
   CodeProblemPage,
   OfferDetailPage,
   AdminUsersPage,
@@ -350,6 +351,7 @@ export function App() {
         <Route path="career-gap" element={<GapExplainerPage />} />
         <Route path="group-discussion" element={<GroupDiscussionPage />} />
         <Route path="readiness" element={<ReadinessPage />} />
+        <Route path="campus" element={<CampusPage />} />
         <Route path="code" element={<CodeHomePage />} />
         <Route path="code/:problemId" element={<CodeProblemPage />} />
         <Route path="offers" element={<OffersPage />} />
