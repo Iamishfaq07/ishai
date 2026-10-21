@@ -49,6 +49,7 @@ const loaders = {
   code: () => import("./pages/code/CodePages"),
   learn: () => import("./pages/learn/Learning"),
   aptitude: () => import("./pages/aptitude/Aptitude"),
+  starCheck: () => import("./pages/star/StarCheck"),
   billing: () => import("./pages/Billing"),
   settings: () => import("./pages/Settings"),
   extensionConnect: () => import("./pages/ExtensionConnect"),
@@ -107,9 +108,11 @@ export const JobMissionPage = page(loaders.jobs, (m) => m.JobMissionPage);
 export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
 export const JobActionDeskPage = page(loaders.jobs, (m) => m.JobActionDeskPage);
 export const WeeklyStudioPage = page(loaders.jobs, (m) => m.WeeklyStudioPage);
+export const ApplyPriorityPage = page(loaders.jobs, (m) => m.ApplyPriorityPage);
 export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
 export const LearningPage = page(loaders.learn, (m) => m.LearningPage);
 export const AptitudePage = page(loaders.aptitude, (m) => m.AptitudePage);
+export const StarCheckPage = page(loaders.starCheck, (m) => m.StarCheckPage);
 export const CodeHomePage = page(loaders.code, (m) => m.CodeHomePage);
 export const CodeProblemPage = page(loaders.code, (m) => m.CodeProblemPage);
 export const LinkedInPage = page(loaders.linkedin, (m) => m.LinkedInPage);
@@ -171,6 +174,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/code(\/|$)/, "code"],
   [/^\/learn(\/|$)/, "learn"],
   [/^\/aptitude\/?$/, "aptitude"],
+  [/^\/star-check\/?$/, "starCheck"],
   [/^\/billing/, "billing"],
   [/^\/settings/, "settings"],
 ];

@@ -28,12 +28,12 @@ export const CAREERS_ROUTES = [/^\/company\/[a-z0-9-]+$/, /^\/company\/[a-z0-9-]
  */
 export const APP_ROUTES = [
   /^\/(?:login|register|forgot-password|reset-password|verify-email|confirm-email-change|companion|welcome)$/,
-  /^\/(?:career|prepare|start|sessions|documents|mock|interview|billing|settings|linkedin|learn|code|offers|aptitude)$/,
+  /^\/(?:career|prepare|start|sessions|documents|mock|interview|billing|settings|linkedin|learn|code|offers|aptitude|star-check)$/,
   /^\/live\/[^/]+$/,
   /^\/sessions\/[^/]+$/,
   /^\/documents\/(?:stories|evidence|answers)$/,
   /^\/resume-ai\/[^/]+$/,
-  /^\/jobs\/(?:matches|tracker|outreach|profile|auto-apply|applications|journey|actions|weekly)$/,
+  /^\/jobs\/(?:matches|tracker|outreach|profile|auto-apply|applications|journey|actions|weekly|priority)$/,
   /^\/jobs\/(?:listing|mission)\/[^/]+$/,
   /^\/jobs\/alerts\/off$/,
   /^\/jobs\/digest\/off$/,
@@ -68,6 +68,7 @@ export const ROBOTS_DISALLOW_EXACT = [
   "/linkedin",
   "/learn",
   "/aptitude",
+  "/star-check",
   "/code",
   "/offers",
   "/welcome",
