@@ -421,3 +421,9 @@ company and private candidate application `GET /scheduling-requests` lists reque
 `POST /scheduling-requests` creates one and `POST /scheduling-requests/{id}/withdraw` withdraws it;
 company `POST /scheduling-requests/{id}/reply` proposes alternatives or saves a message-only response.
 Existing candidate `/book` confirms an offered alternative. See [contracts and booking guarantees](BUSINESS_COORDINATION.md).
+
+## Candidate identity and reviewed session association
+
+`GET /v1/jobs/launchpad/identity` returns the authenticated candidate’s selected master, saved resume summaries, review state, source version and existing career preferences. `PUT` on that path accepts version, action (select/approve/revoke), owned resume_id, resume_revision and optional independent_copy. A stale source returns 409; missing/foreign owned references return 404. Selection does not approve content; approval does not rewrite content.
+
+`POST /v1/jobs/tracker/{entry_id}/sessions/link` accepts session_id and confirmed=true. Only the authenticated owner’s ended session may be attached, with no cross-opportunity rebinding. The timeline distinguishes round from related_round. session_id enables explicit association review; a related event is not counted toward job progress. Existing session creation with application_id remains the authority for practice launched from a job.

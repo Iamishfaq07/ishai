@@ -40,6 +40,7 @@ from orbit_api.documents.routes import ORIGIN_ORBIT, Origin, _check_quota, _inge
 from orbit_api.documents.uploads import sanitize_text
 from orbit_api.job_portal import manual
 from orbit_api.job_portal.mission import _score
+from orbit_api.job_portal.resume_binding import for_job
 from orbit_api.job_portal.rounds import MAX_ROUND, RoundType, as_round_type, review_score, round_label
 from orbit_api.job_portal.routes import Status, _full_text, _job_text, _move
 from orbit_api.live import company_styles
@@ -66,6 +67,7 @@ from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import SessionIndex
 from orbit_api.stories.routes import DOC_KIND as STORY_KIND
 from orbit_api.stories.routes import MAX_STORIES, index_chunk
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["jobs"])
 read_limit = Depends(limit_user("jobs-interview", rate_per_s=3, burst=60))
@@ -309,6 +311,31 @@ async def interview_out(db: AsyncSession, user: User, entry: JobApplication) -> 
         guide=_guide(entry.company), questions=_saved_questions(entry, chosen))
 
 
+class SessionAssociationIn(BaseModel):
+    session_id: str = Field(min_length=1, max_length=36)
+    confirmed: Literal[True]
+
+
+@router.post("/{entry_id}/sessions/link", dependencies=[read_limit])
+async def link_reviewed_session(entry_id: str, body: SessionAssociationIn,
+                                user: Annotated[User, Depends(current_user)],
+                                db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
+    """A candidate-reviewed existing session association; never infer it from a company or URL."""
+    await lock_account(db, user.id)
+    entry = await _entry(db, entry_id, user)
+    session = await db.scalar(select(LiveSessionRow).where(LiveSessionRow.id == body.session_id,
+        LiveSessionRow.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+    if session is None:
+        raise HTTPException(404, "Session not found")
+    if session.application_id and session.application_id != entry.id:
+        raise HTTPException(409, "This session already belongs to another opportunity.")
+    if session.status != "ended":
+        raise HTTPException(409, "Finish the session before reviewing its association.")
+    session.application_id = entry.id
+    await db.commit()
+    return {"session_id": session.id, "application_id": entry.id}
+
+
 @router.get("/{entry_id}/interview", response_model=InterviewOut, dependencies=[read_limit])
 async def get_interview(entry_id: str, user: Annotated[User, Depends(current_user)],
                         db: Annotated[AsyncSession, Depends(get_db)]) -> InterviewOut:
@@ -362,6 +389,7 @@ class InterviewIn(BaseModel):
 @router.put("/{entry_id}/interview", response_model=InterviewOut, dependencies=[read_limit])
 async def update_interview(entry_id: str, body: InterviewIn, user: Annotated[User, Depends(current_user)],
                            db: Annotated[AsyncSession, Depends(get_db)]) -> InterviewOut:
+    await lock_account(db, user.id)
     entry = await _entry(db, entry_id, user)
     sent = body.model_fields_set
     if "at" in sent:
@@ -378,7 +406,7 @@ async def update_interview(entry_id: str, body: InterviewIn, user: Annotated[Use
         r = await db.get(Resume, body.resume_id)
         if r is None or r.user_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Resume not found")
-        entry.resume_id = r.id
+        entry.resume_id = (await for_job(db, user, entry, r)).id
         if "version" not in sent:  # use it: as it is now if versions of another one were sent, else by default
             snaps = await db.scalar(select(ResumeSnapshot.id).where(ResumeSnapshot.application_id == entry.id).limit(1))
             entry.interview_version = LINKED_RESUME if snaps else None
@@ -537,8 +565,9 @@ async def session_context(entry_id: str, user: Annotated[User, Depends(require_v
     if chosen is not None:
         text = resume_document_text(ResumeData.model_validate(chosen.data or {}))
         if len(text) >= 20:
-            resume_doc = await _saved(db, user, "resume", _version_title(chosen, tz), text, "the selected resume version",
-                                      notes, update=not isinstance(chosen, ResumeSnapshot))
+            resume_doc = await _saved(
+                db, user, "resume", _version_title(chosen, tz), text, "the selected resume version",
+                notes, update=not isinstance(chosen, ResumeSnapshot))
     else:
         notes.append("No resume is linked to this job, so the copilot uses the resumes you tick in setup.")
     await db.commit()

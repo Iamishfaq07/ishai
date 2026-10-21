@@ -177,3 +177,9 @@ and move to Workers Paid ($5 a month, 10 million requests included) before daily
 ## Preview isolation (20 October 2026)
 
 See [STAGING.md](STAGING.md). Branch previews no longer point at the production API and fail closed until an independent API is provisioned. Both direct browser REST/live URLs and the Worker proxy need isolation. Production defaults stay unchanged. Current read-only deployment observations are in [release verification](releases/2026-10-20-verification.md); the older Render launch snapshot is historical.
+
+## Unified identity rollout gate
+
+Apply additive migration `e62f8d0b351c` (parent d51e7c9a240b) before deploying clients that read explicit career identity. It adds nullable review metadata to job_search_profiles, without selecting or approving legacy resumes. Roll back UI independently; prior clients ignore the column. A database downgrade drops only review metadata: export/back up that metadata first if review history must survive. Do not execute an automatic production downgrade.
+
+Before production: validate upgrade/downgrade/upgrade and account locking on isolated PostgreSQL with realistic fixtures; verify staging endpoints cannot reach production, backup/restore, live providers and platform-specific gates. This local branch is not deployment approval. Consult implementation/UNIFIED_JOURNEY_RELEASE_SIGNOFF.md for factual evidence and outstanding actions.

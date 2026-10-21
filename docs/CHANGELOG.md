@@ -3562,3 +3562,12 @@ per-app capture: it needs a desktop release to reach users.
 - Preview REST/live/proxy and employer rendering cannot use the canonical production API; independent staging remains operator setup.
 - Correct current release documentation; repair existing motion-contract and incomplete migration-fixture baseline failures.
 - No migration, new transport, automatic submission, provider call on mount or third-party runtime dependency.
+
+## Unreleased — unified candidate journey foundation
+
+- Explicit master resume selection and version-bound candidate review, reused as Discover’s starting resume without redefining the master when search preferences change.
+- Independent job copies when linking a master or resume already used by another opportunity.
+- Redesigned Today/My Career and one stable Opportunity Room with existing deep links preserved.
+- Context-bound Saba entry for audio/video practice and durable report return; matching company names are review suggestions, never counted job progress.
+- Private reply/invitation input retained temporarily in tab memory; account changes clear drafts and approvals are not restored.
+- Baseline regression repairs and new ownership/version/journey checks. Verification and release limitations: implementation/UNIFIED_JOURNEY_RELEASE_SIGNOFF.md.

@@ -141,3 +141,7 @@ Separate channels (mic → candidate, system → interviewer) instead of diariza
 Signed-in `/` is Today, using the existing launchpad progress/action projection, not a new recommendation engine. Five primary tasks route to Today, Discover (`/jobs/matches`), Applications (`/jobs/tracker`), Prepare (`/prepare`) and My Career (`/career`). The last two organize existing tools; legacy deep links stay intact. The first-use launchpad remains at `/jobs?start=1`.
 
 The existing mission read model now projects the exact owned listing's application identity/status only. Guided Application opens that packet's reviewed kit; packet and tracker statuses remain independent. See [lineage](implementation/SECURITY_AND_DATA_LINEAGE.md).
+
+## Unified candidate journey — 21 October 2026
+
+The first integration slice extends existing authorities. `JobSearchProfile.career_identity` contains explicit master selection and revision/fingerprint review metadata; Resume owns content, and profile.resume_id remains the search selection. JobApplication owns each opportunity. Master/shared-job selections create independent job copies. No shadow candidate or second packet tracker was introduced. Existing specialist `?tab=` links resolve within one room. See implementation/UNIFIED_JOURNEY_DATA_LINEAGE.md and UNIFIED_JOURNEY_PLAN.md for scope, migration and remaining work.

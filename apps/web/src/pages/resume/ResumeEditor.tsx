@@ -1,3 +1,4 @@
+import { useAsync } from "../../lib/useAsync";
 import { resumeReturnJob } from "./returnJob";
 import { lazy, Suspense, memo, useCallback, useDeferredValue, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal, flushSync } from "react-dom";
@@ -51,7 +52,7 @@ import {
   SelectCheck,
   type SpotKind,
 } from "@orbit/ui";
-import { Button, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, Input, Select, Spinner, Textarea, Toggle } from "../../components/ui";
 import { api } from "../../lib/api";
 import { downloadText, errorText, isNotFound } from "../../lib/format";
 import { announceOutOfCredits } from "../../lib/outOfCredits";
@@ -126,7 +127,19 @@ const ATS_SPOT: Record<AtsCheck["category"], SpotKind> = {
 
 /** The resume editor, for a resume in the signed-in account. */
 export function ResumeEditorPage() {
-  return <ResumeEditor />;
+  const { resumeId = "" } = useParams();
+  const location = useLocation();
+  const job = resumeReturnJob(location.search);
+  return job ? <JobResumeGuard key={`${job}:${resumeId}`} job={job} resumeId={resumeId} /> : <ResumeEditor />;
+}
+
+function JobResumeGuard({ job, resumeId }: { job: string; resumeId: string }) {
+  const context = useAsync(() => api.jobMission(job), [job, resumeId]);
+  if (context.loading) return <p role="status">Checking this opportunity’s selected resume…</p>;
+  if (context.data?.resume?.id === resumeId && context.data.resume_requires_copy === false) {
+    return <><p className="mb-4 text-sm text-indigo-700 dark:text-indigo-300">Job-specific resume · edits stay with this opportunity.</p><ResumeEditor /></>;
+  }
+  return <Card><h1 className="font-display text-xl font-semibold">Review this job’s resume first</h1><p className="mt-3 text-sm">This link does not identify an independent resume for this opportunity. Choose its current copy or create a separate one before editing for the job.</p>{context.error && <ErrorNote onRetry={context.reload}>{errorText(context.error)}</ErrorNote>}<Link className="mt-4 inline-flex min-h-11 items-center text-indigo-700 underline dark:text-indigo-300" to={`/jobs/mission/${encodeURIComponent(job)}?tab=resume`}>Review opportunity materials</Link><Link className="ml-4 inline-flex min-h-11 items-center text-indigo-700 underline dark:text-indigo-300" to={`/resume-ai/${encodeURIComponent(resumeId)}?guide=1`}>Edit this resume independently</Link></Card>;
 }
 
 function ResumeEditor() {

@@ -19,6 +19,7 @@ from orbit_api.workflow_ai import preview
 
 from .action_priority import attention_packets
 from .actions import queue
+from .candidate_identity import identity
 from .launchpad import snapshot
 
 router = APIRouter(prefix="/v1/jobs/launchpad", tags=["career planning"],
@@ -47,7 +48,8 @@ def resume_checks(raw: dict[str, Any], resume_id: str) -> list[dict[str, Any]]:
 
 
 async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[str, Any]:
-    source = await snapshot(db, user, resume_id)
+    candidate = await identity(db, user)
+    source = await snapshot(db, user, resume_id or (candidate.master.id if candidate.master else None))
     resume = await db.get(Resume, source["resume_id"], populate_existing=True) if source["resume_id"] else None
     checks = resume_checks(resume.data or {}, resume.id) if resume else []
     stages = {state: count for state, count in await db.execute(select(JobApplication.status, func.count())
@@ -58,9 +60,12 @@ async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[
         .order_by(JobApplication.status_at.desc(), JobApplication.id).limit(1))
     has_search = bool(source["prefs"]["titles"]) and source["profile_resume_id"] == source["resume_id"]
     search_path = "/jobs?start=1" + (f"&resume_id={resume.id}" if resume else "")
-    facts = [{"id": "resume", "label": "Selected resume", "path": "/jobs?work=resume",
-              "text": "An owned resume is selected." if resume else
-                      "No resume is selected. You can build or import one."}]
+    selected_reviewed = bool(candidate.review == "reviewed" and candidate.master
+                             and resume and candidate.master.id == resume.id)
+    resume_fact = ("The candidate reviewed the current master resume version." if selected_reviewed else
+                   "A saved resume is available. Its facts still need candidate review.")
+    facts = [{"id": "resume", "label": "Selected resume", "path": "/career",
+              "text": resume_fact if resume else "No resume is selected. You can build or import one."}]
     facts.extend({"id": c["id"], "label": c["label"], "text": c["text"], "path": c["path"]} for c in checks)
     facts.extend([
         {"id": "search", "label": "Search direction", "path": search_path,
@@ -94,6 +99,10 @@ async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[
         next_id, action = "outcomes", "Review your recorded outcomes"
     elif not resume:
         next_id, action = "resume", "Add or import a resume"
+    elif candidate.review != "reviewed" and (not resume_id or
+                                            (candidate.master and candidate.master.id == resume_id)):
+        next_id, action = "resume", ("Choose your master resume" if not candidate.master
+                                    else "Review your master resume")
     elif not checks[0]["present"]:
         next_id, action = "basics", "Review your contact details"
     elif not has_search:
@@ -103,13 +112,16 @@ async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[
     next_step = {**by_id[next_id], "action": action}
     if action == "Explore matching jobs":
         next_step["path"] = "/jobs/matches"
-    material = {"source": source["version"], "facts": facts, "stages": stages, "attention": attention,
+    material = {"source": source["version"], "identity": candidate.version,
+                "facts": facts, "next_step": next_step, "stages": stages, "attention": attention,
                 "actions": actions["version"]}
     return {"version": hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest(),
         "resume_id": source["resume_id"], "resumes": source["resumes"], "checks": checks, "facts": facts,
-        "next_step": next_step, "tracker": stages,
+        "next_step": next_step, "tracker": stages, "identity": candidate.model_dump(mode="json"),
         "activity": {"count": len(actions["items"]), "truncated": actions["truncated"],
-                     "next_at": focus["due_at"] if focus else None}}
+                     "next_at": focus["due_at"] if focus else None,
+                     "items": [{key: item[key] for key in ("id", "title", "path", "due_at", "action_label",
+                                                            "priority_reason")} for item in actions["items"][:5]]}}
 
 
 @router.get("/progress")

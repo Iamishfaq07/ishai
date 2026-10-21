@@ -21,6 +21,9 @@ with engine.begin() as c:
     c.execute(text("INSERT INTO auto_apply_setups (user_id) VALUES ('existing-candidate')"))
     c.execute(text("INSERT INTO application_packets (id,user_id,status) "
                    "VALUES ('old-packet','existing-candidate','ready')"))
+with engine.begin() as prerequisite:
+    prerequisite.execute(text('CREATE TABLE job_search_profiles '
+                             '(user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
 cfg = Config('alembic.ini')
 command.stamp(cfg, '36a8f2c9d7e1')
 command.upgrade(cfg, 'head')

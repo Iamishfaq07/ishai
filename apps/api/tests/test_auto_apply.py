@@ -419,6 +419,10 @@ def test_needs_you_refunds_notifies_and_unknown_questions_come_back_to_the_candi
     assert "captcha" in app.get(f"/v1/apply/packets/{p2['id']}", headers=h).json()["reason"]
     done = app.post(f"/v1/apply/packets/{p2['id']}/done", headers=h).json()
     assert done["status"] == "applied" and done["group"] == "applied" and done["tracker_id"]
+    mission = app.get(f"/v1/jobs/tracker/{done['tracker_id']}/mission", headers=h).json()
+    assert mission["snapshots"][0]["note"] == "Candidate recorded applying from Orbit Apply"
+    # Manual confirmation is neither an Orbit send nor a metered execution.
+    assert app.get("/v1/apply/setup", headers=h).json()["quota"]["used"] == 0
 
 
 def test_bad_results_are_refused(app: TestClient) -> None:

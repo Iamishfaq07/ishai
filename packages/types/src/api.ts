@@ -1443,12 +1443,16 @@ export interface ContactRequest {
 
 /** GET /v1/jobs/tracker/{id}/timeline: one event of a tracked job's journey. */
 export interface JobTimelineEvent {
-  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "stage" | "next";
+  kind: "saved" | "fit" | "resume" | "prep_doc" | "contact" | "outreach" | "applied" | "round" | "related_round" | "stage" | "next";
   at: string;
   title: string;
   detail: string;
   link: string | null;
   upcoming: boolean;
+  /** Owned session available for explicit association review. */
+  session_id?: string | null;
+  /** Only an explicitly linked ended session can count as completed practice. */
+  completed?: boolean;
 }
 
 /** GET /v1/sessions/loop-memory?company=: the candidate's earlier rounds with that company. */
@@ -2822,6 +2826,32 @@ export interface RequirementPractice {
 }
 
 /** Owned navigation context only; opening a library tool does not attach its records to this job. */
+export interface CandidateIdentityUpdate {
+  version: string;
+  action: "select" | "approve" | "revoke";
+  resume_id: string;
+  resume_revision: number;
+  independent_copy?: boolean;
+}
+
+export interface CandidateIdentity {
+  version: string;
+  master: { id: string; title: string; revision: number; job_specific: boolean } | null;
+  resumes: { id: string; title: string; revision: number; job_specific: boolean }[];
+  review: "not_selected" | "missing" | "needs_review" | "reviewed" | "job_copy";
+  reviewed_at: string | null;
+  name: string;
+  headline: string;
+  skills: string[];
+  education_count: number;
+  project_count: number;
+  experience_count: number;
+  target_roles: string[];
+  locations: string[];
+  workplace: string[];
+  search_uses_master: boolean;
+}
+
 export interface OpportunityContext {
   entry_id: string;
   title: string;
@@ -2837,6 +2867,8 @@ export interface JobMission {
   fit: MissionFit | null;
   resume: MissionResume | null;
   resume_missing: boolean;
+  /** Legacy shared/master bindings must be copied before job-specific editing. */
+  resume_requires_copy?: boolean;
   snapshots: MissionSnapshot[];
   offer: MissionOffer | null;
   offers: MissionOffer[];

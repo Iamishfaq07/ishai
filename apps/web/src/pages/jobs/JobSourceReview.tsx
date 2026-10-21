@@ -42,10 +42,11 @@ export function JobSourceReview({ entryId }: { entryId: string }) {
     } catch (err) { if (request === sequence.current) { setView(null); setError(errorText(err)); } }
     finally { if (request === sequence.current) { busyRef.current = false; setBusy(false); } }
   }, [entryId]);
+  const cancel = useCallback(() => { sequence.current++; }, []);
   useEffect(() => {
     void refresh();
-    return () => { sequence.current++; };
-  }, [refresh]);
+    return cancel;
+  }, [refresh, cancel]);
   useEffect(() => { if (params.get("source") === "1") setOpen(true); }, [params]);
   useEffect(() => {
     const onReturn = () => { if (!busyRef.current && document.visibilityState === "visible") void refresh(true); };

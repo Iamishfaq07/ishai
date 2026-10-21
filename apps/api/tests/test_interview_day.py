@@ -179,7 +179,7 @@ def test_the_session_context_saves_the_post_and_the_version_once(client: TestCli
     assert ctx["title"] == "Razorpay — Round 2 · Technical round" and ctx["tech_stack"] == ["Go", "Kafka", "Redis"]
     assert [d["kind"] for d in ctx["documents"]] == ["job_description", "resume"] and ctx["resume_included"]
     assert ctx["version"]["id"] == sid and ctx["notes"] == []
-    assert ctx["documents"][1]["title"].startswith("My CV (sent ")
+    assert ctx["documents"][1]["title"].startswith("My CV (saved ")
     # The post is linked to the job (Practice and the mission room see it), and a second start copies nothing.
     entry = next(e for e in client.get("/v1/jobs/tracker", headers=h).json() if e["id"] == eid)
     assert entry["document_id"] == ctx["document_ids"][0]
@@ -218,7 +218,7 @@ def test_interview_documents_are_outside_the_plans_documents(client: TestClient)
     assert r.status_code == 200, r.text
     ctx = r.json()
     assert len(ctx["document_ids"]) == 2 and ctx["resume_included"] and ctx["notes"] == []
-    assert ctx["documents"][1]["title"].startswith("My CV (sent ")
+    assert ctx["documents"][1]["title"].startswith("My CV (saved ")
     # They don't count as the plan's: still 3 of 3, and the plan's own limit still holds for the user's documents.
     assert client.get("/v1/entitlements", headers=h).json()["usage"]["documents"] == 3
     r = client.post("/v1/documents/text", headers=h, json={"title": "More", "kind": "notes",
@@ -358,8 +358,10 @@ def test_rounds_count_by_the_job_before_the_company_name(client: TestClient) -> 
         return sorted(e["detail"] for e in client.get(f"/v1/jobs/tracker/{eid}/timeline", headers=h).json()
                       if e["kind"] == "round")
 
-    assert titles(first) == ["For the first", "Named Razorpay"]
-    assert titles(second) == ["Named Razorpay"]  # the first's round isn't the second job's
+    assert titles(first) == ["For the first"]
+    assert titles(second) == []  # neither company match nor another job is attributed
+    related = client.get(f"/v1/jobs/tracker/{second}/timeline", headers=h).json()
+    assert [event["detail"] for event in related if event["kind"] == "related_round"] == ["Named Razorpay"]
     # Leaving the tracker unlinks the job's sessions; the sessions stay.
     assert client.delete(f"/v1/jobs/tracker/{first}", headers=h).status_code == 204
 

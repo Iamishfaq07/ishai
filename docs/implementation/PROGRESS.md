@@ -1,5 +1,10 @@
 # V6 progress
 
+## Unified candidate foundation — 2026-10-21
+
+The current detailed owner instruction re-enabled verification. Fresh local evidence: API3798 passed/17 skipped, final affected provenance/identity suites39 passed; workspace tests/typecheck/lint/build and22 bundle budgets pass; root browser86 and deferred V6 browser21 pass. This is a bounded identity/Today/Opportunity Room/Saba foundation, not completion of V6 or the full redesign. See [current progress](UNIFIED_JOURNEY_PROGRESS.md), [visual evidence](UNIFIED_JOURNEY_VISUAL_QA.md) and [NO-GO production sign-off](UNIFIED_JOURNEY_RELEASE_SIGNOFF.md). Earlier skipped/unverified entries below are retained as history. Draft PR for review; no merge/deploy.
+
+
 ## Increment 7 — connected opportunity tools (base `ddc03794`)
 
 PR #443 is merged. **IMPLEMENTED / UNVERIFIED:** bounded owned return trail across learning/coding/library/session review; direct workshop continuation; purposeful stage-tool cards; combined AI/reply/calendar support; previous-round review inside Practice. Existing systems are connected without automatic artifact association, claim creation or submissions. No migration/dependency/new data writer.

@@ -23,6 +23,9 @@ with engine.begin() as c:
     c.execute(text('CREATE TABLE auto_apply_setups (user_id VARCHAR(36) PRIMARY KEY)'))
     c.execute(text('CREATE TABLE job_plan_checks (id VARCHAR(36) PRIMARY KEY)'))
     c.execute(text("INSERT INTO application_packets (id) VALUES ('retained-packet')"))
+with engine.begin() as prerequisite:
+    prerequisite.execute(text('CREATE TABLE job_search_profiles '
+                             '(user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
 cfg = Config('alembic.ini')
 command.stamp(cfg, '58ca94f2d7e3')
 command.upgrade(cfg, 'head')

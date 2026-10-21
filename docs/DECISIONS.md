@@ -1521,3 +1521,11 @@ a chat-style transcript (the form is the record; the panel keeps a one-line hist
 ## Personal Orbit V6 first integration increment — 20 October 2026
 
 Use existing grounded priority and packet execution systems. Replace the operational home with Today and five candidate tasks, preserve specialist/bookmarked URLs, and project exact owned application identity into the mission rather than introducing a second dossier database. No new dependency, migration, permission or automatic model request. Preview guards cover direct REST/live builds as well as proxy/public employer rendering; empty staging configuration fails closed. Rejected: unrestricted browser agent replacement, production-connected previews, mailbox transport without provider/token lifecycle work, and a new UI kit.
+
+## Unified candidate integration — 21 October 2026
+
+Use one existing Resume as an explicitly selected master, referenced from the existing owned JobSearchProfile. Store review metadata, not a duplicate facts document. Search-specific resume selection is independent. Copy a master/shared resume before job-specific edits. Candidate confirmation binds the exact revision and content digest, and later changes invalidate review. Existing legacy records are not backfilled as approved.
+
+Use LiveSessionRow.application_id for durable association. Unlinked same-company history is only possibly related; candidate review and both owner checks are required to attach a completed session. Retries are idempotent; moving a session from another opportunity is rejected. A general navigation return URL does not establish an association.
+
+Use the existing priority queue and source records for Today, with explicit identity review before ordinary discovery. Saved interview/outcome stages can remain useful before resume setup, preserving nonlinear journeys. Models can explain facts only on request. No new agent framework, broad browser automation or implicit external authorization.

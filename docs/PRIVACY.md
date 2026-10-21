@@ -152,3 +152,11 @@ your clipboard for you to share if you choose. It holds measurements, device nam
 ## Personal career continuity
 
 Today, Prepare and My Career reuse the signed-in account's existing records. The per-job application link projects packet identity and delivery state, without another resume/answer store. This navigation update introduces no new analytics content, OAuth permission or retention period. Optional AI plans still require a deliberate request. Existing source records remain covered by account export/delete.
+
+## Implementation note: candidate identity and temporary drafts
+
+The unified journey stores the chosen master resume identifier, reviewed revision/content fingerprint and review timestamp on the existing owned job-search profile. Account export includes this metadata. Existing account deletion removes the profile and its metadata. No new raw voice/video retention or external sharing is introduced by this slice.
+
+Unconfirmed employer-message and calendar input can be retained in this tab’s memory to support navigation. It is not written to local/session storage, expires for restoration after one hour, is bounded to ten inputs, and clears when accounts change. Closing/reloading the tab discards it after the browser’s unsaved-input warning. Review proposals and sending/application approvals are never restored. This technical note does not change legal promises or replace counsel review.
+
+Candidate account transitions also synchronize across same-origin tabs through storage events and opaque BroadcastChannel notifications; server authentication remains authoritative. Blocked browser storage is covered by the channel fallback. Raw resume or draft text is not broadcast.

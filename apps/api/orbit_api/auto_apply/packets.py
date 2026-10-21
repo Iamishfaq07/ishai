@@ -235,7 +235,8 @@ async def track_applied(db: AsyncSession, user: User, packet: ApplicationPacket,
     job_text = _job_text(listing, listing.description) if listing is not None else ""
     db.add(ResumeSnapshot(user_id=user.id, application_id=entry.id, title=packet.resume_title or "Resume",
                           data=packet.resume_data or {}, job_text=job_text[:20_000],
-                          score=score_resume(data, job_text=job_text).score, note="Sent by Orbit Apply"))
+                          score=score_resume(data, job_text=job_text).score,
+                          note="Sent by Orbit Apply" if by_orbit else "Candidate recorded applying from Orbit Apply"))
     packet.application_id = entry.id
     return entry.id
 

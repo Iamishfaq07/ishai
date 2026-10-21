@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, ErrorNote, Field, Input, Select, Textarea, dateTimeInput, cx, focusRing } from "@orbit/ui";
+import { useCandidateDraft } from "../../lib/useCandidateDraft";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { missionPath } from "./paths";
@@ -15,7 +16,7 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
   const id = useId();
   const base = `/v1/jobs/tracker/${encodeURIComponent(entryId)}`;
   const [job, setJob] = useState<Job | null>(null);
-  const [calendar, setCalendar] = useState("");
+  const [calendar, setCalendar] = useCandidateDraft("invitation", entryId);
   const [proposal, setProposal] = useState<Preview | null>(null);
   const [selected, setSelected] = useState("");
   const [interviewing, setInterviewing] = useState(false);
@@ -84,6 +85,7 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
     finally { if (request === seq.current) { busyRef.current = false; setBusy(null); } }
   };
   return <section aria-label="Review a calendar invitation" className="min-w-0 space-y-4 rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
+    <p className="text-xs text-zinc-600 dark:text-zinc-400">Draft invitation text stays in this tab’s memory while you navigate. It is not a saved calendar connection; review changes again after reopening.</p><Button variant="ghost" disabled={!calendar} onClick={() => { setCalendar(""); invalidate(); }}>Discard invitation draft</Button>
     <header><h3 className="font-display text-lg font-semibold">Invitation → reviewed date → preparation</h3><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Import a calendar file for this job. Review the time and stage before anything changes.</p></header>
     {error && <ErrorNote onRetry={() => void refresh()}>{error} Your pasted invitation stays here for review.</ErrorNote>}
     {!job ? <p role="status">{busy ? "Opening the saved job…" : "Refresh to load this job."}</p> : <>

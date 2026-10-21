@@ -46,7 +46,8 @@ def test_progress_is_owned_and_does_not_expose_contact_values(client: TestClient
     assert checks["basics"]["present"] and checks["projects"]["present"] and checks["education"]["present"]
     assert not checks["experience"]["present"]
     assert "private@example.com" not in json.dumps(current) and "Private name" not in json.dumps(current)
-    assert current["next_step"]["id"] == "search"
+    assert current["next_step"]["id"] == "resume"
+    assert current["next_step"]["action"] == "Choose your master resume"
     assert client.get("/v1/jobs/launchpad/progress", headers=auth(other), params={"resume_id": rid}).status_code == 404
     assert client.post("/v1/jobs/launchpad/plan", headers=auth(other),
                       json={"resume_id": rid, "version": current["version"]}).status_code == 404
@@ -56,10 +57,10 @@ def test_progress_is_owned_and_does_not_expose_contact_values(client: TestClient
 def test_no_resume_plan_is_available_and_does_not_claim_completed_actions(client: TestClient) -> None:
     user, _ = account(client, False)
     current = source(client, user)
-    assert not current["checks"] and current["next_step"]["path"] == "/jobs?work=resume"
+    assert not current["checks"] and current["next_step"]["path"] == "/career"
     response = client.post("/v1/jobs/launchpad/plan", headers=auth(user), json={"version": current["version"]})
     assert response.status_code == 200, response.text
-    assert response.json()["source"] == "mock" and response.json()["tips"][0]["path"] == "/jobs?work=resume"
+    assert response.json()["source"] == "mock" and response.json()["tips"][0]["path"] == "/career"
     assert source(client, user) == current
     assert client.get("/v1/resumes", headers=auth(user)).json() == []
 
@@ -190,5 +191,6 @@ def test_saved_followup_is_actionable_and_date_change_invalidates_plan(client: T
                         json={"clear_next": True}).status_code == 200
     after = source(client, user)
     assert after["activity"]["count"] == 0
-    assert after["next_step"]["id"] == "search"
+    assert after["next_step"]["id"] == "resume"
+    assert after["next_step"]["action"] == "Choose your master resume"
     assert after["version"] != current["version"]

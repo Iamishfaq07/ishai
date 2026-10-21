@@ -9,13 +9,14 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.models import Document, JobApplication, JobContact, JobFitCheck, LiveSessionRow, Resume
 from orbit_api.sessions.loop_memory import same_company
 
-Kind = Literal["saved", "fit", "resume", "prep_doc", "contact", "outreach", "applied", "round", "stage", "next"]
+Kind = Literal["saved", "fit", "resume", "prep_doc", "contact", "outreach", "applied", "round",
+               "related_round", "stage", "next"]
 STAGE_LABEL = {"interviewing": "Interviewing", "offer": "Offer", "rejected": "Not this time"}
 ROUND_LABEL = {"mock": "Practice round", "interview": "Live interview", "coding": "Live coding interview",
                "system_design": "Live system design interview", "phone": "Phone interview"}
@@ -29,6 +30,8 @@ class TimelineEvent(BaseModel):
     detail: str = ""
     link: str | None = None  # an in-app path, when there's a page for it
     upcoming: bool = False
+    completed: bool = False
+    session_id: str | None = None  # Explicit review target, not proof of a job association
 
 
 def _aware(at: datetime) -> datetime:
@@ -69,17 +72,21 @@ async def timeline(db: AsyncSession, entry: JobApplication, now: datetime | None
                                     detail="Sent from your browser by Orbit Apply" if orbit else "",
                                     link="/jobs/applications" if orbit else None))
 
-    # Rounds for this job: practice and live sessions started from it (job_portal/interview.py) and, since the job was
-    # saved, ones that name its company and weren't started from another job.
+    # Only explicit owned associations count as progress. Company-name matches are review suggestions.
     sessions = (await db.scalars(select(LiveSessionRow).where(
-        LiveSessionRow.user_id == entry.user_id, LiveSessionRow.created_at >= entry.created_at,
+        LiveSessionRow.user_id == entry.user_id,
+        or_(LiveSessionRow.application_id == entry.id, LiveSessionRow.created_at >= entry.created_at),
         LiveSessionRow.status != "created").order_by(LiveSessionRow.created_at.desc()).limit(80))).all()
-    rounds = [s for s in sessions if s.application_id == entry.id
-              or (s.application_id is None and same_company(s.company, entry.company))][:MAX_ROUNDS]
-    for s in rounds:
-        events.append(TimelineEvent(kind="round", at=s.started_at or s.created_at,
-                                    title=ROUND_LABEL.get(s.type, "Session"), detail=s.title,
-                                    link=f"/sessions/{s.id}" if s.status == "ended" else None))
+    linked = [session for session in sessions if session.application_id == entry.id][:MAX_ROUNDS]
+    related = [session for session in sessions if session.application_id is None
+               and same_company(session.company, entry.company) and session.status == "ended"][:3]
+    for session in [*linked, *related]:
+        confirmed = session.application_id == entry.id
+        events.append(TimelineEvent(kind="round" if confirmed else "related_round",
+            at=session.started_at or session.created_at,
+            title=ROUND_LABEL.get(session.type, "Session") if confirmed else "Possibly related session — review",
+            detail=session.title, session_id=session.id, completed=confirmed and session.status == "ended",
+            link=f"/sessions/{session.id}" if session.status == "ended" else None))
 
     if entry.status in STAGE_LABEL:
         events.append(TimelineEvent(kind="stage", at=entry.status_at, title=STAGE_LABEL[entry.status]))

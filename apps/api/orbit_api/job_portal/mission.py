@@ -27,10 +27,13 @@ from orbit_api.models import ApplicationPacket, JobApplication, JobFitCheck, Job
 from orbit_api.ratelimit import limit_user
 from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
+from orbit_api.transactions import lock_account
 
 from .requirement_practice import RequirementPractice, practice_source
+from .resume_binding import for_job, needs_copy
 from .resume_lineage import VersionComparison, comparison
-from .source_review import SourceReview, review as review_source
+from .source_review import SourceReview
+from .source_review import review as review_source
 
 router = APIRouter(prefix="/v1/jobs/tracker", tags=["jobs"])
 read_limit = Depends(limit_user("jobs-mission", rate_per_s=3, burst=60))
@@ -107,6 +110,7 @@ class MissionOut(BaseModel):
     fit: FitSummary | None
     resume: LinkedResume | None
     resume_missing: bool  # a resume was linked and has since been deleted
+    resume_requires_copy: bool = False
     snapshots: list[SnapshotOut]
     offer: OfferRef | None
     offers: list[OfferRef]  # the account's offers not linked to another job, for the user to pick from
@@ -156,7 +160,7 @@ def next_step(f: Facts, listing_path: str) -> NextStep | None:
                         to="link_offer")
     if f.upcoming_days == 0 and f.status == "interviewing":
         return NextStep(key="interview_day", title="Your interview is today", action="Open interview prep",
-                        why="It's today. The job post, the selected resume version and your stories are in one place, and "
+                        why="It's today. The job post, selected resume version and stories are in one place, and "
                             "the copilot starts with them loaded.", to="interview")
     if f.upcoming_days is not None and f.upcoming_days <= 7 and f.status == "interviewing":
         when = "tomorrow" if f.upcoming_days == 1 else f"in {f.upcoming_days} days"
@@ -224,9 +228,11 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
 
     resume = None
     missing = False
+    requires_copy = False
     if entry.resume_id:
         row = await db.get(Resume, entry.resume_id)
         if row is not None and row.user_id == user.id:
+            requires_copy = await needs_copy(db, user, entry, row)
             score = await asyncio.to_thread(_score, row.data, row.design, row.job_text or "")
             resume = LinkedResume(id=row.id, title=row.title, score=score, updated_at=_aware(row.updated_at))
         else:
@@ -239,7 +245,7 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
                                .order_by(JobOffer.created_at.desc()))).all()
     linked = next((o for o in offers if o.application_id == entry.id), None)
     events = await timeline(db, entry, now)
-    rounds = [e for e in events if e.kind == "round"]
+    rounds = [e for e in events if e.kind == "round" and e.completed]
     practice = sum(1 for e in rounds if e.title == "Practice round")
     upcoming = None
     shift = timedelta(minutes=tz_offset)
@@ -262,7 +268,7 @@ async def mission(db: AsyncSession, user: User, entry: JobApplication, now: date
                   offer=linked is not None, upcoming_days=upcoming, prep_doc=entry.document_id is not None)
     return MissionOut(
         entry_id=entry.id, application=application, stages=stages_for(facts), fit=fit,
-        resume=resume, resume_missing=missing,
+        resume=resume, resume_missing=missing, resume_requires_copy=requires_copy,
         snapshots=[SnapshotOut(id=s.id, title=s.title, score=s.score, note=s.note, resume_id=s.resume_id,
                                created_at=_aware(s.created_at)) for s in snaps],
         offer=_offer_ref(linked) if linked else None,
@@ -317,12 +323,15 @@ class LinkResumeIn(BaseModel):
 async def link_resume(entry_id: str, body: LinkResumeIn, user: Annotated[User, Depends(current_user)],
                       db: Annotated[AsyncSession, Depends(get_db)], tz_offset: TzOffset = 0) -> MissionOut:
     """Link the resume for this job (or unlink with null). Only one of the account's own resumes."""
+    await lock_account(db, user.id)
     entry = await _entry(db, entry_id, user)
     if body.resume_id is not None:
         r = await db.get(Resume, body.resume_id)
         if r is None or r.user_id != user.id:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Resume not found")
-    entry.resume_id = body.resume_id
+        entry.resume_id = (await for_job(db, user, entry, r)).id
+    else:
+        entry.resume_id = None
     await db.commit()
     return await mission(db, user, entry, tz_offset=tz_offset)
 

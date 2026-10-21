@@ -83,7 +83,7 @@ test("Date-free practice guides a fresher without recording an interview or call
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("prep-rehearsal-mobile.png"), fullPage: true });
   await page.getByRole("button", { name: "Add a confirmed interview date", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Interview, one step at a time", exact: true })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "Interview", exact: true })).toBeFocused();
 });
 
 test("A delayed completion cannot replace the plan after switching jobs", async ({ page, context }) => {
