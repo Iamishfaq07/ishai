@@ -19,6 +19,7 @@ import {
   Eye,
   FileText,
   Gauge,
+  Globe,
   Link2,
   Mail,
   MessagesSquare,
@@ -766,6 +767,18 @@ function ResumeEditor() {
             onClick={() => { void import("./jsonResume").then(({ toJsonResume }) => downloadText(`${fileName(resume)}.json`, JSON.stringify(toJsonResume(resume.data), null, 2), "application/json")).catch((error: unknown) => setNotice(errorText(error))); }}
           >
             <Code2 className="h-4 w-4" /> JSON
+          </Button>
+          <Button
+            variant="ghost"
+            title="Download a one-page personal website made from this resume, ready to host free on GitHub Pages, Netlify or Cloudflare Pages"
+            aria-label="Download as a personal website"
+            onClick={() => { void okToDownload().then(async (ok) => {
+              if (!ok) return;
+              const { buildPortfolio } = await import("./portfolio");
+              downloadText(`${fileName(resume)}-website.html`, buildPortfolio(resume.data, resume.design.accent), "text/html");
+            }).catch((error: unknown) => setNotice(errorText(error))); }}
+          >
+            <Globe className="h-4 w-4" /> Website
           </Button>
           <Button onClick={() => void okToDownload().then((ok) => ok && printDoc("resume"))}>
             <Download className="h-4 w-4" /> Download PDF

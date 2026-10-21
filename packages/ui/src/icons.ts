@@ -170,3 +170,5 @@ export { Bell, Flag, GripVertical, List, Tag as TagIcon, UserPlus } from "lucide
 
 // The Personal / Business workspace switch in the top bar.
 export { ArrowLeftRight } from "lucide-react";
+// Aptitude practice.
+export { Brain } from "lucide-react";
