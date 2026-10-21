@@ -1,5 +1,7 @@
 # Unified journey release decision — 2026-10-21
 
+Draft PR: https://github.com/Iamishfaq07/ishai/pull/445. Hosted CI run39521859957 could not execute any steps; six jobs report failure. API and desktop annotations identify account payment/spending-limit blocking. Owner must resolve GitHub Billing & plans and rerun CI. Local evidence does not replace hosted gates. Existing Cloudflare Workers integration was building when inspected; no manual deployment was issued or provider/staging proof inferred.
+
 **Review checkpoint: draft PR. Production release: NO-GO.** This is engineering evidence, not an owner deployment approval. No merge, production deploy, real application, recruiter email or charge was performed.
 
 ## Shipped scope in this branch

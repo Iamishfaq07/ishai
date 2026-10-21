@@ -1,5 +1,9 @@
 # Unified journey progress — review checkpoint
 
+## Draft PR and hosted CI
+
+Draft PR: https://github.com/Iamishfaq07/ishai/pull/445. Implementation commit e1baf6d3. Actions run39521859957 reports six failed jobs with no steps executed. API and desktop check annotations report that jobs did not start because recent account payments failed or the spending limit needs increasing. No remote test pass or code failure is inferred. Owner action: resolve GitHub Billing & plans, then rerun ordinary CI; no workflow or required gate was weakened. The existing Cloudflare Workers build integration was in progress when inspected; no manual deployment was issued or staging/provider validation inferred.
+
 ## 2026-10-21: baseline and Phase 1 in progress
 
 Base `e1426076`, clean checkout after merged PR444. New branch `orbit-unified-candidate-phase1-2026-10-21`. Previous increments4–7 were implemented without tests; their old status is historical, not validation. The current detailed owner instruction requires testing. No new skip-CI request.
