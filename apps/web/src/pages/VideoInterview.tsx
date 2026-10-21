@@ -181,7 +181,7 @@ export function VideoInterviewPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <PageHeader
+      <PageHeader eyebrow="Interview preparation"
         icon={Video}
         title="AI video interview"
         subtitle={`A face-to-face practice interview with ${INTERVIEWER_NAME}, an AI interviewer who asks from the job, your resume or a topic, and follows up on what you say.`}

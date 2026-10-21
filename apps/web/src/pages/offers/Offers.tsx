@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
-import { Spot, ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, Skeleton, celebrate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
+import { Spot, ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, Reveal, Skeleton, celebrate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
+import { Stat } from "../prepare/parts";
 import { Button, Card, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -92,13 +93,19 @@ export function OffersPage() {
           />
         ) : (
           <div className="space-y-6">
-            <ul className="grid gap-3 md:grid-cols-2">
+            <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <Stat label="Offers" value={list.length} hint="Recorded by you" />
+              <Stat label="Above market" value={list.filter((o) => o.position === "above").length} hint="Above the middle of the role's range" />
+              <Stat label="Plans ready" value={list.filter((o) => o.plan && !o.plan_stale).length} hint="With a negotiation plan" />
+              <Stat label="Still deciding" value={list.filter((o) => o.status === "considering").length} hint="Waiting on your answer" />
+            </Reveal>
+            <Reveal as="ul" stagger className="grid gap-3 md:grid-cols-2">
               {list.map((o) => (
                 <li key={o.id}>
-                  <OfferCard offer={o} />
+                  <OfferCard offer={o} best={bestId(list) === o.id} />
                 </li>
               ))}
-            </ul>
+            </Reveal>
             {list.length > 1 && <Compare offers={list} />}
           </div>
         )}
@@ -109,11 +116,17 @@ export function OffersPage() {
   );
 }
 
-function OfferCard({ offer: o }: { offer: JobOfferRecord }) {
+/** The offer worth the most in its first year, when there are two or more in one currency. */
+export function bestId(offers: JobOfferRecord[]): string | null {
+  if (offers.length < 2 || new Set(offers.map((o) => o.currency)).size > 1) return null;
+  return offers.reduce((a, b) => (b.first_year > a.first_year ? b : a)).id;
+}
+
+function OfferCard({ offer: o, best = false }: { offer: JobOfferRecord; best?: boolean }) {
   const terms = offerTerms(useCountry());
   return (
     <Link to={offerPath(o.id)} className={cx("block rounded-2xl", focusRing)}>
-      <Card className="h-full transition-shadow hover:shadow-md">
+      <Card className={cx("h-full transition-[box-shadow,transform] hover:shadow-md motion-safe:hover:-translate-y-0.5", best && "ring-2 ring-emerald-500/40")}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate font-display text-lg font-semibold">{o.company}</p>
@@ -141,6 +154,7 @@ function OfferCard({ offer: o }: { offer: JobOfferRecord }) {
           )}
         </dl>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+          {best && <span className="rounded-full bg-emerald-600 px-2 py-0.5 font-medium text-white">Highest first year</span>}
           {o.position && <span className={cx("rounded-full px-2 py-0.5 font-medium", POSITION_TONE[o.position])}>{POSITION_TEXT[o.position]}</span>}
           {o.plan && !o.plan_stale && <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 font-medium text-indigo-800 dark:text-indigo-200">Plan: ask {money(o.currency, o.plan.ask)}</span>}
           <span className="ml-auto inline-flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400">
