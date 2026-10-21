@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { MOCK_INTERVIEW_ENABLED, buttonClass, cx, focusRing } from "@orbit/ui";
+import { MOCK_INTERVIEW_ENABLED, Reveal, buttonClass, cx, focusRing } from "@orbit/ui";
 import { PublicHeader } from "../../marketing/PublicHeader";
 import { PublicFooter } from "../../marketing/PublicFooter";
 import { useAuth } from "../../lib/auth";
@@ -31,7 +31,7 @@ export function ToolExplorerPage() {
     setParams(next, { replace: true });
   };
   const clear = () => setParams({ audience: new URLSearchParams(window.location.search).get("audience") === "business" ? "business" : "personal" }, { replace: true });
-  const tools = filterTools(audience, query, stage, kind).filter((tool) => tool.id !== "saba" || MOCK_INTERVIEW_ENABLED);
+  const tools = filterTools(audience, query, stage, kind).filter((tool) => !["saba", "video"].includes(tool.id) || MOCK_INTERVIEW_ENABLED);
   const active = Math.max(0, STAGES.findIndex((s) => s.id === stage));
   return <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
     <PublicHeader />
@@ -66,12 +66,12 @@ export function ToolExplorerPage() {
         <p className="text-sm text-zinc-500" role="status">{tools.length} tools · {audience === "personal" ? "Personal" : "Business"}{stage !== "all" ? ` · ${STAGES.find((s) => s.id === stage)?.label}` : ""}</p>
         {audience === "business" && <p className="text-sm text-zinc-600 dark:text-zinc-400">Choose your company after opening a tool. Available actions depend on your company role and plan.</p>}
         {tools.length === 0 ? <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center"><h2 className="font-semibold">No tools match these filters</h2><p className="mt-2 text-sm text-zinc-500">Try a shorter search or clear the workflow step.</p></div> :
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{tools.map((tool, i) => <article key={tool.id} className="group flex flex-col rounded-2xl border border-zinc-200 bg-white p-5 transition-shadow hover:shadow-lg motion-safe:transition-transform motion-safe:hover:-translate-y-1 dark:border-white/10 dark:bg-zinc-900">
+          <Reveal key={`${audience}|${stage}|${kind}`} stagger className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{tools.map((tool, i) => <article key={tool.id} className="group flex h-full flex-col rounded-2xl border border-zinc-200 bg-white p-5 transition-shadow hover:shadow-lg motion-safe:transition-transform motion-safe:hover:-translate-y-1 dark:border-white/10 dark:bg-zinc-900">
             <div className="flex items-center justify-between gap-2"><span aria-hidden="true" className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 text-sm font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">{String(i + 1).padStart(2, "0")}</span>
-              <span className="text-xs font-medium text-indigo-700 dark:text-indigo-300">{tool.automation ? "Automation" : tool.ai ? "AI assisted" : "Workspace"}</span></div>
+              <span className="flex flex-wrap justify-end gap-1">{tool.ai && <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-800 dark:bg-violet-500/10 dark:text-violet-200">AI</span>}{tool.automation && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-200">Automation</span>}{!tool.ai && !tool.automation && <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-700 dark:bg-white/10 dark:text-zinc-300">Workspace</span>}</span></div>
             <h2 className="mt-4 text-lg font-semibold">{tool.name}</h2><p className="mt-2 text-sm font-medium">{tool.line}</p><p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{tool.detail}</p>
             <Link to={tool.href} state={!user ? { from: tool.href } : undefined} className={buttonClass("secondary", "md", "mt-5 w-full")}>{tool.label} <span aria-hidden="true" className="motion-safe:transition-transform motion-safe:group-hover:translate-x-1">→</span></Link>
-          </article>)}</div>}
+          </article>)}</Reveal>}
       </section>
       <aside className="rounded-2xl border border-zinc-200 bg-white p-5 text-sm dark:border-white/10 dark:bg-zinc-900"><h2 className="font-semibold">Where should I start?</h2><p className="mt-2 text-zinc-500">{audience === "personal" ? "Start with your resume, save a few good matches, then configure your application agent. Keep the action desk nearby for anything that needs you." : "Start with a verified company and a role. Add your team, agree on interview criteria, then configure the reminders your hiring process needs."}</p>
         <Link to={audience === "personal" ? "/jobs/journey" : "/business/app"} className={buttonClass("primary", "md", "mt-4")}>{audience === "personal" ? "Open your application agent" : "Open your business workspace"}</Link>
