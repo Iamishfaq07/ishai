@@ -64,6 +64,7 @@ export function PreparePage() {
       ] : []),
       { title: "Quick warm-up", detail: "One question, answered out loud, minutes before you go in.", icon: Zap, to: "/warmup", ai: true },
       { title: "Aptitude tests", detail: "Timed quant, reasoning and verbal practice with worked answers, like placement tests.", icon: Brain, to: "/aptitude" },
+      { title: "Group discussion", detail: "Timed GD practice for placements: a topic, 2 minutes to plan, 5 to speak, then review.", icon: UsersRound, to: "/group-discussion" },
       { title: "Coding & system design", detail: "Practise problems in an editor and explain your approach to a voice interviewer.", icon: Code2, to: "/code", ai: true },
     ] },
     { title: "Build your answers", about: "Your own material, ready before the questions come.", items: [

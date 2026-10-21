@@ -11,6 +11,8 @@ import { useCountry } from "../../lib/country";
 import { jobPath } from "../jobs/paths";
 import { OfferForm } from "./OfferForm";
 import { DecisionMatrix } from "./DecisionMatrix";
+import { ResignPlanner } from "./ResignPlanner";
+import { SalaryScripts } from "./SalaryScripts";
 import { MarketBar } from "./MarketBar";
 import { compareRows, emptyOffer, money, offerPath, offerTerms } from "./model";
 
@@ -112,6 +114,7 @@ export function OffersPage() {
           </div>
         )}
         <PayCheck />
+        <div className="mt-6 space-y-6"><SalaryScripts /><ResignPlanner /></div>
       </>
       )}
     </>

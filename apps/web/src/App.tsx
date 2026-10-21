@@ -69,6 +69,9 @@ import {
   AptitudePage,
   ApplyPriorityPage,
   StarCheckPage,
+  BulletBuilderPage,
+  GapExplainerPage,
+  GroupDiscussionPage,
   CodeProblemPage,
   OfferDetailPage,
   AdminUsersPage,
@@ -342,6 +345,9 @@ export function App() {
         <Route path="learn" element={<LearningPage />} />
         <Route path="aptitude" element={<AptitudePage />} />
         <Route path="star-check" element={<StarCheckPage />} />
+        <Route path="bullet-builder" element={<BulletBuilderPage />} />
+        <Route path="career-gap" element={<GapExplainerPage />} />
+        <Route path="group-discussion" element={<GroupDiscussionPage />} />
         <Route path="code" element={<CodeHomePage />} />
         <Route path="code/:problemId" element={<CodeProblemPage />} />
         <Route path="offers" element={<OffersPage />} />
