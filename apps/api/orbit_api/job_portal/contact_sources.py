@@ -40,32 +40,78 @@ async def page_source(url: str) -> Source:
     return Source(id="page", kind="public_page", url=public_url(page.url), text=page.text[:10000])
 
 
-def search_provider() -> str | None:
+def search_providers() -> list[str]:
+    """Configured search services in the order tried: a run falls through to the next one when a service fails."""
     settings = get_settings()
-    if settings.contact_searxng_url:
-        return "searxng"
-    if settings.contact_search_key:
-        return "brave"
     cfg = get_effective_config()
-    return "deepseek" if (settings.contact_deepseek_search and cfg.deepseek_api_key
-                           and cfg.llm_provider != "mock") else None
+    out = []
+    if settings.contact_searxng_url:
+        out.append("searxng")
+    if settings.contact_search_key:
+        out.append("brave")
+    if settings.contact_deepseek_search and cfg.deepseek_api_key and cfg.llm_provider != "mock":
+        out.append("deepseek")
+    return out
+
+
+def search_provider() -> str | None:
+    providers = search_providers()
+    return providers[0] if providers else None
+
+
+def search_off_reason() -> str | None:
+    """Why automatic search is off, for the page to say exactly what to change. None when it's on."""
+    if search_providers():
+        return None
+    settings = get_settings()
+    cfg = get_effective_config()
+    if not cfg.deepseek_api_key:
+        return "no_key"
+    if cfg.llm_provider == "mock":
+        return "mock_mode"
+    if not settings.contact_deepseek_search:
+        return "deepseek_off"
+    return "no_key"
+
+
+NAMES = {"searxng": "SearXNG", "brave": "Brave Search", "deepseek": "DeepSeek Search"}
+
+
+def search_error(provider: str, exc: Exception) -> str:
+    """A specific, safe explanation of a failed search (no key, query or response body)."""
+    name = NAMES.get(provider, "Web search")
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = exc.response.status_code
+        if code in (401, 403):
+            return f"{name} rejected the server's API key. The site owner needs to check it."
+        if code == 402:
+            return f"{name} has no balance left. The site owner needs to top up the account."
+        if code == 429:
+            return f"{name} is rate-limited right now. Try again in a minute."
+        if code == 404:
+            return f"{name} isn't available for this account."
+        return f"{name} returned an error ({code})."
+    if isinstance(exc, TimeoutError | httpx.TimeoutException):
+        return f"{name} took too long to answer."
+    return f"{name} couldn't be reached."
 
 
 def contact_queries(company: str, title: str) -> list[tuple[str, str]]:
-    # Keep within the128-character provider limit; no candidate profile data in public queries.
+    # Keep within the 128-character provider limit; no candidate profile data in public queries.
     employer = re.sub(r'[^\w .&-]', ' ', company).strip()[:60]
     role = re.sub(r'[^\w -]', ' ', title).strip()[:24]
     return [
         ("Hiring team", f'"{employer}" "{role}" "hiring manager"'),
         ("Recruiting", f'"{employer}" "{role}" (recruiter OR "talent acquisition")'),
+        ("Professional profiles", f'site:linkedin.com/in "{employer}" (recruiter OR "{role}")'),
         ("Relevant team", f'"{employer}" "{role}" team contact'),
     ]
 
 
 async def search_sources(company: str, title: str, *, query: str | None = None,
-                         source_prefix: str = "web") -> list[Source]:
+                         source_prefix: str = "web", provider: str | None = None) -> list[Source]:
     settings = get_settings()
-    provider = search_provider()
+    provider = provider or search_provider()
     if provider is None:
         return []
     # Operator-configured service, no redirects or environment proxy. Only company and role become query inputs.

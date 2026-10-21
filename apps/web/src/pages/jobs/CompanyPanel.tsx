@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { lazy, Suspense, useState } from "react";
 import type { JobTrackerEntry } from "@orbit/types";
 import { ArrowRight, LoadGate, cx, focusRing } from "@orbit/ui";
@@ -19,7 +19,9 @@ const ContactResearch = lazy(() => import("./ContactResearch"));
  * "the questions they'll ask"; it's what to practise.
  */
 export function CompanyPanel({ entry }: { entry: JobTrackerEntry }) {
-  const [contactsOpen, setContactsOpen] = useState(false);
+  // Today's "Find who's hiring" opens this tab with ?contacts=1, finder already open.
+  const [params] = useSearchParams();
+  const [contactsOpen, setContactsOpen] = useState(() => params.get("contacts") === "1");
   const styles = useAsync(() => api.interviewStyles(), [], "interview-styles");
   const memory = useAsync(() => api.loopMemory(entry.company), [entry.company], `loop-memory:${entry.company}`);
   const guide = matchStyle(styles.data ?? [], entry.company);

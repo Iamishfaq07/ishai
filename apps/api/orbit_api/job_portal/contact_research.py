@@ -19,7 +19,17 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.job_portal import contacts
-from orbit_api.job_portal.contact_sources import Source, contact_queries, page_source, public_url, search_provider, search_sources
+from orbit_api.job_portal.contact_sources import (
+    Source,
+    contact_queries,
+    page_source,
+    public_url,
+    search_error,
+    search_off_reason,
+    search_provider,
+    search_providers,
+    search_sources,
+)
 from orbit_api.models import AutoApplySetup, Document, JobApplication, JobContact, JobListing, ProviderRequest, Resume, User
 from orbit_api.prep.job_link import JobLinkError
 from orbit_api.ratelimit import limit_user
@@ -130,7 +140,9 @@ async def context(db: AsyncSession, user: User, job: JobApplication) -> dict[str
                              for j in history[:10]]},
         "web_search_enabled": search_provider() is not None,
         "web_search_provider": search_provider(),
-        "automatic_search_limit": 3,
+        "web_search_providers": search_providers(),
+        "web_search_off_reason": search_off_reason(),
+        "automatic_search_limit": len(contact_queries(job.company, job.title)),
         "search_links": [{"label": "Public web search",
             "url": "https://www.google.com/search?" + urlencode({"q": query})},
             {"label": "Professional profiles", "url": "https://www.google.com/search?" +
@@ -226,35 +238,49 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
                 warnings.append("Live web search isn't configured. Use a public page, pasted reply or search links.")
             else:
                 queries = contact_queries(job.company, job.title)
+                providers = search_providers()
                 for index, (label, query) in enumerate(queries if body.automatic else queries[:1]):
-                    selected_provider = search_provider()
-                    start = time.perf_counter()
-                    ok = False
                     found: list[Source] = []
-                    try:
-                        found = await search_sources(job.company, job.title, query=query, source_prefix=f"web{index}")
-                        urls = {source.url for source in sources if source.url}
-                        room = max(0, 10 - sum(source.kind.startswith("search_") for source in sources))
-                        for source in found:
-                            if source.url not in urls and room:
-                                sources.append(source)
-                                urls.add(source.url)
-                                room -= 1
-                        workflow.append({"label": label, "query": query, "provider": selected_provider,
-                            "status": "completed" if found else "empty", "source_count": len(found)})
-                        ok = True
-                    except (httpx.HTTPError, JobLinkError, ValueError, TypeError, TimeoutError):
-                        warnings.append("Live search is unavailable. Supplied sources were still checked; no automatic retry was made.")
-                        workflow.append({"label": label, "query": query, "provider": selected_provider,
-                            "status": "failed", "source_count": 0})
-                    finally:
-                        # No queries/private content in telemetry. Provider invoice is authoritative.
-                        estimate = get_settings().contact_deepseek_search_cost_usd if (
-                            selected_provider == "deepseek" and ok and found) else None
-                        db.add(ProviderRequest(user_id=user.id, provider=selected_provider or "unavailable", model="search",
-                            request_type="career_contact_search", ok=ok,
-                            latency_ms=int((time.perf_counter() - start) * 1000), estimated_cost_usd=estimate))
-                    if not ok:
+                    used: str | None = None
+                    errors: list[str] = []
+                    # Each query tries the configured services in order; a failure falls through to the next.
+                    for selected_provider in list(providers):
+                        start = time.perf_counter()
+                        ok = False
+                        try:
+                            found = await search_sources(job.company, job.title, query=query,
+                                                         source_prefix=f"web{index}", provider=selected_provider)
+                            ok = True
+                            used = selected_provider
+                        except (httpx.HTTPError, JobLinkError, ValueError, TypeError, TimeoutError) as exc:
+                            errors.append(search_error(selected_provider, exc))
+                            # A service that rejected the key or ran out of balance won't recover this run.
+                            if isinstance(exc, httpx.HTTPStatusError) and exc.response.status_code in (401, 402, 403):
+                                providers.remove(selected_provider)
+                        finally:
+                            # No queries/private content in telemetry. Provider invoice is authoritative.
+                            estimate = get_settings().contact_deepseek_search_cost_usd if (
+                                selected_provider == "deepseek" and ok and found) else None
+                            db.add(ProviderRequest(user_id=user.id, provider=selected_provider, model="search",
+                                request_type="career_contact_search", ok=ok,
+                                latency_ms=int((time.perf_counter() - start) * 1000), estimated_cost_usd=estimate))
+                        if ok:
+                            break
+                    urls = {source.url for source in sources if source.url}
+                    room = max(0, 10 - sum(source.kind.startswith("search_") for source in sources))
+                    for source in found:
+                        if source.url not in urls and room:
+                            sources.append(source)
+                            urls.add(source.url)
+                            room -= 1
+                    for message in errors:
+                        if message not in warnings:
+                            warnings.append(message)
+                    workflow.append({"label": label, "query": query, "provider": used or "unavailable",
+                        "status": "failed" if used is None else "completed" if found else "empty",
+                        "source_count": len(found)})
+                    if used is None:
+                        warnings.append("Live search stopped here. Any sources already found were still checked.")
                         break
         return json.dumps({"company": job.company, "job_title": job.title,
             "sources": [s.model_dump() for s in sources]})

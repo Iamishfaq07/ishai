@@ -45,6 +45,7 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
     items.extend(await playbooks.offer_deadlines(db, user.id, now))
     items.extend(await playbooks.gone_postings(db, user.id))
     items.extend(await playbooks.wrap_up(db, user.id, now))
+    items.extend(await playbooks.find_contacts(db, user.id, now))
     for job in await db.scalars(select(JobApplication).where(JobApplication.user_id == user.id,
             JobApplication.status.not_in(TERMINAL_JOBS), JobApplication.next_at <= horizon)
             .order_by(JobApplication.next_at, JobApplication.id).limit(101)):

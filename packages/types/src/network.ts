@@ -18,6 +18,10 @@ export interface NetworkContext {
   };
   web_search_enabled: boolean;
   web_search_provider?: "searxng" | "brave" | "deepseek" | null;
+  /** Configured services in the order a run tries them (absent on servers older than the fallback). */
+  web_search_providers?: ("searxng" | "brave" | "deepseek")[];
+  /** Why automatic search is off: no DeepSeek key, the mock AI provider, or DeepSeek search switched off. */
+  web_search_off_reason?: "no_key" | "mock_mode" | "deepseek_off" | null;
   automatic_search_limit?: number;
   search_links: Array<{ label: string; url: string }>;
 }
