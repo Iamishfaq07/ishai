@@ -1,3 +1,11 @@
+# Current increment — automatic job contact finder, 2026-10-21
+
+Contact sources retain exact excerpts and retrieved timestamp, adding search-returned content distinctly from snippets. Manual job context reads only its owned job_description document. Separate job fingerprint hides stale results without treating saved-contact changes as a new JD. Public queries contain company/role only; extraction retains existing supplied-source semantics. No automatic capture/send or identity-proof claim. Existing People export/delete and provider metadata retention reused. [Contract](AUTOMATIC_JOB_CONTACT_FINDER.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Saba preparation workspace, 2026-10-21
 
 Displayed source: existing selected InterviewVersion kind/id/at, job document and recorded round fields. Fresh owned session context is compared before practice; fresh round drives persona. UI identity guard is not full content-hash/atomic enforcement. Source provisioning can write existing private Documents before later rejection. Practice/real rounds remain distinct; no new association/status/claims. [Limits](UNIFIED_SABA_PREPARATION.md).

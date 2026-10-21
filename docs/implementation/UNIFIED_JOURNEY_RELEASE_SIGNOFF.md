@@ -1,3 +1,11 @@
+# Current increment — automatic job contact finder, 2026-10-21
+
+**NO-GO / IMPLEMENTED / UNVERIFIED.** Contact finder implementation only; no tests/lint/typechecks/build/browser/screenshots/provider-key calls/scans/migrations by owner instruction. No deploy/secret change. DeepSeek Search integration requires configured server key/credit and later real smoke; all prior operator/migration/dependency gates remain. No schema/dependency. [Release/rollback](AUTOMATIC_JOB_CONTACT_FINDER.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Saba preparation workspace, 2026-10-21
 
 **NO-GO. IMPLEMENTED / UNVERIFIED.** No testing/validation per owner. Saba preparation source/10–20-minute choices/reused materials/questions, stale drill and source/navigation guards implemented. No schema/dependency/backend change or deployment. Live provider/device, atomic/full-hash source assurance, visual/integration and prior migration/dependency/operator gates remain open. [Scope/rollback](UNIFIED_SABA_PREPARATION.md).

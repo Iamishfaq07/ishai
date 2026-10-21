@@ -1,3 +1,11 @@
+# Current increment — automatic job contact finder, 2026-10-21
+
+SOURCE-CONFIRMED: contact search supported only configured SearXNG/Brave and one generic query; CompanyPanel linked out instead of job-bound browser research; manual saved JD was ignored when absent from feed. New DeepSeek fallback/multi-query/manual-doc context/in-room entry implemented. Runtime/provider/source-validation/secret/owner/visual verification remains deferred. No guaranteed contact or mailbox verification. [Details](AUTOMATIC_JOB_CONTACT_FINDER.md).
+
+**IMPLEMENTED / UNVERIFIED. No testing by owner instruction.**
+
+---
+
 # Current increment — Saba preparation workspace, 2026-10-21
 
 SOURCE-CONFIRMED: ordinary Saba practice was hardcoded20 minutes, material/question selection lived elsewhere, old view.round.type was used after fetching fresh context, and saved stale questions could launch drills. New UI duration/source controls and client source/unmount/drill guards implemented, not runtime reproduced. Full same-ID content/hash and atomic session-source validation remains RISK/open; provider/audio/visual behavior unverified. [Details](UNIFIED_SABA_PREPARATION.md).

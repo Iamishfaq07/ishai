@@ -2,6 +2,7 @@
 import hashlib
 import json
 import re
+import time
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, Literal
@@ -15,10 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
+from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.job_portal import contacts
-from orbit_api.job_portal.contact_sources import Source, page_source, public_url, search_provider, search_sources
-from orbit_api.models import AutoApplySetup, JobApplication, JobContact, JobListing, Resume, User
+from orbit_api.job_portal.contact_sources import Source, contact_queries, page_source, public_url, search_provider, search_sources
+from orbit_api.models import AutoApplySetup, Document, JobApplication, JobContact, JobListing, ProviderRequest, Resume, User
 from orbit_api.prep.job_link import JobLinkError
 from orbit_api.ratelimit import limit_user
 from orbit_api.sessions.loop_memory import same_company
@@ -38,6 +40,7 @@ class Strict(BaseModel):
 class ResearchIn(Strict):
     version: str = Field(pattern=r"^[a-f0-9]{64}$")
     search_web: bool = False
+    automatic: bool = False
     page_url: str | None = Field(None, max_length=1000)
     pasted_text: str = Field("", max_length=10000)
 
@@ -70,6 +73,7 @@ class People(Strict):
 
 class ImportIn(Strict):
     person: Person
+    job_version: str | None = Field(None, pattern=r"^[a-f0-9]{64}$")
     source_url: str | None = Field(None, max_length=1000)
     remind_in_days: int | None = Field(None, ge=1, le=60)
 
@@ -110,12 +114,15 @@ async def context(db: AsyncSession, user: User, job: JobApplication) -> dict[str
         .order_by(JobApplication.updated_at.desc()).limit(2001).execution_options(populate_existing=True))).all()
     history = [j for j in rows[:2000] if same_company(j.company, job.company)]
     listing = await db.get(JobListing, job.listing_id, populate_existing=True)
-    posting = (listing.description or "")[:10000] if listing else ""
+    document = await db.get(Document, job.document_id, populate_existing=True) if job.document_id else None
+    posting = ((document.source_text or "") if document and document.user_id == user.id and document.kind == "job_description"
+               else (listing.description or "") if listing else "")[:10000]
     snapshot = {"job": [job.id, job.company, job.title, job.status, job.updated_at, posting],
         "contacts": [[c.id, c.updated_at] for c in warm], "history": [[j.id, j.status, j.updated_at] for j in history]}
     query = f'"{job.company}" (recruiter OR "hiring manager") "{job.title}"'
     labels = await contacts._labels(db, user, {c.application_id for c in warm if c.application_id})
-    return {"version": digest(snapshot), "job": {"id": job.id, "company": job.company, "title": job.title},
+    return {"version": digest(snapshot), "job_version": digest(snapshot["job"]),
+        "job": {"id": job.id, "company": job.company, "title": job.title},
         "saved_contacts": [contacts._out(c, labels).model_dump(mode="json") for c in warm],
         "company_history": {"counts": dict(Counter(j.status for j in history)), "truncated": len(rows) > 2000,
             "last_contacted_at": max((str(c.last_contacted_at) for c in warm if c.last_contacted_at), default=None),
@@ -123,6 +130,7 @@ async def context(db: AsyncSession, user: User, job: JobApplication) -> dict[str
                              for j in history[:10]]},
         "web_search_enabled": search_provider() is not None,
         "web_search_provider": search_provider(),
+        "automatic_search_limit": 3,
         "search_links": [{"label": "Public web search",
             "url": "https://www.google.com/search?" + urlencode({"q": query})},
             {"label": "Professional profiles", "url": "https://www.google.com/search?" +
@@ -154,7 +162,7 @@ def validate_people(raw: object, sources: list[Source], own_emails: set[str], co
             raise ValueError("Every identity needs its exact published evidence.")
         if person.title and person.title not in quote_words:
             raise ValueError("The title must appear alongside this person.")
-        if source.kind == "search_snippet" and company.casefold() not in source.text.casefold():
+        if source.kind in ("search_snippet", "search_content") and company.casefold() not in source.text.casefold():
             raise ValueError("The search result must actually name the target company.")
         if person.email:
             contacts.email(person.email)
@@ -201,6 +209,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
         raise HTTPException(409, "Your job or company history changed. Refresh before researching.")
     sources: list[Source] = []
     warnings: list[str] = []
+    workflow: list[dict[str, Any]] = []
 
     async def gather() -> str:
         if before["posting"]:
@@ -216,10 +225,37 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
             if not before["web_search_enabled"]:
                 warnings.append("Live web search isn't configured. Use a public page, pasted reply or search links.")
             else:
-                try:
-                    sources.extend(await search_sources(job.company, job.title))
-                except (httpx.HTTPError, JobLinkError, ValueError, TypeError, TimeoutError):
-                    warnings.append("Live search is unavailable. Other supplied sources were still checked.")
+                queries = contact_queries(job.company, job.title)
+                for index, (label, query) in enumerate(queries if body.automatic else queries[:1]):
+                    selected_provider = search_provider()
+                    start = time.perf_counter()
+                    ok = False
+                    found: list[Source] = []
+                    try:
+                        found = await search_sources(job.company, job.title, query=query, source_prefix=f"web{index}")
+                        urls = {source.url for source in sources if source.url}
+                        room = max(0, 10 - sum(source.kind.startswith("search_") for source in sources))
+                        for source in found:
+                            if source.url not in urls and room:
+                                sources.append(source)
+                                urls.add(source.url)
+                                room -= 1
+                        workflow.append({"label": label, "query": query, "provider": selected_provider,
+                            "status": "completed" if found else "empty", "source_count": len(found)})
+                        ok = True
+                    except (httpx.HTTPError, JobLinkError, ValueError, TypeError, TimeoutError):
+                        warnings.append("Live search is unavailable. Supplied sources were still checked; no automatic retry was made.")
+                        workflow.append({"label": label, "query": query, "provider": selected_provider,
+                            "status": "failed", "source_count": 0})
+                    finally:
+                        # No queries/private content in telemetry. Provider invoice is authoritative.
+                        estimate = get_settings().contact_deepseek_search_cost_usd if (
+                            selected_provider == "deepseek" and ok and found) else None
+                        db.add(ProviderRequest(user_id=user.id, provider=selected_provider or "unavailable", model="search",
+                            request_type="career_contact_search", ok=ok,
+                            latency_ms=int((time.perf_counter() - start) * 1000), estimated_cost_usd=estimate))
+                    if not ok:
+                        break
         return json.dumps({"company": job.company, "job_title": job.title,
             "sources": [s.model_dump() for s in sources]})
 
@@ -235,7 +271,10 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
     latest = await context(db, user, await owned(db, user, application_id))
     if latest["version"] != before["version"]:
         raise HTTPException(409, "Your job or company history changed during research. Refresh to continue.")
-    return {"provider": provider, "warnings": warnings, "people": [p.model_dump() for p in result.people],
+    ranked = sorted(result.people, key=lambda person: (
+        {"recruiter": 0, "hiring_manager": 1}.get(relation(person), 2), person.name.casefold()))
+    return {"provider": provider, "job_version": before["job_version"], "warnings": warnings,
+            "workflow": workflow, "people": [person.model_dump() for person in ranked],
             "sources": [s.model_dump() for s in sources]}
 
 
@@ -244,6 +283,8 @@ async def capture(application_id: str, body: ImportIn, user: Annotated[User, Dep
                   db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
     await lock_account(db, user.id)
     job = await owned(db, user, application_id)
+    if body.job_version is not None and (await context(db, user, job))["job_version"] != body.job_version:
+        raise HTTPException(409, "This job changed after research. Refresh and review contact sources again.")
     person = body.person
     try:
         validate_people({"people": [person.model_dump()]}, [Source(id=person.source_id, kind="pasted_reply",
