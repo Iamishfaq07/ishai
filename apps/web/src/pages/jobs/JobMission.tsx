@@ -50,6 +50,7 @@ import { FirstNinety } from "./FirstNinety";
 import { ReferenceBrief } from "./ReferenceBrief";
 import { WithdrawNote } from "./WithdrawNote";
 import { ScamCheck } from "./ScamCheck";
+import { InterviewChecklist } from "./InterviewChecklist";
 const Guided = lazy(() => import("./GuidedOpportunity").then((m) => ({ default: m.GuidedOpportunity })));
 const VersionReview = lazy(() => import("./ResumeVersionReview").then((m) => ({ default: m.ResumeVersionReview })));
 const SourceReview = lazy(() => import("./JobSourceReview").then((m) => ({ default: m.JobSourceReview })));
@@ -159,6 +160,7 @@ export function JobMissionPage() {
 
                 <section key={tab} id="mission-tool-panel" aria-label={selected.label} className="motion-safe:animate-fade-up">
                   {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
+                  {tab === "interview" && (entry.status === "interviewing" || entry.status === "applied") && <InterviewChecklist key={`checklist:${entry.id}`} entryId={entry.id} />}
                   {tab === "interview" && <Commitments key={`commitments:${entry.id}`} entryId={entry.id} />}
                   {tab === "interview" && (
                     <InterviewPrepPanel key={entry.id}

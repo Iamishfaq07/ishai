@@ -113,7 +113,6 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
       </div>
       <div className="mt-3"><Field label="Recruiter reply or public profile text (optional)" htmlFor={`${inputId}-paste`}><Textarea id={`${inputId}-paste`} value={paste} onChange={(e) => setPaste(e.target.value)} rows={5} maxLength={10000} placeholder={"From: Alex Rivera <alex@company.com>\nTitle: Talent Acquisition Partner\n\nPaste only relevant contact details and context."} /></Field></div>
       <label className="mt-3 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={searchWeb} disabled={!data.web_search_enabled || busy} onChange={(e) => setSearchWeb(e.target.checked)} />Search the public web for this company and role (one query)</label>
-      {!data.web_search_enabled && <p className="text-xs text-zinc-500">Web search is unavailable here. Use a public company page, paste a reply, or open the search links.</p>}
       {data.web_search_provider === "searxng" && <p className="text-xs text-zinc-500">Open-source web search · no search API key. Review each result’s source before saving a contact.</p>}
       <Button variant="secondary" className="mt-3" loading={busy} onClick={() => void find(false)}>Check these sources</Button>
       <p className="mt-2 text-xs text-zinc-500">Up to 5 research runs per UTC day; failed runs count. Nothing is saved or sent until you choose a lead. Public roles and snippets may be outdated—review the source.</p>
@@ -138,15 +137,18 @@ const OFF_REASON: Record<NonNullable<NetworkContext["web_search_off_reason"]>, s
   deepseek_off: "DeepSeek search is switched off on the API server (ORBIT_CONTACT_DEEPSEEK_SEARCH=false). Remove that setting and redeploy.",
 };
 
-/** Automatic search is off: say exactly why. A server older than the DeepSeek search update doesn't send a reason. */
+/** Automatic search is off. Candidates see a plain note; only admins see why and what to change on the server. */
 function SearchOff({ reason, known }: { reason: NetworkContext["web_search_off_reason"]; known: boolean }) {
+  const admin = useAsync(() => api.adminStatus(), [], "admin-status");
+  if (!admin.data?.is_admin) {
+    return <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Automatic search isn't available right now. You can still check a company page or a recruiter's message below.</p>;
+  }
   const why = !known
     ? "The API server is running an older version. Redeploy the API: the update searches with your existing DeepSeek key, nothing new to add."
     : reason ? OFF_REASON[reason] : "No search service is configured on the API server.";
   return <div className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
-    <p className="font-medium">Automatic search is off on this server</p>
+    <p className="font-medium">Automatic search is off on this server <span className="font-normal">(visible to admins only)</span></p>
     <p className="mt-1">{why}</p>
-    <p className="mt-1 text-xs">Meanwhile you can still check a public page or a pasted reply below.</p>
   </div>;
 }
 
