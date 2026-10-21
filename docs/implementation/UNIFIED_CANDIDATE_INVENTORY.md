@@ -1,3 +1,11 @@
+# Current increment — Opportunity Room continuity, 2026-10-21
+
+RoomNavigation exposes existing Company/Requirements, Materials/History, Practice/Plan without a generic tool catalog. JobMission switcher/briefing use existing tracker/mission authority. GuidedOpportunity lazily embeds existing PacketDetail; full route remains. Resume version notes reuse bounded account/job tab-memory. No new data model/tool/primary route. [Scope](UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+**No tests run, by owner instruction.**
+
+---
+
 ## 2026-10-21 — enterprise visual language / connected Today
 
 Shared tokens/theme/preferences/headers/logo now provide paper/graphite/Slate blue; existing utilities and web/desktop/business consumers reuse them. Today owns next-action + priority queue + opportunities and job-bound journey shortcuts. My Career/Prepare/identity/Discover/Opportunity Room/timeline reuse existing routes and data. No new records or primary tab; legacy preference/deep links retained. Implementation only, no testing. [Scope and remaining asset/visual work](UNIFIED_ENTERPRISE_DESIGN.md).

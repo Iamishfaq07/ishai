@@ -1,3 +1,11 @@
+# Current increment — Opportunity Room continuity, 2026-10-21
+
+**NO-GO. IMPLEMENTED / UNVERIFIED.** Owner says no testing. Contextual room navigation, switching, in-room packet review and input/late-response continuity implemented. No test/build/lint/typecheck/browser/screenshot/migration/provider/native/security check run; no deployment. Existing earlier backend/migration/dependency/operator gates and full programme remain open. No schema/dependency in this slice. [Release/rollback limits](UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+**No tests run, by owner instruction.**
+
+---
+
 # Current release checkpoint — enterprise visual language, 2026-10-21
 
 **NO-GO for production. IMPLEMENTED / UNVERIFIED.** Owner instruction: no testing. No tests/build/lint/typecheck/browser/screenshots/accessibility/contrast/native/provider/migration checks were run for this slice. Earlier evidence is historical.

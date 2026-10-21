@@ -1,3 +1,11 @@
+# Current increment — Opportunity Room continuity, 2026-10-21
+
+Decision: URL tab remains room panel authority. Derive contextual tools from existing roomSection/MISSION_TOOLS, retain all aliases, and reuse PacketDetail under explicit lazy disclosure. Switch job via owned tracker ID with current tool only; drop foreign-job context keys. Per-visit guard and keyed editors prevent stale mutation responses from replacing another room. No schema/dependency. [Rollback/deferred acceptance](UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+**No tests run, by owner instruction.**
+
+---
+
 ## 2026-10-21 — owner-directed enterprise design slice
 
 Decision: change shared visual foundations before adding more tools. Reuse accent/ink utilities and preference API, keep old nebula as a Slate blue compatibility alias, preserve other explicit user colours and resume template design. Consolidate Today into next action/main opportunity list + contextual secondary journey rail. Extend shared headers/surfaces to core candidate screens and public/desktop consumers. No data migration. Rollback is code revert; source records and legacy query routes unchanged. [Detailed scope, risks and later gates](UNIFIED_ENTERPRISE_DESIGN.md). No testing by owner instruction.

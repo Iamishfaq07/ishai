@@ -205,3 +205,8 @@ Owner instruction: no tests, builds, lint, typechecks, migrations or browser che
 No schema/migration or provider configuration required by this visual slice. Prior pending migration/operator gates remain separate. Revert code to roll back palette/layout; source records unaffected. SVG/favicon/theme-init changes need ordinary existing web asset/CSP build pipeline later; no build/deploy was run. Binary/native/social icons are not regenerated.
 
 No tests or validation under owner instruction. [Scope and deferred release gates](implementation/UNIFIED_ENTERPRISE_DESIGN.md). Production NO-GO.
+
+
+## Opportunity Room continuity — 2026-10-21 (unverified)
+
+Existing URL tool/room context remains authoritative; contextual navigation and owned-list switching reuse current routes. Existing application packet review is lazy in-room, with a client expected-opportunity check; server ownership and approval/send semantics remain unchanged. Resume note input reuses bounded account/job tab-memory; no new source association, telemetry, schema, provider cost or legal claim. Keyed panels/visit guard reject late room save UI updates. No tests or deployment; rollback by code revert. [Scope, privacy/authorization limits and deferred gates](implementation/UNIFIED_OPPORTUNITY_CONTINUITY.md).

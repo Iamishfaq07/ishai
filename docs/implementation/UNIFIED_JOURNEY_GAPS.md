@@ -1,3 +1,11 @@
+# Current increment — Opportunity Room continuity, 2026-10-21
+
+SOURCE-CONFIRMED: local room sections still required an eight-tool select; Company/Plan/History discovery was indirect. SOURCE-CONFIRMED: version notes used transient component state; late mission saves lacked per-visit response guard. Updated contextual navigation, keyed panels, bounded note draft and per-visit guard are IMPLEMENTED / UNVERIFIED. Packet job-return links ALREADY EXISTED and are reused. Full reproduction/acceptance deferred. [Details](UNIFIED_OPPORTUNITY_CONTINUITY.md).
+
+**No tests run, by owner instruction.**
+
+---
+
 ## 2026-10-21 — design and navigation source findings
 
 DESIGN OPPORTUNITY, owner-confirmed: default Nebula plus violet-tinted neutrals make even neutral UI read purple. Shared palette, stage marks, legacy-default alias and solid surfaces/logo now replace that direction. Source evidence: design.ts defaults/palettes, base.css ink/accent/stage variables; no new runtime reproduction claimed.
