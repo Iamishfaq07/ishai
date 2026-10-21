@@ -24,7 +24,7 @@ dependencies = [
     "sentry-sdk[fastapi]>=2.0",
     "fastembed>=0.7",
     "pypdfium2>=4.30",
-    "pillow>=10.1",
+    "pillow>=13.0.0",
     "webauthn>=2.5",
     "tldextract>=5.1",
     "tzdata>=2026.5",
@@ -66,3 +66,8 @@ python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
 ignore_missing_imports = true
+
+[tool.uv]
+# fastembed (every release up to 0.9.0) caps pillow below 13, which leaves the 12.x CVEs fixed in 13.0.0.
+# Orbit only uses fastembed's TextEmbedding, which does not touch Pillow. Drop this once fastembed lifts the cap.
+override-dependencies = ["pillow>=13.0.0"]
