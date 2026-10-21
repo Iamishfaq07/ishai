@@ -70,3 +70,22 @@ candidate recorded (applications, confirmed replies, interviews in the next 7 da
 top five actions from Today, with links. A week with nothing new sends nothing. It needs a verified email, runs in the
 existing background sweeper next to job alerts, and every email carries a sign-in-free stop link
 (`/jobs/digest/off`, a random token like job alerts). Counts are the candidate's own records, never a prediction.
+
+## Round three, 21 October 2026: interview debrief and shortlist skills
+
+Researched: [career-ops](https://github.com/career-ops-hq/career-ops) (interview story bank of STAR+Reflection stories,
+the candidate always presses Submit), [MadsLorentzen/ai-job-search](https://github.com/MadsLorentzen/ai-job-search)
+(interview prep reuses feedback recorded from earlier rounds; a reviewer agent critiques drafts),
+[ResumeSkills](https://github.com/Paramchoudhary/ResumeSkills) and [ai-job-agent](https://github.com/AkbarDevop/ai-job-agent)
+(STAR story generators), and the [AIHawk](https://github.com/feder-cr/Jobs_Applier_AI_Agent_AIHawk) family (YAML profile
+driven tailoring, AGPL; concept only). No code reused.
+
+- **Interview debrief** (`job_portal/interview_debrief.py`, `POST /v1/jobs/tracker/{id}/debrief`): the candidate's
+  notes from a real round become the questions asked (with their own sense of how each went), what they promised to
+  send, what to prepare next, thank-you points and up to two STAR drafts. Facts only from the notes; bracketed prompts
+  for missing details; no prediction of the outcome. Nothing is stored: stories go to the existing story bank only on
+  "Save to story bank". Shown on each round (when round history is on) or in the job's interview prep.
+- **Shortlist skills** (`job_portal/skill_gaps.py`, `GET /v1/jobs/skill-gaps`): across active tracked jobs, which
+  skills the postings ask for that the resume and profile show or don't, ranked by how many jobs ask. Deterministic,
+  the feed's own matcher, no AI request. Shown on the Tracker once two or more jobs are tracked. "Not shown" is worded as
+  not on the resume, never as "you lack it".
