@@ -63,16 +63,15 @@ const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 const JOBS_TASK: NavItem = { ...JOBS, label: "Jobs", tab: "Jobs", to: "/jobs/matches", icon: Search,
   current: (p) => /^\/jobs(\/|$)/.test(p) };
 const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
-  current: (p) => /^\/(prepare|mock|interview|warmup|aptitude|star-check|group-discussion|readiness|campus)(\/|$)/.test(p) };
+  current: (p) => /^\/(prepare|mock|interview|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: IdCard,
-  current: (p) => /^\/(?:career|career-gap|github-projects)(\/|$)/.test(p) };
+  current: (p) => /^\/(?:career|career-gap|github-projects|resume-ai|linkedin|offers)(\/|$)/.test(p) };
 
-/** Four task destinations; specialist tools remain available through More and search. */
-export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
+/** Four task destinations and the live Copilot apart (the Route map direction). Resume, LinkedIn and Offers live in
+ *  My Career and Learning in Prepare, which stay current on their pages; every tool is still one search away. */
+export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, _country: string = INDIA): NavGroup[] {
   return [
     { label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] },
-    // The tools people open on their own get their own tabs; the rest live inside the tab they belong to.
-    { label: "Tools", items: [RESUME, LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD, LEARNING] },
     { label: "Live", items: [COPILOT] },
   ];
 }

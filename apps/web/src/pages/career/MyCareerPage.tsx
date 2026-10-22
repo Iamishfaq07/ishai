@@ -120,7 +120,7 @@ export function MyCareerPage() {
     {groups.map((g) => <section key={g.title} aria-labelledby={`grp-${g.title}`}>
       <h2 id={`grp-${g.title}`} className="font-semibold">{g.title}</h2>
       <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{g.about}</p>
-      <Reveal as="ul" stagger className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
+      <Reveal as="ul" stagger className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
     </section>)}
 
     <MoreTools home="career" shown={[...groups.flatMap((g) => g.items.map((t) => t.to)), "/resume-ai"]} />
