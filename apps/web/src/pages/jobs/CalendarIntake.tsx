@@ -110,7 +110,7 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
         <Field htmlFor={`${id}-file`} label="Choose an .ics invitation"><input id={`${id}-file`} type="file" accept=".ics,text/calendar" className="block min-h-11 w-full min-w-0 text-sm" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; void readFile(file); }} /></Field>
         <Field htmlFor={`${id}-text`} label="Or paste iCalendar text"><Textarea id={`${id}-text`} rows={5} maxLength={131072} value={calendar} onChange={(e) => { setCalendar(e.target.value); invalidate(); }} /></Field>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">Free, no AI call. Up to 128 KiB and 20 standalone events. UTC and IANA time zones are supported; custom zone blocks, recurring/cancelled events and ambiguous times need manual review. Links, attendees, alarms and attachments are never opened. The calendar body is not stored.</p>
-        <Button disabled={calendar.trim().length < 30} loading={busy === "preview"} onClick={() => void preview()}>Review invitation</Button>
+        <Button disabled={calendar.trim().length < 30} disabledReason="Paste the invitation text first." loading={busy === "preview"} onClick={() => void preview()}>Review invitation</Button>
       </fieldset>
       {proposal && <div className="space-y-3 rounded-xl bg-zinc-500/5 p-4 motion-safe:animate-menu-in">
         <h4 ref={heading} tabIndex={-1} className="scroll-mt-28 rounded font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">Review the event and changes</h4>
@@ -125,7 +125,7 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
             {nextAt && new Date(nextAt).valueOf() < Date.now() && <p className="text-sm">This time is in the past. Check whether a rescheduled invitation is available.</p>}
             {!job.round_history_enabled && !dateChanged && !stageChanged && <p className="text-sm">These choices are already saved. No duplicate update is needed.</p>}
             <label className="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} />I verified this event belongs to this job and confirm the date and stage above.</label>
-            <Button disabled={!confirmed || !nextAt || (!job.round_history_enabled && !dateChanged && !stageChanged)} loading={busy === "save"} onClick={() => void save()}>Save reviewed invitation</Button>
+            <Button disabled={!confirmed || !nextAt || (!job.round_history_enabled && !dateChanged && !stageChanged)} disabledReason={!nextAt ? "Pick the interview date and time first." : !confirmed ? "Tick the box to confirm the date and stage first." : "These details are already saved."} loading={busy === "save"} onClick={() => void save()}>Save reviewed invitation</Button>
           </fieldset>
         </>}
       </div>}

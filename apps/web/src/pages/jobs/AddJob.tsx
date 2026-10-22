@@ -168,7 +168,7 @@ export function AddJob({ open, onClose, onAdded }: { open: boolean; onClose: () 
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" form={formId} loading={busy} loadingText="Adding…" disabled={!ready || Boolean(info?.tracked)}>
+          <Button type="submit" form={formId} loading={busy} loadingText="Adding…" disabled={!ready || Boolean(info?.tracked)} disabledReason={info?.tracked ? "This job is already in your tracker." : "Add the job title and company first."}>
             Add to tracker
           </Button>
         </DialogActions>

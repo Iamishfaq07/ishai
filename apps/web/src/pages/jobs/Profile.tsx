@@ -136,7 +136,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
                 </Select>
               </Field>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <Button variant="secondary" size="sm" disabled={locked || aiLeft === 0} onClick={() => void readResume()}>
+                <Button variant="secondary" size="sm" disabled={locked || aiLeft === 0} disabledReason={aiLeft === 0 ? "You've used today's AI reads. Try again tomorrow." : undefined} onClick={() => void readResume()}>
                   <Sparkles className="h-4 w-4" aria-hidden /> {busy === "ai" ? "Reading your resume…" : "Fill in from my resume with AI"}
                 </Button>
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">

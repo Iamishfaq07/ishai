@@ -410,6 +410,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
           </label>
           <Button
             disabled={!r || busy}
+            disabledReason={!r ? "Link a resume to this job first." : undefined}
             onClick={() =>
               void run(async () => {
                 const next = await api.freezeMissionResume(entry.id, note, r ? { resume_id: r.id, updated_at: r.updated_at } : undefined);

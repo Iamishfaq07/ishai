@@ -374,7 +374,9 @@ export function createApiClient(options: ApiClientOptions) {
     } catch {
       if (caller?.aborted) throw new DOMException("The request was cancelled.", "AbortError");
       if (timedOut) throw new ApiError(0, "That took too long. Check your connection and try again.", "timeout");
-      throw new ApiError(0, "Can't reach Orbit. Check your internet connection.", "offline");
+      // Only blame the connection when the device says it's offline; otherwise Orbit itself didn't answer.
+      const offline = typeof navigator !== "undefined" && navigator.onLine === false;
+      throw new ApiError(0, offline ? "You're offline. Check your connection and try again." : "Orbit didn't answer. Try again in a moment.", "offline");
     } finally {
       clearTimeout(timer);
       caller?.removeEventListener("abort", cancel);

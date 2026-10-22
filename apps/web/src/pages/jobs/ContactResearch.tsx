@@ -99,7 +99,7 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
       <h3 className="mt-2 text-xl font-semibold">Find the right person for this job</h3>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">One action checks the saved posting, searches for hiring managers, recruiters and relevant team members, then extracts up to three leads with source excerpts. No extension or extra browser tabs.</p>
       <ol className="my-4 grid gap-3 text-sm sm:grid-cols-3"><li>1. Check saved context</li><li>2. Search public sources</li><li>3. Review evidenced leads</li></ol>
-      <Button loading={busy} disabled={!data.web_search_enabled || busy} onClick={() => void find(true)}>Find hiring contacts automatically</Button>
+      <Button loading={busy} disabled={!data.web_search_enabled || busy} disabledReason={!data.web_search_enabled ? "Automatic search isn't available right now. You can still add people yourself." : undefined} onClick={() => void find(true)}>Find hiring contacts automatically</Button>
       {busy && <p role="status" className="mt-3 text-sm">Researching public sources and checking contact evidence. This can take up to two minutes.</p>}
       <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Up to {data.automatic_search_limit ?? 3} searches and one AI extraction per run; provider usage applies. Only company and role are used as public search queries. Up to 5 runs per UTC day, including failed runs. Review before saving; nothing is sent.</p>
       {data.web_search_provider === "deepseek" && <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Uses the server’s DeepSeek Search API configuration. No key is entered or stored in your browser.</p>}
@@ -178,7 +178,7 @@ function Lead({ person, source, applicationId, jobVersion, onSaved }: { person: 
     </details>
     <label className="mt-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />I reviewed this lead and its source</label>
     <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={remind} onChange={(e) => setRemind(e.target.checked)} />Remind me about this contact in 7 days</label>
-    <Button variant="secondary" loading={busy} disabled={!reviewed || !!saved} onClick={() => void capture()}>Save {person.name} to People</Button>
+    <Button variant="secondary" loading={busy} disabled={!reviewed || !!saved} disabledReason={saved ? "Already saved to People." : "Tick that you reviewed this lead first."} onClick={() => void capture()}>Save {person.name} to People</Button>
     {saved && <p className="mt-2 text-sm" role="status">{saved}</p>}{error && <ErrorNote>{error}</ErrorNote>}
   </Card>;
 }
@@ -214,7 +214,7 @@ function ContactDraft({ contact, applicationId }: { contact: JobContact; applica
       {channel === "email" && <Field label="Subject" htmlFor={`${inputId}-subject`}><Input id={`${inputId}-subject`} value={draft.subject} maxLength={160} onChange={(e) => { setDraft({ ...draft, subject: e.target.value }); setCopied(false); }} /></Field>}
       <Field label="Outreach draft" htmlFor={`${inputId}-draft`}><Textarea id={`${inputId}-draft`} value={draft.message} rows={5} onChange={(e) => { setDraft({ ...draft, message: e.target.value }); setCopied(false); }} /></Field>
       <p className="text-xs" role="status">{draft.message.length}/{draft.character_limit} characters{draft.message.length > draft.character_limit ? " · shorten before copying" : ""}</p>
-      <Button variant="secondary" disabled={draft.message.length > draft.character_limit} onClick={() => void copy()}>{copied ? "Copied" : "Copy draft"}</Button>
+      <Button variant="secondary" disabled={draft.message.length > draft.character_limit} disabledReason={`Shorten the draft to ${draft.character_limit} characters first.`} onClick={() => void copy()}>{copied ? "Copied" : "Copy draft"}</Button>
       <p className="text-xs text-zinc-500">Copying does not mark this person contacted. Log the interaction in People after you actually get in touch.</p>
     </div>}
   </div>;
