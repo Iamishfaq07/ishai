@@ -7,6 +7,7 @@ import { cleanPrepContext, prepParams, readPrepContext } from "../../lib/prepCon
 import { useAuth } from "../../lib/auth";
 import { errorText } from "../../lib/format";
 import { buttonClass, safeSession } from "@orbit/ui";
+import { Fold } from "../../components/Fold";
 
 export function ResumeCareerActions({ resume }: { resume: Resume }) {
   const navigate = useNavigate();
@@ -26,18 +27,19 @@ export function ResumeCareerActions({ resume }: { resume: Resume }) {
     finally { setBusy(false); }
   };
   const practice = resume.prep_context?.practice_link ?? `/mock?${prepParams(context)}`;
-  // A quiet workbench card: the editor's one primary action stays Download PDF.
-  return <section aria-label="Defend this resume" className="glass-panel mb-5 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl p-4">
-    <div className="min-w-0 flex-1 basis-72">
-      <p className="text-sm font-medium">Defend this resume out loud</p>
-      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">A focused drill on your current metrics, architecture claims and projects. Preparing it uses one Resume credit; the interview uses five minutes.</p>
-      {context.role && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-300">{context.role}{context.company ? ` · ${context.company}` : ""}{context.tech_stack.length ? ` · ${context.tech_stack.join(", ")}` : ""}</p>}
+  // Folded under the editor: the editor's one primary action stays Download PDF. It opens by itself when the resume
+  // was tailored for a role, since that's when a drill on it pays off.
+  return <div className="mb-5"><Fold title="Defend this resume out loud"
+    hint={context.role ? `A 5-minute drill for ${context.role}${context.company ? ` at ${context.company}` : ""}` : "A 5-minute spoken drill on your metrics, claims and projects"}
+    defaultOpen={Boolean(context.role)}>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-3 pb-2">
+      <p className="min-w-0 flex-1 basis-72 text-[13px] text-zinc-600 dark:text-zinc-400">Preparing it uses one Resume credit; the interview uses five minutes.{context.tech_stack.length ? ` Stack: ${context.tech_stack.join(", ")}.` : ""}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <Link to={practice} className={buttonClass("ghost")}>Practice link</Link>
+        {resume.prep_context?.coding_link && <Link to={resume.prep_context.coding_link} className={buttonClass("ghost")}>Open coding workspace</Link>}
+        <Button variant="secondary" disabled={busy} disabledReason="Preparing your drill." onClick={() => void grill()}>{busy ? "Preparing your defense…" : "Grill my resume"}</Button>
+      </div>
+      {error && <div className="basis-full"><ErrorNote>{error}</ErrorNote></div>}
     </div>
-    <div className="flex flex-wrap items-center gap-2">
-      <Link to={practice} className={buttonClass("ghost")}>Practice link</Link>
-      {resume.prep_context?.coding_link && <Link to={resume.prep_context.coding_link} className={buttonClass("ghost")}>Open coding workspace</Link>}
-      <Button variant="secondary" disabled={busy} onClick={() => void grill()}>{busy ? "Preparing your defense…" : "Grill my resume (5-minute drill)"}</Button>
-    </div>
-    {error && <div className="basis-full"><ErrorNote>{error}</ErrorNote></div>}
-  </section>;
+  </Fold></div>;
 }
