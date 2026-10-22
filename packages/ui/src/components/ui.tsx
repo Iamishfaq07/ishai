@@ -309,7 +309,7 @@ export function Card({ children, className, interactive, id }: { children: React
 /**
  * A page's head: its title, one line under it, and the page's actions at the end of the row (they wrap under the
  * title on a phone). `back` (a link to the list a detail page came from) sits above the title; `eyebrow` names the
- * area above the title, as the task hubs do. The icon tile takes the accent and shows from `sm` up: on a phone the
+ * area above the title, as the task hubs do. The icon tile is neutral ink (the accent is for actions) and shows from `sm` up: on a phone the
  * title gets the width. The head rises in once on arrival (motion settings respected).
  */
 export function PageHeader({
@@ -334,7 +334,7 @@ export function PageHeader({
   const head = (
     <div className={cx("workspace-heading animate-fade-up", !back && "mb-6")}>
       <div className="flex min-w-0 flex-1 basis-[20rem] items-center gap-3">
-        {Icon && <span aria-hidden="true" className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200 sm:flex dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/20"><Icon className="h-5 w-5" /></span>}
+        {Icon && <span aria-hidden="true" className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 ring-1 ring-inset ring-zinc-200 sm:flex dark:bg-white/[0.06] dark:text-zinc-300 dark:ring-white/10"><Icon className="h-5 w-5" /></span>}
         <div className="min-w-0">
           {eyebrow && <p className="workspace-eyebrow">{eyebrow}</p>}
           <h1 className="break-words font-display">{title}</h1>
