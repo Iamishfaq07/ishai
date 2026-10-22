@@ -27,6 +27,7 @@ import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { scoreTone } from "../resume/product";
 import { useJobsAi } from "./JobsAi";
 import { CompanyPanel } from "./CompanyPanel";
+import { JobApplyPeople } from "./JobApplyPeople";
 import { Journey } from "./Journey";
 import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
@@ -150,6 +151,7 @@ export function JobMissionPage() {
                 mission.reload();
               }}
             />
+            <JobApplyPeople key={`apply:${entry.id}`} entry={entry} />
             <RoomNavigation tab={tab} suggested={opportunityStart(entry.status, m)} onSelect={setTab} />
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">
               <aside aria-label="This job's records" className="order-last min-w-0 space-y-4">

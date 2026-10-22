@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CompanyLogo, Plus, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, CompanyLogo, FileText, Headphones, IdCard, Plus, Rocket, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
 import type { JobStatus } from "@orbit/types";
 import { RouteLine, nextStop, routeIndex } from "../components/RouteLine";
 import { RouteMapArt } from "../components/RouteMapArt";
@@ -142,6 +142,18 @@ export function HomePage() {
         })}</ul>}
     </section>
 
+    {/* The tools people reach for most, by name, and the way to every other one. */}
+    <section aria-labelledby="quick-tools" className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="quick-tools" className="font-semibold">Your AI tools</h2>
+        <Link to="/toolkit" className="text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300">See all tools</Link></div>
+      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">{QUICK_TOOLS.map(({ to, label, line, icon: Icon }, i) => <li key={to} className="route-rise" style={{ ["--i" as string]: i + 1 }}>
+        <Link to={to} className={cx("workspace-panel route-card flex h-full flex-col gap-2 p-4", focusRing)}>
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"><Icon className="h-4 w-4" aria-hidden /></span>
+          <span className="font-semibold">{label}</span>
+          <span className="text-[13px] text-zinc-600 dark:text-zinc-400">{line}</span>
+        </Link></li>)}</ul>
+    </section>
+
     <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
       <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>
         <span>Everything due in the next 7 days{queue.data ? ` (${queue.data.items.length})` : ""}</span>
@@ -151,3 +163,10 @@ export function HomePage() {
     </details>
   </div>;
 }
+
+const QUICK_TOOLS = [
+  { to: "/jobs/journey", label: "Auto Apply", line: "Each saved job prepared with a resume tailored to it.", icon: Rocket },
+  { to: "/resume-ai", label: "Resume Builder", line: "Build, import and check your resume for ATS.", icon: FileText },
+  { to: "/mock", label: "AI Mock Interview", line: "Practise out loud and read your feedback.", icon: Headphones },
+  { to: "/linkedin", label: "LinkedIn Optimizer", line: "Headline and About fixes, ready to paste.", icon: IdCard },
+];

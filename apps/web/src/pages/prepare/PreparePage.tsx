@@ -90,7 +90,7 @@ export function PreparePage() {
 
   return <div className="workspace-page">
     <header className="workspace-heading">
-      <div><h1>Prepare</h1>
+      <div><h1>Interview Prep</h1>
         <p className="workspace-description">Your next interview, every job you're preparing for and the full toolkit, in one place.</p></div>
       <div className="flex flex-wrap gap-2">
         <Link to="/jobs?work=updates&input=calendar" className={linkButton("secondary")}><CalendarPlus className="h-4 w-4" aria-hidden /> Import invitation</Link>

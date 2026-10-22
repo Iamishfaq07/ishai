@@ -232,6 +232,22 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
     if (done === selectedEntries.length) setSelected([]);
   };
 
+  // Auto-apply the selected saved jobs: each gets its own application with the resume tailored to it (Orbit Apply).
+  const [applyNote, setApplyNote] = useState<string | null>(null);
+  const selectedSaved = selectedEntries.filter((e) => e.status === "saved").slice(0, 20);
+  const autoApplySelected = async () => {
+    setBulkBusy(true); setApplyNote(null); setError(null);
+    try {
+      const { applyApi } = await import("./autoapply/applyApi");
+      const report = await applyApi.planShortlist(selectedSaved.map((e) => e.listing_id));
+      setApplyNote(report.blocked ?? (report.created
+        ? `${report.created} application${report.created === 1 ? "" : "s"} prepared, each with a resume tailored to its job.${report.skipped.length ? ` ${report.skipped.length} couldn't be prepared.` : ""}`
+        : report.skipped[0]?.reason ?? "None of these could be prepared."));
+      if (report.created) setSelected([]);
+    } catch (err) { setError(errorText(err)); }
+    finally { setBulkBusy(false); }
+  };
+
   const remove = async (entry: JobTrackerEntry) => {
     const ok = await confirmDialog({
       title: `Remove “${entry.title}”?`,
@@ -353,9 +369,14 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
           <Button size="sm" onClick={() => void moveSelected()} disabled={bulkBusy} disabledReason="Moving the selected jobs.">
             {bulkBusy ? "Moving…" : `Move ${selected.length}`}
           </Button>
+          {selectedSaved.length > 0 && <Button size="sm" variant="secondary" onClick={() => void autoApplySelected()} disabled={bulkBusy} disabledReason="Working on the selected jobs.">
+            <Send className="h-3.5 w-3.5" aria-hidden /> Auto-apply {selectedSaved.length} saved
+          </Button>}
           <Button size="sm" variant="ghost" onClick={() => setSelected([])}>Clear</Button>
         </div>
       )}
+      {wide && view === "table" && applyNote && <p role="status" className="flex flex-wrap items-center gap-x-3 text-sm">{applyNote}
+        <Link to="/jobs/applications" className="font-semibold text-indigo-700 hover:underline dark:text-indigo-300">Review applications</Link></p>}
       {wide && view === "table" && <TrackerTable entries={[...entries].sort((a, b) => b.status_at.localeCompare(a.status_at))} selected={selected}
         onToggle={(id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
         onToggleAll={(on) => setSelected(on ? entries.map((e) => e.id) : [])} />}

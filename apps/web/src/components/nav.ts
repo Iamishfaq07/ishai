@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, Banknote, GraduationCap, Headphones, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, Banknote, GraduationCap, Headphones, House, INDIA, IdCard, LayoutGrid, MOCK_INTERVIEW_ENABLED, Rocket, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -49,6 +49,8 @@ const JOBS: NavItem = {
   id: "jobs", to: JOBS_AI_HOME, label: "Career launchpad", tab: "Career", icon: PRODUCTS.jobs.icon, product: "jobs",
   current: under(JOBS_AI_HOME),
 };
+// Every tool in one place (pages/tools/Toolkit.tsx), so the ones inside a job's tabs or a hub's catalogue are found.
+const ALL_TOOLS: NavItem = { id: "all-tools", to: "/toolkit", label: "All tools", icon: LayoutGrid, current: (p) => p === "/toolkit" };
 const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn Optimizer", tab: "LinkedIn", icon: IdCard, current: under(LINKEDIN_HOME) };
 const COPILOT: NavItem = {
   id: "copilot", to: "/sessions", label: "Interview Copilot", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview",
@@ -60,8 +62,11 @@ const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 
 // Discover and Applications are one place: finding a job and following it through are the same search. Its tabs
 // (pages/jobs/workspace.ts, jobsTabs) are Discover, Tracker, Auto-apply, Needs you and People.
+const AUTO_APPLY_PATH = /^\/jobs\/(?:journey|applications|auto-apply)(\/|$)/;
 const JOBS_TASK: NavItem = { ...JOBS, label: "Job Search", tab: "Jobs", to: "/jobs/matches", icon: Search,
-  current: (p) => /^\/jobs(\/|$)/.test(p) };
+  current: (p) => /^\/jobs(\/|$)/.test(p) && !AUTO_APPLY_PATH.test(p) };
+// Orbit Apply's home: every saved job prepared with a resume tailored to it, reviewed and sent within your limits.
+const AUTO_APPLY: NavItem = { id: "auto-apply", to: "/jobs/journey", label: "Auto Apply", icon: Rocket, current: (p) => AUTO_APPLY_PATH.test(p) };
 const PREPARE: NavItem = { id: "prepare", label: "Interview Prep", tab: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
   current: (p) => /^\/(prepare|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: UserRound,
@@ -73,7 +78,7 @@ const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/car
 export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
   return [
     { label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] },
-    { label: "AI tools", items: [RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD] },
+    { label: "AI tools", items: [AUTO_APPLY, RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD, ALL_TOOLS] },
     { label: "Live", items: [COPILOT] },
   ];
 }
@@ -87,10 +92,11 @@ function specialists(mock: boolean, country: string): NavItem[] {
 }
 // A phone has five tabs and no Tools list, so its Prepare and Me tabs stay lit on the tools they hold.
 const PREPARE_TAB: NavItem = { ...PREPARE, current: (p) => PREPARE.current(p) || /^\/(mock|interview)(\/|$)/.test(p) };
+const JOBS_TAB: NavItem = { ...JOBS_TASK, current: (p) => /^\/jobs(\/|$)/.test(p) };
 const CAREER_TAB: NavItem = { ...CAREER, current: (p) => CAREER.current(p) || /^\/(linkedin|offers)(\/|$)/.test(p) };
 /** Today, Jobs, Resume, Prepare and Me: the resume gets its own tab, the tool people open most. */
 export function phoneTabs(_mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
-  return [HOME, JOBS_TASK, RESUME, PREPARE_TAB, CAREER_TAB];
+  return [HOME, JOBS_TAB, RESUME, PREPARE_TAB, CAREER_TAB];
 }
 export function exploreItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
   const tabs = new Set(phoneTabs(mock).map((t) => t.id));
