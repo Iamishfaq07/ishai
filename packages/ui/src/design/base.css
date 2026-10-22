@@ -7,18 +7,18 @@
   --surface-raised: #23272c;
   --specular-border: rgba(255, 255, 255, 0.07);
   --specular-top: rgba(148, 163, 184, 0.24);
-  /* Accent (Tailwind `indigo-*`). Default = Slate blue; applyDesign() overrides these per user. */
-  --accent-50: 245 248 251;
-  --accent-100: 231 238 245;
-  --accent-200: 207 223 237;
-  --accent-300: 168 191 214;
-  --accent-400: 123 155 185;
-  --accent-500: 83 124 159;
-  --accent-600: 54 95 128;
-  --accent-700: 41 75 104;
-  --accent-800: 35 63 86;
-  --accent-900: 32 53 72;
-  --accent-950: 18 35 50;
+  /* Accent (Tailwind `indigo-*`). Default = Route green; applyDesign() overrides these per user. */
+  --accent-50: 242 249 246;
+  --accent-100: 225 242 236;
+  --accent-200: 196 230 220;
+  --accent-300: 142 203 187;
+  --accent-400: 82 169 149;
+  --accent-500: 37 135 115;
+  --accent-600: 24 106 90;
+  --accent-700: 19 86 73;
+  --accent-800: 17 70 60;
+  --accent-900: 16 58 51;
+  --accent-950: 8 34 30;
 
   /* Ink (Tailwind `zinc-*`): neutral graphite on warm paper; no violet cast in text or surfaces. */
   --ink-50: 250 250 249;
@@ -1381,6 +1381,11 @@ html.app-shell :is(h1, h2, h3, .font-display) {
     "Kohinoor Devanagari", "Noto Sans Devanagari", "Yu Gothic UI", "Meiryo UI", "Hiragino Sans", "Noto Sans JP",
     sans-serif;
   letter-spacing: -0.01em;
+}
+/* The Route map title face (Tailwind `font-title`): page titles and Today's next stop keep it inside the shell too. */
+html.app-shell .font-title {
+  font-family: "Source Serif 4 Variable", "Source Serif 4", Georgia, "IBM Plex Sans Variable", serif;
+  letter-spacing: -0.012em;
 }
 html.app-shell .text-gradient {
   background-image: none;

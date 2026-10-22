@@ -3,7 +3,7 @@ import { safeLocal } from "../storage";
 import { initInteractions } from "./interactions";
 
 /** User-chosen look & feel, shared by the web and desktop apps (stored per device). */
-export type AccentName = "slate" | "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
+export type AccentName = "route" | "slate" | "nebula" | "indigo" | "violet" | "sky" | "emerald" | "rose" | "amber";
 export type TextSize = "sm" | "md" | "lg";
 /** Interface animation: everything (`full`), fades only with nothing moving (`reduced`, "Gentle"), or none. */
 export type MotionLevel = "full" | "reduced" | "off";
@@ -15,16 +15,19 @@ export interface DesignPrefs {
   motion: MotionLevel;
 }
 
-export const DEFAULT_DESIGN: DesignPrefs = { accent: "slate", textSize: "md", motion: "full" };
+export const DEFAULT_DESIGN: DesignPrefs = { accent: "route", textSize: "md", motion: "full" };
 
 type Palette = [string, string, string, string, string, string, string, string, string, string, string];
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
-/** Shared enterprise accent; nebula remains a compatibility alias for the former default. */
+/** Route green, the default (the Route map direction, 2026-10-22): the route line and the next action. Slate blue stays
+ *  a choice; nebula, the default before slate, now resolves to the default. */
+const ROUTE: Palette = ["242 249 246", "225 242 236", "196 230 220", "142 203 187", "82 169 149", "37 135 115", "24 106 90", "19 86 73", "17 70 60", "16 58 51", "8 34 30"];
 const SLATE: Palette = ["245 248 251", "231 238 245", "207 223 237", "168 191 214", "123 155 185", "83 124 159", "54 95 128", "41 75 104", "35 63 86", "32 53 72", "18 35 50"];
 export const ACCENTS: Record<AccentName, { label: string; palette: Palette }> = {
+  route: { label: "Route green", palette: ROUTE },
   slate: { label: "Slate blue", palette: SLATE },
-  nebula: { label: "Slate blue (legacy)", palette: SLATE },
+  nebula: { label: "Route green (legacy)", palette: ROUTE },
   indigo: { label: "Indigo", palette: ["238 242 255", "224 231 255", "199 210 254", "165 180 252", "129 140 248", "99 102 241", "79 70 229", "67 56 202", "55 48 163", "49 46 129", "30 27 75"] },
   violet: { label: "Violet", palette: ["245 243 255", "237 233 254", "221 214 254", "196 181 253", "167 139 250", "139 92 246", "124 58 237", "109 40 217", "91 33 182", "76 29 149", "46 16 101"] },
   sky: { label: "Sky", palette: ["240 249 255", "224 242 254", "186 230 253", "125 211 252", "56 189 248", "14 165 233", "2 132 199", "3 105 161", "7 89 133", "12 74 110", "8 47 73"] },
@@ -83,7 +86,7 @@ export function loadDesign(env: MotionEnv = motionEnv()): DesignPrefs {
     const raw = safeLocal.getItem(STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
     return {
-      accent: parsed.accent === "nebula" ? "slate" : typeof parsed.accent === "string" && Object.prototype.hasOwnProperty.call(ACCENTS, parsed.accent) ? (parsed.accent as AccentName) : DEFAULT_DESIGN.accent,
+      accent: parsed.accent === "nebula" ? DEFAULT_DESIGN.accent : typeof parsed.accent === "string" && Object.prototype.hasOwnProperty.call(ACCENTS, parsed.accent) ? (parsed.accent as AccentName) : DEFAULT_DESIGN.accent,
       textSize: TEXT_SIZES.some((t) => t.value === parsed.textSize) ? (parsed.textSize as TextSize) : "md",
       motion: parseMotion(parsed.motion, env),
     };
