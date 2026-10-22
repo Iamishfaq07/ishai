@@ -58,7 +58,7 @@ log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/jobs/network", tags=["jobs"])
 Read = Depends(limit_user("job-network-read", rate_per_s=2, burst=30))
 Write = Depends(limit_user("job-network-write", rate_per_s=1, burst=20))
-Research = Depends(limit_user("job-network-research", rate_per_s=10 / 3600, burst=10))
+Research = Depends(limit_user("job-network-research", rate_per_s=40 / 3600, burst=20))
 
 
 class Strict(BaseModel):
