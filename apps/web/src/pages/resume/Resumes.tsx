@@ -235,7 +235,7 @@ export function ResumeAiHomePage() {
       )}
       {creating && <NewResume key={creating} initial={creating === "import" ? "file" : null} onClose={() => setCreating(null)} />}
       {actionError && <div className="mb-4"><ErrorNote>{actionError}</ErrorNote></div>}
-      <div className={cx("mb-3 flex flex-wrap items-end justify-between gap-3", intro ? "mt-8" : "mt-6")}>
+      {!intro && <div className="mb-3 mt-6 flex flex-wrap items-end justify-between gap-3">
         <h2 className="font-display text-lg font-semibold tracking-tight">
           All versions
           {count > 0 && <span className="ml-2 text-sm font-normal tabular-nums text-zinc-500 dark:text-zinc-400">{count}</span>}
@@ -249,7 +249,7 @@ export function ResumeAiHomePage() {
               <option value="edited">Recently edited</option><option value="score">Highest ATS score</option><option value="name">Name</option>
             </Select></label>
         </div>}
-      </div>
+      </div>}
       <LoadGate
         loading={list.loading && !list.data}
         variant="resume-card"
@@ -260,7 +260,8 @@ export function ResumeAiHomePage() {
       {list.error ? (
         <ErrorNote onRetry={list.reload}>{errorText(list.error)}</ErrorNote>
       ) : !list.data?.length ? (
-        !creating && (
+        // The intro above already invites the first resume; a second empty state here only repeated it.
+        !creating && !intro && (
           <CosmicEmptyState
             variant="resume"
             title="No resumes yet"
@@ -275,9 +276,9 @@ export function ResumeAiHomePage() {
       ) : (
         <Reveal as="ul" stagger key={`${sort}|${query}`} className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {!shown.length && <li className="text-sm text-zinc-600 dark:text-zinc-400">No resumes match “{query}”.</li>}
-          {shown.map((r) => (
-            <li key={r.id}>
-              <Card interactive className="relative h-full">
+          {shown.map((r, i) => (
+            <li key={r.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 8) }}>
+              <Card interactive className="route-card relative h-full">
                 <Link to={resumePath(r.id)} className={cx("block rounded-lg", focusRing)}>
                   <div className="flex items-start gap-3">
                     <ScoreRing score={r.score} />

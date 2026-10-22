@@ -1,8 +1,9 @@
 import { SpotArt } from "../../components/SpotArt";
+import { Fold } from "../../components/Fold";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
-import { Spot, ArrowRight, BadgeIndianRupee, CosmicEmptyState, Banknote, Plus, Reveal, Skeleton, celebrate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
+import { Spot, ArrowRight, BadgeIndianRupee, CompanyLogo, CosmicEmptyState, Banknote, Plus, Reveal, Skeleton, celebrate, currencyFor, cx, focusRing, isIndia } from "@orbit/ui";
 import { Stat } from "../prepare/parts";
 import { Button, Card, ErrorNote, Field, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -104,19 +105,30 @@ export function OffersPage() {
               <Stat label="Plans ready" value={list.filter((o) => o.plan && !o.plan_stale).length} hint="With a negotiation plan" />
               <Stat label="Still deciding" value={list.filter((o) => o.status === "considering").length} hint="Waiting on your answer" />
             </Reveal>
-            <Reveal as="ul" stagger className="grid gap-3 md:grid-cols-2">
-              {list.map((o) => (
-                <li key={o.id}>
+            <ul className="grid gap-3 md:grid-cols-2">
+              {list.map((o, i) => (
+                <li key={o.id} className="route-rise" style={{ ["--i" as string]: i }}>
                   <OfferCard offer={o} best={bestId(list) === o.id} />
                 </li>
               ))}
-            </Reveal>
+            </ul>
             {list.length > 1 && <Compare offers={list} />}
             {list.length > 1 && <DecisionMatrix offers={list} />}
           </div>
         )}
-        <PayCheck />
-        <div className="mt-6 space-y-6"><OfferLetterCheck /><SalaryScripts /><ResignPlanner /></div>
+        {/* The offer tools, in the order a search needs them: before an offer, with one, after saying yes. With an offer
+            on record its letter check comes first. */}
+        <section aria-labelledby="offer-tools" className="mt-8">
+          <h2 id="offer-tools" className="font-semibold">Tools for every stage of an offer</h2>
+          <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Open the one you need; nothing here is sent anywhere.</p>
+          <div className="mt-3 space-y-3">
+            {list.length > 0 && <Fold title="Check the offer letter" hint="Bonds, non-competes and clawbacks worth asking about" defaultOpen><OfferLetterCheck /></Fold>}
+            <Fold title="What does a role pay?" hint="Pay ranges from recent job posts for a role and city"><PayCheck /></Fold>
+            <Fold title="What to say about pay" hint="Words for salary, current pay and notice questions"><SalaryScripts /></Fold>
+            {list.length === 0 && <Fold title="Check an offer letter" hint="Bonds, non-competes and clawbacks worth asking about"><OfferLetterCheck /></Fold>}
+            <Fold title="Resign well" hint="Your last day, the letter and an exit checklist"><ResignPlanner /></Fold>
+          </div>
+        </section>
       </>
       )}
     </>
@@ -133,12 +145,12 @@ function OfferCard({ offer: o, best = false }: { offer: JobOfferRecord; best?: b
   const terms = offerTerms(useCountry());
   return (
     <Link to={offerPath(o.id)} className={cx("block rounded-2xl", focusRing)}>
-      <Card className={cx("h-full transition-[box-shadow,transform] hover:shadow-md motion-safe:hover:-translate-y-0.5", best && "ring-2 ring-emerald-500/40")}>
+      <Card className={cx("route-card h-full", best && "ring-2 ring-indigo-500/40")}>
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-start gap-3"><CompanyLogo company={o.company} size="md" /><div className="min-w-0">
             <p className="truncate font-display text-lg font-semibold">{o.company}</p>
-            <p className="truncate text-sm text-zinc-500 dark:text-zinc-400">{[o.role, o.city].filter(Boolean).join(" · ")}</p>
-          </div>
+            <p className="truncate text-sm text-zinc-600 dark:text-zinc-400">{[o.role, o.city].filter(Boolean).join(" · ")}</p>
+          </div></div>
           {o.status !== "considering" && (
             <span className="shrink-0 rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium capitalize">{o.status}</span>
           )}
@@ -161,7 +173,7 @@ function OfferCard({ offer: o, best = false }: { offer: JobOfferRecord; best?: b
           )}
         </dl>
         <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-          {best && <span className="rounded-full bg-emerald-600 px-2 py-0.5 font-medium text-white">Highest first year</span>}
+          {best && <span className="rounded-full bg-indigo-700 px-2 py-0.5 font-medium text-white dark:bg-indigo-400 dark:text-zinc-950">Highest first year</span>}
           {o.position && <span className={cx("rounded-full px-2 py-0.5 font-medium", POSITION_TONE[o.position])}>{POSITION_TEXT[o.position]}</span>}
           {o.plan && !o.plan_stale && <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 font-medium text-indigo-800 dark:text-indigo-200">Plan: ask {money(o.currency, o.plan.ask)}</span>}
           <span className="ml-auto inline-flex items-center gap-1 font-medium text-indigo-600 dark:text-indigo-400">

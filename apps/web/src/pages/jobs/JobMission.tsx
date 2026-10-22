@@ -1,10 +1,9 @@
-import { lazy, Suspense, type ReactNode, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
   Spot,
   ArrowUpRight,
-  ChevronRight,
   CompanyLogo,
   LoadGate,
   Skeleton,
@@ -36,6 +35,7 @@ import { StagePill } from "./StagePill";
 import { RoomNavigation } from "./RoomNavigation";
 import { RouteLine, routeIndex } from "../../components/RouteLine";
 import { RouteMapArt } from "../../components/RouteMapArt";
+import { Fold } from "../../components/Fold";
 import { whenLabel } from "../home/today";
 import { useCandidateDraft } from "../../lib/useCandidateDraft";
 import { SnapshotSource } from "./SnapshotSource";
@@ -210,17 +210,6 @@ export function JobMissionPage() {
       </LoadGate>
     </div>
   );
-}
-
-/** A quiet section that opens on demand: the current stage's main work stays open above it. */
-function Fold({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
-  return <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
-    <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3", focusRing)}>
-      <span className="min-w-0"><span className="block font-medium">{title}</span><span className="block text-[13px] text-zinc-600 dark:text-zinc-400">{hint}</span></span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />
-    </summary>
-    <div className="px-2 pb-2 sm:px-3 sm:pb-3">{children}</div>
-  </details>;
 }
 
 /** "in 3 days", "in 5 h", "in 20 min" until a recorded date; null once it has passed. */
