@@ -1,5 +1,5 @@
 import { SpotArt } from "../../components/SpotArt";
-import { useState } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
 import {
@@ -185,7 +185,6 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
 
   const update = async (entry: JobTrackerEntry, patch: JobTrackerUpdate) => {
     setError(null);
-    const before = tracker.data;
     if (patch.status) {
       // Moves show at once; the server's answer (with its dates) replaces it.
       setMoved(entry.id);
@@ -197,10 +196,40 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       if (patch.status === "offer") celebrate("first-offer", { message: `An offer from ${entry.company}. Add it to Offers to see what it's worth.` });
       return true;
     } catch (err) {
-      tracker.setData(() => before);
+      // Undo only this job, so a failed move in a batch leaves the others where they went.
+      tracker.setData((prev) => prev?.map((e) => (e.id === entry.id ? entry : e)) ?? null);
       setError(errorText(err));
       return false;
     }
+  };
+
+  // Keyboard moves on the board: Alt + → / ← takes a focused card one stop along the route, and focus follows it to
+  // its new column; the live region says where it went.
+  const [said, setSaid] = useState("");
+  const moveByKey = (entry: JobTrackerEntry, event: KeyboardEvent) => {
+    if (!event.altKey || (event.key !== "ArrowRight" && event.key !== "ArrowLeft")) return;
+    if ((event.target as HTMLElement).closest("input, select, textarea")) return;
+    const at = ROUTE_COLUMNS.indexOf(entry.status);
+    const to = ROUTE_COLUMNS[at + (event.key === "ArrowRight" ? 1 : -1)];
+    event.preventDefault();
+    if (at < 0 || !to) return setSaid(`${entry.title} is already at ${STATUS_LABEL[entry.status]}.`);
+    setSaid(`${entry.title} moved to ${STATUS_LABEL[to]}.`);
+    void update(entry, { status: to });
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-flip="${entry.id}"] a, [data-flip="${entry.id}"] button`)?.focus());
+  };
+
+  // The table's own selection, for moving several jobs at once.
+  const [selected, setSelected] = useState<string[]>([]);
+  const [bulkTo, setBulkTo] = useState<JobStatus>("applied");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const selectedEntries = entries.filter((e) => selected.includes(e.id));
+  const moveSelected = async () => {
+    setBulkBusy(true);
+    let done = 0;
+    for (const e of selectedEntries) if (e.status === bulkTo || (await update(e, { status: bulkTo }))) done++;
+    setBulkBusy(false);
+    setSaid(`${done} of ${selectedEntries.length} moved to ${STATUS_LABEL[bulkTo]}.`);
+    if (done === selectedEntries.length) setSelected([]);
   };
 
   const remove = async (entry: JobTrackerEntry) => {
@@ -247,6 +276,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
   return (
     <div className="space-y-4">
       {error && <ErrorNote>{error}</ErrorNote>}
+      <p role="status" className="sr-only">{said}</p>
 
       {/* Phones and tablets: one list, with a filter. */}
       {!wide && <div className="lg:hidden">
@@ -276,7 +306,8 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
         </ul>
       </div>}
 
-      {wide && <div className="flex items-center justify-end">
+      {wide && <div className="flex items-center justify-end gap-4">
+        {view === "board" && <p className="text-[13px] text-zinc-600 dark:text-zinc-400">With a card focused, <kbd className="font-sans font-medium">Alt</kbd> + <kbd className="font-sans font-medium">→</kbd> or <kbd className="font-sans font-medium">←</kbd> moves it a stop.</p>}
         <div role="group" aria-label="Show as" className="inline-flex rounded-lg p-0.5 ring-1 ring-zinc-200 dark:ring-white/10">
           {(["board", "table"] as const).map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
             className={cx("min-h-9 rounded-md px-3 text-sm font-medium", view === v ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100", focusRing)}>
@@ -295,7 +326,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
             </h3>
             <ul className="space-y-2.5">
               {columns[s].slice(0, drawn).map((e, i) => (
-                <li key={e.id} data-flip={e.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 6) + 1 }}>
+                <li key={e.id} data-flip={e.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 6) + 1 }} onKeyDown={(ev) => moveByKey(e, ev)}>
                   <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
                 </li>
               ))}
@@ -312,7 +343,22 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
           <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
         </li>)}</ul>
       </details>}
-      {wide && view === "table" && <TrackerTable entries={[...entries].sort((a, b) => b.status_at.localeCompare(a.status_at))} />}
+      {wide && view === "table" && selected.length > 0 && (
+        <div role="region" aria-label="Move selected jobs" className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-2xl bg-white/95 px-4 py-2.5 shadow-popover ring-1 ring-zinc-200 backdrop-blur dark:bg-zinc-950/90 dark:ring-white/10">
+          <span className="text-sm font-medium tabular-nums">{selected.length} selected</span>
+          <label htmlFor="bulk-to" className="text-sm text-zinc-600 dark:text-zinc-400">Move to</label>
+          <Select id="bulk-to" value={bulkTo} onChange={(e) => setBulkTo(e.target.value as JobStatus)} className="!w-auto !py-1.5 !text-sm">
+            {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          </Select>
+          <Button size="sm" onClick={() => void moveSelected()} disabled={bulkBusy} disabledReason="Moving the selected jobs.">
+            {bulkBusy ? "Moving…" : `Move ${selected.length}`}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setSelected([])}>Clear</Button>
+        </div>
+      )}
+      {wide && view === "table" && <TrackerTable entries={[...entries].sort((a, b) => b.status_at.localeCompare(a.status_at))} selected={selected}
+        onToggle={(id) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]))}
+        onToggleAll={(on) => setSelected(on ? entries.map((e) => e.id) : [])} />}
 
       {pickedEntries.length > 0 && (
         <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-popover backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
@@ -336,18 +382,25 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
 const ROUTE_COLUMNS: JobStatus[] = ["saved", "applied", "interviewing", "offer"];
 const CLOSED_COLUMNS: JobStatus[] = ["hired", "rejected", "withdrawn"];
 
-/** Every job in one sortable-at-a-glance table: newest move first, each row opening its job page. */
-function TrackerTable({ entries }: { entries: JobTrackerEntry[] }) {
+/** Every job in one sortable-at-a-glance table: newest move first, each row opening its job page. Rows can be
+ *  selected and moved together (the bar above the table). */
+function TrackerTable({ entries, selected, onToggle, onToggleAll }: { entries: JobTrackerEntry[]; selected: string[]; onToggle: (id: string) => void; onToggleAll: (on: boolean) => void }) {
+  const all = entries.length > 0 && selected.length === entries.length;
+  const check = "h-4 w-4 rounded border-zinc-300 text-indigo-600 dark:border-white/20 dark:bg-zinc-900";
   return <div className="overflow-x-auto rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
     <table className="w-full min-w-[46rem] text-sm">
       <caption className="sr-only">Your applications, most recent change first</caption>
       <thead><tr className="border-b border-zinc-200 text-left text-[13px] text-zinc-600 dark:border-white/10 dark:text-zinc-400">
+        <th scope="col" className="w-12 py-2.5 pl-4"><label className="flex min-h-11 min-w-11 items-center"><span className="sr-only">Select every job</span>
+          <input type="checkbox" className={check} checked={all} ref={(el) => { if (el) el.indeterminate = selected.length > 0 && !all; }} onChange={(e) => onToggleAll(e.target.checked)} /></label></th>
         <th scope="col" className="px-4 py-2.5 font-medium">Job</th>
         <th scope="col" className="px-4 py-2.5 font-medium">Route</th>
         <th scope="col" className="px-4 py-2.5 font-medium">Next date</th>
         <th scope="col" className="px-4 py-2.5 font-medium">Last change</th>
       </tr></thead>
-      <tbody className="divide-y divide-zinc-200 dark:divide-white/10">{entries.map((e) => <tr key={e.id} className="hover:bg-zinc-50 dark:hover:bg-white/[0.03]">
+      <tbody className="divide-y divide-zinc-200 dark:divide-white/10">{entries.map((e) => <tr key={e.id} className={cx(selected.includes(e.id) ? "bg-indigo-500/[0.06]" : "hover:bg-zinc-50 dark:hover:bg-white/[0.03]")}>
+        <td className="py-3 pl-4"><label className="flex min-h-11 min-w-11 items-center"><span className="sr-only">Select {e.title} at {e.company}</span>
+          <input type="checkbox" className={check} checked={selected.includes(e.id)} onChange={() => onToggle(e.id)} /></label></td>
         <th scope="row" className="px-4 py-3 text-left font-normal">
           <Link to={missionPath(e.id)} className={cx("rounded font-semibold hover:underline", focusRing)}>{e.title}</Link>
           <span className="block text-[13px] text-zinc-600 dark:text-zinc-400">{[e.company, e.location].filter(Boolean).join(" · ")}</span>
