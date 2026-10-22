@@ -34,6 +34,7 @@ from orbit_api.admin.routes import require_admin
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user, decode_claims, token_from_request
 from orbit_api.auto_apply import bank, handoff, pacing, packets, planner, quota, rules
+from orbit_api.auto_apply import coverage as coverage_mod
 from orbit_api.auto_apply.pacing import aware
 from orbit_api.auto_apply.pdf import resume_pdf
 from orbit_api.auto_apply.setup import Facts, Filters, Mode, QuietHours, WorkAuth
@@ -48,6 +49,7 @@ from orbit_api.models import (
     AuditLog,
     AutoApplySetup,
     BizApplication,
+    CareerPlaybook,
     JobApplication,
     ProviderRequest,
     Resume,
@@ -237,6 +239,10 @@ async def save_setup(body: SetupIn, request: Request, user: Annotated[User, Depe
     if setup is None:
         setup = AutoApplySetup(user_id=user.id)
         db.add(setup)
+        # Applications sent for you get their follow-up reminder too: a 7-day follow-up rule and an interview-eve
+        # email, unless the candidate already chose their own workflow rules.
+        if await db.get(CareerPlaybook, user.id) is None:
+            db.add(CareerPlaybook(user_id=user.id, follow_up_days=7, interview_eve_email=True))
     if body.resume_id is not None:
         resume = await db.get(Resume, body.resume_id)
         if resume is None or resume.user_id != user.id:
@@ -525,6 +531,13 @@ async def _detail(db: AsyncSession, p: ApplicationPacket) -> PacketDetail:
         final_url=p.final_url, submitted=p.submitted_payload,
         screenshot_url=f"/v1/apply/packets/{p.id}/screenshot" if proof is not None else None,
         resume_pdf_url=f"/v1/apply/packets/{p.id}/resume.pdf", tracker_id=tracker_id)
+
+
+@router.get("/coverage", response_model=coverage_mod.Coverage, dependencies=[read_limit])
+async def apply_coverage(user: Annotated[User, Depends(current_user)],
+                         db: Annotated[AsyncSession, Depends(get_db)]) -> coverage_mod.Coverage:
+    """Which tracked jobs Orbit can send, and what the rest need (coverage.py)."""
+    return await coverage_mod.coverage(db, user.id)
 
 
 @router.get("/packets", response_model=list[PacketSummary], dependencies=[read_limit])

@@ -18,9 +18,9 @@ import {
 } from "@orbit/ui";
 import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
-import { errorText } from "../../lib/format";
+import { downloadText, errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
-import { dateInput, followUpState, fromDateInput, safeUrl, shortDate } from "./model";
+import { contactsCsv, dateInput, followUpState, fromDateInput, safeUrl, shortDate } from "./model";
 
 export const RELATIONS: Array<{ id: JobContactRelation; label: string }> = [
   { id: "referral", label: "Referral" },
@@ -112,9 +112,14 @@ export function PeopleSection({ revision = 0 }: { revision?: number }) {
           </p>
         </div>
         {!editing && (
-          <Button size="sm" onClick={() => setEditing({ id: null, initial: EMPTY })}>
-            <Plus className="h-4 w-4" /> Add a person
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {(contacts.data?.length ?? 0) > 0 && <Button size="sm" variant="secondary"
+              onClick={() => downloadText(`orbit-people-${dateInput(new Date().toISOString())}.csv`, contactsCsv(contacts.data ?? []), "text/csv;charset=utf-8")}>
+              Export CSV</Button>}
+            <Button size="sm" onClick={() => setEditing({ id: null, initial: EMPTY })}>
+              <Plus className="h-4 w-4" /> Add a person
+            </Button>
+          </div>
         )}
       </div>
 

@@ -1,182 +1,222 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { JobContact, NetworkContext, NetworkDraft, NetworkPerson, NetworkResearch } from "@orbit/types";
-import { focusRing } from "@orbit/ui";
-import { Button, Card, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
+import { ArrowUpRight, Search, cx, focusRing } from "@orbit/ui";
+import { Button, ErrorNote, Field, Input, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { useJobsAi } from "./JobsAi";
-import { STATUS_LABEL } from "./model";
-import { missionPath } from "./mission";
 
 const root = (id: string) => `/v1/jobs/network/${encodeURIComponent(id)}`;
 const post = <T,>(id: string, action: string, body: unknown) => api.call<T>(`${root(id)}/${action}`, {
   method: "POST", body: JSON.stringify(body), timeoutMs: 120_000,
 });
 
-export default function ContactResearch({ listingId, applicationId, onSaved }: { listingId: string | null; applicationId?: string; onSaved: () => void }) {
+/**
+ * The job contact finder: the people at a job's company (recruiters and HR, likely hiring managers, the team), found
+ * on public professional profiles, each with the page it came from. One click saves a person to People; a message is
+ * drafted for you to edit and send yourself. Nothing is sent from here.
+ */
+export default function ContactResearch({ listingId, applicationId, onSaved, autoRun = false }: {
+  listingId: string | null; applicationId?: string; onSaved: () => void; autoRun?: boolean;
+}) {
   const selectId = useId();
   const { tracker } = useJobsAi();
   const jobs = tracker.data ?? [];
-  const [choice, setChoice] = useState({ context: listingId, id: "" });
-  const target = applicationId ? jobs.find((job) => job.id === applicationId) : (
-    jobs.find((j) => j.id === (choice.context === listingId ? choice.id : ""))
-    ?? jobs.find((j) => j.listing_id === listingId) ?? (listingId ? undefined : jobs[0]));
-  return <section id="contact-research" aria-label="Contact finder" className="mt-4 space-y-4">
-    {!applicationId && <Field label="Job to research" htmlFor={selectId}><Select id={selectId} value={target?.id ?? ""} onChange={(e) => setChoice({ context: listingId, id: e.target.value })}>
-      {!target && <option value="">{jobs.length ? "Choose a saved job" : "Save a job first"}</option>}
+  const [chosen, setChosen] = useState("");
+  const target = applicationId ? jobs.find((j) => j.id === applicationId)
+    : jobs.find((j) => j.id === chosen) ?? jobs.find((j) => j.listing_id === listingId) ?? jobs[0];
+  return <section id="contact-research" aria-label="Contact finder" className="space-y-4">
+    {!applicationId && jobs.length > 0 && <Field label="Job" htmlFor={selectId}><Select id={selectId} value={target?.id ?? ""} onChange={(e) => setChosen(e.target.value)}>
       {jobs.map((j) => <option key={j.id} value={j.id}>{j.title} · {j.company}</option>)}
     </Select></Field>}
     {tracker.error && <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>}
-    {!applicationId && listingId && jobs.length > 0 && !target && <p className="rounded-xl bg-amber-500/10 p-3 text-sm">The linked job is not in your tracker. Save it first, or explicitly choose a different saved job to research.</p>}
-    {!jobs.length ? <p className="text-sm">Save a job in <Link className="underline" to="/jobs/matches">Matches</Link> or add it to your tracker to start contact research.</p> :
-      target ? <JobNetwork key={target.id} applicationId={target.id} onSaved={onSaved} /> : <p className="text-sm">This opportunity is unavailable. Return to Applications and choose an owned saved job.</p>}
+    {!jobs.length && !tracker.loading ? <p className="text-sm text-zinc-600 dark:text-zinc-400">Save a job first, from <Link className="font-medium text-indigo-700 underline dark:text-indigo-300" to="/jobs/matches">Discover</Link> or your tracker, to find people there.</p>
+      : target ? <Finder key={target.id} applicationId={target.id} onSaved={onSaved} autoRun={autoRun} />
+      : <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">Loading your jobs…</p>}
   </section>;
 }
 
-function JobNetwork({ applicationId, onSaved }: { applicationId: string; onSaved: () => void }) {
-  const state = useAsync(() => api.call<NetworkContext>(root(applicationId)), [applicationId], `network:${applicationId}`);
-  return <>
-    {state.error && <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>}
-    {state.data ? <Workspace data={state.data} reload={state.reload} onSaved={onSaved} /> : <p className="text-sm">Checking your saved contacts and company history…</p>}
-  </>;
-}
+type Group = "recruiting" | "manager" | "team";
+const GROUPS: Array<{ id: Group; label: string }> = [
+  { id: "recruiting", label: "Recruiters & HR" }, { id: "manager", label: "Likely hiring managers" }, { id: "team", label: "On the team" },
+];
+const groupOf = (title: string): Group =>
+  /recruit|talent|sourc|hr\b|human resources|people (partner|ops|operations)|hiring partner/i.test(title) ? "recruiting"
+    : /manager|head|director|lead|vp|vice president|chief|principal/i.test(title) ? "manager" : "team";
+const STEPS = ["Recruiters and talent acquisition", "HR and people partners", "Hiring managers", "The team"];
 
-function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: () => void; onSaved: () => void }) {
-  const inputId = useId();
-  const id = data.job.id;
-  const [pageUrl, setPageUrl] = useState("");
-  const [paste, setPaste] = useState("");
-  const [searchWeb, setSearchWeb] = useState(data.web_search_enabled && !data.saved_contacts.length);
-  const [research, setResearch] = useState<NetworkResearch | null>(null);
+function Finder({ applicationId, onSaved, autoRun }: { applicationId: string; onSaved: () => void; autoRun: boolean }) {
+  const ctx = useAsync(() => api.call<NetworkContext>(root(applicationId)), [applicationId], `network:${applicationId}`);
+  const data = ctx.data;
+  const [result, setResult] = useState<NetworkResearch | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [target, setTarget] = useState<JobContact | null>(null);
-  const active = useRef(true);
-  const pending = useRef(false);
-  const currentJob = useRef(data.job_version);
-  currentJob.current = data.job_version;
-  useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
-  const validResearch = research && (!research.job_version || !data.job_version || research.job_version === data.job_version) ? research : null;
-  async function find(automatic = true) {
-    if (pending.current) return;
-    pending.current = true;
-    setBusy(true); setError(null); setResearch(null);
-    const sourceVersion = data.job_version;
-    try {
-      const next = await post<NetworkResearch>(id, "research", { version: data.version, automatic,
-        page_url: automatic ? null : pageUrl || null, pasted_text: automatic ? "" : paste,
-        search_web: automatic ? true : searchWeb });
-      if (active.current) {
-        if (currentJob.current === sourceVersion) setResearch(next);
-        else setError("The job changed during research. Refresh and review the current opportunity before trying again.");
-      }
-    }
-    catch (err) { if (active.current) setError(errorText(err)); }
-    finally { pending.current = false; if (active.current) setBusy(false); }
-  }
-  const saved = (contact: JobContact) => { setTarget(contact); reload(); onSaved(); };
+  const [draftFor, setDraftFor] = useState<JobContact | null>(null);
+  const started = useRef(false);
+  const find = async () => {
+    if (!data || busy) return;
+    setBusy(true); setError(null);
+    try { setResult(await post<NetworkResearch>(applicationId, "research", { version: data.version, automatic: true, search_web: true })); }
+    catch (err) { setError(errorText(err)); }
+    finally { setBusy(false); }
+  };
+  useEffect(() => {
+    if (!autoRun || started.current || !data?.web_search_enabled) return;
+    started.current = true;
+    void find();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the finder opens with its context
+  }, [data]);
+
+  if (ctx.error) return <ErrorNote onRetry={ctx.reload}>{errorText(ctx.error)}</ErrorNote>;
+  if (!data) return <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">Opening the finder…</p>;
+  const company = data.job.company;
+  const saved = data.saved_contacts;
+  const savedNames = new Set(saved.map((c) => c.name.toLowerCase()));
+  const found = (result?.people ?? []).filter((p) => !savedNames.has(p.name.toLowerCase()));
+  const searched = result !== null;
   return <div className="space-y-5">
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
-      <h3 className="font-semibold">Start with people you already saved</h3>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Contacts at {data.job.company}, including people saved for earlier roles. A saved contact does not automatically mean you know them.</p>
-      {data.saved_contacts.length ? <ul className="mt-3 space-y-2">{data.saved_contacts.map((contact) => <li key={contact.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-3 dark:bg-zinc-950">
-        <div><p className="text-sm font-semibold">{contact.name}</p><p className="text-xs text-zinc-500">{contact.title || "Role not recorded"}{contact.application_label ? ` · ${contact.application_label}` : ""}</p>
-          <p className="mt-1 text-xs">{contact.last_contacted_at ? `Contact logged ${new Date(contact.last_contacted_at).toLocaleDateString()}` : "No prior contact logged"}</p></div>
-        <Button variant="secondary" size="sm" onClick={() => setTarget(contact)}>Draft for {contact.name}</Button>
-      </li>)}</ul> : <p className="mt-3 text-sm">No saved contact at this company yet.</p>}
-    </div>
-    <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
-      <summary className="cursor-pointer font-semibold">Your history with {data.job.company}</summary>
-      <p className="mt-2 text-xs text-zinc-500">Your own tracker records, including this role. These are recorded stages, not an assessment of the employer.</p>
-      <dl className="mt-3 flex flex-wrap gap-3">{Object.entries(data.company_history.counts).map(([status, count]) => <div className="rounded-lg bg-zinc-100 p-2 dark:bg-white/5" key={status}><dt className="text-xs">{STATUS_LABEL[status as keyof typeof STATUS_LABEL] ?? status}</dt><dd className="font-semibold">{count}</dd></div>)}</dl>
-      {data.company_history.truncated && <p className="mt-2 text-xs">History covers your 2,000 most recently updated tracked jobs.</p>}
-      <ul className="mt-3 space-y-1 text-sm">{data.company_history.applications.map((job) => <li key={job.id}><Link className="underline" to={missionPath(job.id)}>{job.title}</Link> · {STATUS_LABEL[job.status]}</li>)}</ul>
-    </details>
-    <section className="workspace-panel p-5" aria-label="Automatic hiring contact search">
-      <p className="workspace-eyebrow">Contact finder · {data.job.company}</p>
-      <h3 className="mt-2 text-xl font-semibold">Find the right person for this job</h3>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">One click searches public profiles for recruiters, HR, hiring managers and team members at this company, and shows up to five people with where each was found.</p>
-      <ol className="my-4 grid gap-3 text-sm sm:grid-cols-3"><li>1. Check saved context</li><li>2. Search public sources</li><li>3. Review evidenced leads</li></ol>
-      <Button loading={busy} disabled={!data.web_search_enabled || busy} disabledReason={!data.web_search_enabled ? "Automatic search isn't available right now. You can still add people yourself." : undefined} onClick={() => void find(true)}>Find hiring contacts automatically</Button>
-      {busy && <p role="status" className="mt-3 text-sm">Researching public sources and checking contact evidence. This can take up to two minutes.</p>}
-      <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Only the company and the role are searched, never anything about you. Up to 5 searches a day. Review each person before saving; nothing is sent.</p>
-      {!data.web_search_enabled && <SearchOff reason={data.web_search_off_reason} known={"web_search_off_reason" in data} />}
-      <details className="mt-5 border-t border-zinc-200 pt-3 dark:border-white/10"><summary className={`min-h-11 cursor-pointer rounded py-2 text-sm font-semibold ${focusRing}`}>Supply a source or use a single search</summary>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Optional: add a specific public page or paste the relevant part of a recruiter reply.</p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Field label="Public company or team page (optional)" htmlFor={`${inputId}-page`}><Input id={`${inputId}-page`} type="url" value={pageUrl} maxLength={1000} placeholder="https://company.com/team" onChange={(e) => setPageUrl(e.target.value)} /></Field>
-        <div className="flex flex-col justify-center gap-2 text-sm">{data.search_links.map((link) => <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 underline dark:text-indigo-300">{link.label} ↗</a>)}</div>
-      </div>
-      <div className="mt-3"><Field label="Recruiter reply or public profile text (optional)" htmlFor={`${inputId}-paste`}><Textarea id={`${inputId}-paste`} value={paste} onChange={(e) => setPaste(e.target.value)} rows={5} maxLength={10000} placeholder={"From: Alex Rivera <alex@company.com>\nTitle: Talent Acquisition Partner\n\nPaste only relevant contact details and context."} /></Field></div>
-      <label className="mt-3 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={searchWeb} disabled={!data.web_search_enabled || busy} onChange={(e) => setSearchWeb(e.target.checked)} />Search the public web for this company and role (one query)</label>
-      <Button variant="secondary" className="mt-3" loading={busy} onClick={() => void find(false)}>Check these sources</Button>
-      <p className="mt-2 text-xs text-zinc-500">Up to 5 research runs per UTC day; failed runs count. Nothing is saved or sent until you choose a lead. Public roles and snippets may be outdated—review the source.</p>
-      </details>
-      {error && <ErrorNote onRetry={reload}>{error}</ErrorNote>}
-    </section>
-    {research && !validResearch && <p role="status" className="text-sm">The saved job changed. Refresh and run contact research again before saving these leads.</p>}
-    {validResearch && <div aria-live="polite" className="space-y-3">
-      {validResearch.warnings.map((warning) => <p className="text-sm text-amber-800 dark:text-amber-300" key={warning}>{warning}</p>)}
-      {!!validResearch.workflow?.length && <p className="text-xs text-zinc-600 dark:text-zinc-400">Searched {validResearch.workflow.length} ways: {validResearch.workflow.map((step) => step.label.toLowerCase()).join(", ")}. A public page doesn't confirm someone is hiring for this role; check the source.</p>}
-      {!validResearch.people.length && <p className="rounded-xl bg-zinc-100 p-4 text-sm dark:bg-white/5">No one at this company could be confirmed from public pages this time. Try again later, open the LinkedIn and Google searches below, or paste a recruiter's message.</p>}
-      {validResearch.people.map((person) => <Lead key={`${person.source_id}:${person.name}`} person={person} source={validResearch.sources.find((s) => s.id === person.source_id)} applicationId={id} jobVersion={validResearch.job_version} onSaved={saved} />)}
+    {saved.length > 0 && <div>
+      <h3 className="text-sm font-semibold">Saved at {company}</h3>
+      <ul className="mt-2 grid gap-2 sm:grid-cols-2">{saved.map((c) => <li key={c.id}>
+        <PersonRow name={c.name} title={c.title} profile={c.linkedin_url} email={c.email}
+          action={<Button size="sm" variant="secondary" onClick={() => setDraftFor(c)}>Write a message</Button>} />
+      </li>)}</ul>
     </div>}
-    {target && <ContactDraft key={target.id} contact={target} applicationId={id} />}
+
+    {busy ? <div role="status" className="workspace-panel p-5">
+      <p className="font-medium">Looking for people at {company}…</p>
+      <ul className="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-400">{STEPS.map((s, i) => <li key={s} className="route-rise flex items-center gap-2" style={{ ["--i" as string]: i + 1 }}>
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-indigo-600 motion-safe:animate-pulse dark:bg-indigo-400" />{s}</li>)}</ul>
+      <p className="mt-3 text-xs text-zinc-500">This takes up to a minute.</p>
+    </div>
+      : !searched ? <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={() => void find()} disabled={!data.web_search_enabled} disabledReason="Automatic search isn't available right now. Use the LinkedIn searches below.">
+          <Search className="h-4 w-4" aria-hidden /> Find people at {company}</Button>
+        <span className="text-xs text-zinc-500">Only the company and role are searched, never anything about you.</span>
+      </div>
+      : found.length > 0 ? <div className="space-y-4">
+        {GROUPS.map((g) => {
+          const list = found.filter((p) => groupOf(p.title) === g.id);
+          return list.length > 0 && <div key={g.id}>
+            <h3 className="text-sm font-semibold">{g.label}</h3>
+            <ul className="mt-2 grid gap-2 sm:grid-cols-2">{list.map((p, i) => <li key={`${p.source_id}:${p.name}`} className="route-rise" style={{ ["--i" as string]: i + 1 }}>
+              <Lead person={p} source={result.sources.find((s) => s.id === p.source_id)?.url ?? null} applicationId={applicationId}
+                jobVersion={result.job_version} onSaved={(c) => { ctx.reload(); onSaved(); setDraftFor(c); }} />
+            </li>)}</ul>
+          </div>;
+        })}
+        <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
+          <span>Found on public profiles; roles change, so check the profile before reaching out.</span>
+          <button type="button" onClick={() => void find()} className={cx("font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>Search again</button>
+        </div>
+      </div>
+      : <div className="rounded-xl bg-zinc-100 p-4 text-sm dark:bg-white/5">
+        <p className="font-medium">No public profiles at {company} turned up this time.</p>
+        <p className="mt-1 text-zinc-600 dark:text-zinc-400">Try the LinkedIn searches below; they open with the company and role filled in.</p>
+      </div>}
+    {error && <ErrorNote onRetry={() => void find()}>{error}</ErrorNote>}
+    {!data.web_search_enabled && <SearchOff reason={data.web_search_off_reason} known={"web_search_off_reason" in data} />}
+
+    {result?.email_format && <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm dark:bg-white/5">
+      <span className="font-medium">Email format at {company}:</span> {formatLabel(result.email_format.pattern)}@{result.email_format.domain}
+      <span className="text-zinc-500"> · seen on {result.email_format.from === "directory" ? "a contact directory" : `${result.email_format.seen} public page${result.email_format.seen === 1 ? "" : "s"}`}. A format only; confirm an address before you use it.</span></p>}
+
+    <WarmPaths company={company} warm={data.warm} />
+
+    <div>
+      <h3 className="text-sm font-semibold">Search yourself</h3>
+      <div className="mt-2 flex flex-wrap gap-2">{data.search_links.map((l) => <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+        className={cx("inline-flex min-h-10 items-center gap-1 rounded-lg border border-zinc-200 px-3 text-sm font-medium hover:border-indigo-400 dark:border-white/10", focusRing)}>
+        {l.label} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /></a>)}</div>
+      <p className="mt-2 text-xs text-zinc-500">Found someone there? Add them in <Link to="/jobs/outreach" className="font-medium text-indigo-700 underline dark:text-indigo-300">People</Link>.</p>
+    </div>
+
+    {draftFor && <ContactDraft key={draftFor.id} contact={draftFor} applicationId={applicationId} />}
   </div>;
 }
 
-const OFF_REASON: Record<NonNullable<NetworkContext["web_search_off_reason"]>, string> = {
-  no_key: "The API server has no DeepSeek key. Set DEEPSEEK_API_KEY on the API service and redeploy, or add the key in Settings while signed in as an admin.",
-  mock_mode: "The API server is in demo AI mode (LLM_PROVIDER=mock), so live search stays off. Set LLM_PROVIDER to auto or deepseek and redeploy.",
-  deepseek_off: "DeepSeek search is switched off on the API server (ORBIT_CONTACT_DEEPSEEK_SEARCH=false). Remove that setting and redeploy.",
-};
+/** "{first}.{last}" → "first.last", the way a person reads an email format. */
+function formatLabel(pattern: string) {
+  return pattern.replace(/\{first\}/g, "first").replace(/\{last\}/g, "last").replace(/\{f\}/g, "f").replace(/\{l\}/g, "l");
+}
+
+const people = (keywords: string) => "https://www.linkedin.com/search/results/people/?" + new URLSearchParams({ keywords }).toString();
+
+/** Warm paths: people at the company who went to your college or worked where you worked. The searches open in your
+ *  own browser; your schools and past employers never go into Orbit's own searches. */
+function WarmPaths({ company, warm }: { company: string; warm?: { schools: string[]; employers: string[] } }) {
+  const links = [
+    ...(warm?.schools ?? []).map((s) => ({ label: `${s} alumni at ${company}`, url: people(`${company} ${s}`) })),
+    ...(warm?.employers ?? []).map((e) => ({ label: `Ex-${e} at ${company}`, url: people(`${company} ${e}`) })),
+  ];
+  if (!links.length) return null;
+  return <div>
+    <h3 className="text-sm font-semibold">Warm paths</h3>
+    <p className="mt-0.5 text-xs text-zinc-500">People you share a college or an employer with answer more often. Ask them about the team, then for a referral.</p>
+    <div className="mt-2 flex flex-wrap gap-2">{links.map((l) => <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+      className={cx("inline-flex min-h-10 items-center gap-1 rounded-lg bg-emerald-500/10 px-3 text-sm font-medium text-emerald-800 hover:bg-emerald-500/15 dark:text-emerald-200", focusRing)}>
+      {l.label} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /></a>)}</div>
+  </div>;
+}
+
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
+}
+
+function PersonRow({ name, title, profile, action, source, email }: { name: string; title: string; profile: string | null; action: ReactNode; source?: string | null; email?: string | null }) {
+  const [copied, setCopied] = useState(false);
+  return <div className="workspace-panel flex h-full flex-col gap-3 p-4">
+    <div className="flex items-start gap-3">
+      <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-indigo-500/10 text-sm font-semibold text-indigo-700 dark:text-indigo-300">{initials(name)}</span>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold">{name}</p>
+        <p className="text-[13px] text-zinc-600 dark:text-zinc-400">{title || "Role not shown"}</p>
+        <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
+          {profile && <a href={profile} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-700 hover:underline dark:text-indigo-300">LinkedIn profile ↗</a>}
+          {email && <button type="button" className={cx("font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
+            onClick={() => { void navigator.clipboard?.writeText(email).then(() => setCopied(true), () => undefined); }}>{copied ? "Email copied" : email}</button>}
+          {source && source !== profile && <a href={source} target="_blank" rel="noopener noreferrer" className="text-zinc-600 hover:underline dark:text-zinc-400">Where it was found ↗</a>}
+        </div>
+      </div>
+    </div>
+    <div className="mt-auto">{action}</div>
+  </div>;
+}
+
+function Lead({ person, source, applicationId, jobVersion, onSaved }: { person: NetworkPerson; source: string | null; applicationId: string; jobVersion?: string; onSaved: (c: JobContact) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    setBusy(true); setError(null);
+    try {
+      const r = await post<{ created: boolean; contact: JobContact }>(applicationId, "capture", { person, job_version: jobVersion ?? null, source_url: source, remind_in_days: null });
+      setSaved(true); onSaved(r.contact);
+    } catch (err) { setError(errorText(err)); }
+    finally { setBusy(false); }
+  };
+  return <>
+    <PersonRow name={person.name} title={person.title} profile={person.linkedin_url} source={source} email={person.email}
+      action={<Button size="sm" loading={busy} disabled={saved} disabledReason="Saved to People." onClick={() => void save()}>{saved ? "Saved" : "Save and write a message"}</Button>} />
+    {error && <ErrorNote>{error}</ErrorNote>}
+  </>;
+}
 
 /** Automatic search is off. Candidates see a plain note; only admins see why and what to change on the server. */
 function SearchOff({ reason, known }: { reason: NetworkContext["web_search_off_reason"]; known: boolean }) {
   const admin = useAsync(() => api.adminStatus(), [], "admin-status");
-  if (!admin.data?.is_admin) {
-    return <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">Automatic search isn't available right now. You can still check a company page or a recruiter's message below.</p>;
-  }
-  const why = !known
-    ? "The API server is running an older version. Redeploy the API: the update searches with your existing DeepSeek key, nothing new to add."
-    : reason ? OFF_REASON[reason] : "No search service is configured on the API server.";
-  return <div className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
-    <p className="font-medium">Automatic search is off on this server <span className="font-normal">(visible to admins only)</span></p>
+  if (!admin.data?.is_admin) return null;
+  const why = !known ? "The API is running an older version. Redeploy it."
+    : reason === "no_key" ? "The API has no AI key, so automatic search is off. Set DEEPSEEK_API_KEY on the API service and redeploy."
+    : reason === "mock_mode" ? "The API is in demo AI mode (LLM_PROVIDER=mock). Set it to auto and redeploy."
+    : reason === "deepseek_off" ? "Search is switched off (ORBIT_CONTACT_DEEPSEEK_SEARCH=false). Remove that setting and redeploy."
+    : "No search service is configured on the API.";
+  return <div className="rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
+    <p className="font-medium">Automatic search is off <span className="font-normal">(visible to admins only)</span></p>
     <p className="mt-1">{why}</p>
   </div>;
-}
-
-function Lead({ person, source, applicationId, jobVersion, onSaved }: { person: NetworkPerson; source: NetworkResearch["sources"][number] | undefined; applicationId: string; jobVersion?: string; onSaved: (contact: JobContact) => void }) {
-  const [reviewed, setReviewed] = useState(false);
-  const [remind, setRemind] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  async function capture() {
-    setBusy(true); setError(null);
-    try {
-      const result = await post<{ created: boolean; contact: JobContact }>(applicationId, "capture", {
-        person, job_version: jobVersion ?? null, source_url: source?.url ?? null, remind_in_days: remind ? 7 : null,
-      });
-      setSaved(result.created ? "Saved to People with its source." : "Already saved. Existing details and reminders kept."); onSaved(result.contact);
-    } catch (err) { setError(errorText(err)); }
-    finally { setBusy(false); }
-  }
-  return <Card className="p-4">
-    <h4 className="font-semibold">{person.name}</h4><p className="text-sm text-zinc-500">{person.title || "Role not confirmed"}</p>
-    {person.email && <p className="mt-1 break-all text-sm">{person.email}</p>}
-    {person.linkedin_url && <a className="mt-1 block text-sm text-indigo-700 underline dark:text-indigo-300" href={person.linkedin_url} target="_blank" rel="noopener noreferrer">Published professional profile ↗</a>}
-    <details className="mt-3 text-sm"><summary className="min-h-8 cursor-pointer">Review source evidence</summary><blockquote className="my-2 whitespace-pre-wrap break-words rounded-lg bg-zinc-100 p-3 text-xs dark:bg-white/5">{person.quote}</blockquote>
-      {source?.url ? <a className="break-all text-indigo-700 underline dark:text-indigo-300" href={source.url} target="_blank" rel="noopener noreferrer">Open source ↗</a> : <p>Candidate-provided text; identity not independently verified.</p>}
-      {source && <p className="mt-1 text-xs text-zinc-500">{source.kind === "search_snippet" ? "Search snippet, not a verified current role" : source.kind === "search_content" ? "Page content returned by search; review the original source" : "Source supplied for this research"} · retrieved {new Date(source.checked_at).toLocaleString()}</p>}
-    </details>
-    <label className="mt-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} />I reviewed this lead and its source</label>
-    <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={remind} onChange={(e) => setRemind(e.target.checked)} />Remind me about this contact in 7 days</label>
-    <Button variant="secondary" loading={busy} disabled={!reviewed || !!saved} disabledReason={saved ? "Already saved to People." : "Tick that you reviewed this lead first."} onClick={() => void capture()}>Save {person.name} to People</Button>
-    {saved && <p className="mt-2 text-sm" role="status">{saved}</p>}{error && <ErrorNote>{error}</ErrorNote>}
-  </Card>;
 }
 
 function ContactDraft({ contact, applicationId }: { contact: JobContact; applicationId: string }) {

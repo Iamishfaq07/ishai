@@ -24,11 +24,16 @@ export interface NetworkContext {
   web_search_off_reason?: "no_key" | "mock_mode" | "deepseek_off" | null;
   automatic_search_limit?: number;
   search_links: Array<{ label: string; url: string }>;
+  /** The candidate's schools and past employers (their resume), for alumni and former-colleague searches. */
+  warm?: { schools: string[]; employers: string[] };
 }
+/** The email format a company uses, from addresses it publishes or a directory. Only a format, never an address. */
+export interface EmailFormat { pattern: string; domain: string; seen: number; from: string }
 export interface NetworkResearch {
   provider: string; warnings: string[]; people: NetworkPerson[]; sources: NetworkSource[];
   job_version?: string;
   workflow?: Array<{ label: string; status: "completed" | "empty" | "failed"; source_count: number }>;
+  email_format?: EmailFormat | null;
 }
 export interface NetworkDraft {
   subject: string; message: string; provider: string; character_limit: number;

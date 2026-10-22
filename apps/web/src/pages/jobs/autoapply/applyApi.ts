@@ -1,5 +1,6 @@
 import type {
   ApplyBankItem,
+  ApplyCoverage,
   ApplyGroup,
   ApplyPacketDetail,
   ApplyPacketSummary,
@@ -44,6 +45,7 @@ export const applyApi = {
   pauseApply: () => post<{ paused: boolean }>("/v1/apply/pause"),
   resumeApply: () => post<{ paused: boolean }>("/v1/apply/resume"),
   applyStatus: () => api.call<ApplyStatus>("/v1/apply/status"),
+  applyCoverage: () => api.call<ApplyCoverage>("/v1/apply/coverage"),
   /** A packet's screenshot or resume PDF (API-relative paths from the packet), fetched with the session. */
   applyFile: (path: string) => api.callRaw(path).then((r) => r.blob()),
 };

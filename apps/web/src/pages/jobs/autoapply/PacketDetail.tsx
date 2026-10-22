@@ -91,6 +91,16 @@ export default function PacketDetail({ id, onChanged, opportunityId }: { id: str
         <h3 className="font-semibold">{guidance.label}</h3>
         <p className="text-sm text-zinc-600 dark:text-zinc-300">{guidance.detail}</p>
       </section>
+      {/* Workday asks most candidates for an account on each employer's own site; this is the shortest way through. */}
+      {p.ats === "workday" && ["handoff", "needs_you", "ready", "review"].includes(p.status) && sendYourself && <section aria-label="Applying on Workday" className="rounded-2xl bg-zinc-100 p-4 text-sm dark:bg-white/5">
+        <h3 className="font-semibold">Sending it on Workday</h3>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-zinc-700 dark:text-zinc-300">
+          <li>Open the employer form below and choose <span className="font-medium">Apply Manually</span>.</li>
+          <li>Sign in, or create the employer's account once (each company's Workday has its own). Use the email on your resume.</li>
+          <li>Upload the tailored resume from this page, then copy the prepared answers into each step.</li>
+          <li>Submit, then come back and press <span className="font-medium">I sent it</span>.</li>
+        </ol>
+      </section>}
       <div className="space-y-1 text-sm">
         {p.reason && <p><span className="font-medium">Saved note:</span> {p.reason}</p>}
         <p className="text-zinc-600 dark:text-zinc-400">{p.match_reason}</p>
