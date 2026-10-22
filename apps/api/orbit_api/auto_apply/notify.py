@@ -20,6 +20,8 @@ from orbit_api.providers.email import OutgoingEmail, can_deliver, get_email_send
 log = logging.getLogger(__name__)
 EVERY = timedelta(hours=6)
 NEEDS_YOU = ("needs_answer", "needs_you", "handoff")
+# Review-first applications waiting for the candidate's approval: the same email lists them, with a one-tap link.
+TO_APPROVE = ("review",)
 MAX_LISTED = 10
 
 
@@ -28,13 +30,22 @@ def finish_link(packet_id: str) -> str:
 
 
 def _email(user: User, packets: list[ApplicationPacket]) -> OutgoingEmail:
-    lines = [f"Hi {user.name or 'there'},", "",
-             f"Orbit Apply needs you for {len(packets)} application{'' if len(packets) == 1 else 's'}:", ""]
-    for p in packets[:MAX_LISTED]:
-        lines += [f"{p.title} at {p.company}", f"  {p.reason}", f"  Finish in one click: {finish_link(p.id)}", ""]
+    ready = [p for p in packets if p.status in TO_APPROVE]
+    needs = [p for p in packets if p.status not in TO_APPROVE]
+    lines = [f"Hi {user.name or 'there'},", ""]
+    if ready:
+        lines += [f"{len(ready)} application{'' if len(ready) == 1 else 's'} ready for your approval, each with a "
+                  "resume tailored to the job:", ""]
+        for p in ready[:MAX_LISTED]:
+            lines += [f"{p.title} at {p.company}", f"  Review and approve: {finish_link(p.id)}", ""]
+    if needs:
+        lines += [f"Orbit Apply needs you for {len(needs)} application{'' if len(needs) == 1 else 's'}:", ""]
+        for p in needs[:MAX_LISTED]:
+            lines += [f"{p.title} at {p.company}", f"  {p.reason}", f"  Finish in one click: {finish_link(p.id)}", ""]
     lines += ["Answers you give are saved, so the next form that asks the same is filled in for you.", "",
               f"All your applications: {get_settings().web_url.rstrip('/')}/jobs/applications"]
-    subject = (f"Orbit Apply needs you: {packets[0].title} at {packets[0].company}" if len(packets) == 1
+    subject = (f"{len(ready)} application{'' if len(ready) == 1 else 's'} ready to approve" if ready and not needs
+               else f"Orbit Apply needs you: {packets[0].title} at {packets[0].company}" if len(packets) == 1
                else f"Orbit Apply needs you for {len(packets)} applications")
     return OutgoingEmail(to=user.email, subject=subject[:150], text="\n".join(lines))
 
@@ -50,7 +61,7 @@ async def notify(db: AsyncSession, user: User, now: datetime | None = None) -> b
     if last is not None and now - last < EVERY:
         return False
     q = select(ApplicationPacket).where(ApplicationPacket.user_id == user.id,
-                                        ApplicationPacket.status.in_(NEEDS_YOU))
+                                        ApplicationPacket.status.in_((*NEEDS_YOU, *TO_APPROVE)))
     if last is not None:
         q = q.where(ApplicationPacket.updated_at > last)
     packets = list((await db.scalars(q.order_by(ApplicationPacket.updated_at.desc()).limit(50))).all())

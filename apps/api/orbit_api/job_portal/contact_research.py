@@ -21,6 +21,7 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.job_portal import contacts
+from orbit_api.job_portal.contact_extras import email_format, hunter_enabled, hunter_people, warm_paths
 from orbit_api.job_portal.contact_sources import (
     Source,
     contact_queries,
@@ -156,7 +157,8 @@ async def context(db: AsyncSession, user: User, job: JobApplication) -> dict[str
             "last_contacted_at": max((str(c.last_contacted_at) for c in warm if c.last_contacted_at), default=None),
             "applications": [{"id": j.id, "title": j.title, "status": j.status, "applied_at": j.applied_at}
                              for j in history[:10]]},
-        "web_search_enabled": search_provider() is not None,
+        "web_search_enabled": search_provider() is not None or hunter_enabled(),
+        "warm": await warm_paths(db, user.id, job),
         "web_search_provider": search_provider(),
         "web_search_providers": search_providers(),
         "web_search_off_reason": search_off_reason(),
@@ -355,9 +357,24 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
     # People named in professional-profile results are read directly: the result's own title line is the evidence.
     own = await own_addresses(db, user, job)
     people = linkedin_people(sources, own, job.company)
+    # Work emails the directory has seen published, each its own source (contact_extras.py).
+    directory, fmt = await hunter_people(job.company) if body.search_web and body.automatic else ([], None)
+    sources += directory
+    for source in directory:
+        parts = [p.strip() for p in source.text.split(" · ")]
+        email = next((p for p in parts if "@" in p), None)
+        person = Person(source_id=source.id, name=parts[0], title=parts[1] if len(parts) == 4 else "",
+                        email=email, linkedin_url=None, quote=source.text[:700])
+        try:
+            check_person(person, source, own, job.company)
+        except ValueError:
+            continue
+        if person.name.casefold() not in {p.name.casefold() for p in people}:
+            people.append(person)
+    fmt = fmt or email_format(sources, job.company)
     provider = "search"
     # The AI reads what the titles can't (team pages, posts, the saved posting) when there's room for more people.
-    others = [s for s in sources if not (s.url and LINKEDIN_PROFILE.match(s.url))]
+    others = [s for s in sources if not (s.url and LINKEDIN_PROFILE.match(s.url)) and not s.id.startswith("hunter:")]
     if len(people) < 5 and others:
         try:
             result, provider = await preview(db, user, "career_contact_research",
@@ -373,7 +390,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
                             "sources": [s.model_dump() for s in others]}),
                 lambda raw: validate_people(raw, others, own, job.company))
             names = {p.name.casefold() for p in people}
-            people += [p for p in result.people if p.name.casefold() not in names][:5 - len(people)]
+            people += [p for p in result.people if p.name.casefold() not in names][:max(0, 8 - len(people))]
         except HTTPException as exc:
             log.info("contact extraction skipped: %s", exc.detail)
     latest = await context(db, user, await owned(db, user, application_id))
@@ -382,7 +399,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
     ranked = sorted(people, key=lambda person: (
         {"recruiter": 0, "hiring_manager": 1}.get(relation(person), 2), person.name.casefold()))
     return {"provider": provider, "job_version": before["job_version"], "warnings": warnings,
-            "workflow": workflow, "people": [person.model_dump() for person in ranked],
+            "workflow": workflow, "people": [person.model_dump() for person in ranked], "email_format": fmt,
             "sources": [s.model_dump() for s in sources]}
 
 

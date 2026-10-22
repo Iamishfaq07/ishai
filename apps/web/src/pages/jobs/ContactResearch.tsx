@@ -80,7 +80,7 @@ function Finder({ applicationId, onSaved, autoRun }: { applicationId: string; on
     {saved.length > 0 && <div>
       <h3 className="text-sm font-semibold">Saved at {company}</h3>
       <ul className="mt-2 grid gap-2 sm:grid-cols-2">{saved.map((c) => <li key={c.id}>
-        <PersonRow name={c.name} title={c.title} profile={c.linkedin_url}
+        <PersonRow name={c.name} title={c.title} profile={c.linkedin_url} email={c.email}
           action={<Button size="sm" variant="secondary" onClick={() => setDraftFor(c)}>Write a message</Button>} />
       </li>)}</ul>
     </div>}
@@ -119,6 +119,12 @@ function Finder({ applicationId, onSaved, autoRun }: { applicationId: string; on
     {error && <ErrorNote onRetry={() => void find()}>{error}</ErrorNote>}
     {!data.web_search_enabled && <SearchOff reason={data.web_search_off_reason} known={"web_search_off_reason" in data} />}
 
+    {result?.email_format && <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm dark:bg-white/5">
+      <span className="font-medium">Email format at {company}:</span> {formatLabel(result.email_format.pattern)}@{result.email_format.domain}
+      <span className="text-zinc-500"> · seen on {result.email_format.from === "directory" ? "a contact directory" : `${result.email_format.seen} public page${result.email_format.seen === 1 ? "" : "s"}`}. A format only; confirm an address before you use it.</span></p>}
+
+    <WarmPaths company={company} warm={data.warm} />
+
     <div>
       <h3 className="text-sm font-semibold">Search yourself</h3>
       <div className="mt-2 flex flex-wrap gap-2">{data.search_links.map((l) => <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
@@ -131,11 +137,36 @@ function Finder({ applicationId, onSaved, autoRun }: { applicationId: string; on
   </div>;
 }
 
+/** "{first}.{last}" → "first.last", the way a person reads an email format. */
+function formatLabel(pattern: string) {
+  return pattern.replace(/\{first\}/g, "first").replace(/\{last\}/g, "last").replace(/\{f\}/g, "f").replace(/\{l\}/g, "l");
+}
+
+const people = (keywords: string) => "https://www.linkedin.com/search/results/people/?" + new URLSearchParams({ keywords }).toString();
+
+/** Warm paths: people at the company who went to your college or worked where you worked. The searches open in your
+ *  own browser; your schools and past employers never go into Orbit's own searches. */
+function WarmPaths({ company, warm }: { company: string; warm?: { schools: string[]; employers: string[] } }) {
+  const links = [
+    ...(warm?.schools ?? []).map((s) => ({ label: `${s} alumni at ${company}`, url: people(`${company} ${s}`) })),
+    ...(warm?.employers ?? []).map((e) => ({ label: `Ex-${e} at ${company}`, url: people(`${company} ${e}`) })),
+  ];
+  if (!links.length) return null;
+  return <div>
+    <h3 className="text-sm font-semibold">Warm paths</h3>
+    <p className="mt-0.5 text-xs text-zinc-500">People you share a college or an employer with answer more often. Ask them about the team, then for a referral.</p>
+    <div className="mt-2 flex flex-wrap gap-2">{links.map((l) => <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+      className={cx("inline-flex min-h-10 items-center gap-1 rounded-lg bg-emerald-500/10 px-3 text-sm font-medium text-emerald-800 hover:bg-emerald-500/15 dark:text-emerald-200", focusRing)}>
+      {l.label} <ArrowUpRight className="h-3.5 w-3.5" aria-hidden /></a>)}</div>
+  </div>;
+}
+
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
 }
 
-function PersonRow({ name, title, profile, action, source }: { name: string; title: string; profile: string | null; action: ReactNode; source?: string | null }) {
+function PersonRow({ name, title, profile, action, source, email }: { name: string; title: string; profile: string | null; action: ReactNode; source?: string | null; email?: string | null }) {
+  const [copied, setCopied] = useState(false);
   return <div className="workspace-panel flex h-full flex-col gap-3 p-4">
     <div className="flex items-start gap-3">
       <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-indigo-500/10 text-sm font-semibold text-indigo-700 dark:text-indigo-300">{initials(name)}</span>
@@ -144,6 +175,8 @@ function PersonRow({ name, title, profile, action, source }: { name: string; tit
         <p className="text-[13px] text-zinc-600 dark:text-zinc-400">{title || "Role not shown"}</p>
         <div className="mt-1 flex flex-wrap gap-x-3 text-xs">
           {profile && <a href={profile} target="_blank" rel="noopener noreferrer" className="font-medium text-indigo-700 hover:underline dark:text-indigo-300">LinkedIn profile ↗</a>}
+          {email && <button type="button" className={cx("font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}
+            onClick={() => { void navigator.clipboard?.writeText(email).then(() => setCopied(true), () => undefined); }}>{copied ? "Email copied" : email}</button>}
           {source && source !== profile && <a href={source} target="_blank" rel="noopener noreferrer" className="text-zinc-600 hover:underline dark:text-zinc-400">Where it was found ↗</a>}
         </div>
       </div>
@@ -165,7 +198,7 @@ function Lead({ person, source, applicationId, jobVersion, onSaved }: { person: 
     finally { setBusy(false); }
   };
   return <>
-    <PersonRow name={person.name} title={person.title} profile={person.linkedin_url} source={source}
+    <PersonRow name={person.name} title={person.title} profile={person.linkedin_url} source={source} email={person.email}
       action={<Button size="sm" loading={busy} disabled={saved} disabledReason="Saved to People." onClick={() => void save()}>{saved ? "Saved" : "Save and write a message"}</Button>} />
     {error && <ErrorNote>{error}</ErrorNote>}
   </>;

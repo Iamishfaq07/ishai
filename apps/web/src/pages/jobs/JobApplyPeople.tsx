@@ -8,6 +8,7 @@ import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
 import { applyApi } from "./autoapply/applyApi";
 import { STATUS_LABEL as PACKET_LABEL } from "./autoapply/model";
+import { COVERAGE, useCoverage } from "./autoapply/Coverage";
 import { JOBS_AUTO_APPLY } from "./paths";
 
 const ContactResearch = lazy(() => import("./ContactResearch"));
@@ -62,6 +63,9 @@ function AutoApplyCard({ entry }: { entry: JobTrackerEntry }) {
   const packet = (packets.data ?? []).filter((p) => p.listing_id === entry.listing_id)
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
   const ready = Boolean(setup.data?.configured && setup.data.consent_at);
+  // Where this job's application goes: sent by Orbit, prepared for you to send, or on a job board (coverage.py).
+  const coverage = useCoverage();
+  const here = coverage.data?.jobs.find((j) => j.entry_id === entry.id);
   const prepare = async () => {
     setBusy(true); setNote(null); setError(null);
     try {
@@ -76,6 +80,8 @@ function AutoApplyCard({ entry }: { entry: JobTrackerEntry }) {
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"><Send className="h-4 w-4" aria-hidden /></span>
       <h2 id="auto-apply-title" className="font-semibold">Auto-apply with a tailored resume</h2>
     </div>
+    {here && <p className="flex flex-wrap items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400">
+      <span className={cx("rounded-full px-2.5 py-0.5 text-xs font-medium", COVERAGE[here.kind].tone)}>{COVERAGE[here.kind].label}</span>{here.where} · {here.note}</p>}
     {setup.loading && !setup.data || packets.loading && !packets.data ? <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">Checking Orbit Apply…</p>
       : packet ? <>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Prepared for this job: your resume reordered and reworded for it from your real experience, a short cover letter and the form's answers.</p>

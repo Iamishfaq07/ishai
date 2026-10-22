@@ -2,6 +2,7 @@
 // list edits the profile page makes, and which message Outreach starts on. Kept here so it's unit-tested (model.test.ts).
 import { INDIA, countryInSentence, isIndia, regionWords } from "@orbit/ui";
 import type {
+  JobContact,
   JobEmploymentType,
   JobLevel,
   JobListing,
@@ -539,6 +540,14 @@ export function trackerCsv(entries: JobTrackerEntry[]): string {
     e.notes,
     dateInput(e.created_at),
   ]);
+  return "\uFEFF" + [header, ...rows].map((r) => r.map((c) => csvCell(c ?? "")).join(",")).join("\r\n") + "\r\n";
+}
+
+/** Every saved person as a CSV file (Excel or Google Sheets): name, role, company, how to reach them, follow-up. */
+export function contactsCsv(people: JobContact[]): string {
+  const header = ["Name", "Role", "Company", "Relation", "Email", "Phone", "LinkedIn", "Last contacted", "Follow up", "Notes"];
+  const rows = people.map((p) => [p.name, p.title, p.company, p.relation, p.email ?? "", p.phone ?? "", p.linkedin_url ?? "",
+    dateInput(p.last_contacted_at), dateInput(p.follow_up_at), p.notes ?? ""]);
   return "\uFEFF" + [header, ...rows].map((r) => r.map((c) => csvCell(c ?? "")).join(",")).join("\r\n") + "\r\n";
 }
 

@@ -257,6 +257,8 @@ class Settings(BaseSettings):
     jsearch_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_JSEARCH_KEY"))
     jsearch_monthly_budget: int = Field(200, ge=0, validation_alias=AliasChoices("ORBIT_JSEARCH_MONTHLY_BUDGET"))
     contact_search_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_CONTACT_SEARCH_KEY"))
+    # Optional Hunter.io key: verified work emails and the company's email format in the job contact finder.
+    contact_hunter_key: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_HUNTER_API_KEY"))
     contact_deepseek_search: bool = Field(True, validation_alias=AliasChoices("ORBIT_CONTACT_DEEPSEEK_SEARCH"))
     contact_deepseek_search_cost_usd: float = Field(0.00075, ge=0, le=1,
         validation_alias=AliasChoices("ORBIT_CONTACT_DEEPSEEK_SEARCH_COST_USD"))

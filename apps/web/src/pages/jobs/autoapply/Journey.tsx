@@ -6,6 +6,7 @@ import { api } from "../../../lib/api";
 import { errorText } from "../../../lib/format";
 import { useAsync } from "../../../lib/useAsync";
 import { AgentConsole } from "./AgentConsole";
+import { CoveragePanel } from "./Coverage";
 
 interface Journey {
   steps: Array<{ id: string; title: string; done: boolean; href: string; detail: string }>;
@@ -25,6 +26,7 @@ export function CareerJourneyPage() {
       <h2 className="mt-2 text-lg font-semibold">{next.title}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{next.detail}</p>
       <Link to={next.href} className={buttonClass("primary", "sm", "mt-4")}>Continue · {next.title}</Link>
     </section>}
+    <CoveragePanel />
     <AgentConsole onChanged={state.reload} />
     <LoadGate loading={state.loading && !data} variant="card" count={3} label="Loading your career journey">
       {state.error && <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>}

@@ -385,3 +385,11 @@ export interface ApplyPacketDetail extends ApplyPacketSummary {
   resume_pdf_url: string;
   tracker_id: string | null;
 }
+
+/** Which tracked jobs Orbit Apply can send (GET /v1/apply/coverage). */
+export type ApplyCoverageKind = "auto" | "kit" | "board" | "manual";
+export interface ApplyCoverage {
+  hosted: boolean;
+  counts: Record<ApplyCoverageKind, number>;
+  jobs: Array<{ entry_id: string; listing_id: string; title: string; company: string; kind: ApplyCoverageKind; where: string; note: string }>;
+}
