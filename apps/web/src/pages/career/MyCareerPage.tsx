@@ -104,14 +104,6 @@ export function MyCareerPage() {
       </div>
     </header>
 
-    {/* Counts only once there is something to count: a row of empty tiles is not encouragement. */}
-    {[resumes.data?.length, stories.data?.length, contacts.data?.length, identity.data?.skills.length].some((n) => n !== 0) && <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Stat label="Resumes" value={resumes.data ? resumes.data.length : null} hint="Master and job copies" />
-      <Stat label="Stories" value={stories.data ? stories.data.length : null} hint="Ready for interviews" />
-      <Stat label="Contacts" value={contacts.data ? contacts.data.length : null} hint="People you've saved" />
-      <Stat label="Skills on resume" value={identity.data ? identity.data.skills.length : null} hint="From your master resume" />
-    </Reveal>}
-
     {!loading && <Reveal as="section" aria-labelledby="setup" className="workspace-panel p-5 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><h2 id="setup" className="font-display text-xl font-semibold">{done === steps.length ? "Your profile is set up" : done === 0 ? "Set up your profile, one step at a time" : "Finish setting up your profile"}</h2>
@@ -128,6 +120,14 @@ export function MyCareerPage() {
           <span className="flex-1">{s.label}<span className="sr-only">{s.done ? " (done)" : " (to do)"}</span></span>
           {!s.done && <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">{s.action}</span>}
         </Link></li>)}</Reveal>
+    </Reveal>}
+
+    {/* Counts after the setup steps (what to do comes first), and only once there is something to count: a row of empty tiles is not encouragement. */}
+    {[resumes.data?.length, stories.data?.length, contacts.data?.length, identity.data?.skills.length].some((n) => n !== 0) && <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Stat label="Resumes" value={resumes.data ? resumes.data.length : null} hint="Master and job copies" />
+      <Stat label="Stories" value={stories.data ? stories.data.length : null} hint="Ready for interviews" />
+      <Stat label="Contacts" value={contacts.data ? contacts.data.length : null} hint="People you've saved" />
+      <Stat label="Skills on resume" value={identity.data ? identity.data.skills.length : null} hint="From your master resume" />
     </Reveal>}
 
     {user && <CareerIdentity key={user.id} userId={user.id} />}

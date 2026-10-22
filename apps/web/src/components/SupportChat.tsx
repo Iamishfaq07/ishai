@@ -210,6 +210,22 @@ export function SupportChat() {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
   }, [thread?.messages.length, thread?.suggestions?.length, open]);
 
+  // On a phone the button steps aside while you scroll down through a page (it covered the content's right edge) and
+  // comes back as soon as you scroll up or stop near the top. Never while open, with a new reply, or focused.
+  const [tucked, setTucked] = useState(false);
+  const unreadNow = !open && hasUnseenReply(thread, seenId);
+  useEffect(() => {
+    if (open || unreadNow) { setTucked(false); return; }
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (window.innerWidth < 768 && Math.abs(y - last) > 8) setTucked(y > last && y > 120);
+      if (Math.abs(y - last) > 8) last = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [open, unreadNow]);
+
   if (hidden) return null;
 
   async function send(choice?: { id: string; label: string }) {
@@ -464,11 +480,14 @@ export function SupportChat() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         ref={launcherRef}
+        onFocus={() => setTucked(false)}
         aria-expanded={open}
         aria-label={unread ? "Support chat, new reply" : open ? "Close support chat" : "Chat with support"}
         className={cx(
           "pointer-events-auto relative grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-popover hover:bg-indigo-500",
           keyboard.inset > 0 && "hidden", // typing: the panel has its own close button, and needs the room
+          "motion-safe:transition-[transform,opacity] motion-safe:duration-200",
+          tucked && "pointer-events-none translate-y-16 opacity-0",
           focusRing,
         )}
       >

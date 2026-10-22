@@ -98,13 +98,6 @@ export function PreparePage() {
       </div>
     </header>
 
-    {[ahead, jobs?.length, stories.data?.length, sessions.data?.length].some((n) => n !== 0) && <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <Stat label="Interviews ahead" value={ahead} hint="Recorded on jobs marked interviewing" />
-      <Stat label="Active jobs" value={jobs ? jobs.length : null} hint="Saved, applied, interviewing or at offer" />
-      <Stat label="Stories ready" value={stories.data ? stories.data.length : null} hint="In your story bank" />
-      <Stat label="Practice sessions" value={sessions.data ? sessions.data.length : null} hint="Rehearsals and copilot sessions" />
-    </Reveal>}
-
     <Reveal as="section" aria-labelledby="up-next" className="workspace-panel workspace-next relative overflow-hidden">
       {tracker.error ? <ErrorNote onRetry={tracker.reload}>Your saved jobs could not load. The toolkit below still works.</ErrorNote>
         : !jobs ? <p role="status" className="text-sm">Loading your interviews…</p>
@@ -135,6 +128,14 @@ export function PreparePage() {
           <div className="flex flex-wrap gap-2"><Link to="/jobs?work=updates&input=calendar" className={linkButton("secondary")}>Import invitation</Link><Link to="/jobs/tracker?add=1" className={linkButton("ghost")}>Add an interview</Link></div>
         </div>}
     </Reveal>
+
+    {/* The counts come after the next interview: on a phone the page opens on what to do, not on four numbers. */}
+    {[ahead, jobs?.length, stories.data?.length, sessions.data?.length].some((n) => n !== 0) && <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <Stat label="Interviews ahead" value={ahead} hint="Recorded on jobs marked interviewing" />
+      <Stat label="Active jobs" value={jobs ? jobs.length : null} hint="Saved, applied, interviewing or at offer" />
+      <Stat label="Stories ready" value={stories.data ? stories.data.length : null} hint="In your story bank" />
+      <Stat label="Practice sessions" value={sessions.data ? sessions.data.length : null} hint="Rehearsals and copilot sessions" />
+    </Reveal>}
 
     {jobs && jobs.length > 0 && <section aria-labelledby="prep-jobs">
       <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="prep-jobs" className="font-semibold">Prepare for a saved job</h2>
