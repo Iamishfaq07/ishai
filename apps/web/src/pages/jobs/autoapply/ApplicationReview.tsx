@@ -31,7 +31,7 @@ export default function ApplicationReview({ id, revision }: { id: string; revisi
     <p className="text-xs text-zinc-500">Up to 5 reviews per UTC day, including failed attempts. Advisory only; this does not pause, edit or approve a queued application.</p>
     <div aria-live="polite">
       {error && <ErrorNote>{error}</ErrorNote>}
-      {review && <><p className="mt-3 text-xs font-semibold">{review.source === "mock" ? "Demo response · mock provider" : "AI suggestions · check against your records"}</p>
+      {review && <><p className="mt-3 text-xs font-semibold">AI suggestions · check against your records</p>
         <ul className="mt-3 space-y-4">{review.tips.map((tip) => <li key={tip.fact_id} className="space-y-2 text-sm">
           <p className="font-medium">{tip.suggestion}</p>
           <blockquote className="border-l-2 border-indigo-300 pl-3 text-zinc-600 dark:text-zinc-400">“{tip.source_quote}”</blockquote>

@@ -127,10 +127,10 @@ export function VoicePicker({ compact = false, className }: { compact?: boolean;
       {!compact && (
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           {s.available
-            ? `The natural voices are made by Deepgram from the interviewer's text only, never from what you say.${
+            ? `The natural voices are made from the interviewer's text only, never from what you say.${
                 s.chars_left !== null ? ` ${s.chars_left.toLocaleString("en-IN")} characters left today (about ${Math.floor(s.chars_left / 120)} questions); after that, this device's voice takes over.` : ""
               }`
-            : "The natural AI voices aren't available on this server, so this device's own voice reads the questions."}
+            : "The natural AI voices aren't available right now, so this device's own voice reads the questions."}
         </p>
       )}
     </div>
