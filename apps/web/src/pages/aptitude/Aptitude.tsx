@@ -68,7 +68,7 @@ export function AptitudePage() {
               className={cx("min-h-10 rounded-lg px-4 text-sm font-medium ring-1", count === c ? "bg-zinc-900 text-white ring-zinc-900 dark:bg-zinc-100 dark:text-zinc-950" : "ring-zinc-200 hover:bg-zinc-50 dark:ring-white/10 dark:hover:bg-white/5", focusRing)}>
               {c} questions</button>)}</div></fieldset>
         <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={timed} onChange={(e) => setTimed(e.target.checked)} />Timed: one minute a question, like most placement tests</label>
-        <Button size="lg" disabled={!sections.length} onClick={start}>Start the test</Button>
+        <Button size="lg" disabled={!sections.length} disabledReason="Pick at least one section first." onClick={start}>Start the test</Button>
       </Card>
       <Card>
         <h2 className="font-semibold">Recent scores</h2>
