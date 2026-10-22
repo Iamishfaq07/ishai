@@ -1,4 +1,3 @@
-import { SpotArt } from "../../components/SpotArt";
 import { useState, type KeyboardEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
@@ -97,7 +96,7 @@ export function JobTrackerPage() {
   const has = Boolean(tracker.data && tracker.data.length > 0);
   return (
     <>
-      <PageHeader art={<SpotArt kind="route" />}
+      <PageHeader
         icon={BookmarkCheck}
         title="Your applications"
         subtitle="Follow applications through interviews, offers and hiring, or record when you withdraw."

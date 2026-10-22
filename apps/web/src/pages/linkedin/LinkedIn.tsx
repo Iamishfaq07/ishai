@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { LinkedInState, ResumeSummary } from "@orbit/types";
 import { Check, CircleAlert, CircleCheck, IdCard, LinkedInScene, Upload, LoadGate, WorkingState, confirmDialog, cx, focusRing, safeLocal } from "@orbit/ui";
 import { Button, Card, EmptyState, ErrorNote, Field, Input, PageHeader, Textarea } from "../../components/ui";
+import { SpotArt } from "../../components/SpotArt";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -29,7 +30,7 @@ export function LinkedInPage() {
   const read = Boolean(s?.profile && s.audit);
   return (
     <AllowanceContext.Provider value={allowance}>
-      <PageHeader eyebrow="Your career profile" icon={IdCard} title="LinkedIn Optimizer" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and the fixes to paste in." art={read ? <LinkedInScene /> : undefined} />
+      <PageHeader eyebrow="Your career profile" icon={IdCard} title="LinkedIn Optimizer" subtitle="How your LinkedIn profile looks to a recruiter searching for your next role, and the fixes to paste in." art={read ? <SpotArt kind="profile" /> : undefined} />
       <LoadGate loading={state.loading && !s} variant="card" count={3} label="Getting your LinkedIn check">
         {state.error && !s ? (
           <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>
