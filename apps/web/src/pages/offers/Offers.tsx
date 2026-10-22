@@ -61,7 +61,7 @@ export function OffersPage() {
     <>
       <PageHeader art={<SpotArt kind="offer" />} eyebrow="Offers & decisions"
         icon={Icon}
-        title="Offers"
+        title="Offer & Salary"
         subtitle={
           india
             ? "What an offer really pays each month, how it compares with the market, and a plan to ask for more."

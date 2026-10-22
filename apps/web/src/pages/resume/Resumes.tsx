@@ -197,7 +197,7 @@ export function ResumeAiHomePage() {
         <div className="mb-6 space-y-6">
         <header className="workspace-heading">
           <div>
-            <h1 id="resume-ai-title">Your resumes</h1>
+            <h1 id="resume-ai-title">Resume Builder</h1>
             <p className="workspace-description">Every version with its ATS score. Make a copy to tailor one for each job.</p></div>
           <div className="flex flex-wrap items-center gap-2">
             <SpotArt kind="resume" className="mr-2 hidden w-28 lg:block" />
