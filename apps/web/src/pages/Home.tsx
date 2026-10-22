@@ -9,6 +9,7 @@ import { useAuth } from "../lib/auth";
 import { useAsync } from "../lib/useAsync";
 import { missionPath } from "./jobs/paths";
 import { summaryLine } from "./home/dashboard";
+import { SetupChecklist } from "./home/SetupChecklist";
 import { activeJobs, dayLabel, pickNextStop, weekStops, type Queue } from "./home/today";
 const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
 // The full seven-day action queue, folded under the week; /jobs/actions redirects here.
@@ -66,6 +67,9 @@ export function HomePage() {
     </header>
 
     <Suspense fallback={null}><SecurityNotice /></Suspense>
+
+    {/* A new account's few setup steps, until they're all done. */}
+    <SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} />
 
     <section aria-labelledby="next-stop" className="route-rise relative overflow-hidden rounded-2xl bg-white px-6 py-7 ring-1 ring-zinc-200 sm:px-8 dark:bg-zinc-900 dark:ring-white/10">
       <h2 id="next-stop" className="sr-only">Your next stop</h2>

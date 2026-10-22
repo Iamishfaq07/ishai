@@ -44,6 +44,21 @@ mode with an extension that asked for work in the last two days keep it; the ext
 - Adapters are covered by fixture tests. No real candidate application was submitted during development. A site
   showing confirmation is the worker's evidence; an ATS can still silently discard an application after that.
 
+## Quick setup on a free Ubuntu server (Oracle Cloud Always Free or any VPS)
+
+On an Ubuntu 22.04/24.04 server (x86 or ARM; 1 CPU and 6 GB memory is enough), signed in over SSH:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Iamishfaq07/ishai/main/deploy/setup-apply-worker.sh -o setup.sh
+bash setup.sh
+```
+
+It installs Docker, clones the repository, asks for the API address (default `https://api.orbitanswer.com`) and
+creates the worker secret, saves both in `deploy/apply-worker.env` (readable by that user only, never committed),
+and starts the worker with the Compose file below. Then, on the API (Railway → API service → Variables), set
+`ORBIT_HOSTED_APPLY=true` and `ORBIT_APPLY_WORKER_SECRET` to the same secret, and redeploy. `bash setup.sh` again
+updates the worker; `bash setup.sh status`, `logs` and `stop` do what they say. No inbound port needs opening.
+
 ## Owner deployment (after PR review)
 
 1. Deploy the API with migration `47b9e3d0a6f2` (`alembic upgrade head`). Existing accounts remain in browser mode.
