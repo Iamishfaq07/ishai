@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { JobOfferRecord, OfferInput, OfferMarket } from "@orbit/types";
@@ -57,7 +58,7 @@ export function OffersPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Offers & decisions"
+      <PageHeader art={<SpotArt kind="offer" />} eyebrow="Offers & decisions"
         icon={Icon}
         title="Offers"
         subtitle={

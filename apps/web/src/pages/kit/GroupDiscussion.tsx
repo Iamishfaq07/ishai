@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useEffect, useState } from "react";
 import { Check, Clock, RotateCcw, UsersRound, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
 import { Button, Card, PageHeader, Textarea } from "../../components/ui";
@@ -38,7 +39,7 @@ export function GroupDiscussionPage() {
   };
 
   return <div>
-    <PageHeader eyebrow="Interview preparation" icon={UsersRound} title="Group discussion practice"
+    <PageHeader art={<SpotArt kind="practice" />} eyebrow="Interview preparation" icon={UsersRound} title="Group discussion practice"
       subtitle="The GD round in campus placements and admissions: a topic, two minutes to plan, five to speak, then review what evaluators look for." />
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="space-y-4">

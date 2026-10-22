@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Gauge, Plus, Reveal, Target, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
@@ -60,7 +61,7 @@ export function ReadinessPage() {
   const plan = skills.slice(0, 5);
 
   return <div>
-    <PageHeader eyebrow="Interview preparation" icon={Gauge} title="Skill readiness"
+    <PageHeader art={<SpotArt kind="practice" />} eyebrow="Interview preparation" icon={Gauge} title="Skill readiness"
       subtitle="Every skill your target jobs ask for, how ready you are from the evidence you log, and what to work on next." />
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
       <div className="min-w-0 space-y-6">

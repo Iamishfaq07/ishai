@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useEffect, useMemo, useState } from "react";
 import { Brain, Check, Clock, Reveal, RotateCcw, X, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
 import { Button, Card, PageHeader } from "../../components/ui";
@@ -50,7 +51,7 @@ export function AptitudePage() {
   const score = useMemo(() => test ? test.filter((q) => answers[q.id] === q.answer).length : 0, [test, answers]);
 
   if (!test) return <div>
-    <PageHeader eyebrow="Interview preparation" icon={Brain} title="Aptitude practice"
+    <PageHeader art={<SpotArt kind="practice" />} eyebrow="Interview preparation" icon={Brain} title="Aptitude practice"
       subtitle="The quantitative, reasoning and verbal tests used in placement drives and screening rounds. Fresh questions every time, with worked answers." />
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <Card className="space-y-5">
@@ -82,7 +83,7 @@ export function AptitudePage() {
   if (done) {
     const pct = Math.round((score / test.length) * 100);
     return <div className="space-y-6">
-      <PageHeader eyebrow="Aptitude practice" icon={Brain} title={`You scored ${score} of ${test.length}`} subtitle={pct >= 80 ? "Strong. Most placement cut-offs sit between 60% and 75%." : pct >= 60 ? "Around typical cut-offs. Review the misses below, then try again." : "Review each explanation below; the patterns repeat across tests."}
+      <PageHeader art={<SpotArt kind="practice" />} eyebrow="Aptitude practice" icon={Brain} title={`You scored ${score} of ${test.length}`} subtitle={pct >= 80 ? "Strong. Most placement cut-offs sit between 60% and 75%." : pct >= 60 ? "Around typical cut-offs. Review the misses below, then try again." : "Review each explanation below; the patterns repeat across tests."}
         actions={<div className="flex gap-2"><Button variant="secondary" onClick={() => setTest(null)}>Change setup</Button><Button onClick={start}><RotateCcw className="h-4 w-4" /> New test</Button></div>} />
       <Reveal stagger className="grid gap-3 sm:grid-cols-3">{SECTIONS.filter((s) => test.some((q) => q.section === s.id)).map((s) => {
         const qs = test.filter((q) => q.section === s.id), ok = qs.filter((q) => answers[q.id] === q.answer).length;

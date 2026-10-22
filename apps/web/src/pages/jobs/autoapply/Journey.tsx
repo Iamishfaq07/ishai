@@ -1,3 +1,4 @@
+import { SpotArt } from "../../../components/SpotArt";
 import { Link } from "react-router-dom";
 import { LoadGate, Rocket, buttonClass } from "@orbit/ui";
 import { ErrorNote, PageHeader } from "../../../components/ui";
@@ -18,7 +19,7 @@ export function CareerJourneyPage() {
   const data = state.data;
   const next = data?.steps.find((step) => step.id === data.next_step);
   return <div className="space-y-6">
-    <PageHeader icon={Rocket} title="Auto-apply" subtitle="Orbit finds jobs that fit, prepares each application and sends what it can. You approve the rules once." actions={<Link to="/jobs/auto-apply" className={buttonClass("secondary", "sm")}>Settings</Link>} />
+    <PageHeader art={<SpotArt kind="search" />} icon={Rocket} title="Auto-apply" subtitle="Orbit finds jobs that fit, prepares each application and sends what it can. You approve the rules once." actions={<Link to="/jobs/auto-apply" className={buttonClass("secondary", "sm")}>Settings</Link>} />
     {next && <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-500/20 dark:bg-indigo-500/5" aria-label="Your next career step">
       <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your next step</p>
       <h2 className="mt-2 text-lg font-semibold">{next.title}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{next.detail}</p>

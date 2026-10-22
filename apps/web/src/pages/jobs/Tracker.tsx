@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
@@ -95,7 +96,7 @@ export function JobTrackerPage() {
   const has = Boolean(tracker.data && tracker.data.length > 0);
   return (
     <>
-      <PageHeader
+      <PageHeader art={<SpotArt kind="route" />}
         icon={BookmarkCheck}
         title="Your applications"
         subtitle="Follow applications through interviews, offers and hiring, or record when you withdraw."
@@ -293,8 +294,8 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
               <span className="text-xs font-normal text-zinc-600 tabular-nums dark:text-zinc-400">{columns[s].length}</span>
             </h3>
             <ul className="space-y-2.5">
-              {columns[s].slice(0, drawn).map((e) => (
-                <li key={e.id} data-flip={e.id}>
+              {columns[s].slice(0, drawn).map((e, i) => (
+                <li key={e.id} data-flip={e.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 6) + 1 }}>
                   <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
                 </li>
               ))}

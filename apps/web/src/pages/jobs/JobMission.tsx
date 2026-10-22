@@ -35,6 +35,7 @@ import { MISSION_TOOLS, isSnoozed, requirementTone, snooze, type MissionTool } f
 import { StagePill } from "./StagePill";
 import { RoomNavigation } from "./RoomNavigation";
 import { RouteLine, routeIndex } from "../../components/RouteLine";
+import { RouteMapArt } from "../../components/RouteMapArt";
 import { whenLabel } from "../home/today";
 import { useCandidateDraft } from "../../lib/useCandidateDraft";
 import { SnapshotSource } from "./SnapshotSource";
@@ -596,7 +597,9 @@ function NextStepCard({
   };
   const internal = step.to.startsWith("/");
   return (
-    <section aria-labelledby="next-title" className="rounded-2xl bg-white px-5 py-6 ring-1 ring-zinc-200 sm:px-7 dark:bg-zinc-900 dark:ring-white/10">
+    <section aria-labelledby="next-title" className="route-rise relative overflow-hidden rounded-2xl bg-white px-5 py-6 ring-1 ring-zinc-200 sm:px-7 dark:bg-zinc-900 dark:ring-white/10">
+      <RouteMapArt stops={Math.max(1, routeIndex(entry.status) + 2)} className="pointer-events-none absolute -right-6 bottom-0 hidden h-full max-h-48 w-auto md:block" />
+      <div className="relative md:pr-64">
       <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Next stop on this route</p>
       <h2 id="next-title" className="mt-1 font-title text-[1.5rem] font-semibold leading-tight sm:text-[1.75rem]">{step.title}</h2>
       <p className="mt-2 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">{step.why}</p>
@@ -617,6 +620,7 @@ function NextStepCard({
             Not now
           </Button>
         )}
+      </div>
       </div>
     </section>
   );

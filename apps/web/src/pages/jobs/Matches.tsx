@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { JobFeed, JobListing, JobPortalLink, JobPrefs, JobProfile, JobSort } from "@orbit/types";
@@ -55,7 +56,7 @@ export function JobMatchesPage() {
   const { profile } = useJobsAi();
   return (
     <>
-      <PageHeader
+      <PageHeader art={<SpotArt kind="search" />}
         icon={Search}
         title="Discover opportunities"
         subtitle="From companies' own career pages and remote job boards. You apply on the original site."
@@ -287,8 +288,8 @@ function Matches({ profile }: { profile: JobProfile }) {
         ) : (
           <>
             <ul className="space-y-3">
-              {items.map((job) => (
-                <li key={job.id}>
+              {items.map((job, i) => (
+                <li key={job.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 8) }}>
                   <JobCard
                     job={job}
                     showMatch={basis !== null}

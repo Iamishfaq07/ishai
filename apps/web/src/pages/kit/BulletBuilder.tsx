@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, CircleAlert, Wand2, cx, readJSON, safeLocal } from "@orbit/ui";
@@ -29,7 +30,7 @@ export function BulletBuilderPage() {
   const built = buildBullets(parts);
 
   return <div>
-    <PageHeader eyebrow="Resume Studio" icon={Wand2} title="Bullet builder"
+    <PageHeader art={<SpotArt kind="resume" />} eyebrow="Resume Studio" icon={Wand2} title="Bullet builder"
       subtitle="Turn what you did into a resume line recruiters read in seconds: the result, how much, and how you did it." />
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="space-y-6">

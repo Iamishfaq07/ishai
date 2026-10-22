@@ -1,3 +1,4 @@
+import { SpotArt } from "../components/SpotArt";
 import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { STORY_COMPETENCIES, type Story, type StoryCompetency, type StoryInput } from "@orbit/types";
@@ -460,7 +461,7 @@ export function StoriesPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Interview preparation"
+      <PageHeader art={<SpotArt kind="practice" />} eyebrow="Interview preparation"
         icon={BookOpen}
         title="Story bank"
         subtitle="Your real examples, in STAR form. When an interviewer asks “Tell me about a time…”, live answers use the story that fits."

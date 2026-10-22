@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Plus, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, CompanyLogo, Plus, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
 import type { JobStatus } from "@orbit/types";
-import { RouteLine, nextStop } from "../components/RouteLine";
+import { RouteLine, nextStop, routeIndex } from "../components/RouteLine";
+import { RouteMapArt } from "../components/RouteMapArt";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useAsync } from "../lib/useAsync";
@@ -66,9 +67,12 @@ export function HomePage() {
 
     <Suspense fallback={null}><SecurityNotice /></Suspense>
 
-    <section aria-labelledby="next-stop" className="rounded-2xl bg-white px-6 py-7 ring-1 ring-zinc-200 sm:px-8 dark:bg-zinc-900 dark:ring-white/10">
+    <section aria-labelledby="next-stop" className="route-rise relative overflow-hidden rounded-2xl bg-white px-6 py-7 ring-1 ring-zinc-200 sm:px-8 dark:bg-zinc-900 dark:ring-white/10">
       <h2 id="next-stop" className="sr-only">Your next stop</h2>
-      {!stop ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div> : <>
+      {/* The route picture: it lights as many stops as the furthest job has reached (one on a first visit). */}
+      {stop && <RouteMapArt stops={Math.max(1, ...jobs.map((j) => routeIndex(j.status) + 1)) + (stop.first ? 0 : 1)}
+        className="pointer-events-none absolute -right-6 bottom-0 hidden h-full max-h-56 w-auto md:block" />}
+      {!stop ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div> : <div className="relative md:pr-72">
         {stop.when && <p className="mb-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">{stop.when}</p>}
         <p className="max-w-3xl font-title text-[2rem] font-semibold leading-[1.15] tracking-[-0.015em] sm:text-[2.375rem]">{stop.title}</p>
         <p className="mt-3 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">{stop.detail}</p>
@@ -77,7 +81,7 @@ export function HomePage() {
           <Link className={buttonClass("primary", "lg")} to={stop.to}>{stop.action} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
           {stop.first && <Link className={textLink} to="/jobs/tracker?add=1">Or add a job you found elsewhere</Link>}
         </div>
-      </>}
+      </div>}
     </section>
 
     <section aria-labelledby="this-week">
@@ -88,7 +92,7 @@ export function HomePage() {
       </div>
       <div className="mt-4 overflow-x-auto pb-2" role="region" aria-label="This week's stops (scrolls sideways on small screens)" tabIndex={0}>
         <ol className="relative grid min-w-[44rem] auto-cols-fr grid-flow-col">
-          {week.map((day) => <li key={day.key} className="relative">
+          {week.map((day, i) => <li key={day.key} className="route-rise relative" style={{ ["--i" as string]: i + 2 }}>
             <div className="pr-2">
               <p className={cx("text-[13px] font-medium", day.key === "d0" ? "text-zinc-900 dark:text-zinc-100" : day.key === "past" ? "text-rose-700 dark:text-rose-300" : "text-zinc-600 dark:text-zinc-400")}>{day.label}</p>
               <p className="text-[13px] text-zinc-500 dark:text-zinc-400">{day.date ?? "\u00a0"}</p>
@@ -117,14 +121,18 @@ export function HomePage() {
       </div>
       {tracker.error && !tracker.data ? <p className={cx("mt-4", quiet)}>Your jobs didn't load. <button type="button" onClick={reloadTracker} className={cx("rounded underline underline-offset-4", focusRing)}>Try again</button></p>
         : !tracker.data ? <div className="mt-4"><Skeleton variant="line" count={3} label="Loading your jobs" /></div>
-        : jobs.length === 0 ? <p className={cx("mt-4 max-w-xl", quiet)}>Routes appear here as you save jobs. <Link className={textLink} to="/jobs/matches">Find jobs</Link> or <Link className={textLink} to="/jobs/tracker?add=1">add one you found elsewhere</Link>.</p>
-        : <ul className="mt-3 divide-y divide-zinc-200 dark:divide-white/10">{jobs.slice(0, 6).map((job) => {
+        : jobs.length === 0 ? <div className="mt-4 flex flex-wrap items-center gap-6 rounded-2xl border border-dashed border-zinc-300 p-6 dark:border-white/15">
+            <RouteMapArt stops={1} className="h-24 w-auto" />
+            <p className={cx("max-w-md", quiet)}>Routes appear here as you save jobs: each one gets its own line from saved to offer. <Link className={textLink} to="/jobs/matches">Find jobs</Link> or <Link className={textLink} to="/jobs/tracker?add=1">add one you found elsewhere</Link>.</p>
+          </div>
+        : <ul className="mt-3 divide-y divide-zinc-200 dark:divide-white/10">{jobs.slice(0, 6).map((job, i) => {
           const upcoming = job.next_at && Date.parse(job.next_at) >= new Date().setHours(0, 0, 0, 0);
           const next = nextStop(job.status);
-          return <li key={job.id}>
+          return <li key={job.id} className="route-rise" style={{ ["--i" as string]: i + 4 }}>
             <Link to={missionPath(job.id)} className={cx("grid gap-x-6 gap-y-2 rounded-lg py-4 hover:bg-zinc-100/70 sm:grid-cols-[minmax(0,1fr)_17rem_8rem] sm:items-center sm:px-2 dark:hover:bg-white/[0.04]", focusRing)}>
-              <span className="min-w-0"><span className="block text-[13px] text-zinc-600 dark:text-zinc-400">{job.company}</span>
-                <span className="block font-semibold [overflow-wrap:anywhere]">{job.title}</span></span>
+              <span className="flex min-w-0 items-center gap-3"><CompanyLogo company={job.company} size="sm" />
+                <span className="min-w-0"><span className="block text-[13px] text-zinc-600 dark:text-zinc-400">{job.company}</span>
+                <span className="block font-semibold [overflow-wrap:anywhere]">{job.title}</span></span></span>
               <RouteLine status={job.status} className="w-full max-w-[12rem] sm:hidden" />
               <RouteLine status={job.status} labels className="hidden w-full sm:flex" />
               <span className="text-[13px] sm:text-right">{upcoming

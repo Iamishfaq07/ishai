@@ -15,7 +15,7 @@ export function RoomNavigation({ tab, suggested, onSelect }: { tab: MissionTool;
     <ul className="flex min-w-max gap-1">
       {ORDER.map((item) => <li key={item.id}>
         <button type="button" aria-controls="mission-tool-panel" aria-current={tab === item.id ? "page" : undefined} onClick={() => onSelect(item.id)}
-          className={cx("relative flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-t-md px-3 text-sm font-medium",
+          className={cx("route-tab relative flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-t-md px-3 text-sm font-medium",
             tab === item.id ? "text-zinc-900 after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-indigo-600 dark:text-zinc-100 dark:after:bg-indigo-400"
               : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100", focusRing)}>
           {item.label}

@@ -11,6 +11,7 @@ import { useAuth } from "../../lib/auth";
 import { useAsync } from "../../lib/useAsync";
 import { linkButton } from "../jobs/links";
 import { Stat, ToolHub, type ToolCard } from "../prepare/parts";
+import { RouteMapArt } from "../../components/RouteMapArt";
 import { CareerIdentity } from "./CareerIdentity";
 
 const identityPath = "/v1/jobs/launchpad/identity";
@@ -115,6 +116,8 @@ export function MyCareerPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><h2 id="setup" className="font-display text-xl font-semibold">{done === steps.length ? "Your profile is set up" : done === 0 ? "Set up your profile, one step at a time" : "Finish setting up your profile"}</h2>
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{done === 0 ? `${steps.length} short steps, in any order.` : `${done} of ${steps.length} done.`} Each one makes matches, tailoring and interview prep use your real experience.</p></div>
+        {/* The route picture lights a stop for every two steps done, so setup reads as a route too. */}
+        <RouteMapArt stops={Math.min(4, 1 + Math.floor(done / 2))} className="hidden h-20 w-auto shrink-0 lg:block" />
       </div>
       {done > 0 && <div className="mt-4"><Progress done={done} total={steps.length} /></div>}
       <Reveal as="ol" stagger className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{steps.map((s) => <li key={s.label}>

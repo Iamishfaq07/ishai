@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { ResumeSummary } from "@orbit/types";
@@ -70,7 +71,7 @@ export function JobOutreachPage() {
 
   return (
     <AllowanceContext.Provider value={allowance}>
-      <PageHeader
+      <PageHeader art={<SpotArt kind="route" />}
         icon={Send}
         title="People & messages"
         subtitle="Keep your contacts, find someone at a company and write a thoughtful message—all in one place."
