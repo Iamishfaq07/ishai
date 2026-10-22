@@ -24,7 +24,7 @@ export function ActivityMap({ entries }: { entries: JobTrackerEntry[] }) {
   return <section aria-labelledby="activity-map" className="workspace-panel p-5">
     <div className="flex flex-wrap items-baseline justify-between gap-2">
       <h2 id="activity-map" className="font-semibold">Your search, day by day</h2>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400"><span className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{run}</span>-day streak · <span className="tabular-nums">{active}</span> active days</p>
+      <p className="text-sm text-zinc-600 dark:text-zinc-400"><span className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{run}</span>-day streak · <span className="tabular-nums">{active}</span> active {active === 1 ? "day" : "days"}</p>
     </div>
     <div className="mt-3 overflow-x-auto" tabIndex={0} role="region" aria-label="Activity map (scrolls sideways)">
       <svg width={width} height={height} role="img" aria-label={summary} className="block">

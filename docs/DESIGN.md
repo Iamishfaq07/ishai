@@ -1,4 +1,13 @@
-> Current direction, 2026-10-21: the owner explicitly replaces the purple/deep-space default with warm paper, graphite, restrained Slate blue, opaque surfaces and editorial hierarchy. This supersedes older colour-direction statements below. New default/legacy alias, shared headers/logo and Today layout are implemented but unverified; no tests or visual checks were run. See [enterprise visual slice](implementation/UNIFIED_ENTERPRISE_DESIGN.md).
+> **Current direction, 2026-10-22: Route map** (replaces the 2026-10-21 Slate note; older colour statements below are history). Contract: `apps/web/.impeccable/surfaces/src-pages-home-tsx.md`; product context: `PRODUCT.md`.
+>
+> - **Thesis:** every job is a route; each screen names the next stop first.
+> - **Colour:** warm paper and graphite ink; one accent, **Route green** (`route`, default; legacy `nebula` maps to it). Ramp 50–950 in `packages/ui/src/design/design.ts`; white on 600 is 6.5:1, 700 on paper 7.8:1, 400 on dark 6.7:1. The accent marks the route line, the next stop and the one main action only. Rose means past due; nothing else is coloured.
+> - **Type:** titles (greeting, next stop, job title) in Source Serif 4 via `font-title` (`html.app-shell .font-title`); everything else IBM Plex Sans. Smallest text 13 px. Two faces, no tracked capitals, no eyebrows.
+> - **Route line** (`apps/web/src/components/RouteLine.tsx`): Saved → Applied → Interviews → Offer. Reached stops filled, the next stop ringed in the accent, the rest hollow; a closed job shows its stage pill instead. Labels carry the stage, so nothing depends on colour.
+> - **Today** (`pages/Home.tsx`, `pages/home/today.ts`): next stop (when, title, reason, one button), the This week strip (one line, dated stops by day, past due first), Your routes (one row per active job with its route line), and the full 7-day queue folded underneath. No stat tiles, quick-action grids or tool lists.
+> - **Job page** (`pages/jobs/JobMission.tsx`): one header (company, serif title, route line, next date), the next stop on this route, one row of sections in route order (Requirements, Resume, Company, Practice, Prep plan, Interviews, History, Offer; the stage's suggested section carries a dot; every `?tab=` link still works), the section's main work open and the extras folded (`Fold`). The records aside sits last on phones. The page uses `overflow-wrap: break-word`, never `anywhere`, so words don't split on phones.
+> - **Surfaces:** flat; a 1 px ring, no shadow, no gradient border or glass. Disclosures are full-width rows of at least 48 px.
+
 
 # Design system — Orbit enterprise workbench
 

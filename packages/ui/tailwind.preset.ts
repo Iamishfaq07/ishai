@@ -40,6 +40,8 @@ export default {
         sans: ["IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", "Inter", "ui-sans-serif", "system-ui",
                "-apple-system", "Segoe UI", ...SCRIPT_FALLBACKS, "sans-serif"],
         display: ["IBM Plex Sans Variable", "IBM Plex Sans", "Inter Variable", "Inter", "ui-sans-serif", "system-ui", ...SCRIPT_FALLBACKS, "sans-serif"],
+        // The title face (Route map direction): page titles and Today's next stop; falls back to the product face.
+        title: ["Source Serif 4 Variable", "Source Serif 4", "Georgia", "IBM Plex Sans Variable", ...SCRIPT_FALLBACKS, "serif"],
         mono: ["JetBrains Mono Variable", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
       },
       boxShadow: {

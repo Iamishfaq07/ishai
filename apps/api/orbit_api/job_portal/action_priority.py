@@ -38,7 +38,7 @@ def priority(item: dict[str, Any], now: datetime) -> tuple[int, str, str]:
         rank, why = 1, "Your saved interview is within the next 24 hours."
     elif item["overdue"]:
         rank, why = 2, "Your saved follow-up date or enabled reminder rule is past due."
-    elif kind == "application":
+    elif kind == "application" and "source_status" in item:
         state = item["source_status"]
         rank = 3 if state == "needs_answer" else 4 if state == "review" else 5
         why = {"needs_answer": "This application is waiting for an answer only you can provide.",
@@ -47,6 +47,10 @@ def priority(item: dict[str, Any], now: datetime) -> tuple[int, str, str]:
             "handoff": "Orbit handed this application back to you to finish.",
             "failed": "The saved result needs review before any retry.",
             "expired": "Expired materials need review before a new attempt."}[state]
+    elif kind == "application" and item.get("rule"):
+        # Workflow-rule suggestions (a saved job to decide on, contacts to find) carry no application packet status,
+        # and no date: they come after everything that is actually dated.
+        rank, why = 7, "A workflow rule you turned on suggests this step."
     else:
         rank, why = 6, "This is the next saved date in your seven-day plan."
     item["priority_reason"] = why
