@@ -102,9 +102,9 @@ export function PreparePage() {
         : next ? <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
           <div>
             <p className="flex items-center gap-2 text-[13px] font-medium text-indigo-700 dark:text-indigo-300">
-              <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-600" /></span>
+              <span aria-hidden className="h-2 w-2 rounded-full bg-indigo-600 dark:bg-indigo-400" />
               Up next · {countdown(next.next_at!, now)}</p>
-            <h2 id="up-next" className="mt-2 font-display text-2xl font-semibold">{next.title} · {next.company}</h2>
+            <h2 id="up-next" className="mt-2 font-title text-[1.75rem] font-semibold leading-tight">{next.title} · {next.company}</h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{new Date(next.next_at!).toLocaleString(undefined, { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })}</p>
             <ol className="mt-4 grid gap-2 sm:grid-cols-2">{([
               ["plan", "Follow the prep plan", ListChecks], ["company", "Research the company and people", Building2],
