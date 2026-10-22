@@ -14,6 +14,10 @@ Key facts:
 - Also in the account: LinkedIn AI (score a LinkedIn profile against a target role), Code AI (coding-round practice with an interviewer's review), Offer AI (what an offer pays and how it compares, with a plan to ask for more) and Learning AI.
 - Privacy: interview audio is transcribed as it streams and never stored; documents stay in the user's account and can be deleted at any time.
 
+## Reading these pages as Markdown
+
+The product pages and interview guides below are also served as plain Markdown: add `.md` to its address (the front page is https://orbitanswer.com/index.md), for example https://orbitanswer.com/resume-ai.md or https://orbitanswer.com/companies/tcs.md. A request with `Accept: text/markdown` to the page itself gets the same.
+
 ## Product pages
 
 - [Orbit AI front page](https://orbitanswer.com/): all the tools, pricing (section "Pricing") and common questions (section "Questions people ask first")

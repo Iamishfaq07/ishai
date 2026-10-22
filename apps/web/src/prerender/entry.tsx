@@ -10,8 +10,9 @@ import { StaticRouter } from "react-router-dom";
 import { SpaceBackdrop } from "@orbit/ui";
 import { AuthProvider } from "../lib/auth";
 import { pageDocument, sitemapXml, type PageAssets } from "./document";
+import { markdownFile, pageMarkdown } from "./markdown";
 import { publicRoutes, type PageMeta } from "./routes";
-import { url } from "./seo";
+import { SITE, url } from "./seo";
 
 export type { PageMeta, PublicRoute } from "./routes";
 
@@ -28,7 +29,7 @@ export function renderPage(path: string, page: ReactNode): string {
 }
 
 /** The files to write into dist/: every registered page with a component, as a whole document (from the built
- *  index.html, with `assets`' fonts preloaded), and the sitemap of every registered page. */
+ *  index.html, with `assets`' fonts preloaded), and the sitemap of every registered page; each page that may be indexed also as Markdown. */
 export async function buildSite(
   template: string,
   pageMeta: PageMeta,
@@ -48,6 +49,8 @@ export async function buildSite(
       continue;
     }
     files.push({ file: route.file, contents: pageDocument(template, { path: route.path, head: route.head, html }, assets) });
+    // Its Markdown copy, for AI assistants and agents (markdown.ts); a draft has none.
+    if (!route.head.noindex) files.push({ file: markdownFile(route.path), contents: pageMarkdown(route.head, html, SITE, route.lastmod) });
   }
   // The sitemap lists what may be found in search: not a draft waiting for review (noindex).
   const listed = routes.filter((r) => !r.head?.noindex);
