@@ -91,8 +91,10 @@ const SPOTS = {
   ),
   account: () => (
     <>
-      <circle cx="24" cy="19" r="4.5" className={`fill-white dark:fill-zinc-900 ${ACCENT} ${POP}`} strokeWidth={W} style={at(100)} />
-      <Draw d="M16 33a8 6.5 0 0 1 16 0" delay={250} />
+      {/* A static card behind the person, so the tile is never blank before the drawing plays. */}
+      <rect x="10" y="10" width="28" height="28" rx="6" className={PAPER} strokeWidth={W} />
+      <circle cx="24" cy="21" r="4.5" className={`fill-white dark:fill-zinc-900 ${ACCENT} ${POP}`} strokeWidth={W} style={at(100)} />
+      <Draw d="M16 34a8 6.5 0 0 1 16 0" delay={250} />
     </>
   ),
   security: () => (
