@@ -10,9 +10,8 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useAsync } from "../../lib/useAsync";
 import { linkButton } from "../jobs/links";
-import { Stat, Tool, type ToolCard } from "../prepare/parts";
+import { Stat, ToolHub, type ToolCard } from "../prepare/parts";
 import { CareerIdentity } from "./CareerIdentity";
-import { MoreTools } from "../tools/MoreTools";
 
 const identityPath = "/v1/jobs/launchpad/identity";
 
@@ -82,6 +81,18 @@ export function MyCareerPage() {
     ] },
   ];
 
+  // Three tools for what's missing first: the resume, then stories, then contacts; otherwise keeping the search going.
+  const byTitle = (t: string) => groups.flatMap((g) => g.items).find((x) => x.title === t);
+  const storyCount = stories.data?.length ?? null, contactCount = contacts.data?.length ?? null;
+  const pick = identity.data && !identity.data.master
+    ? { reason: "Start with your resume: matches, tailoring and interview prep all read it.", titles: ["Resume Studio", "LinkedIn profile", "GitHub projects"] }
+    : storyCount !== null && storyCount < 3
+      ? { reason: "Save a few stories: they make interview answers quick and true.", titles: ["Story bank", "GitHub projects", "Bullet builder"] }
+      : contactCount === 0
+        ? { reason: "Add the people who can help: referrals start with a saved contact.", titles: ["Contacts & outreach", "Search preferences", "Weekly progress"] }
+        : { reason: "Keep your search moving.", titles: ["Weekly progress", "Search preferences", "Offers & decisions"] };
+  const pickTools = { reason: pick.reason, tools: pick.titles.map(byTitle).filter((t): t is ToolCard => Boolean(t)) };
+
   return <div className="workspace-page">
     <header className="workspace-heading">
       <div><h1>My Career</h1>
@@ -118,13 +129,7 @@ export function MyCareerPage() {
 
     {user && <CareerIdentity key={user.id} userId={user.id} />}
 
-    {groups.map((g) => <section key={g.title} aria-labelledby={`grp-${g.title}`}>
-      <h2 id={`grp-${g.title}`} className="font-semibold">{g.title}</h2>
-      <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{g.about}</p>
-      <Reveal as="ul" stagger className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
-    </section>)}
-
-    <MoreTools home="career" shown={[...groups.flatMap((g) => g.items.map((t) => t.to)), "/resume-ai"]} />
+    <ToolHub id="career-tools" home="career" reason={pickTools.reason} suggested={pickTools.tools} groups={groups} allTitle="All profile and search tools" />
 
     <section aria-labelledby="next-move" className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-5">
       <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300"><Briefcase className="h-4 w-4" aria-hidden /></span>

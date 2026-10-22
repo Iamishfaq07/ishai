@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CountUp, cx, focusRing } from "@orbit/ui";
+import { toolIcon, toolsFor, type Home } from "../tools/homes";
 
 /** Shared pieces of the task hubs (Prepare, My Career, Copilot): a tool card and a stat tile. */
 export type Icon = ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
@@ -47,3 +48,36 @@ export function Stat({ label, value, hint }: { label: string; value: number | nu
   </div>;
 }
 
+
+export interface ToolGroup { title: string; about: string; items: ToolCard[] }
+
+/**
+ * A hub's tools: up to three suggested for where the person is now (with the reason), then every tool folded under
+ * one row, grouped, with the rest of this tab's catalogue at the end. The next step above stays the loudest thing.
+ */
+export function ToolHub({ id, home, reason, suggested, groups, allTitle }: {
+  id: string; home: Home; reason: string; suggested: ToolCard[]; groups: ToolGroup[]; allTitle: string;
+}) {
+  const extras = toolsFor(home, groups.flatMap((g) => g.items.map((t) => t.to)))
+    .map((t): ToolCard => ({ title: t.name, detail: t.line, icon: toolIcon(t), to: t.href, ai: t.ai }));
+  const all = extras.length ? [...groups, { title: "Also here", about: "More tools that belong to this tab.", items: extras }] : groups;
+  const total = all.reduce((n, g) => n + g.items.length, 0);
+  return <>
+    <section aria-labelledby={`${id}-suggested`}>
+      <h2 id={`${id}-suggested`} className="font-semibold">Suggested for you</h2>
+      <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{reason}</p>
+      <ul className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-3">{suggested.slice(0, 3).map((t) => <li key={t.title}><Tool t={t} /></li>)}</ul>
+    </section>
+    <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+      <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>
+        <span>{allTitle} <span className="font-normal text-zinc-600 dark:text-zinc-400">({total})</span></span>
+        <ArrowRight className="h-4 w-4 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />
+      </summary>
+      <div className="space-y-6 px-5 pb-5">{all.map((g) => <section key={g.title} aria-labelledby={`${id}-${g.title}`}>
+        <h3 id={`${id}-${g.title}`} className="text-sm font-semibold">{g.title}</h3>
+        <p className="mt-0.5 text-[13px] text-zinc-600 dark:text-zinc-400">{g.about}</p>
+        <ul className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</ul>
+      </section>)}</div>
+    </details>
+  </>;
+}
