@@ -6,6 +6,8 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AtsCheck, AtsReport, CoverLetterLength, EvidenceItem, CoverLetterTone, Resume, ResumeData, ResumeDesign, ResumeFixResponse, ResumeInput, ResumeSpacing, ResumeSuggestion } from "@orbit/types";
 import {
   Callout,
+  ChevronDown,
+  buttonClass,
   ArrowLeft,
   ArrowUpRight,
   Briefcase,
@@ -73,6 +75,7 @@ import { ACCENTS, FONTS, LINE_HEIGHTS, SPACING, addSkills, looksFor, templatesFo
 import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
 import { scoreTone } from "./Resumes";
+import { scoreWord } from "./product";
 import { SaveToDocuments } from "./SaveToDocuments";
 import { ResumeCareerActions } from "./ResumeCareerActions";
 
@@ -748,17 +751,21 @@ function ResumeEditor() {
               type="button"
               onClick={() => setTab("score")}
               className={cx("relative flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1", scoreTone(report.score), focusRing)}
-              aria-label={`${report.score} ATS score, ${report.verdict}, out of 100. Show details`}
+              aria-label={`${report.score} ATS score out of 100: ${scoreWord(report.score)}. Show the fixes`}
             >
               <ScoreCount score={report.score} className="font-display text-xl font-semibold" />{" "}
               <span className="text-left text-xs leading-tight">
                 ATS score{" "}
                 <br />
-                {report.verdict}
+                {scoreWord(report.score)}
               </span>
             </button>
           )}
           <SaveToDocuments resume={resume} />
+          {/* Word, JSON and the website fold into one menu: Download PDF is the one most people need. */}
+          <details className="group relative">
+            <summary className={cx(buttonClass("ghost"), "list-none cursor-pointer")}>More formats <ChevronDown className="h-4 w-4 motion-safe:transition-transform group-open:rotate-180" aria-hidden /></summary>
+            <div className="absolute right-0 z-30 mt-1 flex w-56 flex-col items-stretch gap-1 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-popover dark:border-white/10 dark:bg-zinc-900 [&>*]:justify-start">
           <DownloadWord resume={resume} confirm={okToDownload} />
           <Button
             variant="ghost"
@@ -780,6 +787,8 @@ function ResumeEditor() {
           >
             <Globe className="h-4 w-4" /> Website
           </Button>
+            </div>
+          </details>
           <Button onClick={() => void okToDownload().then((ok) => ok && printDoc("resume"))}>
             <Download className="h-4 w-4" /> Download PDF
           </Button>
@@ -825,8 +834,8 @@ function ResumeEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          {(!guided || tab !== "content") && <div className="sticky top-16 z-10 mb-4 flex gap-1 rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900">
-            <div role="tablist" aria-label="Resume editor" className="flex min-w-0 flex-1 flex-wrap gap-1">
+          {(!guided || tab !== "content") && <div className="sticky top-16 z-10 -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-zinc-200 bg-[rgb(var(--canvas))] px-4 sm:mx-0 sm:px-0 dark:border-white/10">
+            <div role="tablist" aria-label="Resume editor" className="flex min-w-max flex-1 gap-1">
               {TABS.map(({ id, label, short, icon: Icon }) => (
                 <button
                   key={id}
@@ -836,17 +845,17 @@ function ResumeEditor() {
                   title={short ? label : undefined}
                   type="button"
                   onClick={() => setTab(id)}
+                  aria-current={tab === id ? "page" : undefined}
                   className={cx(
-                    "flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-1 py-1.5 xl:px-2 text-sm font-medium",
-                    "motion-safe:transition-[background-color,color,box-shadow] motion-safe:duration-200",
-                    tab === id ? "bg-white text-indigo-700 shadow-sm ring-1 ring-zinc-200 dark:bg-white/10 dark:text-indigo-300 dark:ring-white/10" : "text-zinc-500 hover:bg-white/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/5 dark:hover:text-white",
+                    "route-tab relative flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-t-md px-3 text-sm font-medium",
+                    tab === id ? "text-zinc-900 after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-indigo-600 dark:text-zinc-100 dark:after:bg-indigo-400" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100",
                     focusRing,
                   )}
                 >
-                  {/* Icons alone on phones, labels from there up (seven items leave no room for both), short ones where
-                      the editor sits beside the preview; a column too narrow even for those wraps onto a second row. */}
-                  <Icon className="h-4 w-4 shrink-0 sm:max-xl:hidden" aria-hidden />
-                  <span className={cx("hidden sm:inline", short && "lg:hidden")}>{label}</span>
+                  {/* One flat row that scrolls sideways where it must: the short label beside the preview, the full one
+                      on a wide editor column. */}
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className={cx(short && "lg:hidden")}>{short ?? label}</span>
                   {short && <span className="hidden lg:inline">{short}</span>}
                   {id === "ai" && queue.length > 0 && <span className="rounded-full bg-indigo-600 px-1.5 text-[0.625rem] text-white">{queue.length}</span>}
                 </button>
@@ -858,7 +867,7 @@ function ResumeEditor() {
               aria-label="Outreach is now in Jobs: open it for this resume"
               title="Outreach is now in Jobs"
               className={cx(
-                "flex shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2 py-1.5 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
+                "flex min-h-11 shrink-0 items-center justify-center gap-1 whitespace-nowrap px-2 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
                 focusRing,
               )}
             >

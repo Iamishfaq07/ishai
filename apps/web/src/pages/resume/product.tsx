@@ -82,13 +82,17 @@ export function ResumeAiTabs() {
   return <ProductTabs label="Resume" sections={RESUME_AI_SECTIONS} />;
 }
 
-/** The colour of an ATS score, from red (needs work) to green (passes). */
+/** The colour of an ATS score: the accent once it's strong, a tint of it on the way, neutral ink below that. A low
+ *  score is a starting point with fixes attached, not an alarm, so it never wears red or orange. */
 export function scoreTone(score: number): string {
   return score >= 80
-    ? "bg-emerald-500/10 text-emerald-800 ring-emerald-500/25 dark:text-emerald-300"
+    ? "bg-indigo-600 text-white ring-indigo-600 dark:bg-indigo-400 dark:text-zinc-950 dark:ring-indigo-400"
     : score >= 65
-      ? "bg-sky-500/10 text-sky-700 ring-sky-500/25 dark:text-sky-300"
-      : score >= 45
-        ? "bg-amber-500/10 text-amber-800 ring-amber-500/25 dark:text-amber-300"
-        : "bg-rose-500/10 text-rose-700 ring-rose-500/25 dark:text-rose-300";
+      ? "bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-500/15 dark:text-indigo-200 dark:ring-indigo-400/30"
+      : "bg-white text-zinc-800 ring-zinc-200 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-white/10";
+}
+
+/** The score's word, said kindly: what's next, not a grade. */
+export function scoreWord(score: number): string {
+  return score >= 80 ? "Strong" : score >= 65 ? "Good" : score >= 45 ? "Getting there" : "Room to grow";
 }
