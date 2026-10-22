@@ -84,7 +84,7 @@ export function MyCareerPage() {
 
   return <div className="workspace-page">
     <header className="workspace-heading">
-      <div><p className="workspace-eyebrow">Your career profile</p><h1>My Career</h1>
+      <div><h1>My Career</h1>
         <p className="workspace-description">Your resume, stories and direction in one place. Everything you apply and interview with starts here.</p></div>
       <div className="flex flex-wrap gap-2">
         <Link to="/jobs/profile" className={linkButton("secondary")}><Search className="h-4 w-4" aria-hidden /> Search preferences</Link>
@@ -92,19 +92,20 @@ export function MyCareerPage() {
       </div>
     </header>
 
-    <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {/* Counts only once there is something to count: a row of empty tiles is not encouragement. */}
+    {[resumes.data?.length, stories.data?.length, contacts.data?.length, identity.data?.skills.length].some((n) => n !== 0) && <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Stat label="Resumes" value={resumes.data ? resumes.data.length : null} hint="Master and job copies" />
       <Stat label="Stories" value={stories.data ? stories.data.length : null} hint="Ready for interviews" />
       <Stat label="Contacts" value={contacts.data ? contacts.data.length : null} hint="People you've saved" />
       <Stat label="Skills on resume" value={identity.data ? identity.data.skills.length : null} hint="From your master resume" />
-    </Reveal>
+    </Reveal>}
 
     {!loading && <Reveal as="section" aria-labelledby="setup" className="workspace-panel p-5 sm:p-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 id="setup" className="font-display text-xl font-semibold">{done === steps.length ? "Your profile is set up" : "Finish setting up your profile"}</h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{done} of {steps.length} in place. Each one makes matches, tailoring and interview prep use your real experience.</p></div>
+        <div><h2 id="setup" className="font-display text-xl font-semibold">{done === steps.length ? "Your profile is set up" : done === 0 ? "Set up your profile, one step at a time" : "Finish setting up your profile"}</h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{done === 0 ? `${steps.length} short steps, in any order.` : `${done} of ${steps.length} done.`} Each one makes matches, tailoring and interview prep use your real experience.</p></div>
       </div>
-      <div className="mt-4"><Progress done={done} total={steps.length} /></div>
+      {done > 0 && <div className="mt-4"><Progress done={done} total={steps.length} /></div>}
       <Reveal as="ol" stagger className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{steps.map((s) => <li key={s.label}>
         <Link to={s.to} className={cx("group flex min-h-12 items-center gap-3 rounded-lg border px-3 py-2 text-sm motion-safe:transition-colors", s.done
           ? "border-emerald-200 bg-emerald-50/60 text-emerald-900 dark:border-emerald-500/20 dark:bg-emerald-500/5 dark:text-emerald-100"

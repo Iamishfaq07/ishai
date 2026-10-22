@@ -69,7 +69,7 @@ export function SessionsPage() {
   return (
     <div className="workspace-page">
       <header className="workspace-heading">
-        <div><p className="workspace-eyebrow">Interview copilot</p><h1>Copilot</h1>
+        <div><h1>Copilot</h1>
           <p className="workspace-description">Live help during real calls where AI assistance is permitted, and every transcript, answer and summary afterwards.</p></div>
         <div className="flex flex-wrap gap-2">
           <Link to="/prepare" className={linkButton("secondary")}><Target className="h-4 w-4" aria-hidden /> Rehearse first</Link>

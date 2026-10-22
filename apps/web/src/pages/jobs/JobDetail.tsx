@@ -168,7 +168,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
           <TrackButton actions={actions} />
           {entry && (
             <Link to={missionPath(entry.id)} className={linkButton("secondary", "sm")}>
-              Mission room <ArrowRight className="h-4 w-4" aria-hidden />
+              Open your job page <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
           )}
           {entry && entry.status !== "offer" && entry.status !== "rejected" && (
