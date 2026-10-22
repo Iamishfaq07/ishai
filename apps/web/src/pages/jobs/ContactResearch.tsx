@@ -15,7 +15,7 @@ const post = <T,>(id: string, action: string, body: unknown) => api.call<T>(`${r
   method: "POST", body: JSON.stringify(body), timeoutMs: 120_000,
 });
 
-export default function ContactResearch({ listingId, applicationId, onSaved }: { listingId: string | null; applicationId?: string; onSaved: () => void }) {
+export default function ContactResearch({ listingId, applicationId, onSaved, autoRun = false }: { listingId: string | null; applicationId?: string; onSaved: () => void; autoRun?: boolean }) {
   const selectId = useId();
   const { tracker } = useJobsAi();
   const jobs = tracker.data ?? [];
@@ -31,19 +31,19 @@ export default function ContactResearch({ listingId, applicationId, onSaved }: {
     {tracker.error && <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>}
     {!applicationId && listingId && jobs.length > 0 && !target && <p className="rounded-xl bg-amber-500/10 p-3 text-sm">The linked job is not in your tracker. Save it first, or explicitly choose a different saved job to research.</p>}
     {!jobs.length ? <p className="text-sm">Save a job in <Link className="underline" to="/jobs/matches">Matches</Link> or add it to your tracker to start contact research.</p> :
-      target ? <JobNetwork key={target.id} applicationId={target.id} onSaved={onSaved} /> : <p className="text-sm">This opportunity is unavailable. Return to Applications and choose an owned saved job.</p>}
+      target ? <JobNetwork key={target.id} applicationId={target.id} onSaved={onSaved} autoRun={autoRun} /> : <p className="text-sm">This opportunity is unavailable. Return to Applications and choose an owned saved job.</p>}
   </section>;
 }
 
-function JobNetwork({ applicationId, onSaved }: { applicationId: string; onSaved: () => void }) {
+function JobNetwork({ applicationId, onSaved, autoRun }: { applicationId: string; onSaved: () => void; autoRun: boolean }) {
   const state = useAsync(() => api.call<NetworkContext>(root(applicationId)), [applicationId], `network:${applicationId}`);
   return <>
     {state.error && <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>}
-    {state.data ? <Workspace data={state.data} reload={state.reload} onSaved={onSaved} /> : <p className="text-sm">Checking your saved contacts and company history…</p>}
+    {state.data ? <Workspace data={state.data} reload={state.reload} onSaved={onSaved} autoRun={autoRun} /> : <p className="text-sm">Checking your saved contacts and company history…</p>}
   </>;
 }
 
-function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: () => void; onSaved: () => void }) {
+function Workspace({ data, reload, onSaved, autoRun }: { data: NetworkContext; reload: () => void; onSaved: () => void; autoRun: boolean }) {
   const inputId = useId();
   const id = data.job.id;
   const [pageUrl, setPageUrl] = useState("");
@@ -77,23 +77,24 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
     finally { pending.current = false; if (active.current) setBusy(false); }
   }
   const saved = (contact: JobContact) => { setTarget(contact); reload(); onSaved(); };
+  // Opened by "Find HR and team contacts": the search starts at once, so the first thing shown is people, not a form.
+  const started = useRef(false);
+  useEffect(() => {
+    if (!autoRun || started.current || !data.web_search_enabled) return;
+    started.current = true;
+    void find(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the finder opens
+  }, []);
   return <div className="space-y-5">
-    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
-      <h3 className="font-semibold">Start with people you already saved</h3>
+    {data.saved_contacts.length > 0 && <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+      <h3 className="font-semibold">People you already saved</h3>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Contacts at {data.job.company}, including people saved for earlier roles. A saved contact does not automatically mean you know them.</p>
       {data.saved_contacts.length ? <ul className="mt-3 space-y-2">{data.saved_contacts.map((contact) => <li key={contact.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-3 dark:bg-zinc-950">
         <div><p className="text-sm font-semibold">{contact.name}</p><p className="text-xs text-zinc-500">{contact.title || "Role not recorded"}{contact.application_label ? ` · ${contact.application_label}` : ""}</p>
           <p className="mt-1 text-xs">{contact.last_contacted_at ? `Contact logged ${new Date(contact.last_contacted_at).toLocaleDateString()}` : "No prior contact logged"}</p></div>
         <Button variant="secondary" size="sm" onClick={() => setTarget(contact)}>Draft for {contact.name}</Button>
-      </li>)}</ul> : <p className="mt-3 text-sm">No saved contact at this company yet.</p>}
-    </div>
-    <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
-      <summary className="cursor-pointer font-semibold">Your history with {data.job.company}</summary>
-      <p className="mt-2 text-xs text-zinc-500">Your own tracker records, including this role. These are recorded stages, not an assessment of the employer.</p>
-      <dl className="mt-3 flex flex-wrap gap-3">{Object.entries(data.company_history.counts).map(([status, count]) => <div className="rounded-lg bg-zinc-100 p-2 dark:bg-white/5" key={status}><dt className="text-xs">{STATUS_LABEL[status as keyof typeof STATUS_LABEL] ?? status}</dt><dd className="font-semibold">{count}</dd></div>)}</dl>
-      {data.company_history.truncated && <p className="mt-2 text-xs">History covers your 2,000 most recently updated tracked jobs.</p>}
-      <ul className="mt-3 space-y-1 text-sm">{data.company_history.applications.map((job) => <li key={job.id}><Link className="underline" to={missionPath(job.id)}>{job.title}</Link> · {STATUS_LABEL[job.status]}</li>)}</ul>
-    </details>
+      </li>)}</ul> : null}
+    </div>}
     <section className="workspace-panel p-5" aria-label="Automatic hiring contact search">
       <p className="workspace-eyebrow">Contact finder · {data.job.company}</p>
       <h3 className="mt-2 text-xl font-semibold">Find the right person for this job</h3>
@@ -123,6 +124,13 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
       {!validResearch.people.length && <p className="rounded-xl bg-zinc-100 p-4 text-sm dark:bg-white/5">No one at this company could be confirmed from public pages this time. Try again later, open the LinkedIn and Google searches below, or paste a recruiter's message.</p>}
       {validResearch.people.map((person) => <Lead key={`${person.source_id}:${person.name}`} person={person} source={validResearch.sources.find((s) => s.id === person.source_id)} applicationId={id} jobVersion={validResearch.job_version} onSaved={saved} />)}
     </div>}
+    <details className="rounded-xl border border-zinc-200 p-4 dark:border-white/10">
+      <summary className="cursor-pointer font-semibold">Your history with {data.job.company}</summary>
+      <p className="mt-2 text-xs text-zinc-500">Your own tracker records, including this role. These are recorded stages, not an assessment of the employer.</p>
+      <dl className="mt-3 flex flex-wrap gap-3">{Object.entries(data.company_history.counts).map(([status, count]) => <div className="rounded-lg bg-zinc-100 p-2 dark:bg-white/5" key={status}><dt className="text-xs">{STATUS_LABEL[status as keyof typeof STATUS_LABEL] ?? status}</dt><dd className="font-semibold">{count}</dd></div>)}</dl>
+      {data.company_history.truncated && <p className="mt-2 text-xs">History covers your 2,000 most recently updated tracked jobs.</p>}
+      <ul className="mt-3 space-y-1 text-sm">{data.company_history.applications.map((job) => <li key={job.id}><Link className="underline" to={missionPath(job.id)}>{job.title}</Link> · {STATUS_LABEL[job.status]}</li>)}</ul>
+    </details>
     {target && <ContactDraft key={target.id} contact={target} applicationId={id} />}
   </div>;
 }

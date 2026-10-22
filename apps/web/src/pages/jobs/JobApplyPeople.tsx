@@ -46,7 +46,7 @@ export function JobPeople({ company, listingId, applicationId, defaultOpen = fal
       onFinder={() => { if (!applicationId) onSave?.(); setOpen((o) => applicationId ? !o : true); }} saving={saving} />
     {open && applicationId && <div id="job-contact-finder" className="workspace-panel p-5 md:col-span-2">
       <Suspense fallback={<p role="status" className="text-sm">Opening the contact finder…</p>}>
-        <ContactResearch key={applicationId} listingId={listingId} applicationId={applicationId} onSaved={() => undefined} />
+        <ContactResearch key={applicationId} listingId={listingId} applicationId={applicationId} onSaved={() => undefined} autoRun />
       </Suspense>
     </div>}
   </>;
