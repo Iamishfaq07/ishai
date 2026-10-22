@@ -152,7 +152,7 @@ function MockSetup() {
   return (
     <div className="xl:grid xl:grid-cols-[minmax(0,48rem)_minmax(0,1fr)] xl:gap-10">
       <div className="max-w-3xl space-y-8">
-        <PageHeader art={<SpotArt kind="practice" />} eyebrow="Interview preparation" icon={Target} title="Practice" subtitle="Practise out loud with an AI interviewer, then read your report." />
+        <PageHeader art={<SpotArt kind="practice" />} eyebrow="Interview preparation" icon={Target} title="Mock interview" subtitle="Practise out loud with an AI interviewer, then read your report." />
         <Link
           to="/interview"
           className={cx(

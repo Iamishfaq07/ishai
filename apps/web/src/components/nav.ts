@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, Banknote, GraduationCap, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, Banknote, GraduationCap, Headphones, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -35,13 +35,13 @@ export const LEARNING_PATH = /^\/(learn|code)(\/|$)/;
 
 const HOME: NavItem = { id: "home", to: "/", label: "Today", icon: House, current: (p) => p === "/" };
 const PRACTICE: NavItem = {
-  id: "practice", to: "/mock", label: "Practice", icon: PRODUCTS.practice.icon, product: "practice",
+  id: "practice", to: "/mock", label: "AI Mock Interview", tab: "Mock", icon: Headphones, product: "practice",
   current: (p) => /^\/mock(\/|$)/.test(p),
 };
 // The AI video interview: a face-to-face practice call with the AI interviewer (pages/VideoInterview.tsx).
 const VIDEO: NavItem = { id: "video", to: "/interview", label: "Video interview", icon: Video, current: (p) => p === "/interview" };
 const RESUME: NavItem = {
-  id: "resume", to: RESUME_AI_HOME, label: "Resume", tab: "Resume", icon: PRODUCTS.resume.icon, product: "resume",
+  id: "resume", to: RESUME_AI_HOME, label: "Resume Builder", tab: "Resume", icon: PRODUCTS.resume.icon, product: "resume",
   current: under(RESUME_AI_HOME),
 };
 const LEARNING: NavItem = { id: "learning", to: LEARN_HOME, label: "Learning", icon: GraduationCap, current: (p) => LEARNING_PATH.test(p) };
@@ -49,29 +49,31 @@ const JOBS: NavItem = {
   id: "jobs", to: JOBS_AI_HOME, label: "Career launchpad", tab: "Career", icon: PRODUCTS.jobs.icon, product: "jobs",
   current: under(JOBS_AI_HOME),
 };
-const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn", icon: IdCard, current: under(LINKEDIN_HOME) };
+const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn Optimizer", tab: "LinkedIn", icon: IdCard, current: under(LINKEDIN_HOME) };
 const COPILOT: NavItem = {
-  id: "copilot", to: "/sessions", label: "Copilot", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview",
+  id: "copilot", to: "/sessions", label: "Interview Copilot", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview",
   current: (p) => COPILOT_PATH.test(p),
 };
-const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offers", icon: BadgeIndianRupee, current: under(OFFERS_HOME) };
+const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offer & Salary", tab: "Offers", icon: BadgeIndianRupee, current: under(OFFERS_HOME) };
 // Outside India, the offer tool's mark is money in general, not the rupee.
 const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 
 // Discover and Applications are one place: finding a job and following it through are the same search. Its tabs
 // (pages/jobs/workspace.ts, jobsTabs) are Discover, Tracker, Auto-apply, Needs you and People.
-const JOBS_TASK: NavItem = { ...JOBS, label: "Jobs", tab: "Jobs", to: "/jobs/matches", icon: Search,
+const JOBS_TASK: NavItem = { ...JOBS, label: "Job Search", tab: "Jobs", to: "/jobs/matches", icon: Search,
   current: (p) => /^\/jobs(\/|$)/.test(p) };
-const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
-  current: (p) => /^\/(prepare|mock|interview|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code)(\/|$)/.test(p) };
-const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: IdCard,
-  current: (p) => /^\/(?:career|career-gap|github-projects|resume-ai|linkedin|offers)(\/|$)/.test(p) };
+const PREPARE: NavItem = { id: "prepare", label: "Interview Prep", tab: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
+  current: (p) => /^\/(prepare|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code)(\/|$)/.test(p) };
+const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: UserRound,
+  current: (p) => /^\/(?:career|career-gap|github-projects)(\/|$)/.test(p) };
 
-/** Four task destinations and the live Copilot apart (the Route map direction). Resume, LinkedIn and Offers live in
- *  My Career and Learning in Prepare, which stay current on their pages; every tool is still one search away. */
-export function navGroups(_mock: boolean = MOCK_INTERVIEW_ENABLED, _country: string = INDIA): NavGroup[] {
+/** Four task destinations, then the tools people come back to most (Resume, Mock interview, LinkedIn, Offers) by
+ *  name, and the live Copilot apart. Each tool is current on its own pages only, so one item is lit at a time;
+ *  Learning stays in Prepare, and every other tool is one search away. */
+export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
   return [
     { label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] },
+    { label: "AI tools", items: [RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD] },
     { label: "Live", items: [COPILOT] },
   ];
 }
@@ -83,8 +85,12 @@ export function allNavItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: str
 function specialists(mock: boolean, country: string): NavItem[] {
   return [...(mock ? [PRACTICE, VIDEO] : []), RESUME, LEARNING, LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD];
 }
+// A phone has five tabs and no Tools list, so its Prepare and Me tabs stay lit on the tools they hold.
+const PREPARE_TAB: NavItem = { ...PREPARE, current: (p) => PREPARE.current(p) || /^\/(mock|interview)(\/|$)/.test(p) };
+const CAREER_TAB: NavItem = { ...CAREER, current: (p) => CAREER.current(p) || /^\/(linkedin|offers)(\/|$)/.test(p) };
+/** Today, Jobs, Resume, Prepare and Me: the resume gets its own tab, the tool people open most. */
 export function phoneTabs(_mock: boolean = MOCK_INTERVIEW_ENABLED): NavItem[] {
-  return [HOME, JOBS_TASK, PREPARE, CAREER];
+  return [HOME, JOBS_TASK, RESUME, PREPARE_TAB, CAREER_TAB];
 }
 export function exploreItems(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavItem[] {
   const tabs = new Set(phoneTabs(mock).map((t) => t.id));
