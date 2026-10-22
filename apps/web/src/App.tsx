@@ -31,6 +31,7 @@ import {
   HomePage,
   CareerSpacesPage,
   ToolExplorerPage,
+  ToolkitPage,
   LandingPage,
   WelcomePage,
   WarmupPage,
@@ -315,6 +316,7 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="career" element={<CareerSpacesPage />} />
         <Route path="prepare" element={<CareerSpacesPage />} />
+        <Route path="toolkit" element={<ToolkitPage />} />
         <Route path="start" element={<SessionSetupPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="sessions/:sessionId" element={<SessionDetailPage />} />

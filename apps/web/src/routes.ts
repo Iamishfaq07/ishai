@@ -11,6 +11,7 @@ const loaders = {
   home: () => import("./pages/Home"),
   careerSpaces: () => import("./pages/CareerSpaces"),
   tools: () => import("./pages/tools/ToolExplorer"),
+  toolkit: () => import("./pages/tools/Toolkit"),
   landing: () => import("./pages/Landing"),
   welcome: () => import("./pages/Welcome"),
   // The warm-up, which can also open a company's or a role's questions (pages/bank/WarmupRoute.tsx).
@@ -76,6 +77,7 @@ export const CareerSpacesPage = page(loaders.careerSpaces, (m) => m.CareerSpaces
 export const HomePage = page(loaders.home, (m) => m.HomePage);
 export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
 export const ToolExplorerPage = page(loaders.tools, (m) => m.ToolExplorerPage);
+export const ToolkitPage = page(loaders.toolkit, (m) => m.ToolkitPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
 export const WarmupPage = page(loaders.warmup, (m) => m.WarmupRoute);
 export const CompaniesPage = page(loaders.bank, (m) => m.CompaniesPage);
@@ -156,6 +158,7 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/$/, "home"],
   [/^\/(career|prepare)\/?$/, "careerSpaces"],
   [/^\/tools\/?$/, "tools"],
+  [/^\/toolkit\/?$/, "toolkit"],
   [/^\/welcome\/?$/, "welcome"],
   [/^\/warmup\/?$/, "warmup"],
   [/^\/(companies|roles)(\/|$)/, "bank"],

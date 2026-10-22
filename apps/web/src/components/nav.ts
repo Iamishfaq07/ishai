@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, Banknote, GraduationCap, Headphones, House, INDIA, IdCard, MOCK_INTERVIEW_ENABLED, Rocket, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, Banknote, GraduationCap, Headphones, House, INDIA, IdCard, LayoutGrid, MOCK_INTERVIEW_ENABLED, Rocket, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -49,6 +49,8 @@ const JOBS: NavItem = {
   id: "jobs", to: JOBS_AI_HOME, label: "Career launchpad", tab: "Career", icon: PRODUCTS.jobs.icon, product: "jobs",
   current: under(JOBS_AI_HOME),
 };
+// Every tool in one place (pages/tools/Toolkit.tsx), so the ones inside a job's tabs or a hub's catalogue are found.
+const ALL_TOOLS: NavItem = { id: "all-tools", to: "/toolkit", label: "All tools", icon: LayoutGrid, current: (p) => p === "/toolkit" };
 const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn Optimizer", tab: "LinkedIn", icon: IdCard, current: under(LINKEDIN_HOME) };
 const COPILOT: NavItem = {
   id: "copilot", to: "/sessions", label: "Interview Copilot", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview",
@@ -76,7 +78,7 @@ const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/car
 export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
   return [
     { label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] },
-    { label: "AI tools", items: [AUTO_APPLY, RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD] },
+    { label: "AI tools", items: [AUTO_APPLY, RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD, ALL_TOOLS] },
     { label: "Live", items: [COPILOT] },
   ];
 }

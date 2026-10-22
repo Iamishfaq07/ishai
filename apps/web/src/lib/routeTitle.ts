@@ -4,7 +4,8 @@ import { guideTitle } from "../pages/bank/names";
 const ROUTE_TITLES: Array<[RegExp, string]> = [
   [/^\/$/, "Today"],
   [/^\/career\/?$/, "My Career"],
-  [/^\/prepare\/?$/, "Prepare"],
+  [/^\/prepare\/?$/, "Interview Prep"],
+  [/^\/toolkit\/?$/, "All tools"],
   [/^\/tools(\/|$)/, "Explore Orbit tools"],
   [/^\/jobs\/journey/, "Application agent"],
   [/^\/welcome/, "Welcome"],
