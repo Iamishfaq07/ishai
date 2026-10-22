@@ -96,16 +96,54 @@ def search_failure_detail(provider: str, exc: Exception) -> str:
     return f"{name} {type(exc).__name__}"
 
 
+# Legal-form words a company's own people leave out ("Coupa Software Inc." is "Coupa Software" on LinkedIn).
+_LEGAL = re.compile(r"[,.]?\s+\b(?:inc|incorporated|ltd|limited|llc|llp|plc|pvt|private|corp|corporation|co|gmbh|ag|bv|"
+                    r"s\.?a|pte|pty|sarl|srl|oy|ab)\b\.?", re.I)
+# Seniority and level marks that no profile repeats word for word ("Sr Security Engineer - 1" is "Security Engineer").
+_LEVEL = re.compile(r"\b(?:sr|senior|jr|junior|lead|principal|staff|associate|intern|trainee|i{1,3}|iv|[1-5]|l[1-9]|"
+                    r"level\s*\d+|grade\s*\w+)\b\.?", re.I)
+
+
+def employer_name(company: str) -> str:
+    """The name people at the company use: no legal form, no punctuation that breaks a quoted search."""
+    name = re.sub(r"\([^)]*\)", " ", company)
+    for _ in range(2):
+        name = _LEGAL.sub("", name.strip())
+    name = re.sub(r"[^\w .&-]", " ", name)
+    return re.sub(r"\s+", " ", name).strip(" .&-")[:60] or company.strip()[:60]
+
+
+def role_core(title: str) -> str:
+    """The job family without level, team codes or brackets: what a recruiter or manager would list."""
+    role = re.sub(r"\([^)]*\)|\[[^]]*\]", " ", title)
+    role = re.split(r"\s[-|/,:]\s|,", role)[0]
+    role = _LEVEL.sub(" ", role)
+    role = re.sub(r"[^\w &+]", " ", role)
+    return re.sub(r"\s+", " ", role).strip()[:40]
+
+
 def contact_queries(company: str, title: str) -> list[tuple[str, str]]:
-    # Keep within the 128-character provider limit; no candidate profile data in public queries.
-    employer = re.sub(r'[^\w .&-]', ' ', company).strip()[:60]
-    role = re.sub(r'[^\w -]', ' ', title).strip()[:24]
+    """Searches that find real people: the company as its people write it, the role without its level, and
+    professional profiles first. Within the 128-character provider limit; no candidate data in public queries."""
+    employer = employer_name(company)
+    role = role_core(title) or "hiring"
     return [
-        ("Hiring team", f'"{employer}" "{role}" "hiring manager"'),
-        ("Recruiting", f'"{employer}" "{role}" (recruiter OR "talent acquisition")'),
-        ("Professional profiles", f'site:linkedin.com/in "{employer}" (recruiter OR "{role}")'),
-        ("Relevant team", f'"{employer}" "{role}" team contact'),
+        ("Recruiters", f'site:linkedin.com/in "{employer}" (recruiter OR "talent acquisition")'),
+        ("Hiring managers", f'site:linkedin.com/in "{employer}" {role} (manager OR head OR director OR lead)'),
+        ("HR", f'site:linkedin.com/in "{employer}" ("human resources" OR HR OR "people partner")'),
+        ("Team", f'"{employer}" {role} team linkedin'),
     ]
+
+
+def fallback_query(company: str) -> tuple[str, str]:
+    """One broad search when the focused ones found nothing at all."""
+    return ("Company people", f'"{employer_name(company)}" recruiter OR hiring linkedin')
+
+
+def names_company(text: str, company: str) -> bool:
+    """Whether a search result is about this employer: its full name, or the name its people use."""
+    folded = text.casefold()
+    return company.casefold() in folded or employer_name(company).casefold() in folded
 
 
 async def search_sources(company: str, title: str, *, query: str | None = None,

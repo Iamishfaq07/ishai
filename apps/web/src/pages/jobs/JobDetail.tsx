@@ -51,6 +51,7 @@ import {
   TrustBadges,
 } from "./JobCard";
 import { useJobsAi } from "./JobsAi";
+import { JobPeople } from "./JobApplyPeople";
 import { linkButton, textLink } from "./links";
 import { STATUSES, STATUS_LABEL, jobFacts, matchBasis, postedAgo, safeUrl, shortDate, stillOpenAt } from "./model";
 import { StagePill } from "./StagePill";
@@ -219,6 +220,10 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
               )}
             </p>
           </Card>
+
+          {/* The people behind the posting: HR, recruiters and the team, from public sources with their pages. */}
+          <div className="grid min-w-0 gap-4"><JobPeople company={job.company} listingId={job.id} applicationId={job.tracked?.id ?? null}
+            onSave={actions.toggleSaved} saving={actions.busy !== null} /></div>
 
           {showMatch && job.match && (job.match.matched.length > 0 || job.match.missing.length > 0) && (
             <Card>

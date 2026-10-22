@@ -97,14 +97,12 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
     <section className="workspace-panel p-5" aria-label="Automatic hiring contact search">
       <p className="workspace-eyebrow">Contact finder · {data.job.company}</p>
       <h3 className="mt-2 text-xl font-semibold">Find the right person for this job</h3>
-      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">One action checks the saved posting, searches for hiring managers, recruiters and relevant team members, then extracts up to three leads with source excerpts. No extension or extra browser tabs.</p>
+      <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">One click searches public profiles for recruiters, HR, hiring managers and team members at this company, and shows up to five people with where each was found.</p>
       <ol className="my-4 grid gap-3 text-sm sm:grid-cols-3"><li>1. Check saved context</li><li>2. Search public sources</li><li>3. Review evidenced leads</li></ol>
       <Button loading={busy} disabled={!data.web_search_enabled || busy} disabledReason={!data.web_search_enabled ? "Automatic search isn't available right now. You can still add people yourself." : undefined} onClick={() => void find(true)}>Find hiring contacts automatically</Button>
       {busy && <p role="status" className="mt-3 text-sm">Researching public sources and checking contact evidence. This can take up to two minutes.</p>}
-      <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Up to {data.automatic_search_limit ?? 3} searches and one AI extraction per run; provider usage applies. Only company and role are used as public search queries. Up to 5 runs per UTC day, including failed runs. Review before saving; nothing is sent.</p>
-      {data.web_search_provider === "deepseek" && <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Uses the server’s DeepSeek Search API configuration. No key is entered or stored in your browser.</p>}
+      <p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Only the company and the role are searched, never anything about you. Up to 5 searches a day. Review each person before saving; nothing is sent.</p>
       {!data.web_search_enabled && <SearchOff reason={data.web_search_off_reason} known={"web_search_off_reason" in data} />}
-      {(data.web_search_providers?.length ?? 0) > 1 && <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">If one search service fails, the next one is tried automatically.</p>}
       <details className="mt-5 border-t border-zinc-200 pt-3 dark:border-white/10"><summary className={`min-h-11 cursor-pointer rounded py-2 text-sm font-semibold ${focusRing}`}>Supply a source or use a single search</summary>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Optional: add a specific public page or paste the relevant part of a recruiter reply.</p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -113,7 +111,6 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
       </div>
       <div className="mt-3"><Field label="Recruiter reply or public profile text (optional)" htmlFor={`${inputId}-paste`}><Textarea id={`${inputId}-paste`} value={paste} onChange={(e) => setPaste(e.target.value)} rows={5} maxLength={10000} placeholder={"From: Alex Rivera <alex@company.com>\nTitle: Talent Acquisition Partner\n\nPaste only relevant contact details and context."} /></Field></div>
       <label className="mt-3 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className={focusRing} checked={searchWeb} disabled={!data.web_search_enabled || busy} onChange={(e) => setSearchWeb(e.target.checked)} />Search the public web for this company and role (one query)</label>
-      {data.web_search_provider === "searxng" && <p className="text-xs text-zinc-500">Open-source web search · no search API key. Review each result’s source before saving a contact.</p>}
       <Button variant="secondary" className="mt-3" loading={busy} onClick={() => void find(false)}>Check these sources</Button>
       <p className="mt-2 text-xs text-zinc-500">Up to 5 research runs per UTC day; failed runs count. Nothing is saved or sent until you choose a lead. Public roles and snippets may be outdated—review the source.</p>
       </details>
@@ -121,10 +118,9 @@ function Workspace({ data, reload, onSaved }: { data: NetworkContext; reload: ()
     </section>
     {research && !validResearch && <p role="status" className="text-sm">The saved job changed. Refresh and run contact research again before saving these leads.</p>}
     {validResearch && <div aria-live="polite" className="space-y-3">
-      {validResearch.provider === "mock" && <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Demo response · mock provider</p>}
       {validResearch.warnings.map((warning) => <p className="text-sm text-amber-800 dark:text-amber-300" key={warning}>{warning}</p>)}
-      {!!validResearch.workflow?.length && <details className="workspace-panel p-4"><summary className={`min-h-11 cursor-pointer rounded py-2 text-sm font-semibold ${focusRing}`}>Search activity & sources</summary><ol className="mt-3 space-y-3">{validResearch.workflow?.map((step, index) => <li key={`${index}:${step.query}`} className="text-sm"><p className="font-medium">{step.label} · {step.status === "failed" ? "Unavailable" : step.status === "empty" ? "No usable sources" : `${step.source_count} sources returned`}</p><p className="mt-1 break-words text-xs text-zinc-600 dark:text-zinc-400">{step.query} · {step.provider}</p></li>)}</ol><p className="mt-3 text-xs text-zinc-600 dark:text-zinc-400">Search results are deduplicated before extraction. A returned page does not confirm a person is hiring for this role.</p></details>}
-      {!validResearch.people.length && <p className="rounded-xl bg-zinc-100 p-4 text-sm dark:bg-white/5">No contact could be grounded in these sources. Try a relevant public team page or paste a recruiter reply.</p>}
+      {!!validResearch.workflow?.length && <p className="text-xs text-zinc-600 dark:text-zinc-400">Searched {validResearch.workflow.length} ways: {validResearch.workflow.map((step) => step.label.toLowerCase()).join(", ")}. A public page doesn't confirm someone is hiring for this role; check the source.</p>}
+      {!validResearch.people.length && <p className="rounded-xl bg-zinc-100 p-4 text-sm dark:bg-white/5">No one at this company could be confirmed from public pages this time. Try again later, open the LinkedIn and Google searches below, or paste a recruiter's message.</p>}
       {validResearch.people.map((person) => <Lead key={`${person.source_id}:${person.name}`} person={person} source={validResearch.sources.find((s) => s.id === person.source_id)} applicationId={id} jobVersion={validResearch.job_version} onSaved={saved} />)}
     </div>}
     {target && <ContactDraft key={target.id} contact={target} applicationId={id} />}
@@ -210,8 +206,7 @@ function ContactDraft({ contact, applicationId }: { contact: JobContact; applica
     <Button loading={busy} onClick={() => void write()}>Draft outreach with AI</Button>
     {error && <ErrorNote>{error}</ErrorNote>}
     {draft && <div className="mt-4 space-y-3">
-      {draft.provider === "mock" && <p className="text-sm text-amber-800 dark:text-amber-300">Demo response · mock provider</p>}
-      {channel === "email" && <Field label="Subject" htmlFor={`${inputId}-subject`}><Input id={`${inputId}-subject`} value={draft.subject} maxLength={160} onChange={(e) => { setDraft({ ...draft, subject: e.target.value }); setCopied(false); }} /></Field>}
+        {channel === "email" && <Field label="Subject" htmlFor={`${inputId}-subject`}><Input id={`${inputId}-subject`} value={draft.subject} maxLength={160} onChange={(e) => { setDraft({ ...draft, subject: e.target.value }); setCopied(false); }} /></Field>}
       <Field label="Outreach draft" htmlFor={`${inputId}-draft`}><Textarea id={`${inputId}-draft`} value={draft.message} rows={5} onChange={(e) => { setDraft({ ...draft, message: e.target.value }); setCopied(false); }} /></Field>
       <p className="text-xs" role="status">{draft.message.length}/{draft.character_limit} characters{draft.message.length > draft.character_limit ? " · shorten before copying" : ""}</p>
       <Button variant="secondary" disabled={draft.message.length > draft.character_limit} disabledReason={`Shorten the draft to ${draft.character_limit} characters first.`} onClick={() => void copy()}>{copied ? "Copied" : "Copy draft"}</Button>

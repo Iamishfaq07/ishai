@@ -28,7 +28,7 @@ export interface NetworkContext {
 export interface NetworkResearch {
   provider: string; warnings: string[]; people: NetworkPerson[]; sources: NetworkSource[];
   job_version?: string;
-  workflow?: Array<{ label: string; query: string; provider: string | null; status: "completed" | "empty" | "failed"; source_count: number }>;
+  workflow?: Array<{ label: string; status: "completed" | "empty" | "failed"; source_count: number }>;
 }
 export interface NetworkDraft {
   subject: string; message: string; provider: string; character_limit: number;

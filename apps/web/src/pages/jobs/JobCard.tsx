@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import type { JobFitCheck, JobListing, JobMatch } from "@orbit/types";
 import {
+  UsersRound,
   ArrowUpRight,
   Bookmark,
   BookmarkCheck,
@@ -35,7 +36,7 @@ import {
   trustBadges,
   type TrustBadge,
 } from "./model";
-import { JOBS_TRACKER, jobPath } from "./paths";
+import { JOBS_TRACKER, jobPath, missionPath } from "./paths";
 import { useJobActions, type FitState, type JobActions } from "./useJobActions";
 
 interface Props {
@@ -96,6 +97,10 @@ export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
           <TailorButton actions={actions} />
           <PrepareButton actions={actions} />
         </span>
+        {/* The people behind the post: on a saved job its finder opens straight away; otherwise the job's page offers it. */}
+        <Link to={job.tracked ? `${missionPath(job.tracked.id)}?contacts=1` : jobPath(job.id)} className={linkButton("ghost", "sm")}>
+          <UsersRound className="h-4 w-4" aria-hidden /> Contacts
+        </Link>
         <Link to={jobPath(job.id)} className={cx(linkButton("ghost", "sm"), "ml-auto sm:hidden")}>
           Fit check & more <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </Link>

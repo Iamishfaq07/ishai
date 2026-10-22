@@ -65,7 +65,7 @@ export function FormAgent({ eligible, onChanged }: { eligible: boolean; onChange
           <div className="flex flex-wrap justify-between gap-2"><Link className="text-sm font-semibold text-indigo-700 underline dark:text-indigo-300" to={`/jobs/applications?packet=${encodeURIComponent(job.id)}`}>{job.title} · {job.company}</Link><span className="text-xs text-zinc-500">{STATUS_LABEL[job.status] ?? job.status}</span></div>
           <details className="mt-2 text-sm"><summary className="min-h-8 cursor-pointer">View {job.decisions.length} agent observation{job.decisions.length === 1 ? "" : "s"}</summary>
             <ol className="space-y-3 border-l-2 border-indigo-200 pl-3 dark:border-indigo-500/30">{job.decisions.map((decision, index) => <li key={`${decision.at}-${index}`}>
-              <p className="font-medium">{STATE[decision.state]}{decision.provider === "mock" ? " · simulated AI" : ""}</p>
+              <p className="font-medium">{STATE[decision.state]}</p>
               <time className="text-xs text-zinc-500" dateTime={decision.at}>{new Date(decision.at).toLocaleString()}</time>
               <ul className="mt-1 list-inside list-disc text-xs">{decision.matches.length ? decision.matches.map((match) => <li key={match.label}>{match.label} → approved {match.source.replaceAll("_", " ")}</li>) : decision.questions.map((question) => <li key={question}>{question}</li>)}</ul>
             </li>)}</ol>
