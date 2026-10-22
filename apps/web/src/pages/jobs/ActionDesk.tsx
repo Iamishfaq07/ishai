@@ -84,7 +84,7 @@ export function JobActionDeskPage({ embedded = false }: { embedded?: boolean } =
     </section>}
     {savedRules && <p role="status" className="text-sm">Workflow rules saved.</p>}
     <div className="flex flex-wrap items-center gap-3">
-      <Button onClick={() => void generate()} loading={busy} disabled={!queue?.items.length}><Sparkles className="h-4 w-4" /> Build my AI brief</Button>
+      <Button onClick={() => void generate()} loading={busy} disabled={!queue?.items.length} disabledReason="Nothing is due in the next seven days, so there is nothing to brief on yet."><Sparkles className="h-4 w-4" /> Build my AI brief</Button>
       <span className="text-xs text-zinc-500 dark:text-zinc-400">5 AI previews/day · resets at midnight UTC.</span>
     </div>
     <details className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
@@ -92,7 +92,7 @@ export function JobActionDeskPage({ embedded = false }: { embedded?: boolean } =
       <div className="mt-3 flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["follow_up", "Job follow-ups"], ["contact", "Contacts"], ["application", "Applications"], ["playbook", "Playbook"]].map(([key, label]) =>
         <Button key={key} size="sm" variant={filter === key ? "primary" : "secondary"} aria-pressed={filter === key} onClick={() => setFilter(key!)}>{label}</Button>)}</div>
       <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" disabled={busy} onClick={() => setLoad((n) => n + 1)}>Refresh records</Button>
-        <Button variant="secondary" disabled={!queue?.items.some((a) => a.due_at && new Date(a.due_at) > new Date())}
+        <Button variant="secondary" disabled={!queue?.items.some((a) => a.due_at && new Date(a.due_at) > new Date())} disabledReason="No upcoming dates to export yet."
           onClick={() => void exportCalendar()}>Export upcoming dates</Button></div>
       <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Calendar export is a snapshot of upcoming dates.</p>
     </details>

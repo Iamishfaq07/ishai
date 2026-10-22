@@ -318,7 +318,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
           <span className="text-sm">
             {pickedEntries.length === 1 ? "Pick one or two more to compare" : `${pickedEntries.length} jobs picked`}
           </span>
-          <Button size="sm" disabled={pickedEntries.length < 2} onClick={() => setComparing(true)}>
+          <Button size="sm" disabled={pickedEntries.length < 2} disabledReason="Pick at least two jobs to compare." onClick={() => setComparing(true)}>
             <Columns3 className="h-3.5 w-3.5" aria-hidden /> Compare
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setPicked([])}>

@@ -106,7 +106,7 @@ from orbit_api.job_portal.routes import router as jobs_router
 from orbit_api.job_portal.skill_gaps import router as skill_gaps_router
 from orbit_api.job_portal.weekly import router as job_weekly_router
 from orbit_api.linkedin.routes import router as linkedin_router
-from orbit_api.observability import configure_logging, init_sentry, request_id_middleware
+from orbit_api.observability import configure_logging, crash_middleware, init_sentry, request_id_middleware
 from orbit_api.offers.routes import router as offers_router
 from orbit_api.preflight import router as preflight_router
 from orbit_api.prep.company_guides import router as company_guides_router
@@ -304,6 +304,8 @@ def create_app() -> FastAPI:
                   docs_url="/docs" if s.env != "production" else None, redoc_url=None,
                   openapi_url="/openapi.json" if s.env != "production" else None)
     app.middleware("http")(request_id_middleware)
+    # Inside CORS (registered before it): an unhandled error reaches the browser as a readable 500, not a CORS block.
+    app.middleware("http")(crash_middleware)
     app.add_exception_handler(DBAPIError, bad_text_handler)
     # Registered before CORS so it runs *inside* it: its 403s still carry CORS headers the browser can read.
     app.middleware("http")(csrf_middleware)

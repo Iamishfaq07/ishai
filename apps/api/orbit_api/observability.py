@@ -14,12 +14,14 @@ import contextvars
 import json
 import logging
 import re
+import sys
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import Request, Response
+from fastapi.responses import JSONResponse
 
 request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("request_id", default=None)
 user_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("user_id", default=None)
@@ -118,6 +120,20 @@ async def request_id_middleware(request: Request, call_next: Callable[[Request],
         request_id_var.reset(token)
     response.headers["X-Request-ID"] = rid
     return response
+
+
+async def crash_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+    """An unhandled error becomes a plain JSON 500 *inside* CORS. Starlette's own 500 is sent from outside every
+    middleware, without CORS headers, so a browser on another origin can't read it and the app told people to check
+    their internet. Logged with the request id and reported to Sentry when it's on; the person sees no detail."""
+    try:
+        return await call_next(request)
+    except Exception as err:  # the last line of defence; HTTPExceptions are handled inside the routes
+        logging.getLogger("orbit_api.errors").exception("unhandled error on %s %s", request.method, request.url.path)
+        sentry = sys.modules.get("sentry_sdk")
+        if sentry is not None:
+            sentry.capture_exception(err)
+        return JSONResponse({"detail": "Orbit had a problem. Try again shortly."}, status_code=500)
 
 
 def _scrub_event(event: dict[str, Any], _hint: dict[str, Any]) -> dict[str, Any] | None:
