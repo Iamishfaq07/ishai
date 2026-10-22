@@ -35,13 +35,13 @@ export const LEARNING_PATH = /^\/(learn|code)(\/|$)/;
 
 const HOME: NavItem = { id: "home", to: "/", label: "Today", icon: House, current: (p) => p === "/" };
 const PRACTICE: NavItem = {
-  id: "practice", to: "/mock", label: "Mock interview", tab: "Mock", icon: Headphones, product: "practice",
+  id: "practice", to: "/mock", label: "AI Mock Interview", tab: "Mock", icon: Headphones, product: "practice",
   current: (p) => /^\/mock(\/|$)/.test(p),
 };
 // The AI video interview: a face-to-face practice call with the AI interviewer (pages/VideoInterview.tsx).
 const VIDEO: NavItem = { id: "video", to: "/interview", label: "Video interview", icon: Video, current: (p) => p === "/interview" };
 const RESUME: NavItem = {
-  id: "resume", to: RESUME_AI_HOME, label: "Resume Studio", tab: "Resume", icon: PRODUCTS.resume.icon, product: "resume",
+  id: "resume", to: RESUME_AI_HOME, label: "Resume Builder", tab: "Resume", icon: PRODUCTS.resume.icon, product: "resume",
   current: under(RESUME_AI_HOME),
 };
 const LEARNING: NavItem = { id: "learning", to: LEARN_HOME, label: "Learning", icon: GraduationCap, current: (p) => LEARNING_PATH.test(p) };
@@ -49,20 +49,20 @@ const JOBS: NavItem = {
   id: "jobs", to: JOBS_AI_HOME, label: "Career launchpad", tab: "Career", icon: PRODUCTS.jobs.icon, product: "jobs",
   current: under(JOBS_AI_HOME),
 };
-const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn", icon: IdCard, current: under(LINKEDIN_HOME) };
+const LINKEDIN: NavItem = { id: "linkedin", to: LINKEDIN_HOME, label: "LinkedIn Optimizer", tab: "LinkedIn", icon: IdCard, current: under(LINKEDIN_HOME) };
 const COPILOT: NavItem = {
-  id: "copilot", to: "/sessions", label: "Copilot", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview",
+  id: "copilot", to: "/sessions", label: "Interview Copilot", tab: "Copilot", icon: PRODUCTS.interview.icon, product: "interview",
   current: (p) => COPILOT_PATH.test(p),
 };
-const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offers", icon: BadgeIndianRupee, current: under(OFFERS_HOME) };
+const OFFER: NavItem = { id: "offer", to: OFFERS_HOME, label: "Offer & Salary", tab: "Offers", icon: BadgeIndianRupee, current: under(OFFERS_HOME) };
 // Outside India, the offer tool's mark is money in general, not the rupee.
 const OFFER_WORLD: NavItem = { ...OFFER, icon: Banknote };
 
 // Discover and Applications are one place: finding a job and following it through are the same search. Its tabs
 // (pages/jobs/workspace.ts, jobsTabs) are Discover, Tracker, Auto-apply, Needs you and People.
-const JOBS_TASK: NavItem = { ...JOBS, label: "Jobs", tab: "Jobs", to: "/jobs/matches", icon: Search,
+const JOBS_TASK: NavItem = { ...JOBS, label: "Job Search", tab: "Jobs", to: "/jobs/matches", icon: Search,
   current: (p) => /^\/jobs(\/|$)/.test(p) };
-const PREPARE: NavItem = { id: "prepare", label: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
+const PREPARE: NavItem = { id: "prepare", label: "Interview Prep", tab: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
   current: (p) => /^\/(prepare|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: UserRound,
   current: (p) => /^\/(?:career|career-gap|github-projects)(\/|$)/.test(p) };
@@ -73,7 +73,7 @@ const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/car
 export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
   return [
     { label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] },
-    { label: "Tools", items: [RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD] },
+    { label: "AI tools", items: [RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD] },
     { label: "Live", items: [COPILOT] },
   ];
 }
