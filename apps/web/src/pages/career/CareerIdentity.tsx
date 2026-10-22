@@ -75,9 +75,10 @@ export function CareerIdentity({ userId }: { userId: string }) {
         </div>
       </div>
     </section>
-    <section aria-labelledby="career-direction" className="workspace-panel p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="career-direction" className="font-display text-xl font-semibold">{current.target_roles.length ? current.target_roles.join(" · ") : "What would you like to do next?"}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{current.target_roles.length || current.locations.length ? [...current.locations, ...current.workplace].join(" · ") : "Choose your target roles, locations and work preferences when you are ready."}</p></div><Link className={link} to="/jobs/profile">Edit career goals</Link></div>
+    {/* Without goals yet, the setup steps above already ask for them; the card waits until there's something to show. */}
+    {(current.target_roles.length > 0 || current.locations.length > 0 || (master && !current.search_uses_master)) && <section aria-labelledby="career-direction" className="workspace-panel p-5 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 id="career-direction" className="font-display text-xl font-semibold">{current.target_roles.length ? current.target_roles.join(" · ") : "What would you like to do next?"}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{current.target_roles.length || current.locations.length ? [...current.locations, ...current.workplace].join(" · ") : "Choose your target roles, locations and work preferences when you are ready."}</p></div><Link className={link} to="/jobs/profile">Edit career goals</Link></div>
       <div className="mt-4 flex flex-wrap gap-x-5"><Link className={link} to="/jobs/matches">Discover opportunities</Link></div>
       {master && !current.search_uses_master && <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Discover currently uses a different resume. Review search preferences before continuing; your master has not changed.</p>}
-    </section>
+    </section>}
   </section>;
 }

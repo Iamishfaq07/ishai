@@ -95,7 +95,7 @@ async def review(db: AsyncSession, entry: JobApplication, now: datetime | None =
     if row is not None and row.dedupe_key:
         # A shared normalized key is a possible duplicate, not proof of the same vacancy or a repost.
         duplicates = list((await db.scalars(select(JobListing).where(
-            JobListing.dedupe_key == row.dedupe_key, JobListing.id != row.id)
+            JobListing.dedupe_key == row.dedupe_key, JobListing.id != row.id, JobListing.source != "manual")
             .order_by(JobListing.fetched_at.desc(), JobListing.id).limit(4))).all())
     result = SourceReview(entry_id=entry.id, version="", status=status,
         source_label=source.label if source else "Manually added" if manual else "Unknown source",
