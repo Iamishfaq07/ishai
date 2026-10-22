@@ -22,15 +22,32 @@ class AdviceIn(BaseModel):
     version: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+FIELDS = ("fact_id", "source_quote", "suggestion", "success_check")
+
+
 def validate_advice(raw: object, facts: list[dict[str, Any]]) -> Advice:
-    advice = Advice.model_validate(raw)
+    """Keep each tip that quotes its fact exactly; a tip with a wrong id, a paraphrased quote, extra fields or a fact
+    already used is dropped on its own, so one bad tip doesn't cost the review. No usable tip is a failed review."""
     allowed = {f["id"]: f["text"] for f in facts}
-    if len({tip.fact_id for tip in advice.tips}) != len(advice.tips):
-        raise ValueError("Use different source facts")
-    for tip in advice.tips:
-        if tip.source_quote not in allowed[tip.fact_id]:
-            raise ValueError("Source quote is not supported")
-    return advice
+    rows = raw.get("tips") if isinstance(raw, dict) else None
+    tips: list[Tip] = []
+    used: set[str] = set()
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        try:
+            tip = Tip.model_validate({k: row.get(k) for k in FIELDS})
+        except ValueError:
+            continue
+        if tip.fact_id in used or tip.source_quote not in allowed.get(tip.fact_id, ""):
+            continue
+        used.add(tip.fact_id)
+        tips.append(tip)
+        if len(tips) == 4:
+            break
+    if not tips:
+        raise ValueError("No tip quoted its source exactly")
+    return Advice(tips=tips)
 
 
 INSTRUCTION = ('Return JSON {"tips":[{"fact_id":"one supplied id","source_quote":"exact substring of its text",'

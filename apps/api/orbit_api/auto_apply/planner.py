@@ -193,6 +193,25 @@ async def answer_form(questions: list[FormQuestion], ctx: bank.Context) -> tuple
     return answers, missing
 
 
+async def draft_new(answers: list[bank.Answer], missing: list[bank.Missing], master: ResumeData, row: JobListing,
+                    job_text: str, generate: Generate | None) -> tuple[list[bank.Answer], list[bank.Missing]]:
+    still: list[bank.Missing] = []
+    for m in missing:
+        known = bank.seed_for(m.label, "") is not None
+        # Only open text and plain choices: yes/no, numbers, dates and contact fields are facts or attestations.
+        if m.legal or known or m.kind not in ("text", "textarea", "select", "multiselect") or generate is None:
+            still.append(m)
+            continue
+        value = await letters.open_answer(master, row.company, row.title, job_text, m.label, m.options, generate)
+        if value is None:
+            still.append(m)
+            continue
+        answers.append(bank.Answer(question_id=m.question_id, label=m.label, kind=m.kind,
+                                   value=[value] if m.kind == "multiselect" else value,
+                                   source="generated", required=m.required, options=m.options))
+    return answers, still
+
+
 def needs_why(questions: list[FormQuestion]) -> bool:
     return any((s := bank.seed_for(q.label, q.description)) is not None and s.key == "why_company"
                for q in questions)
@@ -236,6 +255,10 @@ async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobL
     tailored = await tailor(master, job_text, generate)
     if target.automatic:
         answers, missing = await answer_form(questions, ctx)
+        # New questions Orbit has no saved answer for: open ones are drafted from the resume and the post, choices
+        # are picked when the resume supports one. Legal attestations and the facts only the candidate can give
+        # (salary, notice, work authorisation and the other known questions) still wait for them.
+        answers, missing = await draft_new(answers, missing, master, row, job_text, generate)
         answer_dicts = [a.model_dump() for a in answers]
         if target.ats not in (*rules.BROWSER_ATS, "orbit"):
             # These forms are rendered by the hosted browser, including multi-step questions. Carry only explicit
