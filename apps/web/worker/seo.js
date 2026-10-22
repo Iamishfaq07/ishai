@@ -361,6 +361,39 @@ export async function notFound(env, request, url) {
   return res;
 }
 
+// ---------------------------------------------------------------- Markdown copies
+
+/** A public page's Markdown copy among the built files ("/" → "/index.md"; src/prerender/markdown.ts). */
+export const markdownPathOf = (path) => (path === "/" ? "/index.md" : `${path}.md`);
+
+/** The page a Markdown copy's address is of ("/index.md" → "/", "/companies/tcs.md" → "/companies/tcs"), or null. */
+export function pageOfMarkdown(path) {
+  if (!/\.md$/i.test(path)) return null;
+  const page = path.slice(0, -3);
+  return page === "/index" ? "/" : page || null;
+}
+
+/** Whether the request asks for Markdown before HTML (an agent sending `Accept: text/markdown`). A browser's
+ *  `text/html,…,*\/*` never does. */
+export function wantsMarkdown(request) {
+  const accept = (request.headers.get("accept") || "").toLowerCase();
+  const md = accept.indexOf("text/markdown");
+  if (md < 0) return false;
+  const html = accept.indexOf("text/html");
+  return html < 0 || md < html;
+}
+
+/** A Markdown copy as it's served: its type, and the page it's a copy of as its canonical address (so search engines
+ *  index the page, not the copy). */
+function markdownAnswer(response, page, env) {
+  const res = new Response(response.body, response);
+  res.headers.set("content-type", "text/markdown; charset=utf-8");
+  res.headers.set("link", `<${originOf(env)}${page === "/" ? "/" : page}>; rel="canonical"`);
+  res.headers.set("vary", "accept");
+  res.headers.delete("etag");
+  return res;
+}
+
 // ---------------------------------------------------------------- the whole policy
 
 /**
@@ -397,6 +430,17 @@ async function seoAnswer(request, env, url, serve) {
   const careers = readable ? careersRoute(path) : null;
   let response;
   try {
+    const mdPage = readable ? pageOfMarkdown(path) : null;
+    if (mdPage && routeKind(mdPage) === "public") {
+      // A public page's Markdown copy (built with the site): served with its page as the canonical.
+      const md = await env.ASSETS.fetch(wholeRequest(request));
+      return md.ok ? markdownAnswer(md, mdPage, env) : notFound(env, request, url);
+    }
+    if (readable && kind === "public" && wantsMarkdown(request)) {
+      // The same page, asked for as Markdown: its copy when there is one, else the page as usual.
+      const md = await env.ASSETS.fetch(wholeRequest(request, new URL(markdownPathOf(path), url)));
+      if (md.ok) return markdownAnswer(md, path, env);
+    }
     if (careers) {
       // Orbit for Business: careers pages, jobs, the widget and the jobs sitemap, from the API (careers.js, D82).
       response = await serveCareers(request, env, url, careers, () => appShell(env, request, url), originOf(env));
@@ -422,6 +466,8 @@ async function seoAnswer(request, env, url, serve) {
       }
       if (response.status === 200 && isHtml(response) && kind === "public") response = withSeoHead(response, path, env);
     }
+    // A public page also answers as Markdown (above), so caches must keep the two apart.
+    if (readable && kind === "public" && response.status === 200) response = withHeader(response, "vary", [response.headers.get("vary"), "accept"].filter(Boolean).join(", "));
     // Text files (llms.txt, the IndexNow key) say they're UTF-8.
     const type = response.headers.get("content-type") || "";
     if (/^text\/plain\s*$/i.test(type)) response = withHeader(response, "content-type", "text/plain; charset=utf-8");

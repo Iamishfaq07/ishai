@@ -19,6 +19,7 @@ for every address except the built files (`wrangler.jsonc` → `run_worker_first
 | An invite link `/r/<code>` | 200, noindex, canonical `/` |
 | Anything else | **404**, noindex. The body is still the app, so people see its "This page isn't here" with links; crawlers read static links |
 | `http://`, `www.`, `/jobs/`, `/Resume-AI`, `/privacy.html`, `/index.html`, `//warmup`, `/resume-maker`, `/documents/resumes/…`, `/resume-ai/jobs/…` | one **301** to the single canonical address |
+| A public page's Markdown copy, `/<page>.md` (`/index.md` for the front page), or the page itself asked for with `Accept: text/markdown` | 200, `text/markdown`, `Link: <page>; rel="canonical"` (search engines index the page, not the copy), `Vary: Accept`. Built with the site from the same HTML (`src/prerender/markdown.ts`); each built page names it in a `<link rel="alternate" type="text/markdown">`. Drafts and policies have none |
 | `/robots.txt` | written by the Worker from the route list (below) |
 | Any other host (a preview, `*.workers.dev`) | everything noindex, and robots.txt `Disallow: /` |
 
@@ -31,6 +32,8 @@ Structured data has one source, `apps/web/worker/site.js`: the build uses it for
 Worker for any public page without its own. Titles stay within 60 characters and descriptions within 160. Signed
 out, the app keeps a public page's own title and description after it loads (`src/lib/servedHead.ts`), so Google,
 which reads pages after their scripts run, sees the same head as crawlers that don't.
+
+The project's SEO rules and audit checklist for Claude Code: `.claude/skills/seo/SKILL.md`.
 
 **Adding a public page:** register it in `src/prerender/routes.tsx` (title, description, canonical, structured data,
 `lastmod`), and add its path to `PUBLIC_APP_PAGES` in `routes.js` (plus `PAGE_META` in `meta.js` if the Worker should

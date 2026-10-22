@@ -2,6 +2,7 @@
 // String surgery on a file we write ourselves (apps/web/index.html); each tag must be found, so a changed template
 // fails the build here rather than shipping a page with the front page's title.
 import type { Head } from "./seo";
+import { markdownPath } from "./markdown";
 
 export const escapeHtml = (s: string): string =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -67,6 +68,10 @@ export function pageDocument(template: string, page: { path: string; head: Head;
   }
   if (head.noindex) {
     out = swap(out, /<\/head>/, () => `  <meta name="robots" content="noindex" />\n  </head>`, "</head>");
+  } else {
+    // The same page as Markdown, for AI assistants and agents (markdown.ts, entry.tsx).
+    const md = new URL(markdownPath(page.path), head.canonical).href;
+    out = swap(out, /<\/head>/, () => `  <link rel="alternate" type="text/markdown" href="${escapeHtml(md)}" />\n  </head>`, "</head>");
   }
   if (head.jsonLd) {
     const data = scriptJson(head.jsonLd);
