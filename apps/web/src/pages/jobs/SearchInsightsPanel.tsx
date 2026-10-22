@@ -18,6 +18,8 @@ function Tile({ label, value, format, detail }: { label: string; value: number |
 }
 
 const percent = (n: number) => `${n}%`;
+/** Below this many applications a rate says more about luck than about the search, so counts show instead of percents. */
+export const RATE_FROM = 5;
 const days = (n: number) => (n === 0 ? "Same day" : `${n} day${n === 1 ? "" : "s"}`);
 
 /** Applications a week, the last eight (the shared column chart: one hue, a tooltip per column, the table view). */
@@ -42,6 +44,7 @@ function Weeks({ weeks }: { weeks: SearchInsights["weeks"] }) {
 export function SearchInsightsPanel({ entries }: { entries: JobTrackerEntry[] }) {
   const s = searchInsights(entries);
   if (!s.applied) return null;
+  const early = s.applied < RATE_FROM;
   return (
     <Card className="mb-5">
       <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
@@ -49,8 +52,13 @@ export function SearchInsightsPanel({ entries }: { entries: JobTrackerEntry[] })
       </h2>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Tile label="Applied" value={s.applied} format={String} detail="from your tracker" />
-        <Tile label="Heard back" value={share(s.responseRate)} format={percent} detail={`${s.heardBack} of ${s.applied}: a next step or a no`} />
-        <Tile label="Reached interview" value={share(s.interviewRate)} format={percent} detail={`${s.interviews} of ${s.applied}${s.offers ? `, ${s.offers} offer${s.offers === 1 ? "" : "s"}` : ""}`} />
+        {early ? <>
+          <Tile label="Heard back" value={s.heardBack} format={String} detail={`of ${s.applied} so far; rates show from ${RATE_FROM} applications`} />
+          <Tile label="Reached interview" value={s.interviews} format={String} detail={`of ${s.applied} so far${s.offers ? `, ${s.offers} offer${s.offers === 1 ? "" : "s"}` : ""}`} />
+        </> : <>
+          <Tile label="Heard back" value={share(s.responseRate)} format={percent} detail={`${s.heardBack} of ${s.applied}: a next step or a no`} />
+          <Tile label="Reached interview" value={share(s.interviewRate)} format={percent} detail={`${s.interviews} of ${s.applied}${s.offers ? `, ${s.offers} offer${s.offers === 1 ? "" : "s"}` : ""}`} />
+        </>}
         <Tile label="Typical wait" value={s.medianDaysToHear} format={days} detail={s.medianDaysToHear !== null ? "from applying to an answer" : s.heardBack ? "not enough to tell yet" : "no answers yet"} />
       </div>
       <div className="mt-5 grid gap-6 lg:grid-cols-2">
@@ -74,10 +82,12 @@ export function SearchInsightsPanel({ entries }: { entries: JobTrackerEntry[] })
                     <td className="py-1.5 text-right tabular-nums">{c.applied}</td>
                     <td className="py-1.5 pl-3">
                       <span className="flex items-center gap-2">
-                        <span aria-hidden className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-500/15">
-                          <span className="block h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${rate * 100}%` }} />
-                        </span>
-                        <span className="tabular-nums">{pct(rate)}</span>
+                        {early ? <span className="tabular-nums">{c.heardBack} of {c.applied}</span> : <>
+                          <span aria-hidden className="h-1.5 w-20 overflow-hidden rounded-full bg-zinc-500/15">
+                            <span className="block h-full rounded-full bg-indigo-500 dark:bg-indigo-400" style={{ width: `${rate * 100}%` }} />
+                          </span>
+                          <span className="tabular-nums">{pct(rate)}</span>
+                        </>}
                         {c.interviews > 0 && <span className="text-xs text-zinc-500 dark:text-zinc-400">· {c.interviews} interview{c.interviews === 1 ? "" : "s"}</span>}
                       </span>
                     </td>

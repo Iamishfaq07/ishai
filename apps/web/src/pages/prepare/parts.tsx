@@ -40,7 +40,9 @@ function ToolBody({ t }: { t: ToolCard }) {
 export function Stat({ label, value, hint }: { label: string; value: number | null; hint: string }) {
   return <div className="workspace-panel p-4">
     <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{label}</p>
-    <p className="stat-value mt-1 font-display text-3xl font-semibold">{value === null ? <span className="text-zinc-300 dark:text-zinc-600">–</span> : <CountUp to={value} />}</p>
+    {/* Zero isn't a score: an empty count reads as a plain "None yet", not a big 0. */}
+    {value === 0 ? <p className="mt-2 text-base font-medium text-zinc-600 dark:text-zinc-400">None yet</p>
+      : <p className="stat-value mt-1 font-display text-3xl font-semibold">{value === null ? <span className="text-zinc-300 dark:text-zinc-600">–</span> : <CountUp to={value} />}</p>}
     <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{hint}</p>
   </div>;
 }

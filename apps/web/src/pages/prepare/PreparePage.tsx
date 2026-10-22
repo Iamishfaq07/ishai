@@ -81,7 +81,7 @@ export function PreparePage() {
 
   return <div className="workspace-page">
     <header className="workspace-heading">
-      <div><p className="workspace-eyebrow">Interview preparation</p><h1>Prepare</h1>
+      <div><h1>Prepare</h1>
         <p className="workspace-description">Your next interview, every job you're preparing for and the full toolkit, in one place.</p></div>
       <div className="flex flex-wrap gap-2">
         <Link to="/jobs?work=updates&input=calendar" className={linkButton("secondary")}><CalendarPlus className="h-4 w-4" aria-hidden /> Import invitation</Link>
@@ -89,12 +89,12 @@ export function PreparePage() {
       </div>
     </header>
 
-    <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    {[ahead, jobs?.length, stories.data?.length, sessions.data?.length].some((n) => n !== 0) && <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Stat label="Interviews ahead" value={ahead} hint="Recorded on jobs marked interviewing" />
       <Stat label="Active jobs" value={jobs ? jobs.length : null} hint="Saved, applied, interviewing or at offer" />
       <Stat label="Stories ready" value={stories.data ? stories.data.length : null} hint="In your story bank" />
       <Stat label="Practice sessions" value={sessions.data ? sessions.data.length : null} hint="Rehearsals and copilot sessions" />
-    </Reveal>
+    </Reveal>}
 
     <Reveal as="section" aria-labelledby="up-next" className="workspace-panel workspace-next">
       {tracker.error ? <ErrorNote onRetry={tracker.reload}>Your saved jobs could not load. The toolkit below still works.</ErrorNote>

@@ -418,10 +418,10 @@ function TrackerCard({
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs coarse:mt-1 coarse:gap-y-0">
         <Link
           to={missionPath(entry.id)}
-          aria-label={`Open the mission room for ${entry.title} at ${entry.company}`}
+          aria-label={`Open ${entry.title} at ${entry.company}`}
           className={cx("inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline coarse:min-h-11 dark:text-indigo-300", focusRing)}
         >
-          Mission room <ArrowRight className="h-3 w-3" aria-hidden />
+          Open job <ArrowRight className="h-3 w-3" aria-hidden />
         </Link>
         {entry.status === "saved" && apply && (
           <a href={apply} target="_blank" rel="noopener" className={cx(rowAction, focusRing)}>
