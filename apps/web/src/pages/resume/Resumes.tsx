@@ -313,7 +313,7 @@ export function ResumeAiHomePage() {
       {list.data && list.data.length > 0 && <TailorQueue resumes={list.data} onMade={afterTailoring} />}
       {count > 0 && <section aria-labelledby="resume-tools" className="mt-8">
         <h2 id="resume-tools" className="font-display text-lg font-semibold tracking-tight">Put your resume to work</h2>
-        <Reveal as="ul" stagger className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{RESUME_TOOLS.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
+        <Reveal as="ul" stagger className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">{RESUME_TOOLS.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
       </section>}
       {count > 0 && <FindJobs />}
     </AllowanceContext.Provider>

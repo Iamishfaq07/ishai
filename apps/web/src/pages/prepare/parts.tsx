@@ -7,33 +7,33 @@ export type Icon = ComponentType<{ className?: string; "aria-hidden"?: boolean }
 /** `to` starting with https:// opens outside the app (a download, for instance) in a new tab. */
 export interface ToolCard { title: string; detail: string; icon: Icon; to: string; ai?: boolean; perJob?: boolean; beta?: boolean }
 
-const card = cx("group relative flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-4 text-sm",
-  "motion-safe:transition-[transform,box-shadow,border-color] motion-safe:duration-200 hover:border-indigo-400 hover:shadow-md",
-  "motion-safe:hover:-translate-y-0.5 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-indigo-400/60", focusRing);
-const tag = "rounded-full px-2 py-0.5 text-xs font-medium";
+// A tool is a quiet row (icon, name, one line, tags), not a raised card: the hubs list many, and the next step on the
+// page should stay the loudest thing.
+const card = cx("group flex h-full min-h-11 items-start gap-3 rounded-xl px-3 py-3 text-sm",
+  "motion-safe:transition-colors hover:bg-zinc-100 dark:hover:bg-white/[0.05]", focusRing);
+const tag = "rounded-full px-2 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300";
 
 export function Tool({ t }: { t: ToolCard }) {
   const body = <ToolBody t={t} />;
   return t.to.startsWith("https://")
-    ? <a href={t.to} target="_blank" rel="noopener noreferrer" className={card}>{body}</a>
+    ? <a href={t.to} target="_blank" rel="noopener noreferrer" className={card}>{body}<span className="sr-only">(opens in a new tab)</span></a>
     : <Link to={t.to} className={card}>{body}</Link>;
 }
 
 function ToolBody({ t }: { t: ToolCard }) {
   return <>
-    <span className="flex items-start justify-between gap-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-700 motion-safe:transition-colors group-hover:text-indigo-700 dark:bg-white/[0.06] dark:text-zinc-300 dark:group-hover:text-indigo-300">
-        <t.icon className="h-4 w-4" aria-hidden /></span>
-      <span className="flex flex-wrap justify-end gap-1">
-        {t.ai && <span className={cx(tag, "bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300")}>Uses AI</span>}
-        {t.perJob && <span className={cx(tag, "bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300")}>Per job</span>}
+    <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-700 motion-safe:transition-colors group-hover:text-indigo-700 dark:bg-white/[0.06] dark:text-zinc-300 dark:group-hover:text-indigo-300">
+      <t.icon className="h-4 w-4" aria-hidden /></span>
+    <span className="min-w-0 flex-1">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-semibold group-hover:underline group-hover:underline-offset-4">{t.title}</span>
+        {t.ai && <span className={tag}>Uses AI</span>}
+        {t.perJob && <span className={tag}>Per job</span>}
         {t.beta && <span className={cx(tag, "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200")}>Beta</span>}
       </span>
+      <span className="mt-0.5 block leading-relaxed text-zinc-600 dark:text-zinc-400">{t.detail}</span>
     </span>
-    <span className="mt-3 font-semibold">{t.title}</span>
-    <span className="mt-1 flex-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{t.detail}</span>
-    <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-      {t.to.startsWith("https://") ? "Download" : "Open"} <ArrowRight className="h-3.5 w-3.5 motion-safe:transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
+    <ArrowRight className="mt-1 h-4 w-4 shrink-0 text-zinc-400 motion-safe:transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-700 dark:group-hover:text-indigo-300" aria-hidden />
   </>;
 }
 

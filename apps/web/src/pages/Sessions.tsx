@@ -92,7 +92,7 @@ export function SessionsPage() {
       <section aria-labelledby="copilot-tools">
         <h2 id="copilot-tools" className="font-semibold">Copilot toolkit</h2>
         <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">Set up the context before a call; the better the context, the better the answers.</p>
-        <Reveal as="ul" stagger className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{TOOLS.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
+        <Reveal as="ul" stagger className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">{TOOLS.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
       </section>
 
       <p className="flex items-start gap-2 rounded-xl bg-emerald-50/70 p-3 text-xs text-emerald-900 dark:bg-emerald-500/5 dark:text-emerald-100"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />Use the copilot only where the employer or meeting allows AI assistance. For practice, use Prepare.</p>

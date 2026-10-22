@@ -48,9 +48,9 @@ export function workspaceTools(group: JobWorkspace) {
 /** The one tab row for Jobs (Discover and Applications merged): finding a job and following it through. */
 export function jobsTabs() {
   return [
-    { to: JOBS_MATCHES, label: "Discover" }, { to: JOBS_TRACKER, label: "Tracker" }, { to: "/jobs/priority", label: "Priority" },
-    { to: "/jobs/journey", label: "Auto-apply" }, { to: JOBS_APPLICATIONS, label: "Needs you" },
-    { to: JOBS_OUTREACH, label: "People" },
+    // Three places: find, follow, and let Orbit prepare. Priority and People open from the tracker; the review queue
+    // ("Needs you") is part of Auto-apply. Their addresses still work and keep their parent tab current.
+    { to: JOBS_MATCHES, label: "Discover" }, { to: JOBS_TRACKER, label: "Tracker" }, { to: "/jobs/journey", label: "Auto-apply" },
   ];
 }
 
@@ -58,6 +58,7 @@ export function currentJobTool(pathname: string) {
   const path = pathname.replace(/\/+$/, "");
   if (path.startsWith("/jobs/mission/")) return JOBS_TRACKER;
   if (path.startsWith("/jobs/listing/") || path === JOBS_PROFILE) return JOBS_MATCHES;
-  if (path === JOBS_AUTO_APPLY) return "/jobs/journey";
+  if (path === JOBS_AUTO_APPLY || path === JOBS_APPLICATIONS || path.startsWith(`${JOBS_APPLICATIONS}/`)) return "/jobs/journey";
+  if (path === "/jobs/priority" || path === JOBS_OUTREACH) return JOBS_TRACKER;
   return path;
 }

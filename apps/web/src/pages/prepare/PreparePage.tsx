@@ -2,16 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
 import {
-  ArrowRight, BookOpen, Brain, Building2, CalendarPlus, ClipboardCheck, Code2, ErrorNote, GraduationCap, Headphones,
-  ListChecks, MOCK_INTERVIEW_ENABLED, Mic, NotebookPen, Play, Reveal, ShieldCheck, Sparkles,
+  ArrowRight, BookOpen, Brain, Building2, CalendarPlus, Code2, ErrorNote, GraduationCap, Headphones,
+  ListChecks, MOCK_INTERVIEW_ENABLED, Mic, Play, Reveal, ShieldCheck, Sparkles,
   Target, UsersRound, Video, Zap, cx, focusRing,
   Gauge,
 } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 import { linkButton } from "../jobs/links";
-import { STATUS_LABEL } from "../jobs/model";
 import { missionPath } from "../jobs/paths";
+import { RouteLine } from "../../components/RouteLine";
 import { StagePill } from "../jobs/StagePill";
 import { Stat, Tool, type ToolCard } from "./parts";
 import { MoreTools } from "../tools/MoreTools";
@@ -77,14 +77,6 @@ export function PreparePage() {
       { title: "Evidence & fit", detail: "Each requirement matched to your experience, with practice for the gaps.", icon: Target, to: jobTab("fit"), ai: true, perJob: true },
       { title: "Learning", detail: "Close a gap without claiming a skill you haven't finished.", icon: GraduationCap, to: "/learn" },
     ] },
-    { title: "For a specific interview", about: "Tied to one job, using its post, your resume and your notes.", items: [
-      { title: "Prep plan & countdown", detail: "Day-by-day plan to the recorded interview date.", icon: ListChecks, to: jobTab("plan"), perJob: true },
-      { title: "Company & people", detail: "How the company interviews, what it asked you before, and who's hiring.", icon: Building2, to: jobTab("company"), perJob: true },
-      { title: "Interview debrief", detail: "After a round: questions asked, promises made, what to prepare next.", icon: NotebookPen, to: jobTab("interview"), ai: true, perJob: true },
-      { title: "Promises to keep", detail: "What you said you'd send, dated, on Today until done.", icon: ClipboardCheck, to: jobTab("interview"), perJob: true },
-      { title: "Prepare your references", detail: "A request and a brief for each reference.", icon: UsersRound, to: jobTab("interview"), ai: true, perJob: true },
-      { title: "Import an invitation", detail: "Read a calendar file, pick the job and confirm the time.", icon: CalendarPlus, to: "/jobs?work=updates&input=calendar" },
-    ] },
   ];
 
   return <div className="workspace-page">
@@ -141,10 +133,10 @@ export function PreparePage() {
       <Reveal as="ul" stagger className="mt-3 divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-zinc-900">
         {jobs.slice(0, 8).map((j) => <li key={j.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 motion-safe:transition-colors hover:bg-zinc-50 dark:hover:bg-white/5">
           <div className="min-w-0 flex-1"><Link to={`${missionPath(j.id)}?tab=plan`} className={cx("rounded font-semibold hover:underline", focusRing)}>{j.title} · {j.company}</Link>
-            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-zinc-500"><StagePill status={j.status} />
-              {j.next_at && Date.parse(j.next_at) > now ? <span>Next step {countdown(j.next_at, now)}</span> : <span>{STATUS_LABEL[j.status]}</span>}</p></div>
-          <nav aria-label={`Prepare for ${j.title}`} className="flex flex-wrap gap-1">{([["plan", "Plan"], ["fit", "Fit"], ["company", "Company"], ["practice", "Practise"], ["interview", "Interview"]] as const).map(([tab, label]) =>
-            <Link key={tab} to={`${missionPath(j.id)}?tab=${tab}`} className={cx("inline-flex min-h-9 items-center rounded-lg px-2.5 text-xs font-medium text-zinc-700 ring-1 ring-zinc-200 hover:bg-indigo-50 hover:text-indigo-800 hover:ring-indigo-300 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-indigo-500/10", focusRing)}>{label}</Link>)}</nav>
+            <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><StagePill status={j.status} className="sm:hidden" />
+              {j.next_at && Date.parse(j.next_at) > now && <span>Next step {countdown(j.next_at, now)}</span>}</p></div>
+          <RouteLine status={j.status} labels className="hidden w-64 sm:flex" />
+          <Link to={`${missionPath(j.id)}?tab=plan`} aria-label={`Prepare for ${j.title} at ${j.company}`} className={cx("inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>Prepare <ArrowRight className="h-4 w-4" aria-hidden /></Link>
         </li>)}
       </Reveal>
     </section>}
@@ -152,7 +144,7 @@ export function PreparePage() {
     {groups.map((g) => <section key={g.title} aria-labelledby={`grp-${g.title}`}>
       <h2 id={`grp-${g.title}`} className="font-semibold">{g.title}</h2>
       <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{g.about}</p>
-      <Reveal as="ul" stagger className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
+      <Reveal as="ul" stagger className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
     </section>)}
 
     <MoreTools home="prepare" shown={[...groups.flatMap((g) => g.items.map((t) => t.to)), "/jobs/tracker", "/prepare"]} />
