@@ -21,6 +21,7 @@ import {
   Sparkles,
   Target,
   Trash2,
+  Users,
   CompanyLogo,
   Route,
   LoadGate,
@@ -549,6 +550,9 @@ function TrackerCard({
           className={cx("inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline coarse:min-h-11 dark:text-indigo-300", focusRing)}
         >
           Open job <ArrowRight className="h-3 w-3" aria-hidden />
+        </Link>
+        <Link to={`${missionPath(entry.id)}?contacts=1`} aria-label={`Find contacts at ${entry.company}`} className={cx(rowAction, focusRing)}>
+          <Users className="h-3 w-3" aria-hidden /> Contacts
         </Link>
         {entry.status === "saved" && apply && (
           <a href={apply} target="_blank" rel="noopener" className={cx(rowAction, focusRing)}>

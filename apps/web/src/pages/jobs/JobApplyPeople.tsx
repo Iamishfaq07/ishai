@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState } from "react";
-import { Link } from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import type { JobTrackerEntry, NetworkContext } from "@orbit/types";
 import { ArrowRight, Send, UsersRound, cx, focusRing } from "@orbit/ui";
 import { Button, ErrorNote } from "../../components/ui";
@@ -20,18 +20,36 @@ const textLink = cx("inline-flex min-h-11 items-center gap-1 rounded text-sm fon
  * Both are drafts until the candidate acts: nothing is sent from here.
  */
 export function JobApplyPeople({ entry }: { entry: JobTrackerEntry }) {
-  const [finder, setFinder] = useState(false);
-  return <section aria-label="Apply and people" className="space-y-4">
-    <div className="grid min-w-0 gap-4 md:grid-cols-2">
-      <AutoApplyCard entry={entry} />
-      <PeopleCard entry={entry} finder={finder} onFinder={() => setFinder((open) => !open)} />
-    </div>
-    {finder && <div id="job-contact-finder" className="workspace-panel p-5">
+  // Tracker cards and Discover link here with ?contacts=1, finder already open.
+  const [params] = useSearchParams();
+  return <div className="grid min-w-0 gap-4 md:grid-cols-2">
+    <AutoApplyCard entry={entry} />
+    <JobPeople company={entry.company} listingId={entry.listing_id} applicationId={entry.id} defaultOpen={params.get("contacts") === "1"} />
+  </div>;
+}
+
+/**
+ * People at the company, for one job: the contacts saved there and the contact finder (recruiters, HR and the team,
+ * each with its source). The finder works on a saved job; an unsaved one offers to save it first. On a narrow grid
+ * cell the finder opens full width under the card's row.
+ */
+export function JobPeople({ company, listingId, applicationId, defaultOpen = false, onSave, saving = false }: {
+  company: string; listingId: string; applicationId: string | null; defaultOpen?: boolean; onSave?: () => void; saving?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  // Opened from a link (?contacts=1): bring the finder into view once it's there.
+  useEffect(() => {
+    if (defaultOpen) requestAnimationFrame(() => document.getElementById("job-contact-finder")?.scrollIntoView({ block: "start" }));
+  }, [defaultOpen]);
+  return <>
+    <PeopleCard company={company} listingId={listingId} applicationId={applicationId} finder={open}
+      onFinder={() => { if (!applicationId) onSave?.(); setOpen((o) => applicationId ? !o : true); }} saving={saving} />
+    {open && applicationId && <div id="job-contact-finder" className="workspace-panel p-5 md:col-span-2">
       <Suspense fallback={<p role="status" className="text-sm">Opening the contact finder…</p>}>
-        <ContactResearch key={entry.id} listingId={entry.listing_id} applicationId={entry.id} onSaved={() => undefined} />
+        <ContactResearch key={applicationId} listingId={listingId} applicationId={applicationId} onSaved={() => undefined} />
       </Suspense>
     </div>}
-  </section>;
+  </>;
 }
 
 function AutoApplyCard({ entry }: { entry: JobTrackerEntry }) {
@@ -79,24 +97,28 @@ function AutoApplyCard({ entry }: { entry: JobTrackerEntry }) {
   </article>;
 }
 
-function PeopleCard({ entry, finder, onFinder }: { entry: JobTrackerEntry; finder: boolean; onFinder: () => void }) {
-  const network = useAsync(() => api.call<NetworkContext>(`/v1/jobs/network/${encodeURIComponent(entry.id)}`), [entry.id], `network:${entry.id}`);
+function PeopleCard({ company, listingId, applicationId, finder, onFinder, saving }: {
+  company: string; listingId: string; applicationId: string | null; finder: boolean; onFinder: () => void; saving: boolean;
+}) {
+  const network = useAsync(() => applicationId ? api.call<NetworkContext>(`/v1/jobs/network/${encodeURIComponent(applicationId)}`) : Promise.resolve(null),
+    [applicationId], applicationId ? `network:${applicationId}` : undefined);
   const people = network.data?.saved_contacts ?? [];
-  return <article className={card} aria-labelledby="people-title">
+  return <article className={card} aria-labelledby={`people-${listingId}`}>
     <div className="flex items-center gap-2.5">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"><UsersRound className="h-4 w-4" aria-hidden /></span>
-      <h2 id="people-title" className="font-semibold">People at {entry.company}</h2>
+      <h2 id={`people-${listingId}`} className="font-semibold">People at {company}</h2>
     </div>
-    {network.loading && !network.data ? <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">Checking who you've saved here…</p>
+    {applicationId && network.loading && !network.data ? <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">Checking who you've saved here…</p>
       : people.length ? <ul className="divide-y divide-zinc-200 dark:divide-white/10">{people.slice(0, 3).map((p) => <li key={p.id} className="py-2">
         <p className="text-sm font-medium">{p.name}</p>
         <p className="text-[13px] text-zinc-600 dark:text-zinc-400">{p.title || "Role not recorded"}</p>
       </li>)}</ul>
-      : <p className="text-sm text-zinc-600 dark:text-zinc-400">Find the recruiter, HR and team members for this role from public sources, each with the page it came from. You choose who to save; nothing is sent.</p>}
+      : <p className="text-sm text-zinc-600 dark:text-zinc-400">Find the recruiter, HR and team members for this role from public sources, each with the page it came from. You choose who to save; nothing is sent.{applicationId ? "" : " The job is saved to your tracker first."}</p>}
     {network.error && <ErrorNote onRetry={network.reload}>{errorText(network.error)}</ErrorNote>}
     <div className="mt-auto flex flex-wrap items-center gap-x-4">
-      <Button variant="secondary" aria-expanded={finder} aria-controls="job-contact-finder" onClick={onFinder}>{finder ? "Close the finder" : people.length ? "Find more contacts" : "Find HR and team contacts"}</Button>
-      {people.length > 3 && <Link to={`/jobs/outreach?job=${encodeURIComponent(entry.listing_id)}&network=1`} className={textLink}>All {people.length}</Link>}
+      <Button variant="secondary" loading={saving} aria-expanded={finder} aria-controls="job-contact-finder" onClick={onFinder}>
+        {!applicationId ? "Save and find contacts" : finder ? "Close the finder" : people.length ? "Find more contacts" : "Find HR and team contacts"}</Button>
+      {people.length > 3 && <Link to={`/jobs/outreach?job=${encodeURIComponent(listingId)}&network=1`} className={textLink}>All {people.length}</Link>}
     </div>
   </article>;
 }
