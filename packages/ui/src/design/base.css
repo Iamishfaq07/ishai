@@ -1384,6 +1384,21 @@ html.app-shell :is(h1, h2, h3, .font-display) {
 }
 /* The Route map title face: every page title (h1) and `font-title` (Today's next stop) use it inside the shell. Section
    headings (h2, h3) stay in Plex so dense tool pages read as one product. */
+/* Inside the app the old cyan "aurora" highlight in the scene illustrations becomes the route accent, so every picture
+   speaks the same green as the route lines. The public site keeps its own brand gradient. */
+html.app-shell {
+  --aurora-50: var(--accent-50);
+  --aurora-100: var(--accent-100);
+  --aurora-200: var(--accent-200);
+  --aurora-300: var(--accent-300);
+  --aurora-400: var(--accent-400);
+  --aurora-500: var(--accent-500);
+  --aurora-600: var(--accent-600);
+  --aurora-700: var(--accent-700);
+  --aurora-800: var(--accent-800);
+  --aurora-900: var(--accent-900);
+  --aurora-950: var(--accent-950);
+}
 /* Route map motion. Full: a route grows stop to stop, stops pop in, the route picture draws itself, sections rise in
    order (--i). Gentle: the same things fade only. Off: nothing moves. Transform and opacity only. */
 @keyframes route-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }

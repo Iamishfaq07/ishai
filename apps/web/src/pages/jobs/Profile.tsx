@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import type { JobPrefs, JobProfile } from "@orbit/types";
@@ -21,7 +22,7 @@ export function JobProfilePage() {
   const { profile, suggesting, setProfile } = useJobsAi();
   return (
     <>
-      <PageHeader
+      <PageHeader art={<SpotArt kind="search" />}
         icon={SlidersHorizontal}
         title="Your search profile"
         subtitle="What Jobs looks for. The AI fills it in from your resume; change anything, and your matches follow."

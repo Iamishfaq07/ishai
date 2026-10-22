@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { ResumeData, ResumeInput, ResumeSummary } from "@orbit/types";
@@ -198,7 +199,8 @@ export function ResumeAiHomePage() {
           <div>
             <h1 id="resume-ai-title">Your resumes</h1>
             <p className="workspace-description">Every version with its ATS score. Make a copy to tailor one for each job.</p></div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <SpotArt kind="resume" className="mr-2 hidden w-28 lg:block" />
             <Button variant="secondary" onClick={() => setCreating("import")}><FileUp className="h-4 w-4" /> Import</Button>
             <Button onClick={() => setCreating("new")}><Plus className="h-4 w-4" /> Create a resume</Button>
           </div>

@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry, Resume, ResumeSummary } from "@orbit/types";
@@ -93,7 +94,7 @@ export function ApplyPriorityPage() {
   };
 
   if (tracker.error && !tracker.data) return <ErrorNote onRetry={tracker.reload}>{errorText(tracker.error)}</ErrorNote>;
-  const header = <PageHeader eyebrow="Applications" icon={Gauge} title="Apply priority"
+  const header = <PageHeader art={<SpotArt kind="route" />} eyebrow="Applications" icon={Gauge} title="Apply priority"
     subtitle="Every saved job scored on what matters to you, graded A to F, so this week's applications start at the top." />;
   if (tracker.data && !jobs.length) return <>{header}<EmptyState icon={Gauge} title="No saved jobs to rank yet"
     body="Save a few jobs from Discover, or add one you found elsewhere. They'll be scored here."

@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useState } from "react";
 import { Route, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
 import { Card, Field, Input, PageHeader } from "../../components/ui";
@@ -17,7 +18,7 @@ export function GapExplainerPage() {
   const set = (patch: Partial<GapInput>) => { const next = { ...g, ...patch }; setG(next); safeLocal.setItem(KEY, JSON.stringify(next)); };
 
   return <div>
-    <PageHeader eyebrow="My Career" icon={Route} title="Career gap explainer"
+    <PageHeader art={<SpotArt kind="resume" />} eyebrow="My Career" icon={Route} title="Career gap explainer"
       subtitle="A break is common. Say it briefly and honestly, then show you're ready. Here's a resume line and an answer to start from." />
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <Card className="space-y-4">

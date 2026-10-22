@@ -1,3 +1,4 @@
+import { SpotArt } from "../components/SpotArt";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { DOCUMENT_ACCEPT, type DocumentKind, type OrbitDocument } from "@orbit/types";
@@ -106,7 +107,7 @@ export function DocumentsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Your materials"
+      <PageHeader art={<SpotArt kind="resume" />} eyebrow="Your materials"
         icon={FolderOpen}
         title="Documents"
         subtitle="Your resume, job descriptions, and notes. Pick which ones each session can use."

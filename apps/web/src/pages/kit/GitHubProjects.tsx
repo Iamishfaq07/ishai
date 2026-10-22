@@ -1,3 +1,4 @@
+import { SpotArt } from "../../components/SpotArt";
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Code2, ExternalLink, Search, Star, cx, focusRing, safeLocal } from "@orbit/ui";
@@ -45,7 +46,7 @@ export function GitHubProjectsPage() {
   const toggle = (name: string) => setChosen((c) => c.includes(name) ? c.filter((x) => x !== name) : [...c, name]);
 
   return <div>
-    <PageHeader eyebrow="Resume Studio" icon={Code2} title="GitHub projects"
+    <PageHeader art={<SpotArt kind="resume" />} eyebrow="Resume Studio" icon={Code2} title="GitHub projects"
       subtitle="Turn your public repositories into resume projects, a skills list and interview stories. Best for freshers whose code is their experience." />
     <Card>
       <form onSubmit={(e) => void load(e)} className="flex flex-col gap-2 sm:flex-row">
