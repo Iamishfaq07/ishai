@@ -21,7 +21,14 @@ from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.job_portal import contacts
-from orbit_api.job_portal.contact_extras import email_format, hunter_enabled, hunter_people, warm_paths
+from orbit_api.job_portal.contact_extras import (
+    domain_from,
+    email_format,
+    email_queries,
+    hunter_enabled,
+    hunter_people,
+    warm_paths,
+)
 from orbit_api.job_portal.contact_sources import (
     Source,
     contact_queries,
@@ -186,7 +193,8 @@ async def own_addresses(db: AsyncSession, user: User, job: JobApplication) -> se
     return emails
 
 
-def validate_people(raw: object, sources: list[Source], own_emails: set[str], company: str) -> People:
+def validate_people(raw: object, sources: list[Source], own_emails: set[str], company: str,
+                    domain: str | None = None) -> People:
     """Every person kept has exact published evidence naming this employer. A lead that fails a check is dropped on
     its own, so one weak lead doesn't cost the others."""
     result = People.model_validate(raw)
@@ -195,7 +203,7 @@ def validate_people(raw: object, sources: list[Source], own_emails: set[str], co
     kept: list[Person] = []
     for person in result.people:
         try:
-            check_person(person, by_id.get(person.source_id), own_emails, company)
+            check_person(person, by_id.get(person.source_id), own_emails, company, domain)
         except ValueError as exc:
             log.info("contact lead dropped: %s", exc)
             continue
@@ -207,14 +215,16 @@ def validate_people(raw: object, sources: list[Source], own_emails: set[str], co
     return result.model_copy(update={"people": kept})
 
 
-def check_person(person: Person, source: Source | None, own_emails: set[str], company: str) -> None:
+def check_person(person: Person, source: Source | None, own_emails: set[str], company: str,
+                 domain: str | None = None) -> None:
     quote_words = contacts._clean(person.quote)
     if (source is None or person.quote not in source.text
             or not re.search(r"(?<!\w)" + re.escape(person.name) + r"(?!\w)", quote_words)):
         raise ValueError("Every identity needs its exact published evidence.")
     if person.title and person.title not in quote_words:
         raise ValueError("The title must appear alongside this person.")
-    if source.kind in ("search_snippet", "search_content") and not names_company(source.text, company):
+    named = names_company(source.text, company) or bool(domain and f"@{domain}" in source.text.casefold())
+    if source.kind in ("search_snippet", "search_content") and not named:
         raise ValueError("The search result must actually name the target company.")
     if person.email:
         contacts.email(person.email)
@@ -331,6 +341,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
             sources.append(await page_source(body.page_url))
         except (JobLinkError, ValueError):
             warnings.append("That page could not be read.")
+    domain: str | None = None
     if body.search_web and before["web_search_enabled"]:
         planned = contact_queries(job.company, job.title)
         planned = planned if body.automatic else planned[:1]
@@ -351,6 +362,26 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
             workflow.append({"label": label, "status": "failed" if error and not results else
                              "completed" if results else "empty", "source_count": len(results)})
         await db.commit()
+        # The free email directory: the employer's own domain, then addresses its people published on the web.
+        listing = await db.get(JobListing, job.listing_id)
+        domain = domain_from([job.url, listing.url if listing else None, listing.apply_url if listing else None,
+                              *[s.url for s in sources]], job.company)
+        if domain is None and body.automatic:
+            # No own-site link yet: one search for the employer's website.
+            site, _ = await search_once(db, user, job, 19, f'"{employer_name(job.company)}" official website')
+            domain = domain_from([s.url for s in site], job.company)
+        if domain and body.automatic:
+            extra = email_queries(domain)
+            more = await asyncio.gather(*(search_once(db, user, job, 20 + i, q) for i, (_, q) in enumerate(extra)))
+            for (label, _), (results, _error) in zip(extra, more, strict=True):
+                for source in results:
+                    if source.url not in urls and len(sources) < 40:
+                        sources.append(source)
+                        if source.url:
+                            urls.add(source.url)
+                workflow.append({"label": label, "status": "completed" if results else "empty",
+                                 "source_count": len(results)})
+            await db.commit()
     elif body.search_web:
         warnings.append("Automatic search isn't available right now.")
 
@@ -385,10 +416,11 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
                 '"exact title or empty","email":null,"linkedin_url":null,"quote":"one exact contiguous excerpt '
                 'containing the identity and every non-null contact value"}]} with at most five people. Never invent '
                 'a person, email pattern, title, relationship or URL. A search snippet must name the target employer. '
+                'An address at the company_domain also shows the person works there. '
                 'Exclude automatic mailboxes and the candidate. Empty people is a valid complete result.',
-                json.dumps({"company": job.company, "job_title": job.title,
+                json.dumps({"company": job.company, "company_domain": domain, "job_title": job.title,
                             "sources": [s.model_dump() for s in others]}),
-                lambda raw: validate_people(raw, others, own, job.company))
+                lambda raw: validate_people(raw, others, own, job.company, domain))
             names = {p.name.casefold() for p in people}
             people += [p for p in result.people if p.name.casefold() not in names][:max(0, 8 - len(people))]
         except HTTPException as exc:

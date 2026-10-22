@@ -152,3 +152,41 @@ async def why_company(data: ResumeData, facts: Facts, company: str, title: str, 
         except (LLMError, ValueError) as e:
             log.info("apply why-company: template used (%s)", type(e).__name__)
     return template_why(data, facts, company, title, job_text), False
+
+
+OPEN_SYSTEM = """You answer one question on a job application form for the candidate.
+
+Rules:
+- First person, plain and specific. Text answers: 40-150 words, no greeting, no markdown.
+- Only facts the resume gives about the candidate. Never claim a skill, tool, degree, employer, number, date,
+  salary, notice period, location preference or legal status the resume doesn't show.
+- Anything about the company or role comes from the job post only.
+- If the question has options, reply with exactly one option, copied as written, and only when the resume clearly
+  supports it.
+- If the resume doesn't give what the question asks, reply with exactly: NONE
+Return only the answer."""
+
+
+async def open_answer(data: ResumeData, company: str, title: str, job_text: str, question: str,
+                      options: list[str] | None, generate: Generate | None) -> str | None:
+    """A new question's answer drafted from the resume and the post, checked like the letters; None when the AI is
+    off, the resume can't answer it, or the draft fails a check (the question then waits for the candidate)."""
+    if generate is None:
+        return None
+    body = (f"Company: {company}\nRole: {title}\nQuestion: {question[:500]}\n"
+            + (f"Options: {' | '.join(o[:120] for o in options[:30])}\n" if options else "")
+            + f"\n<reference_data source=\"resume\">\n{fence(ai._resume_json(data))}\n</reference_data>\n\n"
+            f"<reference_data source=\"job_post\">\n{fence(job_text[:ai.MAX_JOB_CHARS])}\n</reference_data>")
+    try:
+        resp = await generate(LLMRequest(messages=[LLMMessage("system", OPEN_SYSTEM), LLMMessage("user", body)],
+                                         max_tokens=400, temperature=0.3, request_type="apply_open_answer"))
+    except (LLMError, ValueError) as e:
+        log.info("apply open answer: left for the candidate (%s)", type(e).__name__)
+        return None
+    text = resp.text.strip().strip('"')
+    if not text or text.upper().startswith("NONE"):
+        return None
+    if options:
+        return next((o for o in options if o.strip().casefold() == text.casefold()), None)
+    clean = _clean(text, data, job_text)
+    return clean if clean and 20 <= len(clean) <= MAX_WHY else None

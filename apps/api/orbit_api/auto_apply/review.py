@@ -1,6 +1,7 @@
 """An advisory second reader of an owned application, never a submit/approve tool."""
 import hashlib
 import json
+import logging
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,12 +18,18 @@ from orbit_api.resumes.schema import ResumeData
 from orbit_api.workflow_advice import INSTRUCTION, AdviceIn, validate_advice
 from orbit_api.workflow_ai import preview
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/apply/packets", tags=["application review"],
     dependencies=[Depends(limit_user("apply-review", rate_per_s=1, burst=20))])
 
 
-def text(data: dict[str, Any]) -> str:
-    return resume_text(ResumeData.model_validate(data).visible())
+def text(data: Any) -> str:
+    """A resume as plain text; an older or partly filled saved resume is read as far as it goes, never a crash."""
+    try:
+        return resume_text(ResumeData.model_validate(data or {}).visible())
+    except (ValueError, TypeError) as exc:
+        log.info("second reader: resume not readable (%s)", type(exc).__name__)
+        return ""
 
 
 async def snapshot(db: AsyncSession, user: User, packet_id: str) -> dict[str, Any]:
@@ -48,14 +55,15 @@ async def snapshot(db: AsyncSession, user: User, packet_id: str) -> dict[str, An
     if p.resume_data:
         add("prepared", "Prepared application resume", text(p.resume_data))
     add("letter", "Prepared cover letter", p.cover_letter or "")
-    add("questions", "Unanswered required questions", "\n".join(str(q.get("label", "")) for q in p.missing))
+    add("questions", "Unanswered required questions",
+        "\n".join(str(q.get("label", "")) if isinstance(q, dict) else str(q) for q in (p.missing or [])))
     add("status", "Application state", f"Status: {p.status}. Match: {p.match_score}. {p.reason}")
     version = hashlib.sha256(json.dumps({"facts": facts, "packet": p.id, "updated": str(p.updated_at),
         "resume": master.data if master and master.user_id == user.id else None,
         "prepared": p.resume_data, "letter": p.cover_letter, "answers": p.answers,
         "approval": p.approval_fingerprint, "approved_hash": setup.resume_hash if setup else None,
         "posting": listing.description if listing else None, "archived_posting": p.posting_text},
-        sort_keys=True).encode()).hexdigest()
+        sort_keys=True, default=str).encode()).hexdigest()
     return {"version": version, "facts": facts}
 
 

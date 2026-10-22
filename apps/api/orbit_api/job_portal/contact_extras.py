@@ -119,3 +119,46 @@ async def warm_paths(db: AsyncSession, user_id: str, job: JobApplication) -> dic
     target = employer_name(job.company).casefold()
     return {"schools": [s for s in dict.fromkeys(schools) if s][:3],
             "employers": [e for e in dict.fromkeys(employers) if e and employer_name(e).casefold() != target][:3]}
+
+
+# Hosts that are never the employer's own site: job boards, ATS hosts, social and search sites.
+NOT_COMPANY = ("linkedin.com", "indeed.", "naukri.com", "glassdoor.", "foundit.in", "monster.", "instahyre.com",
+               "greenhouse.io", "lever.co", "ashbyhq.com", "myworkdayjobs.com", "myworkdaysite.com",
+               "smartrecruiters.com", "workable.com", "recruitee.com", "wellfound.com", "angel.co", "github.com",
+               "twitter.com", "x.com", "facebook.com", "instagram.com", "youtube.com", "wikipedia.org",
+               "crunchbase.com", "bloomberg.com", "google.", "bing.com", "zoominfo.com", "apollo.io", "rocketreach.co",
+               "theorg.com", "ambitionbox.com", "adzuna.", "jooble.", "simplyhired.", "ziprecruiter.")
+
+
+def company_host(url: str | None) -> str | None:
+    """The registrable-looking host of an employer's own page ("careers.samsara.com" → "samsara.com"), or None for a
+    board, an ATS or any other third-party site."""
+    from urllib.parse import urlsplit
+
+    host = (urlsplit(url or "").hostname or "").lower().removeprefix("www.")
+    if not host or "." not in host or any(bad in host for bad in NOT_COMPANY):
+        return None
+    parts = host.split(".")
+    keep = 3 if len(parts) >= 3 and parts[-2] in ("co", "com", "org", "net", "ac", "gov") and len(parts[-1]) == 2 else 2
+    return ".".join(parts[-keep:])
+
+
+def domain_from(urls: list[str | None], company: str) -> str | None:
+    """The employer's domain: the first own-site address whose name looks like the company's."""
+    name = employer_name(company).casefold()
+    core = re.sub(r"[^a-z0-9]", "", name)
+    initials = "".join(w[0] for w in re.findall(r"[a-z0-9]+", name))  # "Tata Consultancy Services" → "tcs"
+    for url in urls:
+        host = company_host(url)
+        if not host or not core:
+            continue
+        label = host.split(".")[0].replace("-", "")
+        if core[:6] in label or label in core or (len(initials) >= 2 and label == initials):
+            return host
+    return None
+
+
+def email_queries(domain: str) -> list[tuple[str, str]]:
+    """Searches for addresses an employer's people have published themselves: the free directory."""
+    return [("Published work emails", f'"@{domain}" (recruiter OR "talent acquisition" OR hiring OR HR)'),
+            ("Published team emails", f'"@{domain}" (engineer OR manager OR lead) contact')]

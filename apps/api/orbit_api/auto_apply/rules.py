@@ -3,8 +3,10 @@ candidate can choose a limit *under* a cap, never past it, and no setting turns 
 
 The rules (orbit-business-autoapply.md §2.5):
 1. Answers come only from what the candidate approved: the master resume, the confirmed facts and the answer bank.
-   Nothing invents experience, skills, degrees, salary history, notice period or work authorisation. A required
-   question without a truthful answer stops the packet (`needs_answer`) until the candidate answers it once.
+   Nothing invents experience, skills, degrees, salary history, notice period or work authorisation. A new open
+   question or plain choice is drafted from the resume and the post and checked like the cover letter
+   (planner.draft_new, letters.open_answer). A required question still without a truthful answer stops the packet
+   (`needs_answer`) until the candidate answers it once; that answer is saved and reused.
 2. Legal attestations (work authorisation, sponsorship, background checks, "I certify", arbitration, an AI policy)
    are answered only from an explicit answer the candidate set. Voluntary self-identification (EEO) is "decline to
    self-identify" unless the candidate chose otherwise.
