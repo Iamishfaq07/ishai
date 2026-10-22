@@ -13,8 +13,7 @@ import { linkButton } from "../jobs/links";
 import { missionPath } from "../jobs/paths";
 import { RouteLine } from "../../components/RouteLine";
 import { StagePill } from "../jobs/StagePill";
-import { Stat, Tool, type ToolCard } from "./parts";
-import { MoreTools } from "../tools/MoreTools";
+import { Stat, ToolHub, type ToolCard } from "./parts";
 
 const CLOSED = new Set(["hired", "withdrawn", "rejected"]);
 const MINUTE = 60_000;
@@ -79,6 +78,16 @@ export function PreparePage() {
     ] },
   ];
 
+  // Three tools for where the person is: an interview coming up, no stories yet, or neither.
+  const byTitle = (t: string) => groups.flatMap((g) => g.items).find((x) => x.title === t);
+  const rehearse = MOCK_INTERVIEW_ENABLED ? "Mock interview with Saba" : "Quick warm-up";
+  const pick = next
+    ? { reason: `For your interview ${countdown(next.next_at!, now)}: your opening answer, a full rehearsal and a quick warm-up.`, titles: ["Tell me about yourself", rehearse, "Quick warm-up"] }
+    : stories.data?.length === 0
+      ? { reason: "Start with your stories: every interview answer is built from them.", titles: ["Story bank", "STAR answer check", rehearse] }
+      : { reason: "Rehearse in your own time, before any interview is booked.", titles: [rehearse, "Aptitude tests", "Skill readiness"] };
+  const pickTools = { reason: pick.reason, tools: [...new Set(pick.titles)].map(byTitle).filter((t): t is ToolCard => Boolean(t)) };
+
   return <div className="workspace-page">
     <header className="workspace-heading">
       <div><h1>Prepare</h1>
@@ -141,13 +150,7 @@ export function PreparePage() {
       </Reveal>
     </section>}
 
-    {groups.map((g) => <section key={g.title} aria-labelledby={`grp-${g.title}`}>
-      <h2 id={`grp-${g.title}`} className="font-semibold">{g.title}</h2>
-      <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{g.about}</p>
-      <Reveal as="ul" stagger className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">{g.items.map((t) => <li key={t.title}><Tool t={t} /></li>)}</Reveal>
-    </section>)}
-
-    <MoreTools home="prepare" shown={[...groups.flatMap((g) => g.items.map((t) => t.to)), "/jobs/tracker", "/prepare"]} />
+    <ToolHub id="prepare-tools" home="prepare" reason={pickTools.reason} suggested={pickTools.tools} groups={groups} allTitle="All practice tools" />
 
     <section aria-labelledby="live-help" className="workspace-panel flex flex-wrap items-center justify-between gap-4 p-5">
       <div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"><ShieldCheck className="h-4 w-4" aria-hidden /></span>
