@@ -21,8 +21,10 @@ const isSaved = (v: unknown): v is Saved => typeof v === "object" && v !== null 
 const EMPTY: Saved = { resumeId: null, weights: DEFAULT_WEIGHTS, ratings: {} };
 
 const GRADE_TONE = {
-  A: "bg-emerald-600 text-white", B: "bg-teal-600 text-white", C: "bg-amber-500 text-zinc-950",
-  D: "bg-orange-600 text-white", F: "bg-zinc-500 text-white",
+  // Your own ranking, not a verdict: the top grades wear the accent, the rest stay neutral ink (no warning colours).
+  A: "bg-indigo-700 text-white dark:bg-indigo-400 dark:text-zinc-950", B: "bg-indigo-100 text-indigo-900 dark:bg-indigo-500/20 dark:text-indigo-100",
+  C: "bg-zinc-200 text-zinc-900 dark:bg-white/10 dark:text-zinc-100", D: "bg-zinc-100 text-zinc-700 ring-1 ring-zinc-300 dark:bg-transparent dark:text-zinc-300 dark:ring-white/20",
+  F: "bg-zinc-100 text-zinc-700 ring-1 ring-zinc-300 dark:bg-transparent dark:text-zinc-300 dark:ring-white/20",
 } as const;
 
 /** Each saved post's keywords against one resume (POST /v1/resumes/score: the ATS report, no AI, no credit). */

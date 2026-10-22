@@ -506,7 +506,7 @@ function ChipsField({
           placeholder={items.length >= max ? "" : placeholder}
           disabled={items.length >= max}
           list={suggestions ? `${id}-list` : undefined}
-          className="min-w-[8rem] flex-1 bg-transparent px-1 py-1 text-sm outline-none placeholder:text-zinc-400"
+          className="min-w-[8rem] flex-1 bg-transparent px-1 py-1 text-sm outline-none placeholder:text-zinc-500"
         />
         {suggestions && (
           <datalist id={`${id}-list`}>

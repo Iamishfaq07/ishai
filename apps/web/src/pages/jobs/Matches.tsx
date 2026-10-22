@@ -176,7 +176,7 @@ function Matches({ profile }: { profile: JobProfile }) {
               enterKeyHint="search"
               placeholder={`Try: remote React jobs in ${profile.cities.find((c) => !ANYWHERE_TOKENS.includes(c)) ?? (isIndia(country) ? "Bangalore" : (sampleCity(country) ?? "your city"))}, 2 years`}
               className={cx(
-                "block w-full rounded-xl border border-zinc-200 bg-white/90 py-2.5 pl-9 pr-9 text-sm placeholder:text-zinc-400 hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950/60 dark:placeholder:text-zinc-500",
+                "block w-full rounded-xl border border-zinc-200 bg-white/90 py-2.5 pl-9 pr-9 text-sm placeholder:text-zinc-500 hover:border-zinc-300 focus:border-indigo-500 dark:border-white/10 dark:bg-zinc-950/60 dark:placeholder:text-zinc-400",
                 focusRing,
               )}
             />

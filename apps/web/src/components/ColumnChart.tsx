@@ -96,7 +96,7 @@ export function ColumnChart({
         onPointerLeave={() => setActive(null)}
         className={cx("relative mt-2 rounded-md transition-opacity duration-quick", focusRing, !columns && "opacity-50")}
       >
-        <span className="absolute left-0 text-[10px] leading-none text-zinc-500 tabular-nums dark:text-zinc-400" style={{ top: HEAD - 5 }} aria-hidden>
+        <span className="absolute left-0 text-xs leading-none text-zinc-500 tabular-nums dark:text-zinc-400" style={{ top: HEAD - 5 }} aria-hidden>
           {format(ceiling)}
         </span>
         <svg width={width} height={HEAD + height} className="block overflow-visible" aria-hidden>
@@ -130,7 +130,7 @@ export function ColumnChart({
         {peak >= 0 && (
           <span
             className={cx(
-              "chart-marks chart-label pointer-events-none absolute -translate-x-1/2 text-[11px] font-medium text-zinc-700 dark:text-zinc-200",
+              "chart-marks chart-label pointer-events-none absolute -translate-x-1/2 text-xs font-medium text-zinc-700 dark:text-zinc-200",
               active !== null && "invisible",
             )}
             style={{ left: (peak + 0.5) * slot, top: HEAD + height - columnHeight(max, ceiling, height) - 15 }}
@@ -161,7 +161,7 @@ export function ColumnChart({
           {shown ? `${shown.label}: ${unit(shown.value)}` : ""}
         </span>
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-zinc-500 dark:text-zinc-400" aria-hidden>
+      <div className="mt-1 flex justify-between text-xs text-zinc-500 dark:text-zinc-400" aria-hidden>
         <span>{cols.length ? axis[0] : ""}</span>
         <span>{axis[1]}</span>
       </div>

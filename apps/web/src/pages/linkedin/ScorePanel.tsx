@@ -44,7 +44,7 @@ export function ScoreRing({ score, size = 96 }: { score: number; size?: number }
           <span aria-hidden>{Math.round(shown)}</span>
           <span className="sr-only">{score} out of 100</span>
         </span>
-        <span aria-hidden className="text-[10px] text-zinc-500">out of 100</span>
+        <span aria-hidden className="text-xs text-zinc-500">out of 100</span>
       </span>
       {changed && (
         <span key={score} aria-hidden className={cx("absolute -right-2 -top-1 rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums animate-fade-out [animation-delay:1600ms]",
@@ -134,7 +134,7 @@ export function ScoreTrail({ read, now, projected }: { read: number; now: number
     <dl className="grid grid-cols-3 gap-2 text-center" aria-label="Your score, before and after the fixes">
       {steps.map((s, i) => (
         <div key={s.label} className={cx("rounded-xl px-2 py-2", i === 2 ? "bg-indigo-500/10 ring-1 ring-inset ring-indigo-500/20" : "bg-zinc-500/5")}>
-          <dt className="text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">{s.label}</dt>
+          <dt className="text-xs leading-tight text-zinc-500 dark:text-zinc-400">{s.label}</dt>
           <dd className="stat-value mt-0.5 font-display text-lg font-semibold tabular-nums">{s.value}</dd>
         </div>
       ))}

@@ -53,7 +53,7 @@ export function BulletBuilderPage() {
       <aside className="space-y-4">
         <Card>
           <h2 className="font-semibold">Strong verbs</h2>
-          <dl className="mt-3 space-y-3 text-sm">{STRONG_VERBS.map((g) => <div key={g.group}><dt className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{g.group}</dt>
+          <dl className="mt-3 space-y-3 text-sm">{STRONG_VERBS.map((g) => <div key={g.group}><dt className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">{g.group}</dt>
             <dd className="mt-1 flex flex-wrap gap-1">{g.verbs.map((v) => <span key={v} className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs dark:bg-white/10">{v}</span>)}</dd></div>)}</dl>
         </Card>
         <p className="px-1 text-xs text-zinc-600 dark:text-zinc-400">The formula is the one Google's recruiters describe: accomplished X, as measured by Y, by doing Z. Copy a line into your resume in <Link className="font-medium text-indigo-600 hover:underline dark:text-indigo-400" to="/resume-ai">Resume Studio</Link>.</p>

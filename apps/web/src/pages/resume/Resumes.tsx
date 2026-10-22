@@ -287,7 +287,7 @@ export function ResumeAiHomePage() {
                       <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
                         Edited {formatDate(r.updated_at)}
                       </span>
-                      {r.has_job && <span className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">Tailored to a job</span>}
+                      {r.has_job && <span className="mt-2 inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-800 dark:bg-indigo-500/10 dark:text-indigo-200">Tailored to a job</span>}
                     </span>
                   </div>
                 </Link>

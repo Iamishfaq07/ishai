@@ -57,10 +57,10 @@ export function ReferenceBrief({ entryId, company }: { entryId: string; company:
     {result && <div className="space-y-4 text-sm">
       {result.references.map((r) => <article key={r.name} className="space-y-3 rounded-lg border border-zinc-200 p-3 dark:border-white/10">
         <h4 className="font-semibold">{r.name}</h4>
-        <div><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Your request</p>
+        <div><p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Your request</p>
           <p className="mt-1 whitespace-pre-wrap">{r.ask}</p>
           <Button size="sm" variant="secondary" className="mt-2" onClick={() => copyAs(`ask:${r.name}`, r.ask)}><Copy className="h-4 w-4" aria-hidden /> {isCopied(`ask:${r.name}`) ? "Copied" : "Copy request"}</Button></div>
-        {r.brief.length > 0 && <div><p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Brief for {r.name}</p>
+        {r.brief.length > 0 && <div><p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Brief for {r.name}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5">{r.brief.map((b, i) => <li key={i}>{b}</li>)}</ul>
           <Button size="sm" variant="secondary" className="mt-2" onClick={() => copyAs(`brief:${r.name}`, r.brief.map((b) => `- ${b}`).join("\n"))}><Copy className="h-4 w-4" aria-hidden /> {isCopied(`brief:${r.name}`) ? "Copied" : "Copy brief"}</Button></div>}
       </article>)}

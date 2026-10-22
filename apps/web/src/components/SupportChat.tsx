@@ -377,7 +377,7 @@ export function SupportChat() {
                       : "bg-zinc-100 text-zinc-800 dark:bg-white/10 dark:text-zinc-100",
                 )}
               >
-                {m.role === "human" && <span className="mb-0.5 block text-[11px] font-medium">Orbit</span>}
+                {m.role === "human" && <span className="mb-0.5 block text-xs font-medium">Orbit</span>}
                 {m.text}
               </p>
             ))}

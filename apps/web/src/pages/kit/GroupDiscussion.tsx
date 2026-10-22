@@ -47,7 +47,7 @@ export function GroupDiscussionPage() {
             <button key={k.id} type="button" role="radio" aria-checked={kind === k.id} onClick={() => { setKind(k.id); setTopic(pickTopic(k.id, topic.id)); }}
               className={cx("min-h-10 rounded-lg px-3 text-sm font-medium ring-1", kind === k.id ? "bg-zinc-900 text-white ring-zinc-900 dark:bg-zinc-100 dark:text-zinc-950" : "ring-zinc-200 hover:bg-zinc-50 dark:ring-white/10 dark:hover:bg-white/5", focusRing)}>{k.label}</button>)}</div>}
           <div key={topic.id} className="motion-safe:animate-fade-up">
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{KINDS.find((k) => k.id === topic.kind)?.label} topic</p>
+            <p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">{KINDS.find((k) => k.id === topic.kind)?.label} topic</p>
             <h2 className="mt-1 font-display text-2xl font-semibold leading-snug">{topic.title}</h2>
           </div>
           {phase === "pick" && <div className="flex flex-wrap gap-2"><Button onClick={start}><Clock className="h-4 w-4" aria-hidden /> Start: 2 minutes to plan</Button>

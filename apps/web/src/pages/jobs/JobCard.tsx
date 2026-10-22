@@ -497,7 +497,7 @@ function Requirements({ items }: { items: NonNullable<JobFitCheck["requirements"
       <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-white/10 dark:border-white/10">
         {items.map((r) => (
           <li key={r.requirement} className="flex flex-col gap-1 px-3 py-2 sm:flex-row sm:items-start sm:gap-3">
-            <span className={cx("w-fit shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold", REQ_STATUS[r.status].tone)}>
+            <span className={cx("w-fit shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", REQ_STATUS[r.status].tone)}>
               {REQ_STATUS[r.status].label}
             </span>
             <span className="min-w-0 flex-1">

@@ -74,7 +74,7 @@ export function AdminSupportPage() {
               <button type="button" onClick={() => void choose(item)} className="w-full rounded-xl px-3 py-2 text-left ring-1 ring-zinc-200 hover:bg-zinc-50 dark:ring-white/10 dark:hover:bg-white/5">
                 <span className="block text-sm font-medium">{item.name || item.email || "Visitor"}</span>
                 <span className="block truncate text-xs text-zinc-500">{item.preview}</span>
-                <span className="block text-[11px] text-zinc-400">{when(item.updated_at)}</span>
+                <span className="block text-xs text-zinc-400">{when(item.updated_at)}</span>
               </button>
             </li>
           ))}

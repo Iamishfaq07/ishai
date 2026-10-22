@@ -421,7 +421,7 @@ export function PrepSection({
                     >
                       <span className="flex flex-wrap items-center gap-2">
                         <span className="text-xs font-semibold tabular-nums text-zinc-400">{i + 1}</span>
-                        <span className={cx("rounded-full px-2 py-0.5 text-[11px] font-medium", CATEGORY[q.category].tone)}>
+                        <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", CATEGORY[q.category].tone)}>
                           {CATEGORY[q.category].label}
                         </span>
                       </span>

@@ -16,7 +16,7 @@ export function MarketBar({ market: m, value, label = "This offer" }: { market: 
         <div className="absolute top-4 h-4 w-0.5 bg-indigo-600 dark:bg-indigo-300" style={{ left: at(m.median) }} />
         {value !== undefined && (
           <div className="absolute top-0 -translate-x-1/2 text-center" style={{ left: at(value) }}>
-            <span className="block whitespace-nowrap rounded bg-zinc-900 px-1.5 text-[10px] font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">{label}</span>
+            <span className="block whitespace-nowrap rounded bg-zinc-900 px-1.5 text-xs font-medium text-white dark:bg-zinc-100 dark:text-zinc-900">{label}</span>
             <span className="mx-auto mt-0.5 block h-4 w-2.5 rounded-sm bg-zinc-900 ring-2 ring-white dark:bg-zinc-100 dark:ring-zinc-900" />
           </div>
         )}
