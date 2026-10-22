@@ -558,7 +558,7 @@ function Illustrations() {
         {SPOT_KINDS.map((k) => (
           <li key={k} className="flex flex-col items-center gap-1.5 rounded-xl border border-zinc-200 p-3 dark:border-white/10">
             <Spot kind={k} />
-            <span className="text-[11px] text-zinc-600 dark:text-zinc-400">{k}</span>
+            <span className="text-xs text-zinc-600 dark:text-zinc-400">{k}</span>
           </li>
         ))}
       </ul>

@@ -111,7 +111,7 @@ export function AptitudePage() {
     </div>
     <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className="h-full rounded-full bg-indigo-600 motion-safe:transition-[width] motion-safe:duration-300" style={{ width: `${(answered / test.length) * 100}%` }} /></div>
     <Card key={q.id} className="motion-safe:animate-fade-up">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{q.topic}</p>
+      <p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">{q.topic}</p>
       <h1 className="mt-2 text-lg font-semibold leading-snug">{q.prompt}</h1>
       <div role="radiogroup" aria-label="Options" className="mt-4 grid gap-2">{q.options.map((o, i) => {
         const chosen = answers[q.id] === i;

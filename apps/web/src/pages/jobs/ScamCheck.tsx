@@ -29,11 +29,11 @@ export function ScamCheck({ posting = "", className }: { posting?: string; class
       </div>
     </div>
     {report.signals.length > 0 && <ul className="mt-4 space-y-2">{report.signals.map((s) => <li key={s.id} className="rounded-lg bg-white/80 p-3 text-sm ring-1 ring-zinc-200 dark:bg-zinc-950/60 dark:ring-white/10">
-      <p className="flex flex-wrap items-center gap-2 font-medium"><span className={cx("rounded-full px-2 py-0.5 text-[11px] font-semibold", s.level === "high" ? "bg-rose-600 text-white" : "bg-amber-500 text-white")}>{s.level === "high" ? "Serious" : "Caution"}</span>{s.label}</p>
+      <p className="flex flex-wrap items-center gap-2 font-medium"><span className={cx("rounded-full px-2 py-0.5 text-xs font-semibold", s.level === "high" ? "bg-rose-600 text-white" : "bg-amber-500 text-white")}>{s.level === "high" ? "Serious" : "Caution"}</span>{s.label}</p>
       <p className="mt-1 text-zinc-600 dark:text-zinc-400">{s.why}</p>
       <blockquote className="mt-2 break-words border-l-2 border-zinc-300 pl-3 text-xs italic text-zinc-600 dark:border-white/20 dark:text-zinc-400">{s.quote}</blockquote>
     </li>)}</ul>}
-    {report.good.length > 0 && <div className="mt-4"><p className="text-xs font-semibold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">Good signs</p>
+    {report.good.length > 0 && <div className="mt-4"><p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Good signs</p>
       <ul className="mt-2 flex flex-wrap gap-2">{report.good.map((g) => <li key={g.id} title={g.quote} className="rounded-full bg-emerald-600/10 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:text-emerald-200">{g.label}</li>)}</ul></div>}
     <details className="mt-4" open={!posting.trim() || undefined}><summary className="cursor-pointer text-sm font-medium">Check a recruiter's message</summary>
       <label htmlFor={`${id}-msg`} className="sr-only">Recruiter message</label>

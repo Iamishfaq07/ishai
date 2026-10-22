@@ -154,7 +154,7 @@ export default function CommandPalette({ onClose, onHelp, onSignOut }: { onClose
             autoComplete="off"
             spellCheck={false}
             // 16 px, so phones don't zoom in on focus.
-            className="h-14 min-w-0 flex-1 bg-transparent text-base text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100 dark:placeholder:text-zinc-400"
+            className="h-14 min-w-0 flex-1 bg-transparent text-base text-zinc-900 outline-none placeholder:text-zinc-500 dark:text-zinc-100 dark:placeholder:text-zinc-500"
           />
           <button
             type="button"

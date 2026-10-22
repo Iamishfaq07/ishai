@@ -28,7 +28,7 @@ export function CompanyGuide({ style, className, inMock = true }: { style: Compa
             <ol className="mt-2 space-y-1.5 text-sm text-zinc-700 dark:text-zinc-300">
               {style.rounds.map((r, i) => (
                 <li key={r} className="flex gap-2">
-                  <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-zinc-500/10 text-[11px] font-semibold tabular-nums text-zinc-600 dark:text-zinc-300">
+                  <span className="flex h-5 w-5 flex-none items-center justify-center rounded-full bg-zinc-500/10 text-xs font-semibold tabular-nums text-zinc-600 dark:text-zinc-300">
                     {i + 1}
                   </span>
                   <span>{r}</span>

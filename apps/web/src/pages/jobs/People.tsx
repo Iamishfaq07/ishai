@@ -204,7 +204,7 @@ function PersonCard({ contact: c, busy, onTouched, onEdit, onDelete }: {
             {[c.title, c.company].filter(Boolean).join(" at ") || relationLabel(c.relation)}
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-zinc-500/10 px-2 py-0.5 text-[11px] font-medium text-zinc-700 dark:text-zinc-300">
+        <span className="shrink-0 rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:text-zinc-300">
           {relationLabel(c.relation)}
         </span>
       </div>

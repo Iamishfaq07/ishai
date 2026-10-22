@@ -10,7 +10,7 @@ export interface ToolCard { title: string; detail: string; icon: Icon; to: strin
 const card = cx("group relative flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-4 text-sm",
   "motion-safe:transition-[transform,box-shadow,border-color] motion-safe:duration-200 hover:border-indigo-400 hover:shadow-md",
   "motion-safe:hover:-translate-y-0.5 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-indigo-400/60", focusRing);
-const tag = "rounded-full px-2 py-0.5 text-[11px] font-medium";
+const tag = "rounded-full px-2 py-0.5 text-xs font-medium";
 
 export function Tool({ t }: { t: ToolCard }) {
   const body = <ToolBody t={t} />;
@@ -22,10 +22,10 @@ export function Tool({ t }: { t: ToolCard }) {
 function ToolBody({ t }: { t: ToolCard }) {
   return <>
     <span className="flex items-start justify-between gap-3">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-700 motion-safe:transition-colors group-hover:bg-indigo-600 group-hover:text-white dark:bg-indigo-500/10 dark:text-indigo-300">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-zinc-100 text-zinc-700 motion-safe:transition-colors group-hover:text-indigo-700 dark:bg-white/[0.06] dark:text-zinc-300 dark:group-hover:text-indigo-300">
         <t.icon className="h-4 w-4" aria-hidden /></span>
       <span className="flex flex-wrap justify-end gap-1">
-        {t.ai && <span className={cx(tag, "bg-violet-50 text-violet-800 dark:bg-violet-500/10 dark:text-violet-200")}>AI</span>}
+        {t.ai && <span className={cx(tag, "bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300")}>Uses AI</span>}
         {t.perJob && <span className={cx(tag, "bg-zinc-100 text-zinc-700 dark:bg-white/10 dark:text-zinc-300")}>Per job</span>}
         {t.beta && <span className={cx(tag, "bg-amber-50 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200")}>Beta</span>}
       </span>

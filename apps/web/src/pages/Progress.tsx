@@ -78,7 +78,7 @@ function ScoreChart({ points }: { points: ProgressPoint[] }) {
         {[1, 2, 3, 4, 5].map((t) => (
           <g key={t}>
             <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} className="stroke-zinc-200 dark:stroke-white/10" strokeWidth={1} />
-            <text x={PAD.left - 8} y={y(t)} dy="0.32em" textAnchor="end" className="fill-zinc-500 text-[11px] dark:fill-zinc-400">
+            <text x={PAD.left - 8} y={y(t)} dy="0.32em" textAnchor="end" className="fill-zinc-500 text-xs dark:fill-zinc-400">
               {t}
             </text>
           </g>
@@ -101,10 +101,10 @@ function ScoreChart({ points }: { points: ProgressPoint[] }) {
             {last.overall_score}
           </text>
         )}
-        <text x={PAD.left} y={H - 4} className="fill-zinc-500 text-[11px] dark:fill-zinc-400">
+        <text x={PAD.left} y={H - 4} className="fill-zinc-500 text-xs dark:fill-zinc-400">
           {shortDate(points[0]?.ended_at ?? null)}
         </text>
-        <text x={width - PAD.right} y={H - 4} textAnchor="end" className="fill-zinc-500 text-[11px] dark:fill-zinc-400">
+        <text x={width - PAD.right} y={H - 4} textAnchor="end" className="fill-zinc-500 text-xs dark:fill-zinc-400">
           {shortDate(last?.ended_at ?? null)}
         </text>
       </svg>

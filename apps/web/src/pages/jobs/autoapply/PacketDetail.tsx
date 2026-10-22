@@ -226,11 +226,11 @@ export default function PacketDetail({ id, onChanged, opportunityId }: { id: str
                   </p>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     <div>
-                      <p className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">Before</p>
+                      <p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Before</p>
                       <p className="whitespace-pre-line">{c.before}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">After</p>
+                      <p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">After</p>
                       <p className="whitespace-pre-line">{c.after}</p>
                     </div>
                   </div>

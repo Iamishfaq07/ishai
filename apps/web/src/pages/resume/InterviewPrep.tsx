@@ -236,7 +236,7 @@ function QuestionList({ resume, result, state, setState }: {
             return (
               <section key={g.id} aria-label={g.label}>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-[11px] font-medium text-zinc-600 dark:text-zinc-300">{GROUP_KIND[g.kind]}</span>
+                  <span className="rounded-full bg-zinc-500/10 px-2 py-0.5 text-xs font-medium text-zinc-600 dark:text-zinc-300">{GROUP_KIND[g.kind]}</span>
                   <h4 className="min-w-0 flex-1 text-sm font-semibold">{g.label}</h4>
                   <CopyButton text={prepText(result, g.id)} label="Copy" small />
                 </div>
@@ -287,7 +287,7 @@ function QuestionCard({ q, startOpen, picked, canPick, onPick }: { q: ResumeInte
           className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
         />
         <button type="button" onClick={() => setOpen(!expanded)} aria-expanded={expanded} className={cx("min-w-0 flex-1 text-left", focusRing)}>
-          <span className={cx("rounded-full px-2 py-0.5 text-[11px] font-medium", TYPE[q.type].tone)}>{TYPE[q.type].label}</span>
+          <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", TYPE[q.type].tone)}>{TYPE[q.type].label}</span>
           <span className="mt-1 block text-sm font-medium">{q.question}</span>
         </button>
         <ChevronDown className={cx("mt-1 h-4 w-4 shrink-0 text-zinc-400 transition-transform", expanded && "rotate-180")} aria-hidden />
@@ -428,8 +428,8 @@ function GapPanel({ resume, state, setState, hasJob, onShowJob }: {
                   <li key={g.skill} className="rounded-xl border border-zinc-200 p-3 text-sm dark:border-white/10">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{g.skill}</span>
-                      <span className={cx("rounded-full px-2 py-0.5 text-[11px] font-medium ring-1", VERDICT[g.verdict].tone)}>{VERDICT[g.verdict].label}</span>
-                      {!g.keyword && <span className="text-[11px] text-zinc-500 dark:text-zinc-400">From the job post's requirements</span>}
+                      <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium ring-1", VERDICT[g.verdict].tone)}>{VERDICT[g.verdict].label}</span>
+                      {!g.keyword && <span className="text-xs text-zinc-500 dark:text-zinc-400">From the job post's requirements</span>}
                     </div>
                     {g.verdict === "related" && (
                       <>

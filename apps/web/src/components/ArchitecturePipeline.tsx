@@ -117,7 +117,7 @@ export function ArchitecturePipeline() {
               <text x={X[i]! + W / 2} y="75" textAnchor="middle" className="fill-zinc-800 text-[13px] font-semibold dark:fill-zinc-100">
                 {s.title}
               </text>
-              <text x={X[i]! + W / 2} y="28" textAnchor="middle" className="fill-zinc-500 text-[11px] dark:fill-zinc-400">
+              <text x={X[i]! + W / 2} y="28" textAnchor="middle" className="fill-zinc-500 text-xs dark:fill-zinc-400">
                 {i + 1}
               </text>
             </g>
