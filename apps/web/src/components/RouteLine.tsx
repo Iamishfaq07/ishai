@@ -39,9 +39,9 @@ export function RouteLine({ status, labels = false, className }: { status: JobSt
       const reached = !closed && i <= at;
       const next = !closed && i === at + 1;
       return <li key={stop.status} className={cx("relative flex flex-1 flex-col items-center", labels ? "min-w-16" : "")} aria-current={!closed && i === at ? "step" : undefined}>
-        {i < ROUTE_STOPS.length - 1 && <span aria-hidden className={cx("absolute left-1/2 h-0.5 w-full", !closed && i < at ? "bg-indigo-600 dark:bg-indigo-400" : "bg-zinc-300 dark:bg-zinc-700")}
-          style={{ top: labels ? "5px" : "3px" }} />}
-        <span aria-hidden className={cx("relative z-10 rounded-full", dot,
+        {i < ROUTE_STOPS.length - 1 && <span aria-hidden className={cx("absolute left-1/2 h-0.5 w-full", !closed && i < at ? "route-seg bg-indigo-600 dark:bg-indigo-400" : "bg-zinc-300 dark:bg-zinc-700")}
+          style={{ top: labels ? "5px" : "3px", ["--i" as string]: i }} />}
+        <span aria-hidden style={{ ["--i" as string]: i }} className={cx("route-stop relative z-10 rounded-full", dot,
           reached ? "bg-indigo-600 dark:bg-indigo-400"
             : next ? "bg-white ring-2 ring-indigo-600 dark:bg-zinc-950 dark:ring-indigo-400"
               : "bg-white ring-1 ring-zinc-300 dark:bg-zinc-950 dark:ring-zinc-600")} />

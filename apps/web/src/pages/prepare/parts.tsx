@@ -66,7 +66,7 @@ export function ToolHub({ id, home, reason, suggested, groups, allTitle }: {
     <section aria-labelledby={`${id}-suggested`}>
       <h2 id={`${id}-suggested`} className="font-semibold">Suggested for you</h2>
       <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{reason}</p>
-      <ul className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-3">{suggested.slice(0, 3).map((t) => <li key={t.title}><Tool t={t} /></li>)}</ul>
+      <ul className="-mx-3 mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2 xl:grid-cols-3">{suggested.slice(0, 3).map((t, i) => <li key={t.title} className="route-rise" style={{ ["--i" as string]: i }}><Tool t={t} /></li>)}</ul>
     </section>
     <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
       <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>

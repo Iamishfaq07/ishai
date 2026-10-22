@@ -1384,6 +1384,24 @@ html.app-shell :is(h1, h2, h3, .font-display) {
 }
 /* The Route map title face: every page title (h1) and `font-title` (Today's next stop) use it inside the shell. Section
    headings (h2, h3) stay in Plex so dense tool pages read as one product. */
+/* Route map motion. Full: a route grows stop to stop, stops pop in, the route picture draws itself, sections rise in
+   order (--i). Gentle: the same things fade only. Off: nothing moves. Transform and opacity only. */
+@keyframes route-grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes route-pop { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+@keyframes route-draw { from { stroke-dashoffset: var(--len, 400); } to { stroke-dashoffset: 0; } }
+@keyframes route-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes route-fade { from { opacity: 0; } to { opacity: 1; } }
+:root[data-motion="full"] .route-seg { transform-origin: left center; animation: route-grow 480ms var(--ease-enter) both; animation-delay: calc(var(--i, 0) * 110ms + 80ms); }
+:root[data-motion="full"] .route-stop { animation: route-pop 320ms var(--ease-enter) both; animation-delay: calc(var(--i, 0) * 110ms); }
+:root[data-motion="full"] .route-draw { animation: route-draw 1600ms var(--ease-enter) 150ms both; }
+:root[data-motion="full"] .route-rise { animation: route-rise 420ms var(--ease-enter) both; animation-delay: calc(var(--i, 0) * 70ms); }
+:root[data-motion="reduced"] :is(.route-rise, .route-stop) { animation: route-fade 200ms linear both; }
+/* The current tab's underline grows from its centre when it changes (Full only). */
+:root[data-motion="full"] .route-tab[aria-current="page"]::after { transform-origin: center; animation: route-grow 260ms var(--ease-enter) both; }
+/* A quiet card that answers a hover: the border darkens and a hairline of accent appears; nothing lifts. */
+.route-card { transition: border-color var(--dur-quick) var(--ease-standard), background-color var(--dur-quick) var(--ease-standard); }
+.route-card:hover { border-color: rgb(var(--accent-300)); }
+.dark .route-card:hover { border-color: rgb(var(--accent-500) / 0.6); }
 html.app-shell :is(h1, .font-title) {
   font-family: "Source Serif 4 Variable", "Source Serif 4", Georgia, "IBM Plex Sans Variable", serif;
   letter-spacing: -0.012em;

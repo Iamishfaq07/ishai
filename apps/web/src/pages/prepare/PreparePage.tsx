@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
 import {
-  ArrowRight, BookOpen, Brain, Building2, CalendarPlus, Code2, ErrorNote, GraduationCap, Headphones,
+  ArrowRight, BookOpen, Brain, Building2, CalendarPlus, Code2, CompanyLogo, ErrorNote, GraduationCap, Headphones,
   ListChecks, MOCK_INTERVIEW_ENABLED, Mic, Play, Reveal, ShieldCheck, Sparkles,
   Target, UsersRound, Video, Zap, cx, focusRing,
   Gauge,
@@ -105,7 +105,7 @@ export function PreparePage() {
       <Stat label="Practice sessions" value={sessions.data ? sessions.data.length : null} hint="Rehearsals and copilot sessions" />
     </Reveal>}
 
-    <Reveal as="section" aria-labelledby="up-next" className="workspace-panel workspace-next">
+    <Reveal as="section" aria-labelledby="up-next" className="workspace-panel workspace-next relative overflow-hidden">
       {tracker.error ? <ErrorNote onRetry={tracker.reload}>Your saved jobs could not load. The toolkit below still works.</ErrorNote>
         : !jobs ? <p role="status" className="text-sm">Loading your interviews…</p>
         : next ? <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
@@ -141,6 +141,7 @@ export function PreparePage() {
         <Link to="/jobs/tracker" className="text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300">All {jobs.length} in tracker</Link></div>
       <Reveal as="ul" stagger className="mt-3 divide-y divide-zinc-200 overflow-hidden rounded-xl border border-zinc-200 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-zinc-900">
         {jobs.slice(0, 8).map((j) => <li key={j.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 motion-safe:transition-colors hover:bg-zinc-50 dark:hover:bg-white/5">
+          <CompanyLogo company={j.company} size="sm" />
           <div className="min-w-0 flex-1"><Link to={`${missionPath(j.id)}?tab=plan`} className={cx("rounded font-semibold hover:underline", focusRing)}>{j.title} · {j.company}</Link>
             <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-zinc-600 dark:text-zinc-400"><StagePill status={j.status} className="sm:hidden" />
               {j.next_at && Date.parse(j.next_at) > now && <span>Next step {countdown(j.next_at, now)}</span>}</p></div>
