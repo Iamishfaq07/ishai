@@ -1,13 +1,12 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, type ReactNode, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
 import {
   Spot,
   ArrowUpRight,
-  Check,
+  ChevronRight,
   CompanyLogo,
   LoadGate,
-  Reveal,
   Skeleton,
   Sparkles,
   Trash2,
@@ -15,7 +14,6 @@ import {
   cx,
   focusRing,
   toast,
-  useInView,
 } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
 import { KashSecContext } from "../../components/KashSec";
@@ -33,9 +31,11 @@ import { CompanyPanel } from "./CompanyPanel";
 import { Journey } from "./Journey";
 import { PrepPlanPanel } from "./PrepPlan";
 import { linkButton, textLink } from "./links";
-import { MISSION_TOOLS, MISSION_STAGES, isSnoozed, requirementTone, snooze, stagesDone, type MissionTool } from "./mission";
+import { MISSION_TOOLS, isSnoozed, requirementTone, snooze, type MissionTool } from "./mission";
 import { StagePill } from "./StagePill";
 import { RoomNavigation } from "./RoomNavigation";
+import { RouteLine, routeIndex } from "../../components/RouteLine";
+import { whenLabel } from "../home/today";
 import { useCandidateDraft } from "../../lib/useCandidateDraft";
 import { SnapshotSource } from "./SnapshotSource";
 import { JOBS_TRACKER, jobPath, missionPath } from "./paths";
@@ -122,10 +122,10 @@ export function JobMissionPage() {
   const m = mission.data;
 
   return (
-    <div className="workspace-page">
+    <div className="flex min-w-0 flex-col gap-6 [overflow-wrap:break-word]">
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <BackLink to={JOBS_TRACKER}>Applications</BackLink>
-        {entry && (tracker.data?.length ?? 0) > 1 && <label className="block min-w-0 w-full text-xs text-zinc-600 sm:w-auto sm:max-w-sm dark:text-zinc-400">Switch opportunity<Select aria-label="Switch opportunity" className="mt-1 w-full" value={entry.id} onChange={(event) => {
+        {entry && (tracker.data?.length ?? 0) > 1 && <label className="block min-w-0 w-full sm:w-auto sm:max-w-xs"><span className="sr-only">Switch to another job</span><Select aria-label="Switch to another job" className="w-full" value={entry.id} onChange={(event) => {
           const id = event.target.value;
           if (id !== entry.id && tracker.data?.some((job) => job.id === id)) navigate(`${missionPath(id)}?tab=${tab}`);
         }}>{tracker.data?.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.company}</option>)}</Select></label>}
@@ -140,20 +140,27 @@ export function JobMissionPage() {
           <ErrorNote onRetry={mission.reload}>{errorText(mission.error)}</ErrorNote>
         ) : m && entry && m.entry_id === entry.id ? (
           <>
-            <Stages mission={m} />
-            <RoomNavigation tab={tab} onSelect={setTab} />
-            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
-              <aside aria-label="Next step" className="min-w-0 space-y-4 lg:order-last">
-                <NextStepCard key={entry.id}
-                  step={m.next}
-                  entry={entry}
-                  onTab={setTab}
-                  onEntry={(e) => {
-                    onEntry(e);
-                    mission.reload();
-                  }}
-                />
-                <section className="workspace-panel p-4 text-sm" aria-label="Opportunity briefing"><h2 className="font-semibold">This opportunity</h2><dl className="mt-4 space-y-4"><div><dt className="workspace-eyebrow">Linked editable resume</dt><dd className="mt-1 break-words">{m.resume?.title ?? "No resume linked"}</dd></div><div><dt className="workspace-eyebrow">Saved resume copies</dt><dd className="mt-1">{m.snapshots.length} · not delivery receipts</dd></div>{entry.next_at && <div><dt className="workspace-eyebrow">Recorded next date</dt><dd className="mt-1">{new Date(entry.next_at).toLocaleString()}</dd></div>}</dl><div className="mt-4 flex flex-col items-start gap-2"><Button variant="secondary" onClick={() => setTab("resume")}>Review materials</Button><Button variant="ghost" onClick={() => setTab("practice")}>Practice with Saba</Button><Button variant="ghost" onClick={() => setTab("timeline")}>Open application history</Button></div><p className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">Job-specific copies stay separate from your master. Practice is separate from employer interview rounds.</p></section>
+            <NextStepCard key={entry.id}
+              step={m.next}
+              entry={entry}
+              onTab={setTab}
+              onEntry={(e) => {
+                onEntry(e);
+                mission.reload();
+              }}
+            />
+            <RoomNavigation tab={tab} suggested={opportunityStart(entry.status, m)} onSelect={setTab} />
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">
+              <aside aria-label="This job's records" className="order-last min-w-0 space-y-4">
+                <section className="text-sm lg:border-l lg:border-zinc-200 lg:pl-6 lg:dark:border-white/10" aria-labelledby="records-title">
+                  <h2 id="records-title" className="font-semibold">Records for this job</h2>
+                  <dl className="mt-3 space-y-3">
+                    <div><dt className="text-[13px] text-zinc-600 dark:text-zinc-400">Resume for this job</dt><dd className="mt-0.5">{m.resume?.title ?? "None linked yet"}</dd></div>
+                    <div><dt className="text-[13px] text-zinc-600 dark:text-zinc-400">Saved resume copies</dt><dd className="mt-0.5">{m.snapshots.length}<span className="text-zinc-600 dark:text-zinc-400"> (not proof of sending)</span></dd></div>
+                    {entry.next_at && <div><dt className="text-[13px] text-zinc-600 dark:text-zinc-400">Next date</dt><dd className="mt-0.5">{whenLabel(entry.next_at)}</dd></div>}
+                  </dl>
+                  <p className="mt-3 text-[13px] leading-relaxed text-zinc-600 dark:text-zinc-400">Copies made for this job stay separate from your main resume. Practice rounds are separate from the employer's interview rounds.</p>
+                </section>
                 {isSecurityRole(entry.title) && <KashSecContext placement="mission" />}
               </aside>
               <div className="min-w-0 space-y-4">
@@ -161,9 +168,6 @@ export function JobMissionPage() {
 
                 <section key={tab} id="mission-tool-panel" aria-label={selected.label} className="motion-safe:animate-fade-up">
                   {(tab === "fit" || tab === "timeline") && <Suspense fallback={<p role="status">Opening job source review…</p>}><SourceReview key={entry.id} entryId={entry.id} /></Suspense>}
-                  {tab === "interview" && (entry.status === "interviewing" || entry.status === "applied") && <InterviewChecklist key={`checklist:${entry.id}`} entryId={entry.id} />}
-                  {tab === "interview" && <Commitments key={`commitments:${entry.id}`} entryId={entry.id} />}
-                  {tab === "interview" && entry.status !== "saved" && <InterviewRedFlags key={`flags:${entry.id}`} entryId={entry.id} />}
                   {tab === "interview" && (
                     <InterviewPrepPanel key={entry.id}
                       entry={entry}
@@ -173,7 +177,12 @@ export function JobMissionPage() {
                       }}
                     />
                   )}
-                  {tab === "interview" && (entry.status === "interviewing" || entry.status === "offer") && <ReferenceBrief key={`references:${entry.id}`} entryId={entry.id} company={entry.company} />}
+                  {tab === "interview" && <div className="mt-6 space-y-3">
+                    {(entry.status === "interviewing" || entry.status === "applied") && <Fold title="Interview-day checklist" hint="The day before, on the day, right after"><InterviewChecklist key={`checklist:${entry.id}`} entryId={entry.id} /></Fold>}
+                    <Fold title="Promises to keep" hint="Things you told this employer you'd do"><Commitments key={`commitments:${entry.id}`} entryId={entry.id} /></Fold>
+                    {entry.status !== "saved" && <Fold title="Red flags you noticed" hint="Interviews go both ways"><InterviewRedFlags key={`flags:${entry.id}`} entryId={entry.id} /></Fold>}
+                    {(entry.status === "interviewing" || entry.status === "offer") && <Fold title="Prepare your references" hint={`Brief the people ${entry.company} may call`}><ReferenceBrief key={`references:${entry.id}`} entryId={entry.id} company={entry.company} /></Fold>}
+                  </div>}
                   {tab === "plan" && <PrepPlanPanel key={entry.id} entry={entry} onOpenInterview={() => setTab("interview")} />}
                   {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel key={entry.id} mission={m} entry={entry} onMission={update} />}
@@ -202,6 +211,17 @@ export function JobMissionPage() {
   );
 }
 
+/** A quiet section that opens on demand: the current stage's main work stays open above it. */
+function Fold({ title, hint, children }: { title: string; hint: string; children: ReactNode }) {
+  return <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+    <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 py-3", focusRing)}>
+      <span className="min-w-0"><span className="block font-medium">{title}</span><span className="block text-[13px] text-zinc-600 dark:text-zinc-400">{hint}</span></span>
+      <ChevronRight className="h-4 w-4 shrink-0 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />
+    </summary>
+    <div className="px-2 pb-2 sm:px-3 sm:pb-3">{children}</div>
+  </details>;
+}
+
 /** "in 3 days", "in 5 h", "in 20 min" until a recorded date; null once it has passed. */
 export function dueIn(at: string | null, now = Date.now()): string | null {
   const ms = at ? Date.parse(at) - now : Number.NaN;
@@ -211,83 +231,35 @@ export function dueIn(at: string | null, now = Date.now()): string | null {
 }
 
 function Header({ entry }: { entry: JobTrackerEntry }) {
-  const due = dueIn(entry.next_at);
+  const upcoming = entry.next_at && Date.parse(entry.next_at) > Date.now() ? entry.next_at : null;
+  const closed = routeIndex(entry.status) < 0;
   return (
-    <header className="workspace-heading animate-fade-up">
-      <div className="flex min-w-0 items-center gap-4">
-        <CompanyLogo company={entry.company} size="lg" />
-        <div className="min-w-0">
-          <p className="workspace-eyebrow">Opportunity</p>
-          <h1 className="break-words font-display">{entry.title}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {[entry.company, entry.location, `added ${formatDate(entry.created_at)}`].filter(Boolean).join(" · ")}
-          </p>
+    <header className="flex flex-col gap-5 border-b border-zinc-200 pb-6 dark:border-white/10">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-start gap-4">
+          <CompanyLogo company={entry.company} size="lg" />
+          <div className="min-w-0">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">{[entry.company, entry.location].filter(Boolean).join(" · ")}</p>
+            <h1 className="mt-0.5 font-title text-[1.75rem] font-semibold leading-tight sm:text-[2.125rem]">{entry.title}</h1>
+            <p className="mt-1 text-[13px] text-zinc-600 dark:text-zinc-400">Added {formatDate(entry.created_at)}</p>
+          </div>
         </div>
+        {(entry.live || entry.apply_url || entry.url) && <div className="flex flex-wrap gap-2">
+          {entry.live && <Link to={jobPath(entry.listing_id)} className={linkButton("secondary", "sm")}>Job page</Link>}
+          {(entry.apply_url || entry.url) && (
+            <a href={entry.apply_url || entry.url} target="_blank" rel="noopener noreferrer" className={linkButton("secondary", "sm")}>
+              Original post <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          )}
+        </div>}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <StagePill status={entry.status} className="px-2.5 py-1" />
-        {due && <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-800 ring-1 ring-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-200 dark:ring-indigo-400/20">
-          <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-60 motion-safe:animate-ping" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-600" /></span>
-          Next step {due}</span>}
-        {entry.live && (
-          <Link to={jobPath(entry.listing_id)} className={linkButton("secondary", "sm")}>
-            Job page
-          </Link>
-        )}
-        {(entry.apply_url || entry.url) && (
-          <a href={entry.apply_url || entry.url} target="_blank" rel="noopener noreferrer" className={linkButton("secondary", "sm")}>
-            Original post <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-            <span className="sr-only">(opens in a new tab)</span>
-          </a>
-        )}
+      <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+        {closed ? <p className="flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300"><StagePill status={entry.status} /> This route is closed. Its records stay here.</p>
+          : <RouteLine status={entry.status} labels className="w-full max-w-sm" />}
+        {upcoming && <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{entry.status === "interviewing" ? "Interview" : "Next date"} · {whenLabel(upcoming)}</p>}
       </div>
     </header>
-  );
-}
-
-/** Six stages, each done only on a record (named in its tooltip and for screen readers). */
-function Stages({ mission }: { mission: JobMission }) {
-  const done = stagesDone(mission);
-  const [ref, inView] = useInView<HTMLElement>();
-  return (
-    <section ref={ref} aria-labelledby="stages-title">
-      <h2 id="stages-title" className="sr-only">
-        Stages: {done} of {MISSION_STAGES.length} have a record
-      </h2>
-      <div aria-hidden className="mb-3 flex items-center gap-3 text-xs text-zinc-600 dark:text-zinc-400">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10">
-          <div className="h-full rounded-full bg-emerald-500 motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out" style={{ width: `${inView ? (done / MISSION_STAGES.length) * 100 : 0}%` }} />
-        </div>
-        <span className="tabular-nums">{done}/{MISSION_STAGES.length} stages</span>
-      </div>
-      <Reveal as="ol" stagger className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {MISSION_STAGES.map((s, i) => {
-          const ok = mission.stages[s.id];
-          return (
-            <li
-              key={s.id}
-              title={ok ? s.done : `Not yet: ${s.done.toLowerCase()}`}
-              className={cx(
-                "flex items-center gap-2 rounded-xl border px-3 py-2 text-sm",
-                ok ? "border-emerald-500/30 bg-emerald-500/5" : "border-zinc-200 dark:border-white/10",
-              )}
-            >
-              <span
-                aria-hidden
-                className={cx(
-                  "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                  ok ? "bg-emerald-500 text-white" : "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400",
-                )}
-              >
-                {ok ? <Check className="h-3 w-3" /> : i + 1}
-              </span>
-              <span className={cx("font-medium", !ok && "text-zinc-600 dark:text-zinc-400")}>{s.label}</span>
-              <span className="sr-only">{ok ? `: done (${s.done})` : ": not yet"}</span>
-            </li>
-          );
-        })}
-      </Reveal>
-    </section>
   );
 }
 
@@ -589,7 +561,7 @@ function NextStepCard({
   if (!step) {
     return (
       <Card>
-        <h2 className="font-display text-base font-semibold">Nothing pressing</h2>
+        <h2 className="font-title text-lg font-semibold">Nothing pressing</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">No next action is suggested from these saved records. Review your tracker when something changes.</p>
       </Card>
     );
@@ -623,14 +595,11 @@ function NextStepCard({
   };
   const internal = step.to.startsWith("/");
   return (
-    <section aria-labelledby="next-title" className="glass-panel gradient-border rounded-2xl p-5">
-      <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Next step</p>
-      <h2 id="next-title" className="mt-1 font-display text-lg font-semibold">{step.title}</h2>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-        <span className="font-medium">Why: </span>
-        {step.why}
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
+    <section aria-labelledby="next-title" className="rounded-2xl bg-white px-5 py-6 ring-1 ring-zinc-200 sm:px-7 dark:bg-zinc-900 dark:ring-white/10">
+      <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">Next stop on this route</p>
+      <h2 id="next-title" className="mt-1 font-title text-[1.5rem] font-semibold leading-tight sm:text-[1.75rem]">{step.title}</h2>
+      <p className="mt-2 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">{step.why}</p>
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         {internal ? (
           <Link to={step.to} className={linkButton("primary", "md")}>{step.action}</Link>
         ) : (

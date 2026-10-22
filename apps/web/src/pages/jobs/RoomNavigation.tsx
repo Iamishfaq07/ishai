@@ -1,23 +1,27 @@
 import type { MissionTool } from "./mission";
-import { MISSION_TOOLS, ROOM_SECTIONS, roomSection } from "./mission";
 import { cx, focusRing } from "@orbit/ui";
 
-const labels: Record<MissionTool, string> = {
-  fit: "Requirements & fit", company: "Company & contacts", resume: "Resume & materials",
-  timeline: "Application history", practice: "Practice with Saba", plan: "Preparation plan",
-  interview: "Rounds & interview day", offer: "Offer & decision",
-};
+/** The job page's sections in route order: the job and its materials first, then preparation, the interviews, the
+ *  history and the offer. Every `?tab=` deep link still lands on its own section. */
+const ORDER: { id: MissionTool; label: string }[] = [
+  { id: "fit", label: "Requirements" }, { id: "resume", label: "Resume" }, { id: "company", label: "Company" },
+  { id: "practice", label: "Practice" }, { id: "plan", label: "Prep plan" }, { id: "interview", label: "Interviews" },
+  { id: "timeline", label: "History" }, { id: "offer", label: "Offer" },
+];
 
-/** Existing query routes, progressively grouped; no second expert mode or independent panel state. */
-export function RoomNavigation({ tab, onSelect }: { tab: MissionTool; onSelect: (tool: MissionTool) => void }) {
-  const current = roomSection(tab);
-  const tools = MISSION_TOOLS.filter((tool) => roomSection(tool.id) === current);
-  return <div className="workspace-panel p-2 sm:p-3">
-    <nav aria-label="Opportunity room" className="grid grid-cols-2 gap-1 sm:grid-cols-5">
-      {ROOM_SECTIONS.map((section) => <button key={section.id} type="button" aria-controls="mission-tool-panel" aria-current={current === section.id ? "page" : undefined} onClick={() => onSelect(current === section.id ? tab : section.first)} className={cx("min-h-11 rounded-lg px-3 py-2 text-sm font-semibold transition-colors duration-quick", current === section.id ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950" : "text-zinc-600 hover:bg-zinc-500/5 dark:text-zinc-400", focusRing)}>{section.label}</button>)}
-    </nav>
-    {tools.length > 1 && <nav aria-label={`${ROOM_SECTIONS.find((section) => section.id === current)?.label} sections`} className="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-zinc-200 px-2 pt-2 dark:border-white/10">
-      {tools.map((tool) => <button key={tool.id} type="button" aria-controls="mission-tool-panel" aria-current={tab === tool.id ? "page" : undefined} onClick={() => onSelect(tool.id)} className={cx("min-h-11 rounded px-1 text-sm underline-offset-8", tab === tool.id ? "font-semibold text-zinc-900 underline dark:text-zinc-100" : "text-zinc-600 hover:underline dark:text-zinc-400", focusRing)}>{labels[tool.id]}</button>)}
-    </nav>}
-  </div>;
+/** One row of sections (it scrolls sideways on a phone). The section this job's stage suggests carries a dot. */
+export function RoomNavigation({ tab, suggested, onSelect }: { tab: MissionTool; suggested: MissionTool; onSelect: (tool: MissionTool) => void }) {
+  return <nav aria-label="Sections of this job" className="-mx-4 overflow-x-auto border-b border-zinc-200 px-4 sm:mx-0 sm:px-0 dark:border-white/10">
+    <ul className="flex min-w-max gap-1">
+      {ORDER.map((item) => <li key={item.id}>
+        <button type="button" aria-controls="mission-tool-panel" aria-current={tab === item.id ? "page" : undefined} onClick={() => onSelect(item.id)}
+          className={cx("relative flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-t-md px-3 text-sm font-medium",
+            tab === item.id ? "text-zinc-900 after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-indigo-600 dark:text-zinc-100 dark:after:bg-indigo-400"
+              : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100", focusRing)}>
+          {item.label}
+          {suggested === item.id && <><span aria-hidden className="h-1.5 w-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400" /><span className="sr-only">(suggested for this stage)</span></>}
+        </button>
+      </li>)}
+    </ul>
+  </nav>;
 }
