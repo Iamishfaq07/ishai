@@ -1,5 +1,6 @@
+import { SpotArt } from "../../components/SpotArt";
 import { Link, useSearchParams } from "react-router-dom";
-import { Badge, CircleCheck, Code2, CodeScene, LoadGate, Spot, cx, focusRing, type SpotKind } from "@orbit/ui";
+import { Badge, CircleCheck, Code2, LoadGate, Spot, cx, focusRing, type SpotKind } from "@orbit/ui";
 import { Card, ErrorNote, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -36,14 +37,18 @@ export function CodeHomePage() {
   return (
     <>
       <OpportunityReturn />
-      <PageHeader eyebrow="Interview preparation" icon={Code2} title="Coding practice" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<CodeScene />} />
+      <PageHeader eyebrow="Interview preparation" icon={Code2} title="Coding practice" subtitle="Coding-round practice by pattern: write it, run the tests, then get an interviewer's review of your code and your explanation." art={<SpotArt kind="practice" />} />
       <LoadGate loading={data.loading && !d} variant="card" count={3} label="Getting the problems">
         {data.error && !d ? (
           <ErrorNote onRetry={data.reload}>{errorText(data.error)}</ErrorNote>
         ) : d ? (
           <>
             <Card className="mb-6 flex flex-wrap items-center gap-x-8 gap-y-3">
-              <div>
+              {/* Counts once something is solved; before that, where to start (no "0 of 16" on a first visit). */}
+              {solved === 0 ? <div className="min-w-0 basis-full sm:basis-auto">
+                <p className="font-title text-xl font-semibold">Start with any pattern</p>
+                <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{d.patterns.length} patterns, {d.problems.length} problems, each one with tests and a review.</p>
+              </div> : <><div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">Solved</p>
                 <p className="font-display text-2xl font-semibold tabular-nums">{solved} <span className="text-base font-normal text-zinc-500">of {d.problems.length}</span></p>
               </div>
@@ -52,18 +57,18 @@ export function CodeHomePage() {
                 <p className="font-display text-2xl font-semibold tabular-nums">
                   {d.patterns.filter((pat) => d.problems.some((p) => p.pattern === pat && p.solved)).length} <span className="text-base font-normal text-zinc-500">of {d.patterns.length}</span>
                 </p>
-              </div>
+              </div></>}
               <p className="min-w-0 basis-full text-sm text-zinc-600 sm:basis-0 sm:flex-1 dark:text-zinc-300">
                 Do the easier one in each pattern first, then the harder one. Explain your approach as you would out loud: the review scores that too.
                 {d.reviews_left !== null && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{d.reviews_left} free reviews left today</span>}
               </p>
             </Card>
-            <div className="stagger grid grid-cols-1 gap-4 md:grid-cols-2">
-              {d.patterns.map((pattern) => {
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {d.patterns.map((pattern, i) => {
                 const mine = d.problems.filter((p) => p.pattern === pattern);
                 const done = mine.filter((p) => p.solved).length;
                 return (
-                  <Card key={pattern} className="min-w-0">
+                  <div key={pattern} className="route-rise min-w-0" style={{ ["--i" as string]: Math.min(i, 8) }}><Card className="h-full min-w-0">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind={PATTERN_SPOT[pattern] ?? "code"} />{pattern}</h2>
                       <span className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">{done}/{mine.length} solved</span>
@@ -80,7 +85,7 @@ export function CodeHomePage() {
                         </li>
                       ))}
                     </ul>
-                  </Card>
+                  </Card></div>
                 );
               })}
             </div>

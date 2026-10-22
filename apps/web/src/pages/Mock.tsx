@@ -1,4 +1,5 @@
 import { SpotArt } from "../components/SpotArt";
+import { Fold } from "../components/Fold";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { CreateSessionRequest, MockDifficulty, MockInterviewType, MockPersona } from "@orbit/types";
@@ -7,6 +8,8 @@ import { Button, Card, ErrorNote, Field, Input, PageHeader, Select } from "../co
 import { isSecurityRole } from "../lib/security";
 import {
   Spot,
+  ArrowRight,
+  buttonClass,
   type SpotKind,
   ChevronDown,
   MOCK_INTERVIEW_ENABLED,
@@ -153,21 +156,21 @@ function MockSetup() {
         <Link
           to="/interview"
           className={cx(
-            "group relative flex flex-wrap items-center gap-4 overflow-hidden rounded-3xl bg-zinc-900 p-5 text-white ring-1 ring-inset ring-white/10 sm:p-6",
+            "route-card route-rise group relative flex flex-wrap items-center gap-4 rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6 dark:border-white/10 dark:bg-zinc-900",
             focusRing,
           )}
         >
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 dark:bg-white/[0.06] dark:text-zinc-300">
             <Video className="h-6 w-6" aria-hidden />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-display text-lg font-semibold">AI video interview</span>
-            <span className="block text-sm text-white/85">
+            <span className="block font-title text-xl font-semibold">AI video interview</span>
+            <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
               Face to face with an AI interviewer who asks from a job description, your resume or any topic, follows up on your
               answers, and grades every one.
             </span>
           </span>
-          <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-indigo-700 transition-transform group-hover:translate-x-0.5">Start</span>
+          <span className={buttonClass("primary")}>Start <ArrowRight className="h-4 w-4 motion-safe:transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
         </Link>
         <PracticeQueueCard />
 
@@ -180,6 +183,9 @@ function MockSetup() {
               <p className="text-sm text-zinc-500 dark:text-zinc-400">Uses your interview minutes. Only your microphone is used.</p>
             </div>
           </div>
+          {/* The one-tap rounds come first; tailoring them is optional and waits in one row (open when a company is set). */}
+          <Fold title="Make it specific (optional)" hint="Company style, stage, language and the job post to practise for" defaultOpen={Boolean(company)}>
+            <div className="space-y-3 p-2">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Company (optional)" htmlFor="mock-company" hint={guide ? `Asked the way ${guide.name} interviews.` : "Name a company to practise in its interview style."}>
               <Input id="mock-company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder={isIndia(country) ? "e.g. Amazon, TCS, Flipkart" : "e.g. Amazon, Google, Deloitte"}
@@ -229,11 +235,13 @@ function MockSetup() {
               role guides
             </Link>
           </p>
+            </div>
+          </Fold>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {PRESETS.map((p) => {
+            {PRESETS.map((p, i) => {
               const busy = starting === p.id;
               return (
-                <li key={p.id}>
+                <li key={p.id} className="route-rise" style={{ ["--i" as string]: i + 1 }}>
                   <button
                     ref={(el) => {
                       presetRefs.current[p.id] = el;
@@ -242,7 +250,7 @@ function MockSetup() {
                     disabled={starting !== null}
                     onClick={() => void launch(presetSession(p.id, knownRole, contextDocs(), country, practiceLanguage), p.id)}
                     className={cx(
-                      "glass-panel lift flex h-full w-full flex-col items-start gap-1.5 rounded-2xl p-3.5 text-left hover:border-indigo-400/40 disabled:cursor-wait disabled:opacity-70 sm:p-4 dark:hover:border-indigo-400/30",
+                      "route-card flex h-full w-full flex-col items-start gap-1.5 rounded-2xl border border-zinc-200 bg-white p-3.5 text-left disabled:cursor-wait disabled:opacity-70 sm:p-4 dark:border-white/10 dark:bg-zinc-900",
                       // "!": inside the app the cards drop their box-shadow (html.app-shell .glass-panel), which a plain
                       // ring is drawn with, so the preset a link points at wasn't marked at all.
                       highlighted === p.id && "!ring-2 ring-indigo-500",
