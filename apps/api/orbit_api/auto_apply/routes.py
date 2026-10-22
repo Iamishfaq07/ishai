@@ -63,7 +63,8 @@ router = APIRouter(prefix="/v1/apply", tags=["apply"])
 admin_router = APIRouter(prefix="/v1/admin/apply", tags=["admin"])
 read_limit = Depends(limit_user("apply-read", rate_per_s=3, burst=60))
 write_limit = Depends(limit_user("apply-write", rate_per_s=1, burst=30))
-plan_limit = Depends(limit_user("apply-plan", rate_per_s=6 / 3600, burst=3))
+# Preparing applications: per job from a job page or the tracker, so generous; the plan quota caps real cost.
+plan_limit = Depends(limit_user("apply-plan", rate_per_s=120 / 3600, burst=30))
 executor_limit = Depends(limit_user("apply-executor", rate_per_s=1, burst=30))
 SIGNED_URL_S = 15 * 60
 

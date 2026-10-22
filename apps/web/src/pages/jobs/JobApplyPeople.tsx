@@ -66,6 +66,12 @@ function AutoApplyCard({ entry }: { entry: JobTrackerEntry }) {
   // Where this job's application goes: sent by Orbit, prepared for you to send, or on a job board (coverage.py).
   const coverage = useCoverage();
   const here = coverage.data?.jobs.find((j) => j.entry_id === entry.id);
+  const approve = async (id: string) => {
+    setBusy(true); setError(null);
+    try { await applyApi.approveApplyPacket(id); packets.reload(); }
+    catch (err) { setError(errorText(err)); }
+    finally { setBusy(false); }
+  };
   const prepare = async () => {
     setBusy(true); setNote(null); setError(null);
     try {
@@ -86,7 +92,11 @@ function AutoApplyCard({ entry }: { entry: JobTrackerEntry }) {
       : packet ? <>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Prepared for this job: your resume reordered and reworded for it from your real experience, a short cover letter and the form's answers.</p>
         <p className="text-sm font-medium">{PACKET_LABEL[packet.status]}{packet.missing > 0 ? ` · ${packet.missing} question${packet.missing === 1 ? "" : "s"} to answer` : ""}</p>
-        <Link to={`/jobs/applications?packet=${encodeURIComponent(packet.id)}`} className={textLink}>Review the application <ArrowRight className="h-4 w-4" aria-hidden /></Link>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* Review-first: approve it here once you've looked; it then goes out within your limits. */}
+          {packet.status === "review" && <Button size="sm" loading={busy} onClick={() => void approve(packet.id)}>Approve and send</Button>}
+          <Link to={`/jobs/applications?packet=${encodeURIComponent(packet.id)}`} className={textLink}>{packet.status === "review" ? "Check it first" : "Open the application"} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
+        </div>
       </>
       : !ready ? <>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">Set it up once: approve your master resume and the facts forms ask for. After that, every job you save can be prepared with a resume tailored to it.</p>
