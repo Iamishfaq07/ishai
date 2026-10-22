@@ -403,8 +403,8 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
           Keep the linked resume as a separate saved copy before sharing it. Later edits do not change that copy. Saving is not proof that an application was sent or received. A new saved copy becomes the default interview-preparation version; you can change the choice in Interview.
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
-          <label className="min-w-0 flex-1 text-sm">
-            <span className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">Version note (optional)</span>
+          <label className="min-w-0 basis-full text-sm sm:basis-auto sm:flex-1">
+            <span className="mb-1 block text-[13px] font-medium text-zinc-600 dark:text-zinc-400">Version note (optional)</span>
             <Input disabled={busy} value={note} maxLength={200} placeholder="Why I saved this version" onChange={(e) => setNote(e.target.value)} />
             <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Temporary draft · save this version to keep the note.</p>
           </label>

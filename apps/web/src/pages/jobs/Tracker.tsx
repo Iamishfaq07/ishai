@@ -65,6 +65,7 @@ import {
   trackerCsv,
 } from "./model";
 import { StagePill } from "./StagePill";
+import { RouteLine, routeIndex } from "../../components/RouteLine";
 import { JOBS_MATCHES, jobPath, outreachPath } from "./paths";
 import { CompareDrawer } from "./CompareDrawer";
 import { SearchInsightsPanel } from "./SearchInsightsPanel";
@@ -159,6 +160,10 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
     return STATUSES.find((s) => s === asked) ?? "all";
   });
   const [error, setError] = useState<string | null>(null);
+  // Wide screens choose a board or a table (?view=table, so the choice survives a reload and can be linked).
+  const [params, setParams] = useSearchParams();
+  const view = params.get("view") === "table" ? "table" : "board";
+  const setView = (v: "board" | "table") => { const next = new URLSearchParams(params); if (v === "table") next.set("view", "table"); else next.delete("view"); setParams(next, { replace: true }); };
   const entries = tracker.data ?? [];
   const columns = byStatus(entries);
   // Jobs picked to compare side by side (CompareDrawer), in the order picked; a removed job drops out.
@@ -236,6 +241,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
     );
   }
 
+  const closed = CLOSED_COLUMNS.flatMap((st) => columns[st]);
   const shown = filter === "all" ? [...entries].sort((a, b) => b.status_at.localeCompare(a.status_at)) : columns[filter];
   return (
     <div className="space-y-4">
@@ -251,7 +257,7 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
               aria-pressed={filter === s}
               onClick={() => setFilter(s)}
               className={cx(
-                "shrink-0 rounded-full border px-3 py-1 text-sm font-medium",
+                "tap-y shrink-0 rounded-full border px-3 py-1 text-sm font-medium",
                 filter === s ? "border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-200" : "border-zinc-200 text-zinc-500 dark:border-white/10 dark:text-zinc-400",
                 focusRing,
               )}
@@ -269,14 +275,22 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
         </ul>
       </div>}
 
-      {/* Wide screens: a board, one column per status. */}
-      {wide && <div ref={boardRef} className="hidden gap-3 lg:grid lg:grid-cols-4 xl:grid-cols-7">
-        {STATUSES.map((s) => (
+      {wide && <div className="flex items-center justify-end">
+        <div role="group" aria-label="Show as" className="inline-flex rounded-lg p-0.5 ring-1 ring-zinc-200 dark:ring-white/10">
+          {(["board", "table"] as const).map((v) => <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
+            className={cx("min-h-9 rounded-md px-3 text-sm font-medium", view === v ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950" : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100", focusRing)}>
+            {v === "board" ? "Board" : "Table"}</button>)}
+        </div>
+      </div>}
+
+      {/* Wide screens: a board of the four route stops; closed jobs fold away underneath. */}
+      {wide && view === "board" && <div ref={boardRef} className="hidden gap-3 lg:grid lg:grid-cols-4">
+        {ROUTE_COLUMNS.map((s) => (
           <section key={s} aria-label={STATUS_LABEL[s]} className="relative min-w-0 rounded-2xl bg-zinc-500/[0.06] p-2.5 dark:bg-white/[0.02]">
             <span aria-hidden="true" className={cx("absolute inset-x-4 top-0 h-0.5 rounded-full", STATUS_MARK[s])} />
             <h3 className="mb-2 flex items-center gap-2 px-1 text-sm font-semibold">
               <StagePill status={s} />
-              <span className="text-xs font-normal text-zinc-500 tabular-nums dark:text-zinc-400">{columns[s].length}</span>
+              <span className="text-xs font-normal text-zinc-600 tabular-nums dark:text-zinc-400">{columns[s].length}</span>
             </h3>
             <ul className="space-y-2.5">
               {columns[s].slice(0, drawn).map((e) => (
@@ -288,6 +302,16 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
           </section>
         ))}
       </div>}
+      {wide && view === "board" && closed.length > 0 && <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+        <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>
+          <span>Closed <span className="font-normal text-zinc-600 dark:text-zinc-400">({closed.length}: {CLOSED_COLUMNS.filter((s) => columns[s].length).map((s) => `${columns[s].length} ${STATUS_LABEL[s].toLowerCase()}`).join(", ")})</span></span>
+          <ArrowRight className="h-4 w-4 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />
+        </summary>
+        <ul className="grid gap-3 p-3 lg:grid-cols-3">{closed.map((e) => <li key={e.id}>
+          <TrackerCard compact entry={e} onUpdate={(p) => update(e, p)} onRemove={() => void remove(e)} compare={compareFor(e)} moved={moved === e.id} />
+        </li>)}</ul>
+      </details>}
+      {wide && view === "table" && <TrackerTable entries={[...entries].sort((a, b) => b.status_at.localeCompare(a.status_at))} />}
 
       {pickedEntries.length > 0 && (
         <div role="region" aria-label="Compare jobs" className="sticky bottom-20 z-20 mx-auto flex w-fit max-w-full flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/25 bg-white/95 px-4 py-2.5 shadow-popover backdrop-blur sm:bottom-6 dark:bg-zinc-950/90">
@@ -305,6 +329,34 @@ export function JobTracker({ tracker, onAdd }: { tracker: AsyncState<JobTrackerE
       <CompareDrawer entries={pickedEntries} open={comparing && pickedEntries.length >= 2} onClose={() => setComparing(false)} />
     </div>
   );
+}
+
+/** The board's columns are the route's four stops; hired, not this time and withdrawn are closed and fold away. */
+const ROUTE_COLUMNS: JobStatus[] = ["saved", "applied", "interviewing", "offer"];
+const CLOSED_COLUMNS: JobStatus[] = ["hired", "rejected", "withdrawn"];
+
+/** Every job in one sortable-at-a-glance table: newest move first, each row opening its job page. */
+function TrackerTable({ entries }: { entries: JobTrackerEntry[] }) {
+  return <div className="overflow-x-auto rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+    <table className="w-full min-w-[46rem] text-sm">
+      <caption className="sr-only">Your applications, most recent change first</caption>
+      <thead><tr className="border-b border-zinc-200 text-left text-[13px] text-zinc-600 dark:border-white/10 dark:text-zinc-400">
+        <th scope="col" className="px-4 py-2.5 font-medium">Job</th>
+        <th scope="col" className="px-4 py-2.5 font-medium">Route</th>
+        <th scope="col" className="px-4 py-2.5 font-medium">Next date</th>
+        <th scope="col" className="px-4 py-2.5 font-medium">Last change</th>
+      </tr></thead>
+      <tbody className="divide-y divide-zinc-200 dark:divide-white/10">{entries.map((e) => <tr key={e.id} className="hover:bg-zinc-50 dark:hover:bg-white/[0.03]">
+        <th scope="row" className="px-4 py-3 text-left font-normal">
+          <Link to={missionPath(e.id)} className={cx("rounded font-semibold hover:underline", focusRing)}>{e.title}</Link>
+          <span className="block text-[13px] text-zinc-600 dark:text-zinc-400">{[e.company, e.location].filter(Boolean).join(" · ")}</span>
+        </th>
+        <td className="px-4 py-3">{routeIndex(e.status) < 0 ? <StagePill status={e.status} /> : <RouteLine status={e.status} labels className="w-60" />}</td>
+        <td className="px-4 py-3 tabular-nums">{e.next_at ? shortDate(e.next_at) : <span className="text-zinc-500 dark:text-zinc-400">None</span>}</td>
+        <td className="px-4 py-3 tabular-nums text-zinc-600 dark:text-zinc-400">{shortDate(e.status_at)}</td>
+      </tr>)}</tbody>
+    </table>
+  </div>;
 }
 
 /** A card's own actions: small accent links, the same weight whether a link or a button. */
