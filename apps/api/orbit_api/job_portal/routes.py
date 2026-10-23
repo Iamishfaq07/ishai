@@ -418,7 +418,8 @@ async def _generate(db: AsyncSession, user: User, req: LLMRequest) -> LLMRespons
 
 async def _listing(db: AsyncSession, listing_id: str) -> JobListing:
     row = await db.get(JobListing, listing_id)
-    if row is None:
+    # A job someone added by hand (auto_apply/manual_jobs.py) is theirs, on their tracker, never a listing.
+    if row is None or row.source == "manual":
         raise HTTPException(status.HTTP_404_NOT_FOUND, "That job isn't listed anymore.")
     return row
 
@@ -488,7 +489,7 @@ async def _rows(db: AsyncSession, days: int, country: str) -> list[ranking.Row]:
         or_(BizJob.valid_through.is_(None), BizJob.valid_through > datetime.now(UTC))))
     result = await db.execute(select(*_ROW_COLUMNS).where(
         JobListing.posted_at >= since, or_(JobListing.country == country, JobListing.workplace == "remote"),
-        or_(JobListing.source != "orbit", live_business)))
+        JobListing.source != "manual", or_(JobListing.source != "orbit", live_business)))
     return [ranking.row_of(r) for r in result.all()]
 
 
@@ -689,7 +690,7 @@ async def _also_listed(db: AsyncSession, row: JobListing) -> list[AlsoListedOut]
     """Other posts of the same job (the duplicate fingerprint: company, title, city, workplace), each with its own
     source; a link only when it's http(s)."""
     others = (await db.scalars(select(JobListing).where(JobListing.dedupe_key == row.dedupe_key,
-                                                        JobListing.id != row.id)
+                                                        JobListing.id != row.id, JobListing.source != "manual")
                                .order_by(JobListing.fetched_at.desc()).limit(MAX_ALSO_LISTED))).all()
     out = []
     for other in others:
@@ -1139,7 +1140,8 @@ async def stats(db: Annotated[AsyncSession, Depends(get_db)]) -> StatsOut:
         return _stats[1]
     since = datetime.now(UTC) - timedelta(days=STATS_DAYS)
     jobs, companies = (await db.execute(
-        select(func.count(), func.count(func.distinct(JobListing.company))).where(JobListing.posted_at >= since))).one()
+        select(func.count(), func.count(func.distinct(JobListing.company))).where(
+            JobListing.posted_at >= since, JobListing.source != "manual"))).one()
     statuses = await refresh.statuses(db)
     settings = get_settings()
     out = StatsOut(jobs=int(jobs), companies=int(companies), days=STATS_DAYS,

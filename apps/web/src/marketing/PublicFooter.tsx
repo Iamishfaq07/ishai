@@ -159,7 +159,11 @@ export function PublicFooter({ className }: { className?: string }) {
       <div className="border-t mk-line">
         <Container className="flex flex-col gap-4 py-6 text-xs text-zinc-500 sm:flex-row sm:items-center sm:justify-between dark:text-zinc-400">
           <p className="max-w-xl">{USE_WHERE_ALLOWED}</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* The listing on CodeHype, as they give it (it also verifies the site is ours). */}
+            <a href="https://www.codehype.ai/product/orbit-ai-orbitanswer?utm_source=codehype_badge" target="_blank" rel="noopener noreferrer" className={cx("rounded", focusRing)}>
+              <img src="https://www.codehype.ai/badges/orbit-ai-orbitanswer.svg?variant=find-us&v=20" alt="Featured on CodeHype" width="180" height="65" loading="lazy" decoding="async" className="block h-auto max-h-[65px] w-full max-w-[180px]" />
+            </a>
             <ThemeSwitch />
             <p>© {new Date().getFullYear()} Orbit</p>
           </div>

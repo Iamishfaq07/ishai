@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { BillingScene, CreditCard, LoadGate, Skeleton, Spot, cx, focusRing, rupees } from "@orbit/ui";
+import { CreditCard, LoadGate, Skeleton, Spot, cx, focusRing, rupees } from "@orbit/ui";
 import type { CreditPack, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
+import { SpotArt } from "../components/SpotArt";
 import { api } from "../lib/api";
 import { contactHref } from "../lib/contactForm";
 import { errorText, formatDate } from "../lib/format";
@@ -222,7 +223,7 @@ export function BillingPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Account" icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." art={<BillingScene />} />
+      <PageHeader eyebrow="Account" icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." art={<SpotArt kind="plan" />} />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
       {!shown ? (

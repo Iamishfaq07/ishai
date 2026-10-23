@@ -6,7 +6,7 @@ import { cx } from "@orbit/ui";
  * and one subject drawn in ink with the accent on the part that matters. Decorative (aria-hidden); the route draws in
  * and the accent pops on Full motion (base.css `.route-draw`, `.route-stop`).
  */
-export type SpotKind = "search" | "resume" | "offer" | "practice" | "route";
+export type SpotKind = "search" | "resume" | "offer" | "practice" | "route" | "plan" | "video" | "profile";
 
 export function SpotArt({ kind, className }: { kind: SpotKind; className?: string }) {
   return (
@@ -53,6 +53,28 @@ const SUBJECTS: Record<SpotKind, ReactElement> = {
     <path d="M86 28h34a6 6 0 0 1 6 6v16a6 6 0 0 1-6 6h-20l-10 8v-8h-4a6 6 0 0 1-6-6V34a6 6 0 0 1 6-6z" className={ink} strokeWidth="2" />
     <path d="M110 48h30a5 5 0 0 1 5 5v14a5 5 0 0 1-5 5h-4v7l-9-7h-17a5 5 0 0 1-5-5V53a5 5 0 0 1 5-5z" className={accent} />
     <path d="M96 40h16" className="stroke-zinc-400" strokeWidth="2.5" strokeLinecap="round" />
+  </>,
+  // A ticket with its stub torn off at the dotted line: a plan or credits, paid once.
+  plan: <>
+    <path d="M88 34h52v12a6 6 0 0 0 0 12v12H88V58a6 6 0 0 0 0-12z" className={ink} strokeWidth="2" strokeLinejoin="round" />
+    <path d="M122 36v32" className="stroke-zinc-300 dark:stroke-zinc-600" strokeWidth="2" strokeDasharray="2 4" />
+    <path d="M96 46h18M96 54h12" className="stroke-zinc-300 dark:stroke-zinc-600" strokeWidth="2.5" strokeLinecap="round" />
+    <circle cx="131" cy="52" r="5" className={accent} />
+  </>,
+  // A camera frame with the accent "recording" dot.
+  video: <>
+    <rect x="84" y="32" width="44" height="34" rx="5" className={ink} strokeWidth="2" />
+    <path d="M128 44l14-8v26l-14-8z" className={ink} strokeWidth="2" strokeLinejoin="round" />
+    <circle cx="106" cy="46" r="6" className="fill-none stroke-zinc-400" strokeWidth="2" />
+    <path d="M96 60c3-6 17-6 20 0" fill="none" className="stroke-zinc-400" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="92" cy="38" r="3" className={accent} />
+  </>,
+  // A profile card with the headline line in the accent: what a recruiter reads first.
+  profile: <>
+    <rect x="86" y="26" width="52" height="44" rx="5" className={ink} strokeWidth="2" />
+    <circle cx="100" cy="42" r="7" className="fill-none stroke-zinc-400" strokeWidth="2" />
+    <path d="M112 38h18" className={accentLine} strokeWidth="3" strokeLinecap="round" />
+    <path d="M112 46h14M94 58h36" className="stroke-zinc-300 dark:stroke-zinc-600" strokeWidth="2.5" strokeLinecap="round" />
   </>,
   // The route's next stop, ringed, with the flag beyond it.
   route: <>

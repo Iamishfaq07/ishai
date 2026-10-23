@@ -27,7 +27,7 @@ import json
 import logging
 import random
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -36,7 +36,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import InvalidRequestError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.auto_apply import bank, direct, handoff, letters, quota, rules
+from orbit_api.auto_apply import bank, direct, handoff, letters, manual_jobs, quota, rules
 from orbit_api.auto_apply.forms import FormClient, FormError, FormQuestion, fetch_form, standard_form
 from orbit_api.auto_apply.pacing import OPEN, aware, company_count, daily_limit, expire, pause_if_hired
 from orbit_api.auto_apply.resolve import Target, resolve
@@ -46,6 +46,7 @@ from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.job_portal import ranking, signals
 from orbit_api.job_portal.profile import JobPrefs, apply_suggestion, from_resume, resume_hash
+from orbit_api.job_portal.skills import resume_matcher
 from orbit_api.job_portal.sources import source_named
 from orbit_api.models import (
     AnswerBankEntry,
@@ -293,6 +294,16 @@ async def prepare(db: AsyncSession, user: User, setup: AutoApplySetup, row: JobL
     return packet
 
 
+def rank_rows(rows: list[JobListing], search: ranking.Search, master: ResumeData) -> dict[str, ranking.Match]:
+    """Jobs outside the shared feed (manual_jobs.py), scored the way the feed scores its own posts."""
+    if not rows:
+        return {}
+    matcher = resume_matcher(master.visible(), search.skills)
+    # The candidate chose these jobs; where the saved location doesn't name a country, it's taken as theirs.
+    own = [replace(row, country=row.country or search.country) for row in map(ranking.row_of, rows)]
+    return {m.id: m for m in ranking.rank(own, search, matcher)}
+
+
 async def rebuild_packet(db: AsyncSession, user: User, setup: AutoApplySetup, packet: ApplicationPacket) -> None:
     """Rebuild an unsent packet from the current approvals. New filters are checked again, and Review first never
     becomes Automatic. Used before leasing stale queue entries and when the candidate explicitly retries."""
@@ -313,7 +324,9 @@ async def rebuild_packet(db: AsyncSession, user: User, setup: AutoApplySetup, pa
     searches = _searches(user, prefs, filters, Facts.model_validate(setup.profile or {}))
     copies = set((await db.scalars(select(JobListing.id).where(JobListing.dedupe_key == listing.dedupe_key))).all()) \
         if listing.dedupe_key else {listing.id}
-    matches = [m for search in searches for m in await _matches(db, user, search, master, "best")
+    matches = [m for search in searches for m in (
+               list(rank_rows([listing], search, master).values()) if listing.source == manual_jobs.MANUAL_SOURCE
+               else await _matches(db, user, search, master, "best"))
                if m.id in copies and m.score >= setup.threshold]
     if (not matches or not _keywords_ok(listing, filters)
             or (filters.seniority and listing.level and listing.level not in filters.seniority)
@@ -410,11 +423,18 @@ async def plan_for_user(db: AsyncSession, user: User, *, now: datetime | None = 
     applied_jobs = [(c, t.lower()) for _, c, t, st in tracked if st != "saved"]
     excluded = filters.exclude_companies
     prepared_ids: set[str] = set()
+    # Jobs the candidate added by hand from a link: not in the feed, so scored here and put first.
+    manual = await manual_jobs.ensure_listings(db, user.id, listing_ids) if listing_ids else {}
     for search in _searches(user, prefs, filters, facts):
         matches = [m for m in await _matches(db, user, search, master, "best") if m.score >= threshold
                    and (listing_ids is None or m.id in listing_ids)]
         ids = [m.id for m in matches[:MAX_CONSIDERED]]
         rows = {r.id: r for r in (await db.scalars(select(JobListing).where(JobListing.id.in_(ids)))).all()}
+        if manual:
+            ranked = [m for m in rank_rows(list(manual.values()), search, master).values() if m.score >= threshold]
+            matches = ranked + matches
+            rows |= {m.id: manual[m.id] for m in ranked}
+            manual = {k: v for k, v in manual.items() if k not in rows}  # the rest may fit another search
         for m in matches[:MAX_CONSIDERED]:
             if report.created >= budget:
                 break

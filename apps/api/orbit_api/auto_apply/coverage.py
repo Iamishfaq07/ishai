@@ -19,7 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from orbit_api.auto_apply import hosted, rules
+from orbit_api.auto_apply import hosted, manual_jobs, rules
 from orbit_api.auto_apply.resolve import resolve
 from orbit_api.models import JobApplication, JobListing
 
@@ -46,7 +46,7 @@ class Coverage(BaseModel):
 
 
 def classify(ats: str, site: str | None, hosting: bool) -> tuple[Kind, str, str]:
-    name = ATS_NAMES.get(ats, site or "its site")
+    name = ATS_NAMES.get(ats, site or "Its own site")
     if ats == "orbit":
         return "auto", name, "Sent through Orbit."
     if ats in rules.BROWSER_ATS or (ats in rules.ATS_SUPPORTED and ats != "workday"):
@@ -58,7 +58,7 @@ def classify(ats: str, site: str | None, hosting: bool) -> tuple[Kind, str, str]
         return "kit", name, "Workday: prepared in full; you sign in to the employer's Workday and send it."
     if ats == "board":
         return "board", name, f"A {name} listing: apply there with the prepared answers. Boards are never automated."
-    return "manual", name, "Added by hand: add the employer's application link to prepare it."
+    return "manual", name, "Added by hand without the employer's application link: add it to prepare this job."
 
 
 async def coverage(db: AsyncSession, user_id: str) -> Coverage:
@@ -68,7 +68,8 @@ async def coverage(db: AsyncSession, user_id: str) -> Coverage:
         .order_by(JobApplication.updated_at.desc()).limit(200))).all()
     jobs: list[JobCoverage] = []
     for e in entries:
-        row = await db.get(JobListing, e.listing_id)
+        # A job added by hand from its link is read from that link (manual_jobs.py), as Orbit Apply will.
+        row = await db.get(JobListing, e.listing_id) or manual_jobs.listing_from(e)
         if row is None:
             kind, where, note = classify("other", None, hosting)
         else:
