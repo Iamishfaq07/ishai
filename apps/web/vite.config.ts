@@ -43,7 +43,8 @@ export function contentSecurityPolicy(inlineScripts: string[], env: Record<strin
     // 'wasm-unsafe-eval': the camera coach's face model runs as WebAssembly, served from this site (never eval).
     `script-src 'self' 'wasm-unsafe-eval' ${hashes.join(" ")} ${TURNSTILE} ${RAZORPAY_SCRIPTS} ${CF_ANALYTICS_SCRIPT}`.replace(/\s+/g, " "),
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob: https://cdn.razorpay.com",
+    // CodeHype: the "Featured on CodeHype" badge in the public footer.
+    "img-src 'self' data: blob: https://cdn.razorpay.com https://www.codehype.ai",
     "font-src 'self' data:",
     "media-src 'self' blob: data:",
     "worker-src 'self' blob:",
