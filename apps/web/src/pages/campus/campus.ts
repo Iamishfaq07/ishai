@@ -2,7 +2,7 @@
  * Campus placements: the drives a college's placement cell announces (company, date, CTC, cut-offs, rounds), each
  * checked against the student's own marks, with a countdown and the prep for every round it has. The early-career
  * job lists trending on GitHub (new-grad and internship trackers) cover off-campus roles; this covers the on-campus
- * season. Everything is typed by the student and stays on the device.
+ * season. Students enter the information and can save it to their account.
  */
 
 export const ROUNDS = [

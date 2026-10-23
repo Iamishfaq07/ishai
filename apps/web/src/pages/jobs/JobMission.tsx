@@ -1,3 +1,4 @@
+import { PrepDownload } from "./PrepDownload";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { JobMission, JobTrackerEntry, MissionFit, MissionNextStep } from "@orbit/types";
@@ -151,6 +152,7 @@ export function JobMissionPage() {
                 mission.reload();
               }}
             />
+            <PrepDownload key={`prep:${entry.id}`} entryId={entry.id} />
             <JobApplyPeople key={`apply:${entry.id}`} entry={entry} />
             <RoomNavigation tab={tab} suggested={opportunityStart(entry.status, m)} onSelect={setTab} />
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">

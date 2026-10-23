@@ -14,7 +14,7 @@ from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.models import JobApplication, User
+from orbit_api.models import ApplicationStageEvent, JobApplication, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.workflow_ai import preview
 
@@ -187,11 +187,15 @@ async def confirm(entry_id: str, body: ConfirmIn, user: Annotated[User, Depends(
     if len(changes) == 1:
         raise HTTPException(422, "Choose a change to save")
     # Compare and update atomically, including writers using the regular tracker API.
+    previous_status = row.status
     changed = await db.execute(update(JobApplication).where(JobApplication.id == row.id,
         JobApplication.user_id == user.id, JobApplication.updated_at == row.updated_at,
         JobApplication.status == row.status).values(**changes).returning(JobApplication.id))
     if changed.scalar_one_or_none() is None:
         await db.rollback()
         raise HTTPException(409, "This job changed during saving. Refresh and review again.")
+    if "status" in changes:
+        db.add(ApplicationStageEvent(user_id=user.id, application_id=row.id, from_status=previous_status,
+                                     to_status=changes["status"], source="reviewed_message"))
     await db.commit()
     return state(await owned(db, user, entry_id))

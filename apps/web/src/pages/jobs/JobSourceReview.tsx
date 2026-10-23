@@ -1,3 +1,4 @@
+import { PostingHistory } from "./PostingHistory";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { JobSourceReview as Review } from "@orbit/types";
@@ -93,12 +94,13 @@ export function JobSourceReview({ entryId }: { entryId: string }) {
             <ul className="space-y-3">{view.duplicates.map((item) => <li key={item.id} className="min-w-0"><Link to={jobPath(item.id)} className={cx("inline-flex min-h-11 items-center break-words rounded text-sm underline", focusRing)}>{item.title} · {item.company}</Link><p className="text-xs text-zinc-600 dark:text-zinc-400">{item.source_label} · last seen {formatDate(item.last_seen_at)}</p><Credit attribution={item.attribution} /></li>)}</ul>
             {view.more_duplicates && <p className="text-xs">Showing three possible matches. More exist in the current cache.</p>}
           </section>}
-          <p className="text-xs text-zinc-600 dark:text-zinc-400">This comparison changes no saved job, resume, application kit or submission. It cannot compare an earlier job description, salary or requirement version. Review prepared materials separately if the source changed.</p>
+          <p className="text-xs text-zinc-600 dark:text-zinc-400">This comparison changes no saved job, resume, application kit or submission. Available source-version comparisons appear under Posting changes over time. Review prepared materials separately if the source changed.</p>
           {savedPost && <a className={cx("inline-flex min-h-11 items-center rounded text-sm font-semibold text-indigo-700 underline dark:text-indigo-300", focusRing)} href={savedPost} target="_blank" rel="noopener noreferrer">Open saved original post<span className="sr-only"> (opens in a new tab)</span></a>}
         </>}
         <Button variant="secondary" disabled={busy} onClick={() => void refresh()}>Refresh source status</Button>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">Reloading reads Orbit’s records only; it does not contact the employer. Cache updates continue through the existing feed refresh process.</p>
       </div>
     </details>
+    {open && <PostingHistory entryId={entryId} />}
   </section>;
 }

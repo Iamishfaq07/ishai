@@ -1,3 +1,4 @@
+import { SemanticPreview } from "./SemanticPreview";
 import { SpotArt } from "../../components/SpotArt";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -161,6 +162,7 @@ function Matches({ profile }: { profile: JobProfile }) {
     // minmax(0, 1fr): on a phone the one column is the screen's width, not its widest child's (the portal strip).
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
       <div className="min-w-0 space-y-4">
+        <SemanticPreview />
         <form onSubmit={search} className="flex flex-col gap-2 sm:flex-row" role="search">
           <label htmlFor="job-q" className="sr-only">
             Search your matches

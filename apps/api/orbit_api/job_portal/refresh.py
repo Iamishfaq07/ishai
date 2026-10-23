@@ -35,11 +35,12 @@ from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.job_portal.http import FeedClient, RateLimited, SourceError
 from orbit_api.job_portal.pace import Pace, breathe
+from orbit_api.job_portal.posting_history import capture, snapshot
 from orbit_api.job_portal.postings import MAX_AGE, Posting, listing_id, normalize
 from orbit_api.job_portal.skills import listing_keywords
 from orbit_api.job_portal.sources import Source, allowed_hosts, enabled_sources
 from orbit_api.job_portal.sources.base import SearchQuery
-from orbit_api.models import JobListing, JobSourceState
+from orbit_api.models import JobApplication, JobListing, JobPostingVersion, JobSourceState
 
 log = logging.getLogger(__name__)
 
@@ -188,6 +189,12 @@ async def _store_chunk(rows: list[dict[str, Any]], now: datetime) -> None:
     async with sessionmaker()() as db:
         existing = {found.id: found for found in (await db.scalars(
             select(JobListing).where(JobListing.id.in_([r["id"] for r in rows])))).all()}
+        tracked = set(await db.scalars(select(JobApplication.listing_id).where(
+            JobApplication.listing_id.in_([r["id"] for r in rows])).distinct()))
+        # Source observations are shared public data. Drop histories no longer tracked by anyone.
+        await db.execute(delete(JobPostingVersion).where(
+            JobPostingVersion.listing_id.in_([r["id"] for r in rows]),
+            JobPostingVersion.listing_id.not_in(select(JobApplication.listing_id))))
         for r in rows:
             partial = r.pop("partial")
             keywords = r.pop("keywords")
@@ -195,6 +202,7 @@ async def _store_chunk(rows: list[dict[str, Any]], now: datetime) -> None:
             if row is None:
                 db.add(JobListing(**r, keywords=keywords if keywords is not None else [], fetched_at=now))
                 continue
+            before, previous_at = snapshot(row), row.fetched_at
             keep = partial and bool(row.description)  # listed without its text: keep the text and links we have
             for name, value in r.items():
                 if keep and name in ("url", "apply_url", "description", "snippet", "text_hash", "level", "exp_min",
@@ -204,6 +212,8 @@ async def _store_chunk(rows: list[dict[str, Any]], now: datetime) -> None:
             if keywords is not None and not keep:
                 row.keywords = keywords
             row.fetched_at = now
+            if row.id in tracked:
+                await capture(db, row, before, previous_at, now)
         await db.commit()
 
 

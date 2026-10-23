@@ -1,13 +1,15 @@
+import { validCampus } from "../../lib/workspaceValidation";
+import { useCareerWorkspace } from "../../lib/useCareerWorkspace";
+import { WorkspaceSync } from "../../components/WorkspaceSync";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarIcon, Check, CircleAlert, GraduationCap, Plus, Reveal, Trash2, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
+import { CalendarIcon, Check, CircleAlert, GraduationCap, Plus, Reveal, Trash2, cx, focusRing } from "@orbit/ui";
 import { Button, Card, Field, IconButton, Input, PageHeader, Select } from "../../components/ui";
 import { ROUNDS, STATUSES, daysTo, eligibility, newDrive, ordered, type Drive, type Marks, type RoundId } from "./campus";
 
 const KEY = "orbit.campus";
 interface Saved { marks: Marks; drives: Drive[] }
 const EMPTY: Saved = { marks: { cgpa: null, tenth: null, twelfth: null, backlogs: null, branch: "" }, drives: [] };
-const isSaved = (v: unknown): v is Saved => typeof v === "object" && v !== null && "marks" in v && Array.isArray((v as Saved).drives);
 const num = (v: string) => { const n = Number(v); return v.trim() === "" || Number.isNaN(n) ? null : n; };
 const id = () => (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`).slice(0, 18);
 
@@ -43,12 +45,13 @@ function DriveForm({ drive, onSave, onCancel }: { drive: Drive; onSave: (d: Driv
 
 /**
  * Prepare → Campus placements (campus.ts): the season's drives with an eligibility check against your marks, a
- * countdown, each round's prep, and the outcome. Kept on this device.
+ * countdown, each round's prep, and the outcome. Saved to the account; unsaved drafts are kept on this device.
  */
 export function CampusPage() {
-  const [s, setS] = useState<Saved>(() => readJSON(safeLocal, KEY, EMPTY, isSaved));
+  const sync = useCareerWorkspace("campus", EMPTY, validCampus, KEY);
+  const s = sync.value;
   const [editing, setEditing] = useState<Drive | null>(null);
-  const save = (next: Saved) => { setS(next); safeLocal.setItem(KEY, JSON.stringify(next)); };
+  const save = sync.change;
   const setMarks = (patch: Partial<Marks>) => save({ ...s, marks: { ...s.marks, ...patch } });
   const upsert = (d: Drive) => { save({ ...s, drives: s.drives.some((x) => x.id === d.id) ? s.drives.map((x) => x.id === d.id ? d : x) : [...s.drives, d] }); setEditing(null); };
   const patch = (driveId: string, p: Partial<Drive>) => save({ ...s, drives: s.drives.map((x) => x.id === driveId ? { ...x, ...p } : x) });
@@ -57,6 +60,8 @@ export function CampusPage() {
   const selected = s.drives.filter((d) => d.status === "selected").length;
 
   return <div>
+    <WorkspaceSync {...sync} />
+    <fieldset disabled={!sync.loaded || sync.saving || sync.conflict} className="min-w-0">
     <PageHeader eyebrow="Interview preparation" icon={GraduationCap} title="Campus placements"
       subtitle="Every drive your placement cell announces: whether you're eligible, how long until it, and the prep for each round."
       actions={!editing ? <Button onClick={() => setEditing(newDrive(id()))}><Plus className="h-4 w-4" aria-hidden /> Add a drive</Button> : undefined} />
@@ -107,5 +112,6 @@ export function CampusPage() {
         <p className="px-1 text-xs text-zinc-600 dark:text-zinc-400">Off-campus too? Use <Link className="font-medium text-indigo-600 hover:underline dark:text-indigo-400" to="/jobs/matches">Discover</Link> with the Fresher and Internship chips.</p>
       </aside>
     </div>
+    </fieldset>
   </div>;
 }

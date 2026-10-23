@@ -43,6 +43,8 @@ jobs:
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run mypy orbit_api
+      - name: Career message regression gate
+        run: uv run python -m evals.career_quality
       - name: Tests (SQLite)
         run: uv run pytest -q
       - name: Migrations on Postgres + pgvector

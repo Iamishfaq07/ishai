@@ -1,3 +1,4 @@
+import { Projects } from "./Projects";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, GraduationCap, Spot, cx, focusRing } from "@orbit/ui";
 import { KashSecFeature } from "../../components/KashSec";
@@ -22,7 +23,7 @@ export function LearningPage() {
   return (
     <>
       <OpportunityReturn />
-      <PageHeader eyebrow="Interview preparation" icon={GraduationCap} title="Learning" subtitle="Learn the skills interviews test: coding rounds here in Orbit, and cybersecurity for free on KashSec Academy." />
+      <PageHeader eyebrow="Interview preparation" icon={GraduationCap} title="Learning" subtitle="Build practical project evidence, practise coding rounds, and learn cybersecurity on KashSec Academy." />
       <ul className="grid grid-cols-[minmax(0,1fr)] gap-4">
         <li className="min-w-0">
           <Link to={careerToolHref(CODE_HOME, params)} className={cx(card, focusRing)}>
@@ -48,6 +49,7 @@ export function LearningPage() {
           </Link>
         </li>
       </ul>
+      <Projects />
       <KashSecFeature placement="learning" className="mt-6" />
     </>
   );

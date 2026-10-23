@@ -1,8 +1,8 @@
 """One tracked job's journey, oldest first: saved, fit checks, the tailored resume, the job post kept for prep, the
 people at the company, applied, practice and live rounds with the company, where it stands now, and what's next.
 
-Read from rows Orbit already keeps for the tracker and the things linked to it; nothing new is stored, and only the
-owner's own rows are read. Stage history isn't kept, so the current stage appears once, at when it last moved.
+Only the owner's rows are read. New tracker transitions come from the durable stage ledger;
+older records without a ledger show their current stage without inventing earlier history.
 """
 
 from datetime import UTC, datetime
@@ -16,6 +16,7 @@ from orbit_api.config import get_settings
 from orbit_api.job_portal import session_associations
 from orbit_api.models import (
     ApplicationPacket,
+    ApplicationStageEvent,
     Document,
     JobApplication,
     JobContact,
@@ -154,8 +155,20 @@ async def timeline(db: AsyncSession, entry: JobApplication, now: datetime | None
                 upcoming=recorded.status == "planned" and recorded.scheduled_at is not None and _aware(at) > now,
                 link=f"/jobs/mission/{entry.id}?tab=interview"))
 
-    if entry.status in STAGE_LABEL:
-        events.append(TimelineEvent(kind="stage", at=entry.status_at, title=STAGE_LABEL[entry.status]))
+    stages = list(await db.scalars(select(ApplicationStageEvent).where(
+        ApplicationStageEvent.user_id == entry.user_id, ApplicationStageEvent.application_id == entry.id)
+        .order_by(ApplicationStageEvent.created_at.desc()).limit(100)))
+    for stage in stages:
+        if stage.to_status in {"saved", "applied"}:
+            continue  # Already represented by saved/applied events above.
+        events.append(TimelineEvent(kind="stage", at=stage.created_at,
+            title=STAGE_LABEL.get(stage.to_status, f"Tracker stage: {stage.to_status}"),
+            provenance="candidate_recorded",
+            detail=f"{stage.from_status or 'First observed state'} → {stage.to_status}. "
+                   "Recorded in Orbit; not independent employer verification."))
+    if not stages and entry.status in STAGE_LABEL:
+        events.append(TimelineEvent(kind="stage", at=entry.status_at, title=STAGE_LABEL[entry.status],
+                                   detail="Current state; earlier transitions were not recorded."))
     if entry.next_at and _aware(entry.next_at) > now:
         events.append(TimelineEvent(kind="next", at=entry.next_at, upcoming=True,
                                     title="Next interview" if entry.status == "interviewing" else "Next follow-up"))
