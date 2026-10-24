@@ -69,34 +69,29 @@ test("reviewed identity flows into Discover and independent opportunity rooms", 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("career-reviewed-320.png"), fullPage: true });
   await page.setViewportSize({ width: 390, height: 900 });
-  await page.getByRole("link", { name: "Return to Today", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Suggested next action" })).toContainText("Choose your search direction");
-  await page.getByRole("region", { name: "Suggested next action" }).getByRole("link", { name: "Open next step" }).click();
-  const profile = await (await context.request.get(`${API}/v1/jobs/profile`)).json();
-  expect(profile.resume.id).toBe(master.id);
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
   const jobs = [];
   for (const company of ["Northstar Studio", "Second Studio"]) {
     const created = await context.request.post(`${API}/v1/jobs/tracker/manual`, { data: { company, title: "Graduate developer" } });
     expect(created.status()).toBe(201); jobs.push(await created.json());
   }
   await page.goto(`/jobs/mission/${jobs[0].id}?guide=0&tab=resume`);
-  await expect(page.getByRole("navigation", { name: "Opportunity room", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Follow guided steps" })).toHaveCount(0);
+  const sections = page.getByRole("navigation", { name: "Sections of this job", exact: true });
+  await expect(sections).toBeVisible();
   await page.getByLabel("Link a resume", { exact: true }).selectOption(master.id);
   await expect(page.getByLabel("Change linked resume", { exact: true })).toBeVisible();
   const missionA = await (await context.request.get(`${API}/v1/jobs/tracker/${jobs[0].id}/mission`)).json();
   expect(missionA.resume.id).not.toBe(master.id);
-  await page.getByRole("navigation", { name: "Opportunity room", exact: true }).getByRole("button", { name: "Prepare with Saba" }).click();
+  await sections.getByRole("button", { name: /^Practice/ }).click();
   await expect(page.getByRole("heading", { name: "Practice with Saba", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Start practice with Saba", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Start \d+-minute practice$/ })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Practice format" })).toHaveValue("audio");
   expect((await (await context.request.get(`${API}/v1/jobs/tracker/${jobs[1].id}/mission`)).json()).resume).toBeNull();
   const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag22aa"]).analyze();
   expect(audit.violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("opportunity-saba-390.png"), fullPage: true });
-  await page.goBack();
-  await expect(page).toHaveURL(new RegExp(`mission/${jobs[0].id}.*tab=resume`));
   expect((await (await context.request.get(`${API}/v1/jobs/launchpad/identity`)).json()).master.id).toBe(master.id);
   await page.goto(`/resume-ai/${master.id}?guide=1&job=${jobs[0].id}`);
   await expect(page.getByRole("heading", { name: "Review this job’s resume first", exact: true })).toBeVisible();
@@ -126,13 +121,13 @@ test("Saba creates a job-bound mock and its report returns to that job", async (
   expect((await context.request.put(`${API}/v1/jobs/tracker/${job}/interview`, { data: { resume_id: rid,
     job_text: "Graduate developer role. Build small Python services and discuss your real projects and education.", round_type: "technical" } })).status()).toBe(200);
   await page.goto("/prepare");
-  await page.getByRole("combobox", { name: "What are you preparing for?" }).selectOption(job);
-  await page.getByRole("link", { name: "Prepare my Saba session", exact: true }).click();
+  await page.getByRole("link", { name: "Prepare for Graduate developer at Practice Studio", exact: true }).click();
+  await page.getByRole("navigation", { name: "Sections of this job", exact: true }).getByRole("button", { name: /^Practice/ }).click();
   await expect(page.getByRole("heading", { name: "Practice with Saba", exact: true })).toBeVisible();
   // Exercise the current video engine with no camera permission. Real speech/provider quality is a separate gate.
   await page.getByRole("combobox", { name: "Practice format" }).selectOption("video");
   const started = page.waitForResponse((response) => response.url().endsWith("/v1/sessions") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "Start practice with Saba", exact: true }).click();
+  await page.getByRole("button", { name: /^Start \d+-minute practice$/ }).click();
   const response = await started; expect(response.status(), await response.text()).toBe(201);
   const session = await response.json();
   expect(session.type).toBe("mock"); expect(session.application_id).toBe(job);
@@ -141,7 +136,8 @@ test("Saba creates a job-bound mock and its report returns to that job", async (
   await page.goto(`/sessions/${session.id}`);
   await expect(page.getByRole("link", { name: "Back to this opportunity", exact: true })).toHaveAttribute("href", `/jobs/mission/${job}?tab=practice`);
   await page.getByRole("link", { name: "Back to this opportunity", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Practice for Practice Studio", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Practice with Saba", exact: true })).toBeVisible();
+  await expect(page.getByText("Graduate developer · Practice Studio")).toBeVisible();
 });
 
 test("reply drafts survive room and route changes without restoring approval", async ({ page, context }) => {
@@ -158,7 +154,7 @@ test("reply drafts survive room and route changes without restoring approval", a
   await page.getByRole("button", { name: "Employer reply", exact: true }).click();
   const message = page.getByRole("textbox", { name: /Paste/ });
   await message.fill("Private draft: thank you for the invitation. Please confirm the next round.");
-  await page.getByRole("navigation", { name: "Opportunity room", exact: true }).getByRole("button", { name: "Overview", exact: true }).click();
+  await page.getByRole("navigation", { name: "Sections of this job", exact: true }).getByRole("button", { name: /^Resume/ }).click();
   await expect(message).toHaveValue(/Private draft/);
   await page.getByRole("link", { name: "Applications", exact: true }).last().click();
   await expect(page.getByRole("heading", { name: "Your applications", exact: true })).toBeVisible();
@@ -214,14 +210,15 @@ test("twenty opportunities remain navigable at 320px and CSS 200 percent zoom", 
     expect(created.status()).toBe(201);
   }
   await page.setViewportSize({ width: 320, height: 900 }); await page.goto("/");
-  const focus = page.getByRole("combobox", { name: "Focus an opportunity" });
-  await expect(focus.locator("option")).toHaveCount(21);
-  await expect(page.getByRole("link", { name: "Open opportunity", exact: true })).toHaveCount(5);
-  const options = await focus.locator("option").evaluateAll((nodes) => nodes.map((node) => (node as HTMLOptionElement).value));
-  await focus.selectOption(options[1]!);
-  await expect(page.getByRole("link", { name: "Open opportunity", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("today-20-opportunities-320.png"), fullPage: true });
+  await page.goto("/jobs/tracker");
+  await expect(page.getByRole("link", { name: /^Open job ?: Opportunity \d+ at Studio \d+$/ })).toHaveCount(20);
+  await page.getByRole("link", { name: /^Open job ?: Opportunity 7 at Studio 7$/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Opportunity 7" })).toBeVisible();
+  await page.goBack();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(() => { document.body.style.zoom = "2"; });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

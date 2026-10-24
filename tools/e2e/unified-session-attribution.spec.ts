@@ -22,29 +22,30 @@ test("candidate reviews, unlinks and reassigns a completed session without chang
   } });
   expect(created.status(), await created.text()).toBe(201); const session = (await created.json()).id;
   expect((await context.request.post(`${API}/v1/sessions/${session}/end`)).status()).toBe(200);
+  let current = "";
   const openRounds = async (id: string, company: string) => {
-    await page.goto(`/jobs/mission/${id}?tab=practice`);
-    await expect(page.getByRole("heading", { name: `Practice for ${company}`, exact: true })).toBeVisible();
-    await page.locator("summary").filter({ hasText: "Review previous rounds, then try again" }).click();
+    current = id;
+    await page.goto(`/jobs/mission/${id}?tab=timeline`);
+    await expect(page.getByRole("heading", { name: "Journey", exact: true })).toBeVisible();
   };
   const choose = async (job: string, review = false) => {
     await page.getByRole("button", { name: "Link a completed session", exact: true }).click();
     await page.getByRole("combobox", { name: "Completed session", exact: true }).selectOption(session);
-    await expect(page.getByRole("link", { name: "Review selected report", exact: true })).toHaveAttribute("href", `/sessions/${session}?job=${job}&career_from=practice`);
+    await expect(page.getByRole("link", { name: "Review selected report", exact: true })).toHaveAttribute("href", `/sessions/${session}?job=${job}&career_from=timeline`);
     if (review) {
       await page.getByRole("link", { name: "Review selected report", exact: true }).click();
-      await expect(page.getByRole("link", { name: "Back to this job", exact: true })).toHaveAttribute("href", `/jobs/mission/${job}?guide=1&tab=practice`);
+      await expect(page.getByRole("link", { name: "Back to this job", exact: true })).toHaveAttribute("href", `/jobs/mission/${job}?guide=1&tab=timeline`);
       // Navigation alone must not attach a generic report or change progress.
       expect((await (await context.request.get(`${API}/v1/sessions/${session}`)).json()).session.application_id).toBeNull();
       await page.getByRole("link", { name: "Back to this job", exact: true }).click();
-      await expect(page.getByRole("heading", { name: "Practice for Opportunity One", exact: true })).toBeVisible();
-      await page.locator("summary").filter({ hasText: "Review previous rounds, then try again" }).click();
+      await expect(page.getByRole("heading", { name: "Journey", exact: true })).toBeVisible();
       await page.getByRole("button", { name: "Link a completed session", exact: true }).click();
       await page.getByRole("combobox", { name: "Completed session", exact: true }).selectOption(session);
     }
     await page.getByRole("button", { name: "Review and link session", exact: true }).click();
   };
-  const count = (number: number) => expect(page.locator("dl > div").filter({ has: page.locator("dt", { hasText: "Completed practice" }) }).locator("dd")).toHaveText(String(number));
+  // Whether the session counts for the job open on screen (the counts themselves are on its Practice section).
+  const count = (number: number) => expect.poll(async () => (await (await context.request.get(`${API}/v1/sessions/${session}`)).json()).session.application_id === current).toBe(number === 1);
   await openRounds(jobs[0], "Opportunity One"); await count(0);
   await choose(jobs[0], true);
   const dialog = page.getByRole("alertdialog");
