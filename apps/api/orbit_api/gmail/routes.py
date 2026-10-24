@@ -179,7 +179,7 @@ async def draft(entry_id: str, payload: Annotated[str, Form()], user: Annotated[
 async def save_draft(db: AsyncSession, user: User, entry_id: str, message: ApplicationEmail, mime: bytes,
                      identity: str, attachment_name: str | None, sender: str,
                      extra: dict[str, Any] | None = None) -> dict[str, Any]:
-    await db.scalar(select(User).where(User.id == user.id).with_for_update())
+    await lock_account(db, user.id)
     materials = (extra or {}).get("tailoring")
     if materials:
         entry = await db.scalar(select(JobApplication).where(JobApplication.id == entry_id,
@@ -226,6 +226,9 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
         raise HTTPException(404, "Email attempt not found")
     if not connection or connection.data.get("email") != row.data.get("sender"):
         raise HTTPException(409, "Reconnect the same Gmail account used for this draft.")
+    if row.status != "ready":
+        raise HTTPException(409, "Only a reviewed ready draft can be sent. Review its delivery record first.")
+    review_generation = row.data.get("review_generation")
     connection_stamp = (connection.data.get("generation"), connection.data.get("refresh"))
     refresh = _decrypt_secret(connection.data.get("refresh", ""))
     if not refresh:
@@ -254,8 +257,17 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
             raise HTTPException(409, "This opportunity was removed before delivery.")
         if entry.status in {"withdrawn", "rejected", "hired"}:
             raise HTTPException(409, "This opportunity is closed. Reopen it explicitly before sending an application.")
+        await db.refresh(row)
+        if row.data.get("review_generation") != review_generation:
+            raise HTTPException(409, "This email returned for a new review. Confirm its current review before sending.")
+        history = list(row.data.get("deliveries", []))
+        if len(history) >= 5:
+            raise HTTPException(409, "This email has reached its five-send limit. Review the delivery history.")
+        history.append({"number": len(history) + 1, "status": "sending",
+                        "reserved_at": datetime.now(UTC).isoformat()})
         reserved = await db.scalar(update(GmailAttempt).where(GmailAttempt.id == row.id,
-            GmailAttempt.user_id == user.id, GmailAttempt.status == "ready").values(status="sending")
+            GmailAttempt.user_id == user.id, GmailAttempt.status == "ready")
+            .values(status="sending", data={**row.data, "deliveries": history})
             .returning(GmailAttempt.id))
         if not reserved:
             raise HTTPException(409, "This attempt has already been sent or reserved. "
@@ -286,11 +298,37 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
             db.add(saved)
             if entry.resume_id is None and source_id:
                 entry.resume_id = source_id
+    recorded_at = datetime.now(UTC).isoformat()
+    receipt = {"status": result.status, "message_id": result.message_id, "reason": result.reason,
+               "retryable": result.retryable, "retry_after": result.retry_after,
+               "http_status": result.http_status, "recorded_at": recorded_at}
+    history[-1] = {**history[-1], **receipt}
     row.status = result.status
-    row.data = {**row.data, "message_id": result.message_id, "reason": result.reason,
-                "recorded_at": datetime.now(UTC).isoformat()}
+    row.data = {**row.data, **{k: v for k, v in receipt.items() if k != "status"}, "deliveries": history}
     await db.commit()
     return {"id": row.id, "status": row.status, "message_id": result.message_id, "reason": result.reason}
+
+
+@router.post("/attempts/{attempt_id}/retry")
+async def retry(attempt_id: str, body: Confirmation, user: Annotated[User, Depends(require_verified_email)],
+                db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
+    if not body.confirmed:
+        raise HTTPException(422, "Confirm returning the rejected email to review.")
+    await lock_account(db, user.id)
+    row = await db.get(GmailAttempt, attempt_id, populate_existing=True)
+    if row is None or row.user_id != user.id:
+        raise HTTPException(404, "Email attempt not found")
+    if row.status != "rejected" or row.data.get("retryable") is not True:
+        raise HTTPException(409, "Only a recorded, definite Gmail rejection can return to review.")
+    if len(row.data.get("deliveries", [])) >= 5:
+        raise HTTPException(409, "This email has reached its five-send limit.")
+    retry_after = row.data.get("retry_after")
+    if not retry_after or datetime.fromisoformat(retry_after) > datetime.now(UTC):
+        raise HTTPException(409, "Gmail's retry cooldown has not elapsed. Wait before returning to review.")
+    row.status = "ready"
+    row.data = {**row.data, "review_generation": str(uuid.uuid4())}
+    await db.commit()
+    return {"id": row.id, "status": row.status}
 
 
 @router.get("/attempts/{entry_id}")
@@ -305,10 +343,11 @@ async def attempts(entry_id: str, user: Annotated[User, Depends(current_user)],
 @router.delete("/attempts/{attempt_id}", status_code=204)
 async def discard(attempt_id: str, user: Annotated[User, Depends(current_user)],
                    db: Annotated[AsyncSession, Depends(get_db)]) -> None:
-    removed = await db.scalar(delete(GmailAttempt).where(GmailAttempt.id == attempt_id,
-        GmailAttempt.user_id == user.id, GmailAttempt.status == "ready").returning(GmailAttempt.id))
-    if not removed:
-        raise HTTPException(409, "Only an unsent draft can be discarded.")
+    await lock_account(db, user.id)
+    row = await db.get(GmailAttempt, attempt_id, populate_existing=True)
+    if row is None or row.user_id != user.id or row.status != "ready" or row.data.get("deliveries"):
+        raise HTTPException(409, "Only an unsent draft without delivery history can be discarded.")
+    await db.delete(row)
     await db.commit()
 
 

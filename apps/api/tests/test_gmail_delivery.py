@@ -44,3 +44,16 @@ async def test_connection_loss_is_uncertain() -> None:
         raise httpx.ReadTimeout("Lost response")
     async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
         assert (await send_once(client, "test-token", b"mime")).status == "uncertain"
+
+
+@pytest.mark.parametrize(("header", "minimum"), [("3600", 3590), ("invalid", 86390),
+    ("Wed, 01 Jan 2031 00:00:00 GMT", 86400)])
+async def test_explicit_rejection_respects_provider_cooldown(header: str, minimum: int) -> None:
+    from datetime import UTC, datetime
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(429, json={}, headers={"Retry-After": header})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handle)) as client:
+        result = await send_once(client, "test-token", b"mime")
+    assert result.retryable and result.http_status == 429 and result.retry_after
+    assert (datetime.fromisoformat(result.retry_after) - datetime.now(UTC)).total_seconds() >= minimum

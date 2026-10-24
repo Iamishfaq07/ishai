@@ -10,7 +10,7 @@ from sqlalchemy import delete
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
 from orbit_api.gmail import routes
-from orbit_api.models import GmailConnection
+from orbit_api.models import GmailAttempt, GmailConnection
 from orbit_api.runtime_config import encrypt_secret
 from tests.business_helpers import auth, db_call, register
 
@@ -45,7 +45,7 @@ def setup(client, monkeypatch):
     return h, user, entry, draft, payload
 
 
-@pytest.mark.parametrize("mode", ["closed", "disconnect", "reconnect"])
+@pytest.mark.parametrize("mode", ["closed", "disconnect", "reconnect", "review_changed"])
 def test_closed_job_or_disconnect_prevents_send(client, monkeypatch, mode):
     h, user, entry, draft, _ = setup(client, monkeypatch)
     if mode == "closed":
@@ -63,6 +63,11 @@ def test_closed_job_or_disconnect_prevents_send(client, monkeypatch, mode):
                 async with sessionmaker()() as db:
                     row = await db.get(GmailConnection, user)
                     row.data = {**row.data, "generation": "new-connection"}
+                    await db.commit()
+            if mode == "review_changed":
+                async with sessionmaker()() as db:
+                    attempt = await db.get(GmailAttempt, draft)
+                    attempt.data = {**attempt.data, "review_generation": "new-review"}
                     await db.commit()
             return httpx.Response(200, json={"access_token": "token"})
         sends.append(1)

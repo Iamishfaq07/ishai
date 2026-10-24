@@ -43,10 +43,16 @@ Up to 20 retained drafts/attempts can be created per rolling day. PDFs are limit
 
 A Gmail receipt marks the attempt sent. A timeout, inconclusive response, or process crash
 after reservation cannot cause automatic resend. `sending`/`uncertain` records require
-manual checking in Gmail Sent. Rejected attempts are also retained and cannot be
-resubmitted through this flow. Do not delete durable attempt records to retry delivery.
-Pending drafts can be discarded and prepared again. Ordinary tracker deletion is blocked
-once a Gmail attempt leaves ready; withdraw the opportunity to preserve delivery history.
+manual checking in Gmail Sent and cannot be retried through Orbit. Definite HTTP 401,
+403 and 429 rejections can explicitly return to review, then require a new send confirmation.
+Reconnect or resolve the provider restriction first. Orbit honors Retry-After and applies
+at least a minute's cooldown to 403/429; malformed cooldown headers default to a day.
+Other rejection codes and historical records without a known rejection classification
+remain blocked. There are at most five delivery requests per email, with every reservation
+and outcome retained. Retries preserve the exact MIME and Message-ID; no automatic retry
+runs. Only drafts without delivery history can be discarded. Ordinary tracker deletion is
+blocked for every email with delivery history, including those returned to review; withdraw
+the opportunity instead.
 Account erasure still removes account-owned attempt records; account exports include MIME/content records but never connection tokens.
 A matching content hash is checked before send.
 
