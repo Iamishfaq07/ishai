@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { ErrorNote } from "../../components/ui";
-import { Skeleton } from "@orbit/ui";
+import { ApiError, Skeleton } from "@orbit/ui";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 import { useGmail } from "../../lib/useGmail";
@@ -14,6 +14,8 @@ export function CareerOverview() {
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", refresh);
     return () => { window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
   }, [reload]);
+  // An API that doesn't have the overview yet (the web deploys ahead of the API) leaves it out instead of an error.
+  if (view.error instanceof ApiError && view.error.status === 404) return null;
   if (view.error) return <ErrorNote onRetry={view.reload}>Could not load your career overview.</ErrorNote>;
   if (!view.data) return <Skeleton variant="card" count={1} label="Loading career overview" />;
   const data = view.data;
