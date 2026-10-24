@@ -59,3 +59,20 @@ test("practical project sharing requires excerpt review and can be revoked on mo
   expect((await context.request.get(href)).status()).toBe(404);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test("transition plan saves role evidence and actions across reload", async ({ page, context }) => {
+  await register(context);
+  await page.goto("/learn");
+  const planner = page.locator('section[aria-labelledby="transition-planner"]');
+  await expect(planner.getByText("Account version loaded", { exact: false })).toBeVisible();
+  await planner.getByRole("button", { name: "Backend developer starter", exact: true }).click();
+  await planner.getByLabel("Current role or starting point").fill("Customer support");
+  const requirement = planner.locator("article").first();
+  await requirement.getByLabel("Your supporting evidence").fill("Synthetic API exercise with validation tests recorded locally.");
+  await requirement.getByLabel("Next concrete action").fill("Test concurrent requests against the synthetic API");
+  await planner.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(planner.getByText("Account version loaded", { exact: false })).toBeVisible();
+  await page.reload();
+  await expect(planner.getByLabel("Target role", { exact: true })).toHaveValue("Backend developer");
+  await expect(planner.locator("article").first().getByLabel("Your supporting evidence")).toHaveValue("Synthetic API exercise with validation tests recorded locally.");
+});

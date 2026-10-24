@@ -1,8 +1,8 @@
 """Version-one contracts for the four personal workspaces."""
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
 
 Text = Annotated[str, Field(max_length=500)]
 Number = Annotated[float, Field(ge=0, le=100)]
@@ -79,7 +79,38 @@ class Projects(Contract):
     work: dict[Literal["data", "backend", "support"], Project]
 
 
+class TransitionRequirement(Contract):
+    id: Annotated[str, Field(min_length=1, max_length=80)]
+    requirement: Annotated[str, Field(min_length=1, max_length=300)]
+    evidence: Annotated[str, Field(max_length=2000)]
+    nextAction: Annotated[str, Field(max_length=500)]
+    due: Annotated[str, Field(max_length=10)]
+    state: Literal["missing", "practising", "demonstrated"]
+
+    @model_validator(mode="after")
+    def checked_evidence(self) -> "TransitionRequirement":
+        if self.state == "demonstrated" and not self.evidence.strip():
+            raise ValueError("Record supporting evidence before marking it demonstrated")
+        if self.due:
+            date.fromisoformat(self.due)
+        return self
+
+
+class Transition(Contract):
+    currentRole: Annotated[str, Field(max_length=160)]
+    targetRole: Annotated[str, Field(max_length=160)]
+    motivation: Annotated[str, Field(max_length=1000)]
+    requirements: Annotated[list[TransitionRequirement], Field(max_length=50)]
+
+    @model_validator(mode="after")
+    def unique_requirements(self) -> "Transition":
+        if len({r.id for r in self.requirements}) != len(self.requirements):
+            raise ValueError("Each requirement needs a unique identity")
+        return self
+
+
 CONTRACTS: dict[str, TypeAdapter[Any]] = {
     "readiness": TypeAdapter(Annotated[list[SkillRecord], Field(max_length=300)]),
     "campus": TypeAdapter(Campus), "priority": TypeAdapter(Priority), "projects": TypeAdapter(Projects),
+    "transition": TypeAdapter(Transition),
 }

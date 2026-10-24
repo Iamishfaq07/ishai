@@ -1,3 +1,4 @@
+import { TransitionPlanner } from "./TransitionPlanner";
 import { Projects } from "./Projects";
 import { Link, useSearchParams } from "react-router-dom";
 import { ArrowRight, GraduationCap, Spot, cx, focusRing } from "@orbit/ui";
@@ -49,6 +50,7 @@ export function LearningPage() {
           </Link>
         </li>
       </ul>
+      <TransitionPlanner />
       <Projects />
       <KashSecFeature placement="learning" className="mt-6" />
     </>

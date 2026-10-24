@@ -171,3 +171,14 @@ ID and move saved opportunities to applied. Tokens are excluded from exports. De
 configuration, behavior and live-validation limits are documented in `docs/GMAIL.md`.
 Mailbox reading, continuous inbox synchronization and unattended automation rules remain
 outside this sending workflow.
+
+## Career transition planner
+
+Learning now includes an account-backed transition plan: current/target roles, motivation,
+job-specific requirements, supporting evidence, self-assessed status, concrete next actions
+and due dates. Data/backend/support starters provide editable starting checklists. The plan
+prioritizes up to five unfinished actions, putting overdue dates first, and can be downloaded.
+It links to job-search targets and readiness without silently changing search preferences.
+Server validation rejects invalid dates, duplicate requirement IDs and demonstrated status
+without evidence. Existing workspace revision checks, conflict recovery, exports and account
+deletion apply. This is candidate planning, not an AI prediction or independent skills audit.

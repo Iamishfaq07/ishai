@@ -49,3 +49,18 @@ def test_nested_workspace_contracts_cannot_store_unreadable_data(client: TestCli
     assert client.put("/v1/career/workspace/projects", headers=h,
                       json={"revision": 0, "data": {"work": {"unknown": {}}}}).status_code == 422
     assert client.get("/v1/career/workspace/readiness", headers=h).json()["revision"] == 0
+
+
+def test_transition_plan_requires_evidence_and_preserves_account_boundaries(client: TestClient) -> None:
+    h, other = account(client), account(client)
+    path = "/v1/career/workspace/transition"
+    row = {"id": "sql", "requirement": "SQL", "evidence": "", "nextAction": "Build cohort query",
+           "due": "2026-11-01", "state": "demonstrated"}
+    plan = {"currentRole": "Support", "targetRole": "Analyst", "motivation": "Data work", "requirements": [row]}
+    assert client.put(path, headers=h, json={"revision": 0, "data": plan}).status_code == 422
+    row["state"] = "practising"
+    assert client.put(path, headers=h, json={"revision": 0, "data": plan}).status_code == 200
+    assert client.get(path, headers=other).json()["data"] is None
+    assert client.get(path, headers=h).json()["data"]["targetRole"] == "Analyst"
+    row["due"] = "2026-99-99"
+    assert client.put(path, headers=h, json={"revision": 1, "data": plan}).status_code == 422
