@@ -20,10 +20,20 @@ from orbit_api.auto_apply.tailor import tailor
 from orbit_api.db import get_db
 from orbit_api.gmail.delivery import ApplicationEmail, ResumeAttachment, compose
 from orbit_api.gmail.routes import require_config, save_draft
-from orbit_api.job_portal.message_updates import owned
-from orbit_api.models import Document, GmailConnection, JobListing, ProviderRequest, Resume, User
+from orbit_api.job_portal.message_updates import owned, state
+from orbit_api.models import (
+    Document,
+    GmailAttempt,
+    GmailConnection,
+    JobApplication,
+    JobListing,
+    ProviderRequest,
+    Resume,
+    User,
+)
 from orbit_api.providers.llm import get_llm_provider
 from orbit_api.providers.llm.base import LLMRequest, LLMResponse
+from orbit_api.resumes.ats import score_resume
 from orbit_api.resumes.docx_export import resume_docx
 from orbit_api.resumes.schema import ResumeData, ResumeDesign
 from orbit_api.transactions import lock_account
@@ -79,11 +89,17 @@ async def import_post(
     body: ImportIn, user: Annotated[User, Depends(require_verified_email)], db: Annotated[AsyncSession, Depends(get_db)]
 ) -> dict[str, str]:
     from orbit_api.documents.routes import _check_quota, _ingest
-    from orbit_api.job_portal.routes import ManualIn, track_manual
+    from orbit_api.job_portal.routes import ManualIn, _already, _listing_at, track_manual
 
     source = next((r for r in recipients(body.text) if r["email"].lower() == str(body.recipient).lower()), None)
     if not body.confirmed or source is None:
         raise HTTPException(422, "Confirm an application address present in the source text.")
+    urls = [str(body.source_url)] if body.source_url else []
+    listing = await _listing_at(db, *urls) if urls else None
+    existing = await _already(db, user, urls, listing, body.company, body.title)
+    if existing:
+        raise HTTPException(409, "This job is already tracked. Select it in the existing-opportunity list "
+                            "to attach the reviewed source.")
     await _check_quota(db, user, "orbit")
     doc = Document(
         user_id=user.id,
@@ -216,6 +232,9 @@ async def prepare(
         await db.commit()
     await db.refresh(resume)
     await db.refresh(doc)
+    await db.refresh(entry)
+    if entry.document_id != doc.id or entry.status in {"withdrawn", "rejected", "hired"}:
+        raise HTTPException(409, "The opportunity source changed or closed. Prepare a fresh draft.")
     if resume.revision != revision or (doc.source_text or "")[:20000] != text:
         raise HTTPException(409, "The source resume or job changed during preparation. Prepare a fresh draft.")
     if (doc.extracted or {}).get("application_email") != recipient:
@@ -238,7 +257,11 @@ async def prepare(
         {
             "tailoring": {
                 "resume_id": resume.id,
+                "document_id": doc.id,
                 "resume_revision": revision,
+                "resume_design": resume.design or {},
+                "resume_score": score_resume(tailored.data, job_text=text).score,
+                "job_text": text,
                 "job_digest": hashlib.sha256(text.encode()).hexdigest(),
                 "changes": [c.model_dump() for c in tailored.changes],
                 "ai_used": tailored.ai_used,
@@ -248,3 +271,45 @@ async def prepare(
             }
         },
     )
+
+
+class AttachIn(PostIn):
+    recipient: EmailStr
+    confirmed: bool = Field(strict=True)
+    version: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_url: HttpUrl | None = None
+
+
+@router.post("/{entry_id}/source")
+async def attach_source(entry_id: str, body: AttachIn, user: Annotated[User, Depends(require_verified_email)],
+                        db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
+    from orbit_api.documents.routes import _check_quota, _ingest
+
+    selected = next((r for r in recipients(body.text) if r["email"].lower() == str(body.recipient).lower()), None)
+    if not body.confirmed or selected is None:
+        raise HTTPException(422, "Confirm an application address present in the supplied source.")
+    await lock_account(db, user.id)
+    entry = await db.scalar(select(JobApplication).where(JobApplication.id == entry_id,
+        JobApplication.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+    if entry is None:
+        raise HTTPException(404, "Opportunity not found")
+    if state(entry)["version"] != body.version or entry.status in {"withdrawn", "rejected", "hired"}:
+        raise HTTPException(409, "This opportunity changed or is closed. Review its current record first.")
+    attempt = await db.scalar(select(GmailAttempt).where(GmailAttempt.user_id == user.id,
+                                                       GmailAttempt.application_id == entry_id))
+    if attempt:
+        raise HTTPException(409, "This job already has a Gmail attempt. Discard an unsent draft before changing "
+                            "its source; delivery history cannot be replaced.")
+    await _check_quota(db, user, "orbit")
+    doc = Document(user_id=user.id, title=f"{entry.company}: {entry.title}"[:300], kind="job_description",
+                   origin="orbit", source_text=body.text, size_bytes=len(body.text.encode()), status="ready")
+    db.add(doc)
+    await db.flush()
+    await _ingest(db, doc, body.text)
+    doc.extracted = {**(doc.extracted or {}), "application_email": selected["email"],
+                     "application_email_quote": selected["quote"],
+                     "source_url": str(body.source_url) if body.source_url else None}
+    entry.document_id = doc.id
+    entry.updated_at = datetime.now(UTC)
+    await db.commit()
+    return {"entry_id": entry.id}

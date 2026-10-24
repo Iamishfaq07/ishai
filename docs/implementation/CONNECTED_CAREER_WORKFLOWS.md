@@ -244,3 +244,14 @@ reserved at Google cannot be retracted by later local actions. Controlled interl
 are included in SQLite validation and added to the PostgreSQL CI race job. Other audit
 findings, including resume handoff, existing-job intake, rejection recovery and artifact
 storage/export remain open; this does not close the entire audit.
+
+## Audit remediation: resume handoff and existing-job source intake
+
+The next pass resolves the two reproduced P2 handoff/intake findings. Successful tailored
+Gmail sends create frozen resume snapshots with provider-accepted provenance and links to
+the retained MIME/message receipt. Interview prep can select these versions; current master
+resumes are not modified. Gmail outcome attribution follows captured source IDs. Existing
+active opportunities support explicitly reviewed, version-checked source attachment, with
+prior documents retained and prepared-attempt replacement blocked. Tailored-draft persistence
+rechecks locked source rows and revisions after rendering. Historical sends are not backfilled.
+Safe rejection recovery and artifact storage/export hardening remain open.

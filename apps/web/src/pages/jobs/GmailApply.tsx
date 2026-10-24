@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, ErrorNote, Input } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -10,6 +10,11 @@ export function GmailApply({ entryId }: { entryId: string }) {
   const [file, setFile] = useState<File | null>(null); const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
   const [open, setOpen] = useState(() => window.location.hash === "#gmail-apply");
+  useEffect(() => {
+    const reveal = () => { if (window.location.hash === "#gmail-apply") setOpen(true); };
+    window.addEventListener("hashchange", reveal);
+    return () => window.removeEventListener("hashchange", reveal);
+  }, []);
   const attempt = records.data?.[0];
   const resumes = useAsync(() => api.listResumes(), [], "gmail-source-resumes");
   const [resumeId, setResumeId] = useState("");
