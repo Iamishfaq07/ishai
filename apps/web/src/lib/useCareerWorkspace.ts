@@ -79,7 +79,7 @@ export function useCareerWorkspace<T>(kind: WorkspaceKind, empty: T, valid: (v: 
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  return { value, change, save, loaded, dirty, saving, error, conflict, legacy,
+  return { value, revision, change, save, loaded, dirty, saving, error, conflict, legacy,
     reload: () => load(true),
     dismissLegacy: () => { safeLocal.removeItem(legacyKey); setLegacy(null); },
     importLegacy: () => { if (legacy) change(legacy); },

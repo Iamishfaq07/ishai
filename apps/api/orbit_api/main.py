@@ -68,6 +68,7 @@ from orbit_api.career.routes import router as career_router
 from orbit_api.career_workspace.prep import router as career_prep_router
 from orbit_api.career_workspace.shares import router as career_shares_router
 from orbit_api.career_workspace.state import router as career_workspace_router
+from orbit_api.career_workspace.transition_review import router as transition_review_router
 from orbit_api.code.routes import router as code_router
 from orbit_api.config import get_settings
 from orbit_api.contact.routes import router as contact_router
@@ -462,6 +463,7 @@ def create_app() -> FastAPI:
     app.include_router(linkedin_router)
     app.include_router(code_router)
     app.include_router(gmail_router)
+    app.include_router(transition_review_router)
     app.include_router(career_workspace_router)
     app.include_router(career_prep_router)
     app.include_router(career_shares_router)

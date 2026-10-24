@@ -182,3 +182,16 @@ It links to job-search targets and readiness without silently changing search pr
 Server validation rejects invalid dates, duplicate requirement IDs and demonstrated status
 without evidence. Existing workspace revision checks, conflict recovery, exports and account
 deletion apply. This is candidate planning, not an AI prediction or independent skills audit.
+
+## AI transition-plan review
+
+Verified accounts can request an advisory review of a saved transition plan. The configured
+AI receives role goals, motivation and the first ten requirements with their recorded evidence.
+Up to five suggestions must name existing requirements and include exact source excerpts;
+unmatched quotes or duplicate requirement references fail validation. The existing persisted
+preview allowance caps requests at five per UTC day, including failed calls. Revision checks
+reject stale plans before and after inference. A user may explicitly copy one suggestion into
+a draft action and then save separately; evidence and self-assessed status are not rewritten.
+Mock-provider responses are labelled as demo output. Quote checks establish source presence,
+not factual correctness of every sentence or the usefulness of advice. No hiring prediction
+or independent readiness assessment is made.
