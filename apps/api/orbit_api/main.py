@@ -82,6 +82,7 @@ from orbit_api.entitlements import plans as configured_plans
 from orbit_api.evidence.routes import router as evidence_router
 from orbit_api.extension.routes import router as extension_router
 from orbit_api.geo import router as region_router
+from orbit_api.gmail.job_posts import router as gmail_jobs_router
 from orbit_api.gmail.routes import router as gmail_router
 from orbit_api.job_portal import stage_history  # noqa: F401 — register transactional tracker history
 from orbit_api.job_portal.actions import router as job_actions_router
@@ -463,6 +464,7 @@ def create_app() -> FastAPI:
     app.include_router(offers_router)
     app.include_router(linkedin_router)
     app.include_router(code_router)
+    app.include_router(gmail_jobs_router)
     app.include_router(gmail_router)
     app.include_router(transition_checkpoints_router)
     app.include_router(transition_review_router)

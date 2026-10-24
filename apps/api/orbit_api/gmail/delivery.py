@@ -1,5 +1,7 @@
 """Build a reviewed application email and send once. Never retry uncertain delivery."""
 import base64
+import io
+import zipfile
 from dataclasses import dataclass
 from email.message import EmailMessage
 from email.policy import SMTP
@@ -44,12 +46,21 @@ def compose(message: ApplicationEmail, sender: str, attempt_id: str,
     mail["Message-ID"] = f"<orbit-{attempt_id}@{sender.split('@')[1]}>"
     mail.set_content(message.body)
     if attachment:
-        if not attachment.filename.lower().endswith(".pdf") or any(
-                c in attachment.filename for c in "/\\\r\n"):
-            raise ValueError("Choose a PDF filename without path separators")
-        if not attachment.content.startswith(b"%PDF-") or len(attachment.content) > 5_000_000:
-            raise ValueError("Choose a PDF of at most 5 MB")
-        mail.add_attachment(attachment.content, maintype="application", subtype="pdf", filename=attachment.filename)
+        if any(c in attachment.filename for c in "/\\\r\n") or len(attachment.content) > 5_000_000:
+            raise ValueError("Choose a resume file of at most 5 MB without path separators")
+        if attachment.filename.lower().endswith(".pdf") and attachment.content.startswith(b"%PDF-"):
+            subtype = "pdf"
+        elif attachment.filename.lower().endswith(".docx"):
+            try:
+                with zipfile.ZipFile(io.BytesIO(attachment.content)) as archive:
+                    if "word/document.xml" not in archive.namelist():
+                        raise ValueError("Not a Word document")
+            except zipfile.BadZipFile as exc:
+                raise ValueError("Not a Word document") from exc
+            subtype = "vnd.openxmlformats-officedocument.wordprocessingml.document"
+        else:
+            raise ValueError("Choose a PDF or DOCX resume")
+        mail.add_attachment(attachment.content, maintype="application", subtype=subtype, filename=attachment.filename)
     return mail.as_bytes()
 
 

@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 
 import httpx
 import jwt
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, Response, UploadFile
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, func, select, update
@@ -149,14 +149,22 @@ async def draft(entry_id: str, payload: Annotated[str, Form()], user: Annotated[
         mime = compose(message, connection.data["email"], identity, attachment)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    return await save_draft(db, user, entry_id, message, mime, identity,
+                            attachment.filename if attachment else None, connection.data["email"])
+
+
+async def save_draft(db: AsyncSession, user: User, entry_id: str, message: ApplicationEmail, mime: bytes,
+                     identity: str, attachment_name: str | None, sender: str,
+                     extra: dict[str, Any] | None = None) -> dict[str, Any]:
     await db.scalar(select(User).where(User.id == user.id).with_for_update())
     count = await db.scalar(select(func.count()).select_from(GmailAttempt).where(GmailAttempt.user_id == user.id,
         GmailAttempt.created_at >= datetime.now(UTC) - timedelta(days=1)))
     if (count or 0) >= 20:
         raise HTTPException(429, "Up to 20 Gmail application drafts per rolling day.")
     row = GmailAttempt(id=identity, user_id=user.id, application_id=entry_id, status="ready", data={
-        **message.model_dump(), "sender": connection.data["email"], "mime": base64.b64encode(mime).decode(),
-        "sha256": hashlib.sha256(mime).hexdigest(), "attachment": attachment.filename if attachment else None})
+        **message.model_dump(), "sender": sender, "mime": base64.b64encode(mime).decode(),
+        "sha256": hashlib.sha256(mime).hexdigest(), "attachment": attachment_name,
+        **(extra or {})})
     db.add(row)
     try:
         await db.commit()
@@ -237,3 +245,24 @@ async def discard(attempt_id: str, user: Annotated[User, Depends(current_user)],
     if not removed:
         raise HTTPException(409, "Only an unsent draft can be discarded.")
     await db.commit()
+
+
+@router.get("/attempts/{attempt_id}/attachment")
+async def attachment(attempt_id: str, user: Annotated[User, Depends(current_user)],
+                      db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
+    from email import policy
+    from email.parser import BytesParser
+
+    row = await db.get(GmailAttempt, attempt_id)
+    if row is None or row.user_id != user.id:
+        raise HTTPException(404, "Email attempt not found")
+    mime = base64.b64decode(row.data["mime"])
+    if hashlib.sha256(mime).hexdigest() != row.data["sha256"]:
+        raise HTTPException(409, "Captured email content is inconsistent")
+    mail = BytesParser(policy=policy.default).parsebytes(mime)
+    part = next(mail.iter_attachments(), None)
+    if part is None:
+        raise HTTPException(404, "No attachment was captured")
+    name = "resume.docx" if part.get_content_subtype().endswith("document") else "resume.pdf"
+    return Response(part.get_payload(decode=True), media_type=part.get_content_type(),
+                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})

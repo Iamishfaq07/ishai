@@ -56,3 +56,32 @@ transport outcomes, draft review, duplicate-send blocking, ownership, exports, O
 PKCE/state denial/replay and disconnect. Network calls are mocked. Live Google consent,
 real Gmail delivery and production browser/cookie behavior require configured Google
 credentials and test accounts; they have not been validated in this environment.
+
+## Email-bearing job posts and automatic preparation
+
+Jobs → Matches now includes “Find jobs that accept applications by email.” Candidates can
+search the first 100 eligible matches from their saved profile for addresses present in
+cached descriptions (up to ten results), or paste a LinkedIn/public job post with its
+original URL, company and title. Orbit shows address excerpts; the candidate must confirm
+which address the source actually designates for applications. It does not guess addresses,
+verify recruiter identity, scrape logged-in LinkedIn pages or open supplied URLs.
+
+Import saves the source post to Documents and links it to a tracked opportunity, subject
+to existing document/tracker quotas. In that opportunity’s Apply by Gmail panel, select an
+owned resume and choose “Tailor resume and prepare job email.” Orbit reuses its existing
+fact-preserving tailoring engine: checked AI rewording when available, otherwise prioritizing
+existing bullets/skills/projects. The UI states whether AI rewording was retained and shows
+changes. No changes are made to the source resume. Preparation is limited to five requests
+per UTC day, including failures, and stale resume/post edits invalidate preparation.
+
+Each prepared email includes a job-specific DOCX resume and an application email built
+from existing resume facts and the target role/company. Gmail also accepts manually chosen
+PDF/DOCX files. Candidates can download the exact captured attachment, inspect the proposed
+changes and message, then explicitly approve sending. They can discard an unsent draft to
+prepare another version. Source resume identity/revision, post hash, recipient excerpt,
+structured tailored resume and MIME bytes remain associated with the attempt.
+
+This workflow automatically prepares applications; it does not send unattended or establish
+that every address in a post belongs to a recruiter. No live LinkedIn discovery or live Gmail
+delivery was exercised in local validation; Google OAuth deployment configuration is still
+required for real connected accounts.

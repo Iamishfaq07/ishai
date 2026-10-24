@@ -206,3 +206,11 @@ Checkpoints can be downloaded or deleted individually. Duplicate revision captur
 requests are rejected. Data uses a separate account-owned workspace record, so existing
 account export and deletion apply without a schema migration. Comparisons describe recorded
 changes and self-assessments, not independent skill improvement.
+
+## Email-job intake and job-specific Gmail preparation
+
+Email-bearing eligible matches and pasted posts now flow through recipient/source review,
+tracked-job import, fact-preserving automatic resume tailoring, DOCX generation and a saved
+Gmail draft. The candidate can inspect changes and download the exact attachment before
+approving a send. Details and discovery limits are in `docs/GMAIL.md`. Existing source resumes
+remain untouched; attempt metadata preserves source revision, post digest and prepared content.
