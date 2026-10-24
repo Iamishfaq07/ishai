@@ -1,3 +1,4 @@
+import { clearWorkspaceDrafts } from "./careerWorkspace";
 import {
   createContext,
   useCallback,
@@ -30,7 +31,7 @@ export function unreachableText(err: unknown): string {
 export const LAST_PREP_KEY = "orbit.lastPrep";
 // Account data this browser keeps outside the page cache. localStorage is shared by everyone who signs in on the
 // browser, so it goes with the page cache whenever the account changes.
-const ACCOUNT_STORAGE_KEYS = [LAST_PREP_KEY];
+const ACCOUNT_STORAGE_KEYS = [LAST_PREP_KEY, "orbit.readiness", "orbit.campus", "orbit.jobs.priority"];
 const ACCOUNT_ID_KEY = "orbit.browser-account-id";
 
 /**
@@ -68,6 +69,7 @@ function acceptAccount(account: User): User {
 function forgetAccount(): void {
   clearAsyncCache();
   clearPrepContext();
+  clearWorkspaceDrafts();
   try {
     for (const key of ACCOUNT_STORAGE_KEYS) safeLocal.removeItem(key);
   } catch {

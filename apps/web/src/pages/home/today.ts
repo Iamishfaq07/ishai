@@ -7,7 +7,7 @@ import { missionPath } from "../jobs/paths";
  */
 
 export interface QueueItem {
-  id: string; kind: "interview" | "follow_up" | "contact" | "application";
+  id: string; kind: "interview" | "follow_up" | "contact" | "application" | "preparation";
   title: string; detail: string; due_at: string | null; overdue: boolean; path: string;
   action_label?: string; priority_reason?: string;
 }
@@ -15,7 +15,7 @@ export interface Queue { items: QueueItem[]; focus_id?: string | null }
 
 export interface NextStop { title: string; when: string | null; detail: string; reason: string | null; action: string; to: string; first?: boolean }
 
-const KIND: Record<QueueItem["kind"], string> = { interview: "Interview", follow_up: "Follow-up", contact: "Contact", application: "Application" };
+const KIND: Record<QueueItem["kind"], string> = { interview: "Interview", follow_up: "Follow-up", contact: "Contact", application: "Application", preparation: "Preparation" };
 const ACTIVE: JobStatus[] = ["saved", "applied", "interviewing", "offer"];
 const RANK: Partial<Record<JobStatus, number>> = { offer: 0, interviewing: 1, applied: 2, saved: 3 };
 const DAY = 86_400_000;

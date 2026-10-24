@@ -231,7 +231,7 @@ async def track_applied(db: AsyncSession, user: User, packet: ApplicationPacket,
     if note not in (entry.notes or ""):
         entry.notes = f"{entry.notes}\n{note}".strip() if entry.notes else note
     data = ResumeData.model_validate(packet.resume_data or {})
-    from orbit_api.job_portal.resume_lineage import capture_origin
+    from orbit_api.job_portal.resume_lineage import capture_origin, packet_materials
 
     # Keep the description captured with these materials, never today's mutable listing.
     job_text = (packet.posting_text or "")[:20_000]
@@ -242,6 +242,8 @@ async def track_applied(db: AsyncSession, user: User, packet: ApplicationPacket,
     saved.origin = capture_origin(saved, kind="packet", source_id=packet.id,
         observation="executor_reported" if by_orbit else "candidate_recorded",
         packet_status=packet.status, packet_result=packet.result_status, design_captured=False)
+    saved.origin = {**saved.origin, "packet_materials": packet_materials(
+        packet.answers or [], packet.fields or {}, packet.cover_letter)}
     db.add(saved)
     packet.application_id = entry.id
     return entry.id

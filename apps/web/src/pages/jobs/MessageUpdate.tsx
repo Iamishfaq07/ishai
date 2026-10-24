@@ -6,8 +6,11 @@ import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useJobsAi } from "./JobsAi";
 
+const EmailHistory = lazy(() => import("./EmailImportHistory").then((m) => ({ default: m.EmailImportHistory })));
+
 const Calendar = lazy(() => import("./CalendarIntake").then((m) => ({ default: m.CalendarIntake })));
 
+interface ImportedEmail { message: string; sender: string; subject: string; sent_at: string; source_receipt: string }
 interface SavedJob { version: string; id: string; title: string; company: string; status: string; next_at: string | null; editable: boolean }
 interface Proposal { version: string; source: string; event: string; summary: string; source_quote: string; suggested_status: string | null; date: { value: string; source_quote: string } | null; editable: boolean }
 const link = cx("inline-flex min-h-11 items-center rounded text-sm font-semibold text-indigo-700 underline underline-offset-4 dark:text-indigo-300", focusRing);
@@ -35,6 +38,8 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
   const base = `/v1/jobs/tracker/${encodeURIComponent(entryId)}/message-update`;
   const [job, setJob] = useState<SavedJob | null>(null);
   const [message, setMessage] = useCandidateDraft("reply", entryId);
+  const [imported, setImported] = useState<ImportedEmail | null>(null);
+  const [historyRevision, setHistoryRevision] = useState(0);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [stage, setStage] = useState("");
   const [useStage, setUseStage] = useState(false);
@@ -42,7 +47,7 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
   const [useDate, setUseDate] = useState(false);
   const [clearDate, setClearDate] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
-  const [busy, setBusy] = useState<"load" | "rules" | "ai" | "save" | null>("load");
+  const [busy, setBusy] = useState<"load" | "rules" | "ai" | "save" | "import" | null>("load");
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const seq = useRef(0);
@@ -59,7 +64,7 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
   const cancel = useCallback(() => { seq.current++; active.current = false; }, []);
   useEffect(() => { active.current = true; void refresh(); return cancel; }, [refresh, cancel]);
   useEffect(() => {
-    const onReturn = () => { if (document.visibilityState === "visible" && !busyRef.current) void refresh(); };
+    const onReturn = () => { if (document.visibilityState === "visible" && !busyRef.current && !(document.activeElement instanceof HTMLInputElement && document.activeElement.type === "file")) void refresh(); };
     window.addEventListener("focus", onReturn); document.addEventListener("visibilitychange", onReturn);
     return () => { window.removeEventListener("focus", onReturn); document.removeEventListener("visibilitychange", onReturn); };
   }, [refresh]);
@@ -67,7 +72,7 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
     if (!job || busyRef.current) return;
     const request = ++seq.current; busyRef.current = true; setBusy(mode); setError(null); invalidate();
     try {
-      const result = await api.call<Proposal>(`${base}/preview`, { method: "POST", timeoutMs: 70_000, body: JSON.stringify({ message: message.trim(), mode, version: job.version }) });
+      const result = await api.call<Proposal>(`${base}/preview`, { method: "POST", timeoutMs: 70_000, body: JSON.stringify({ message: message.trim(), mode, version: job.version, source_receipt: imported?.source_receipt ?? null }) });
       if (request !== seq.current) return;
       setProposal(result); setStage(result.suggested_status ?? ""); setUseStage(Boolean(result.suggested_status && result.suggested_status !== job.status));
       setDate(result.date ? dateTimeInput(result.date.value) : ""); setUseDate(false); setClearDate(false);
@@ -80,9 +85,22 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
     const request = ++seq.current; busyRef.current = true; setBusy("save"); setError(null);
     try {
       const result = await api.call<SavedJob>(`${base}/confirm`, { method: "POST", body: JSON.stringify({ version: proposal.version, confirmed: true,
-        status: useStage ? stage : null, next_at: useDate ? fromDateTimeInput(date) : null, clear_next: clearDate }) });
+        source_receipt: imported?.source_receipt ?? null, status: useStage ? stage : null, next_at: useDate ? fromDateTimeInput(date) : null, clear_next: clearDate }) });
       if (request !== seq.current) return;
-      setJob(result); setMessage(""); setProposal(null); setConfirmed(false); setSaved(true); onSaved();
+      setJob(result); setMessage(""); setImported(null); setHistoryRevision((n) => n + 1); setProposal(null); setConfirmed(false); setSaved(true); onSaved();
+    } catch (e) { if (request === seq.current) setError(errorText(e)); }
+    finally { if (request === seq.current) { busyRef.current = false; setBusy(null); } }
+  };
+  const importEmail = async (file: File) => {
+    if (!job || busyRef.current) return;
+    if (file.size > 512000) { setError("Choose an .eml file of at most 512 KB."); return; }
+    if (message.trim() && !window.confirm("Replace your current message draft with the imported email?")) return;
+    const request = ++seq.current; busyRef.current = true; setBusy("import"); setError(null); invalidate();
+    try {
+      const form = new FormData(); form.append("file", file);
+      const result = await api.call<ImportedEmail>(`${base}/import`, { method: "POST", body: form });
+      if (request !== seq.current) return;
+      setMessage(result.message); setImported(result);
     } catch (e) { if (request === seq.current) setError(errorText(e)); }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(null); } }
   };
@@ -94,9 +112,17 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
       {saved && <div role="status" className="rounded-xl bg-indigo-500/10 p-4 motion-safe:animate-menu-in"><h3 className="font-semibold">Reviewed changes saved</h3><p className="mt-2 text-sm">Your tracker and saved-date actions now use these changes. The pasted message has been cleared.</p><Link className={link} to={`/jobs/mission/${entryId}?guide=1&tab=${job.status === "interviewing" ? "interview" : ["offer", "rejected"].includes(job.status) ? "offer" : "timeline"}`}>Continue with this job</Link></div>}
       {!job.editable && <p className="text-sm">This job is closed. Keep its current outcome here; use the tracker if you need to correct or reopen it. <Link className={link} to="/jobs/tracker">Open tracker</Link></p>}
       <fieldset disabled={Boolean(busy)} className="min-w-0 space-y-3"><legend className="sr-only">Paste and interpret a message</legend>
-        <Field htmlFor={`${id}-message`} label="2. Paste the relevant employer message"><Textarea id={`${id}-message`} value={message} maxLength={10000} rows={5} onChange={(event) => { setMessage(event.target.value); invalidate(); }} placeholder="Paste the latest relevant reply, without unrelated email history." /></Field>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">Free pattern review uses no AI. Ask AI sends this text to the configured provider. The full message is not saved on the server, and links in it are not opened. Draft text stays in this tab’s memory for navigation; closing the tab discards it.</p>
-        <div className="flex flex-wrap gap-2"><Button variant="ghost" disabled={!message} onClick={() => { setMessage(""); invalidate(); }}>Discard draft</Button><Button disabled={message.trim().length < 20} loading={busy === "rules"} onClick={() => void analyze("rules")}>Review message for free</Button><Button variant="secondary" disabled={message.trim().length < 20} loading={busy === "ai"} onClick={() => void analyze("ai")}>Ask AI to interpret</Button></div>
+        <Field htmlFor={`${id}-email`} label="Import an exported email (.eml, up to 512 KB)"><Input id={`${id}-email`} type="file" accept=".eml,message/rfc822" onChange={(event) => {
+          const file = event.target.files?.[0]; event.target.value = ""; if (file) void importEmail(file);
+        }} /></Field>
+        {busy === "import" && <p role="status">Reading the email file…</p>}
+        {imported && <div className="rounded-lg bg-zinc-500/5 p-3 text-sm"><p className="font-medium">Imported email · sender and job match are not verified</p>
+          <p className="break-words">From: {imported.sender || "Not stated"}</p><p className="break-words">Subject: {imported.subject || "Not stated"}</p>
+          {imported.sent_at && <p className="break-words">Email header date: {imported.sent_at} (not an interview date)</p>}
+          <p className="mt-2 text-xs">Review within 30 minutes. Saving retains these headers, content hashes and your chosen changes for duplicate detection. The email body and attachments are not stored. Editing the text below turns it into a pasted draft without the import reference.</p></div>}
+        <Field htmlFor={`${id}-message`} label="2. Paste the relevant employer message"><Textarea id={`${id}-message`} value={message} maxLength={10000} rows={5} onChange={(event) => { setMessage(event.target.value); setImported(null); invalidate(); }} placeholder="Paste the latest relevant reply, without unrelated email history." /></Field>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">Free pattern review uses no AI. Ask AI sends this text to the configured provider. The full message is not saved on the server, attachments are ignored, and links are not opened. Draft text stays in this tab’s memory for navigation; closing the tab discards it.</p>
+        <div className="flex flex-wrap gap-2"><Button variant="ghost" disabled={!message} onClick={() => { setMessage(""); setImported(null); invalidate(); }}>Discard draft</Button><Button disabled={message.trim().length < 20} loading={busy === "rules"} onClick={() => void analyze("rules")}>Review message for free</Button><Button variant="secondary" disabled={message.trim().length < 20} loading={busy === "ai"} onClick={() => void analyze("ai")}>Ask AI to interpret</Button></div>
         <p className="text-xs text-zinc-600 dark:text-zinc-400">AI: up to 5 requests per UTC day, including failures. A pasted message does not verify the sender or the job match.</p>
       </fieldset>
       {proposal && <div className="space-y-4 rounded-xl bg-zinc-500/5 p-4 motion-safe:animate-menu-in">
@@ -115,6 +141,7 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
           <Button disabled={!ready} loading={busy === "save"} onClick={() => void save()}>Save reviewed changes</Button>
         </fieldset>}
       </div>}
+      <Suspense fallback={<p role="status">Loading imported-message history…</p>}><EmailHistory entryId={entryId} revision={historyRevision} /></Suspense>
     </>}
   </section>;
 }

@@ -461,6 +461,16 @@ class MockLLMProvider(LLMProvider):
                 "reason": "[mock] This resume evidence is a starting point for exploring the role.",
                 "experiment": "[mock] Build one small example using this skill and document how it works.",
                 "check": "[mock] Explain your decisions and demonstrate the example to a peer."}]})
+        if request.request_type == "transition_review":
+            body = request.messages[-1].content
+            data = json.loads(body[body.find("{"):body.rfind("}") + 1])
+            rows = data.get("requirements", [])
+            suggestions = [{"requirement_id": row["id"], "source_quote": row["requirement"][:600],
+                "gap": "[mock] Clarify the supporting example and distinguish practice from employment.",
+                "next_action": "[mock] Record one reproducible example and its actual result for review."}
+                for row in rows[:5] if len(row["requirement"]) >= 8]
+            return json.dumps({"summary": "[mock] Review your supporting evidence and choose one concrete next action.",
+                               "suggestions": suggestions})
         if request.request_type == "employer_message":
             from orbit_api.job_portal.message_updates import classify
             body = request.messages[-1].content

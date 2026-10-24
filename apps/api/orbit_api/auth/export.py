@@ -19,16 +19,21 @@ from orbit_api.models import (
     AnswerBankEntry,
     AnswerFeedback,
     ApplicationPacket,
+    ApplicationStageEvent,
     AuditLog,
     AutoApplySetup,
+    CareerEvidenceShare,
     CareerPlaybook,
     CareerPreparation,
     CareerWeeklyGoal,
+    CareerWorkspaceState,
     CodeAttempt,
     ContactMessage,
     DebriefAttempt,
     Document,
+    EmployerMessageImport,
     EvidenceItem,
+    GmailAttempt,
     JobApplication,
     JobCommitment,
     JobContact,
@@ -89,6 +94,16 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
         "account": _row(user),
         "documents": [_row(d) for d in (await db.scalars(select(Document).where(Document.user_id == user_id)
                                                           .order_by(Document.created_at))).all()],
+        "employer_message_imports": [_row(r) for r in (await db.scalars(select(EmployerMessageImport).where(
+            EmployerMessageImport.user_id == user_id))).all()],
+        "gmail_attempts": [_row(r) for r in (await db.scalars(select(GmailAttempt).where(
+            GmailAttempt.user_id == user_id))).all()],
+        "application_stage_events": [_row(r) for r in (await db.scalars(select(ApplicationStageEvent).where(
+            ApplicationStageEvent.user_id == user_id))).all()],
+        "career_evidence_shares": [{k: v for k, v in _row(r).items() if k != "token_hash"} for r in (
+            await db.scalars(select(CareerEvidenceShare).where(CareerEvidenceShare.user_id == user_id))).all()],
+        "career_workspace_states": [_row(r) for r in (await db.scalars(select(CareerWorkspaceState).where(
+            CareerWorkspaceState.user_id == user_id))).all()],
         "workspaces": [_row(w) for w in (await db.scalars(select(Workspace).where(Workspace.user_id == user_id)
                                                            .order_by(Workspace.created_at))).all()],
         "stories": [_row(st) for st in (await db.scalars(select(Story).where(Story.user_id == user_id)

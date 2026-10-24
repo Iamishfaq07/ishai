@@ -13,6 +13,7 @@ import { SetupChecklist } from "./home/SetupChecklist";
 import { activeJobs, dayLabel, pickNextStop, weekStops, type Queue } from "./home/today";
 const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
 // The full seven-day action queue, folded under the week; /jobs/actions redirects here.
+const Overview = lazy(() => import("./home/CareerOverview").then((m) => ({ default: m.CareerOverview })));
 const Actions = lazy(() => import("./jobs/ActionDesk").then((m) => ({ default: m.JobActionDeskPage })));
 
 /** Conversion so far, from the tracker's own records: of everything past "saved", how much reached an interview, and
@@ -67,6 +68,7 @@ export function HomePage() {
     </header>
 
     <Suspense fallback={null}><SecurityNotice /></Suspense>
+    <Suspense fallback={<Skeleton variant="card" count={1} label="Loading career overview" />}><Overview /></Suspense>
 
     {/* A new account's few setup steps, until they're all done. */}
     <SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} />
@@ -160,7 +162,7 @@ export function HomePage() {
 
     <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
       <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>
-        <span>Everything due in the next 7 days{queue.data ? ` (${queue.data.items.length})` : ""}</span>
+        <span>Your action queue{queue.data ? ` (${queue.data.items.length})` : ""}</span>
         <ArrowRight className="h-4 w-4 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />
       </summary>
       <div className="border-t border-zinc-200 p-5 dark:border-white/10"><Suspense fallback={<Skeleton variant="line" count={3} label="Loading your actions" />}><Actions embedded /></Suspense></div>

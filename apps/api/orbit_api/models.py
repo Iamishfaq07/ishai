@@ -1629,3 +1629,75 @@ class BizAudit(TimestampMixin, Base):
     target: Mapped[str | None] = mapped_column(String(200))
     detail: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
+
+
+class CareerWorkspaceState(Base):
+    """Versioned personal-tool data. Guest browser drafts are never silently claimed."""
+    __tablename__ = "career_workspace_states"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(24), primary_key=True)
+    data: Mapped[Any] = mapped_column(JSON)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ApplicationStageEvent(TimestampMixin, Base):
+    """Observed tracker transitions, not independently verified employer outcomes."""
+    __tablename__ = "application_stage_events"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"), index=True)
+    from_status: Mapped[str | None] = mapped_column(String(16))
+    to_status: Mapped[str] = mapped_column(String(16))
+    source: Mapped[str] = mapped_column(String(24), default="tracker_recorded")
+
+
+class CareerEvidenceShare(TimestampMixin, Base):
+    """A reviewed, immutable project excerpt accessible by a revocable bearer link."""
+    __tablename__ = "career_evidence_shares"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    title: Mapped[str] = mapped_column(String(160))
+    content: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class JobPostingVersion(Base):
+    """Bounded public-source observations for tracked listings; survives cache eviction."""
+    __tablename__ = "job_posting_versions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    listing_id: Mapped[str] = mapped_column(String(36), index=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class EmployerMessageImport(TimestampMixin, Base):
+    """Only reviewed email-file provenance; no raw body, HTML or attachments retained."""
+    __tablename__ = "employer_message_imports"
+    __table_args__ = (UniqueConstraint("user_id", "source_key", name="uq_employer_import_owner_source"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"), index=True)
+    source_key: Mapped[str] = mapped_column(String(64))
+    body_digest: Mapped[str] = mapped_column(String(64))
+    sender: Mapped[str] = mapped_column(String(300))
+    subject: Mapped[str] = mapped_column(String(300))
+    sent_at: Mapped[str] = mapped_column(String(120))
+    changes: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class GmailConnection(Base):
+    __tablename__ = "gmail_connections"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class GmailAttempt(TimestampMixin, Base):
+    __tablename__ = "gmail_attempts"
+    __table_args__ = (UniqueConstraint("user_id", "application_id", name="uq_gmail_application"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(16), default="ready")
+    data: Mapped[dict[str, Any]] = mapped_column(JSON)

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.business.hiring_schema import Contract
+from orbit_api.career_workspace.connected_actions import connected_actions
 from orbit_api.db import get_db
 from orbit_api.job_portal import commitments, playbooks
 from orbit_api.job_portal.action_priority import PACKET_ACTIONS, TERMINAL_JOBS, attention_packets, priority
@@ -81,6 +82,9 @@ async def queue(db: AsyncSession, user: User) -> dict[str, Any]:
             "detail": PACKET_ACTIONS[packet.status][0], "action_label": PACKET_ACTIONS[packet.status][1],
             "source_status": packet.status, "source_updated_at": aware(packet.updated_at).isoformat(),
             "due_at": None, "overdue": False, "path": f"/jobs/applications?packet={packet.id}"})
+    connected, connected_truncated = await connected_actions(db, user.id, now)
+    items.extend(connected)
+    truncated = truncated or connected_truncated
     for item in items:
         item.setdefault("action_label", "Review follow-up")
     items.sort(key=lambda item: priority(item, now))

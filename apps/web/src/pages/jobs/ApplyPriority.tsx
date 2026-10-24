@@ -1,8 +1,11 @@
+import { validPriority } from "../../lib/workspaceValidation";
+import { useCareerWorkspace } from "../../lib/useCareerWorkspace";
+import { WorkspaceSync } from "../../components/WorkspaceSync";
 import { SpotArt } from "../../components/SpotArt";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import type { JobTrackerEntry, Resume, ResumeSummary } from "@orbit/types";
-import { CompanyLogo, Gauge, Reveal, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
+import { CompanyLogo, Gauge, Reveal, cx, focusRing } from "@orbit/ui";
 import { Card, EmptyState, ErrorNote, Input, PageHeader, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
@@ -18,7 +21,6 @@ import {
 const KEY = "orbit.jobs.priority";
 const MAX_READ = 15; // saved posts read against the resume per visit
 interface Saved { resumeId: string | null; weights: Weights; ratings: Record<string, Scores>; breakers?: string[] }
-const isSaved = (v: unknown): v is Saved => typeof v === "object" && v !== null && "weights" in v && "ratings" in v;
 const EMPTY: Saved = { resumeId: null, weights: DEFAULT_WEIGHTS, ratings: {} };
 
 const GRADE_TONE = {
@@ -61,12 +63,13 @@ function useMatches(resume: Resume | null, jobs: JobTrackerEntry[]) {
 /**
  * Jobs → Apply priority: every saved job scored 1.0–5.0 and graded A–F on what matters to the candidate, so the
  * week's applications start at the top. Resume match, level and freshness are read from records; the rest the
- * candidate rates. Ratings and weights stay on this device.
+ * candidate rates. Ratings and weights are saved to the account; unsaved drafts stay on this device.
  */
 export function ApplyPriorityPage() {
   const { tracker } = useJobsAi();
-  const [saved, setSaved] = useState<Saved>(() => ({ ...EMPTY, ...readJSON(safeLocal, KEY, EMPTY, isSaved) }));
-  const update = (next: Saved) => { setSaved(next); safeLocal.setItem(KEY, JSON.stringify(next)); };
+  const sync = useCareerWorkspace("priority", EMPTY, validPriority, KEY);
+  const saved = sync.value;
+  const update = sync.change;
   const weights = useMemo(() => ({ ...DEFAULT_WEIGHTS, ...saved.weights }), [saved.weights]);
 
   const resumes = useAsync<ResumeSummary[]>(() => api.listResumes(), [], "resumes");
@@ -75,6 +78,7 @@ export function ApplyPriorityPage() {
 
   const breakers = useMemo(() => saved.breakers ?? [], [saved.breakers]);
   const [breakerText, setBreakerText] = useState(() => (saved.breakers ?? []).join(", "));
+  useEffect(() => setBreakerText(breakers.join(", ")), [breakers]);
   const jobs = useMemo(() => (tracker.data ?? []).filter((j) => j.status === "saved"), [tracker.data]);
   const { found, reading } = useMatches(resume.data ?? null, jobs);
   const years = useMemo(() => resume.data ? yearsOfExperience(resume.data.data.experience) : null, [resume.data]);
@@ -103,7 +107,8 @@ export function ApplyPriorityPage() {
   const top = ranked.filter((r) => !r.vetoes.length && (r.grade === "A" || r.grade === "B")).slice(0, 3);
   return <>
     {header}
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
+    <WorkspaceSync {...sync} />
+    <fieldset disabled={!sync.loaded || sync.saving || sync.conflict} className="min-w-0">    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
       <div className="min-w-0 space-y-6">
         {top.length > 0 && <section aria-labelledby="apply-first">
           <h2 id="apply-first" className="font-display text-lg font-semibold">Apply first</h2>
@@ -177,8 +182,9 @@ export function ApplyPriorityPage() {
               {[0, 1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 0 ? "Ignore" : n}</option>)}</Select>
           </li>)}</ul>
         </Card>
-        <p className="px-1 text-xs text-zinc-600 dark:text-zinc-400">Grades: A from 4.2, B from 3.6, C from 3.0, D from 2.4. Anything not known counts as 3. A way to order your week, not a verdict on any job. Ratings stay on this device. <Link className={textLink} to={JOBS_TRACKER}>Back to the tracker</Link></p>
+        <p className="px-1 text-xs text-zinc-600 dark:text-zinc-400">Grades: A from 4.2, B from 3.6, C from 3.0, D from 2.4. Anything not known counts as 3. A way to order your week, not a verdict on any job. Save your ratings to continue on another device. <Link className={textLink} to={JOBS_TRACKER}>Back to the tracker</Link></p>
       </aside>
     </div>
+    </fieldset>
   </>;
 }
