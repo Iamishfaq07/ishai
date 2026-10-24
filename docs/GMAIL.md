@@ -97,3 +97,19 @@ opportunities must be explicitly reopened. Tracker deletion uses the same accoun
 refuses to erase reserved/completed delivery history. After reservation commits, Gmail may
 already be processing delivery; later disconnect or withdrawal cannot retract that request.
 Account erasure remains a separate privacy lifecycle rather than a retry mechanism.
+
+## Existing opportunities and interview handoff
+
+Email-post intake can explicitly attach a reviewed source to an existing active opportunity.
+The current opportunity version is loaded when selected; changing the opportunity elsewhere
+invalidates the attachment request. Previous documents remain available. A Gmail attempt
+must be discarded while still unsent before its source can change; delivery history cannot
+be replaced. New-job duplicate detection runs before document ingestion.
+
+Accepted tailored Gmail applications now create frozen resume snapshots for interview prep,
+with source resume revision, captured job text/design, Gmail message ID and MIME hash. The
+snapshot preserves prepared structured content; the Gmail attempt remains authoritative for
+exact attachment bytes. Default interview-version selection can use the new snapshot, while
+explicit candidate version choices are respected. Source resumes are not rewritten. Resume
+performance uses the sent Gmail attempt's captured source rather than a later tracker relink.
+Earlier sent attempts are not reconstructed or backfilled.

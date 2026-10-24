@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
-from orbit_api.models import ApplicationStageEvent, JobApplication, JobInterviewRound, Resume, User
+from orbit_api.models import ApplicationStageEvent, GmailAttempt, JobApplication, JobInterviewRound, Resume, User
 from orbit_api.ratelimit import limit_user
 
 router = APIRouter(prefix="/v1/jobs/resume-performance", tags=["jobs"],
@@ -56,6 +56,8 @@ async def resume_performance(user: Annotated[User, Depends(current_user)],
                 JobInterviewRound.status == "completed")):
             history[completed.application_id].add("interviewing")
     resumes = {r.id: r for r in await db.scalars(select(Resume).where(Resume.user_id == user.id))}
+    submitted = {r.application_id: r.data["tailoring"] for r in await db.scalars(select(GmailAttempt).where(
+        GmailAttempt.user_id == user.id, GmailAttempt.status == "sent")) if r.data.get("tailoring")}
     by_title = {r.title: r for r in resumes.values()}
 
     def source(r: Resume) -> Resume:
@@ -71,14 +73,15 @@ async def resume_performance(user: Annotated[User, Depends(current_user)],
     general: list[JobApplication] = []
     unknown: list[JobApplication] = []
     for job in applied:
-        resume = resumes.get(job.resume_id or "")
+        actual = submitted.get(job.id)
+        resume = resumes.get(actual.get("resume_id", "") if actual else (job.resume_id or ""))
         if resume is None:
             unknown.append(job)
             continue
         base = source(resume)
         groups[base.id].append(job)
         names[base.id] = base.title
-        (tailored if (resume.job_text or base.id != resume.id) else general).append(job)
+        (tailored if (actual or resume.job_text or base.id != resume.id) else general).append(job)
     by_resume = sorted(({"resume_id": rid, "title": names[rid], **_stats(rows, history)}
                         for rid, rows in groups.items()),
                        key=lambda g: -g["applied"])

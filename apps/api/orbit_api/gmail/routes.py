@@ -24,7 +24,7 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.gmail.delivery import ApplicationEmail, ResumeAttachment, compose, send_once
 from orbit_api.job_portal.message_updates import owned
-from orbit_api.models import GmailAttempt, GmailConnection, JobApplication, User
+from orbit_api.models import Document, GmailAttempt, GmailConnection, JobApplication, Resume, ResumeSnapshot, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.runtime_config import _decrypt_secret, encrypt_secret, secrets_editable
 from orbit_api.transactions import lock_account
@@ -169,6 +169,19 @@ async def save_draft(db: AsyncSession, user: User, entry_id: str, message: Appli
                      identity: str, attachment_name: str | None, sender: str,
                      extra: dict[str, Any] | None = None) -> dict[str, Any]:
     await db.scalar(select(User).where(User.id == user.id).with_for_update())
+    materials = (extra or {}).get("tailoring")
+    if materials:
+        entry = await db.scalar(select(JobApplication).where(JobApplication.id == entry_id,
+            JobApplication.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        source = await db.scalar(select(Resume).where(Resume.id == materials["resume_id"],
+            Resume.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        doc = await db.scalar(select(Document).where(Document.id == materials["document_id"],
+            Document.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        if (entry is None or source is None or doc is None or entry.document_id != doc.id
+                or entry.status in {"withdrawn", "rejected", "hired"}
+                or source.revision != materials["resume_revision"]
+                or hashlib.sha256((doc.source_text or "")[:20000].encode()).hexdigest() != materials["job_digest"]):
+            raise HTTPException(409, "Application sources changed. Prepare a fresh reviewed draft.")
     count = await db.scalar(select(func.count()).select_from(GmailAttempt).where(GmailAttempt.user_id == user.id,
         GmailAttempt.created_at >= datetime.now(UTC) - timedelta(days=1)))
     if (count or 0) >= 20:
@@ -244,6 +257,24 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
         entry = await owned(db, user, row.application_id)
         if entry.status == "saved":
             _move(entry, "applied")
+        materials = row.data.get("tailoring")
+        if materials and materials.get("resume_data"):
+            from orbit_api.job_portal.resume_lineage import capture_origin
+
+            source = await db.get(Resume, materials.get("resume_id"))
+            source_id = source.id if source and source.user_id == user.id else None
+            saved = ResumeSnapshot(user_id=user.id, application_id=entry.id, resume_id=source_id,
+                title="Resume accepted by Gmail", data=materials["resume_data"],
+                design=materials.get("resume_design", {}), job_text=materials.get("job_text", ""),
+                score=materials.get("resume_score", 0),
+                note="Gmail accepted the application email; employer receipt is not verified")
+            saved.origin = {**capture_origin(saved, kind="gmail", source_id=row.id,
+                source_revision=materials.get("resume_revision"), observation="provider_accepted",
+                design_captured="resume_design" in materials), "source_resume_id": materials.get("resume_id"),
+                "gmail_message_id": result.message_id, "mime_digest": row.data["sha256"]}
+            db.add(saved)
+            if entry.resume_id is None and source_id:
+                entry.resume_id = source_id
     row.status = result.status
     row.data = {**row.data, "message_id": result.message_id, "reason": result.reason,
                 "recorded_at": datetime.now(UTC).isoformat()}
