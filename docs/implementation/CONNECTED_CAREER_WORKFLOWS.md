@@ -116,3 +116,12 @@ history and account export, and cascades on account/opportunity deletion.
 Migration `c9f1a3b5d7e9` follows the foundation migration. The existing pasted-message
 workflow remains available. This is manual email-file intake, not mailbox OAuth,
 continuous email synchronization, sender authentication or calendar reconciliation.
+
+## Continuation: packet material preservation
+
+New submission-associated resume snapshots also retain detached copies of packet answers,
+form fields and the cover letter, with a canonical SHA-256 content digest. These are
+captured alongside the existing candidate-recorded/executor-reported origin and travel
+through the existing snapshot export/deletion lifecycle. Later nested packet edits do not
+change captured materials. Historical snapshots are not reconstructed. This does not
+capture uploaded binary file bytes or establish employer acknowledgement.
