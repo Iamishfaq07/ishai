@@ -9,6 +9,7 @@ export function GmailApply({ entryId }: { entryId: string }) {
   const [recipient, setRecipient] = useState(""); const [subject, setSubject] = useState(""); const [body, setBody] = useState("");
   const [file, setFile] = useState<File | null>(null); const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const [open, setOpen] = useState(() => window.location.hash === "#gmail-apply");
   const attempt = records.data?.[0];
   const resumes = useAsync(() => api.listResumes(), [], "gmail-source-resumes");
   const [resumeId, setResumeId] = useState("");
@@ -32,7 +33,7 @@ export function GmailApply({ entryId }: { entryId: string }) {
     } catch { setError("Could not complete this action. Reload the email record before retrying; uncertain sends must not be resent."); records.reload(); }
     finally { setBusy(false); }
   };
-  return <details className="my-4 rounded-xl border border-zinc-200 p-4 dark:border-white/10"><summary className="cursor-pointer font-semibold">Apply by Gmail</summary><div className="mt-3 space-y-3">
+  return <details id="gmail-apply" open={open} onToggle={(event) => setOpen(event.currentTarget.open)} className="my-4 rounded-xl border border-zinc-200 p-4 dark:border-white/10"><summary className="cursor-pointer font-semibold">Apply by Gmail</summary><div className="mt-3 space-y-3">
     <p className="text-sm">Use an employer’s published application address or a recipient you have approved. <Link className="underline" to="/settings">Connect Gmail in Settings</Link>.</p>
     {records.loading && <p role="status">Loading email record…</p>}
     {records.error && <ErrorNote onRetry={records.reload}>Could not load the email record.</ErrorNote>}

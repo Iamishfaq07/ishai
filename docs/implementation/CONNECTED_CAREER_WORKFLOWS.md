@@ -214,3 +214,20 @@ tracked-job import, fact-preserving automatic resume tailoring, DOCX generation 
 Gmail draft. The candidate can inspect changes and download the exact attachment before
 approving a send. Details and discovery limits are in `docs/GMAIL.md`. Existing source resumes
 remain untouched; attempt metadata preserves source revision, post digest and prepared content.
+
+## Connected Today experience
+
+Today now reuses the existing deterministic action queue to surface Gmail draft reviews,
+unresolved/rejected delivery checks, and unfinished transition actions. Timed interviews
+retain their priority. Unresolved Gmail attempts are loaded before other email records;
+drafts for closed opportunities are excluded from active actions. Transition actions include
+upcoming/overdue date-only tasks and undated actions needing scheduling, with a Preparation
+filter. Date-only actions carry no invented time and stay out of timed calendar exports.
+Deep links open the Gmail review panel or transition planner directly.
+
+The new owned overview reports recorded applications, ever-recorded interviews/offers,
+upcoming interviews and Gmail delivery/draft counts. Historical interview/offer stages and
+completed employer rounds remain represented after later rejection. Earlier unrecorded
+history stays unknown. Counts are descriptive, not proof of employer receipt or causal
+resume performance. The overview refreshes when the user returns to the page. Existing
+Today/action-queue infrastructure remains the single next-action surface.

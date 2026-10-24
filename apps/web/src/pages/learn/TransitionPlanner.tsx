@@ -17,8 +17,8 @@ export function TransitionPlanner() {
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const actions = weeklyActions(plan, today);
-  return <section aria-labelledby="transition-planner" className="mt-8 space-y-4">
-    <h2 id="transition-planner" className="font-display text-xl font-semibold">Plan a career transition</h2>
+  return <section id="transition-planner" aria-labelledby="transition-heading" className="mt-8 space-y-4">
+    <h2 id="transition-heading" className="font-display text-xl font-semibold">Plan a career transition</h2>
     <p className="text-sm text-zinc-600 dark:text-zinc-400">Connect what a target role asks for to your own evidence and a practical next step. Copy requirements from real job descriptions and label practice work accurately.</p>
     <WorkspaceSync {...sync} />
     <fieldset disabled={!sync.loaded || sync.saving || sync.conflict} className="min-w-0 space-y-4">

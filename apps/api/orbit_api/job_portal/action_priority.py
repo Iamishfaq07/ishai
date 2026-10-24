@@ -36,6 +36,17 @@ def priority(item: dict[str, Any], now: datetime) -> tuple[int, str, str]:
         rank, why = 0, "The saved interview date has passed. Record what happened or update the next round."
     elif kind == "interview" and due is not None and due <= now + timedelta(hours=24):
         rank, why = 1, "Your saved interview is within the next 24 hours."
+    elif item.get("source_channel") == "gmail":
+        uncertain = item["source_status"] in {"sending", "uncertain"}
+        rank = 2 if uncertain else 4
+        why = "Delivery is unresolved. Check Gmail Sent before any further action." if uncertain else (
+            "Your prepared email requires review before sending." if item["source_status"] == "ready"
+            else "The rejected Gmail request needs review.")
+    elif item.get("source_channel") == "transition":
+        rank = 2 if item["overdue"] else 6 if item.get("due_date") else 8
+        why = "Your recorded transition action is past its due date." if item["overdue"] else (
+            "A transition action is due within seven days." if item.get("due_date")
+            else "Schedule a concrete next step in your transition plan.")
     elif item["overdue"]:
         rank, why = 2, "Your saved follow-up date or enabled reminder rule is past due."
     elif kind == "application" and "source_status" in item:
@@ -54,4 +65,4 @@ def priority(item: dict[str, Any], now: datetime) -> tuple[int, str, str]:
     else:
         rank, why = 6, "This is the next saved date in your seven-day plan."
     item["priority_reason"] = why
-    return rank, item["due_at"] or item.get("source_updated_at", ""), item["id"]
+    return rank, item["due_at"] or item.get("due_date") or item.get("source_updated_at", ""), item["id"]

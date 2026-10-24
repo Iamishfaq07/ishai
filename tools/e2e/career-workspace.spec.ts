@@ -63,7 +63,7 @@ test("practical project sharing requires excerpt review and can be revoked on mo
 test("transition plan saves role evidence and actions across reload", async ({ page, context }) => {
   await register(context);
   await page.goto("/learn");
-  const planner = page.locator('section[aria-labelledby="transition-planner"]');
+  const planner = page.locator('section[aria-labelledby="transition-heading"]');
   await expect(planner.getByText("Account version loaded", { exact: false })).toBeVisible();
   await planner.getByRole("button", { name: "Backend developer starter", exact: true }).click();
   await planner.getByLabel("Current role or starting point").fill("Customer support");
@@ -75,4 +75,22 @@ test("transition plan saves role evidence and actions across reload", async ({ p
   await page.reload();
   await expect(planner.getByLabel("Target role", { exact: true })).toHaveValue("Backend developer");
   await expect(planner.locator("article").first().getByLabel("Your supporting evidence")).toHaveValue("Synthetic API exercise with validation tests recorded locally.");
+});
+
+test("Today presents the connected overview and preparation queue", async ({ page, context }) => {
+  const registered = await context.request.post(`${API}/v1/auth/register`, { data: {
+    email: `today-${Date.now()}@example.com`, password: "career-workspace-test-password", name: "Today Tester" } });
+  expect(registered.status()).toBe(201);
+  const token = (await registered.json()).access_token;
+  const saved = await context.request.put(`${API}/v1/career/workspace/transition`, { headers: { Authorization: `Bearer ${token}` }, data: {
+    revision: 0, data: { currentRole: "Support", targetRole: "Analyst", motivation: "Data work", requirements: [{
+      id: "sql", requirement: "SQL", evidence: "", nextAction: "Run synthetic cohort query", state: "practising", due: "" }] } } });
+  expect(saved.status()).toBe(200);
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Your career overview" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open transition plan" }).first()).toBeVisible();
+  await page.locator("summary").filter({ hasText: "Your action queue" }).click();
+  await page.locator("summary").filter({ hasText: "Filters, refresh & calendar" }).click();
+  await page.getByRole("button", { name: "Preparation", exact: true }).click();
+  await expect(page.getByText("Run synthetic cohort query", { exact: true }).last()).toBeVisible();
 });
