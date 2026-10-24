@@ -313,7 +313,7 @@ export function Layout() {
             <ProductTabs
               label="Interview copilot"
               sections={user?.evidence_vault ? [...COPILOT_SECTIONS, EVIDENCE_SECTION] : COPILOT_SECTIONS}
-              action={
+              action={pathname === "/sessions" ? undefined : (
                 <Link
                   to="/start"
                   aria-current={pathname === "/start" ? "page" : undefined}
@@ -331,7 +331,7 @@ export function Layout() {
                   <AudioLines className="h-4 w-4 text-indigo-600 dark:text-indigo-300" aria-hidden />
                   Start live session
                 </Link>
-              }
+              )}
             />
           )}
           {/* Keyed on the route so each page arrives the same way: a quick fade with a 4 px rise (a fade at Gentle,

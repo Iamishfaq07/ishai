@@ -57,6 +57,9 @@ export function HomePage() {
   const week = weekStops(queue.data ?? null, tracker.data ?? null);
   const weekCount = week.reduce((n, d) => n + d.stops.length, 0);
   const jobs = activeJobs(tracker.data ?? []);
+  // A brand-new account (no jobs, nothing queued): the overview, week, routes and queue would only be zeros and
+  // empty states repeating the "save a job" step, so Today shows setup, the first step and the tools until then.
+  const fresh = tracker.data?.length === 0 && queue.data?.items.length === 0;
 
   return <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
     <header className="flex flex-wrap items-end justify-between gap-4">
@@ -68,7 +71,7 @@ export function HomePage() {
     </header>
 
     <Suspense fallback={null}><SecurityNotice /></Suspense>
-    <Suspense fallback={<Skeleton variant="card" count={1} label="Loading career overview" />}><Overview /></Suspense>
+    {!fresh && <Suspense fallback={<Skeleton variant="card" count={1} label="Loading career overview" />}><Overview /></Suspense>}
 
     {/* A new account's few setup steps, until they're all done. */}
     <SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} />
@@ -90,7 +93,7 @@ export function HomePage() {
       </div>}
     </section>
 
-    <section aria-labelledby="this-week">
+    {!fresh && <section aria-labelledby="this-week">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="this-week" className="text-lg font-semibold">This week</h2>
         {queue.error && !queue.data ? <button type="button" onClick={reloadQueue} className={cx(quiet, "rounded underline underline-offset-4", focusRing)}>Reminders didn't load · Retry</button>
@@ -118,9 +121,9 @@ export function HomePage() {
           </li>)}
         </ol>
       </div>
-    </section>
+    </section>}
 
-    <section aria-labelledby="your-routes">
+    {!fresh && <section aria-labelledby="your-routes">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id="your-routes" className="text-lg font-semibold">Your routes</h2>
         {jobs.length > 0 && <Link className={textLink} to="/jobs/tracker">All jobs</Link>}
@@ -146,7 +149,7 @@ export function HomePage() {
                 : <span className="text-zinc-600 dark:text-zinc-400">{next ? `Next: ${next}` : "At the last stop"}</span>}</span>
             </Link></li>;
         })}</ul>}
-    </section>
+    </section>}
 
     {/* The tools people reach for most, by name, and the way to every other one. */}
     <section aria-labelledby="quick-tools" className="space-y-3">
@@ -160,13 +163,13 @@ export function HomePage() {
         </Link></li>)}</ul>
     </section>
 
-    <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+    {!fresh && <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
       <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>
         <span>Your action queue{queue.data ? ` (${queue.data.items.length})` : ""}</span>
         <ArrowRight className="h-4 w-4 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />
       </summary>
       <div className="border-t border-zinc-200 p-5 dark:border-white/10"><Suspense fallback={<Skeleton variant="line" count={3} label="Loading your actions" />}><Actions embedded /></Suspense></div>
-    </details>
+    </details>}
   </div>;
 }
 

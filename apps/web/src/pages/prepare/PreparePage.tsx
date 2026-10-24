@@ -125,7 +125,7 @@ export function PreparePage() {
         : <div className="flex flex-wrap items-center justify-between gap-4">
           <div><h2 id="up-next" className="font-display text-xl font-semibold">No interview on your calendar yet</h2>
             <p className="mt-1 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">When a job is marked interviewing with a date, it shows here with a countdown and its prep steps. Until then, practise for a role or build your stories.</p></div>
-          <div className="flex flex-wrap gap-2"><Link to="/jobs?work=updates&input=calendar" className={linkButton("secondary")}>Import invitation</Link><Link to="/jobs/tracker?add=1" className={linkButton("ghost")}>Add an interview</Link></div>
+          <Link to="/jobs/tracker?add=1" className={linkButton("secondary")}>Add an interview</Link>
         </div>}
     </Reveal>
 
