@@ -35,6 +35,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email, require_verified_user
 from orbit_api.auth.security import current_user
+from orbit_api.auto_apply import manual_jobs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.documents.routes import ORIGIN_ORBIT, Origin, _check_quota, _ingest
@@ -44,7 +45,9 @@ from orbit_api.job_portal.mission import _score
 from orbit_api.job_portal.resume_binding import for_job
 from orbit_api.job_portal.round_journal import context_round
 from orbit_api.job_portal.rounds import MAX_ROUND, RoundType, as_round_type, review_score, round_label
-from orbit_api.job_portal.routes import Status, _full_text, _job_text, _move
+from orbit_api.job_portal.routes import FitOut, Status, _full_text, _job_text, _move, run_fit
+from orbit_api.job_portal.routes import ai_limit as jobs_ai_limit
+from orbit_api.job_portal.routes import ai_user_limit as jobs_ai_user_limit
 from orbit_api.live import company_styles
 from orbit_api.live.events import QuestionType
 from orbit_api.models import (
@@ -467,6 +470,36 @@ async def update_interview(entry_id: str, body: InterviewIn, user: Annotated[Use
     await db.commit()
     await db.refresh(entry)
     return await interview_out(db, user, entry)
+
+
+class FitIn(BaseModel):
+    job_text: str | None = Field(None, min_length=40, max_length=MAX_JOB_TEXT)  # else the post saved on the job
+
+
+@router.post("/{entry_id}/fit", response_model=FitOut,
+             dependencies=[Depends(jobs_ai_limit), Depends(jobs_ai_user_limit)])
+async def manual_fit(entry_id: str, body: FitIn, user: Annotated[User, Depends(require_verified_email)],
+                     db: Annotated[AsyncSession, Depends(get_db)]) -> FitOut:
+    """The fit check for a job added by hand, which has no post in Orbit: against the post pasted here (kept on the
+    job, as the interview prep keeps one) or the one already saved. Same allowance and cache as a listing's check."""
+    entry = await _entry(db, entry_id, user)
+    if not manual.is_manual(entry.listing_id):
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "This job has its post in Orbit: check your fit from its listing.")
+    if body.job_text is not None:
+        text = body.job_text
+        doc = await keep_document(db, user, "job_description", f"{entry.title} — {entry.company}", text,
+                                  origin=ORIGIN_ORBIT)
+        entry.document_id = doc.id
+        await db.commit()
+    else:
+        _, saved = await _post(db, user, entry)
+        text = (saved.source_text or "") if saved is not None else ""
+    if len(text.strip()) < 40:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
+                            "Paste the job description first: the fit check compares it with your resume.")
+    text = text[:MAX_JOB_TEXT]
+    return await run_fit(None, db, user, manual_jobs.post_listing(entry, text), text, pasted=True)
 
 
 @router.post("/{entry_id}/interview/questions", response_model=interview_prep.QuestionsOut,

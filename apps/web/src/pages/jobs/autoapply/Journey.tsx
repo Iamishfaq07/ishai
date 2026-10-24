@@ -19,6 +19,9 @@ export function CareerJourneyPage() {
   const state = useAsync(() => api.call<Journey>("/v1/apply/journey"), [], "career-journey");
   const data = state.data;
   const next = data?.steps.find((step) => step.id === data.next_step);
+  // Without a resume there is nothing to tailor or send: the agent, its shortlist and an all-zero activity count
+  // would only be disabled buttons under the one step that matters, so they wait for the resume.
+  const noResume = data?.steps.some((step) => step.id === "resume" && !step.done) ?? false;
   return <div className="space-y-6">
     <PageHeader art={<SpotArt kind="search" />} icon={Rocket} title="Auto Apply" subtitle="Orbit finds jobs that fit, tailors your resume to each one, prepares the application and sends what it can. You approve the rules once." actions={<Link to="/jobs/auto-apply" className={buttonClass("secondary", "sm")}>Settings</Link>} />
     {next && <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-500/20 dark:bg-indigo-500/5" aria-label="Your next career step">
@@ -26,12 +29,13 @@ export function CareerJourneyPage() {
       <h2 className="mt-2 text-lg font-semibold">{next.title}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{next.detail}</p>
       <Link to={next.href} className={buttonClass("primary", "sm", "mt-4")}>Continue · {next.title}</Link>
     </section>}
-    <CoveragePanel />
-    <AgentConsole onChanged={state.reload} />
+    {!noResume && <CoveragePanel />}
+    {!noResume && <AgentConsole onChanged={state.reload} />}
+    {noResume && <p className="text-sm text-zinc-600 dark:text-zinc-400">Once your resume is in, this is where you choose jobs for the agent, approve what it prepares and follow every application it sends.</p>}
     <LoadGate loading={state.loading && !data} variant="card" count={3} label="Loading your career journey">
       {state.error && <ErrorNote onRetry={state.reload}>{errorText(state.error)}</ErrorNote>}
       {data && <>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900">
+        {!noResume && <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900">
           <h2 className="text-lg font-semibold">Your application activity</h2>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{data.packets.submitted ?? 0} automatic submissions · {data.needs_attention} need attention · {data.tracker.interviewing ?? 0} interviewing · {data.tracker.offer ?? 0} offers · {data.tracker.hired ?? 0} hired</p>
           {data.paused && <p className="mt-3 text-sm">Automatic applications are paused. Resume them from Orbit Apply when you are ready.</p>}
@@ -39,7 +43,7 @@ export function CareerJourneyPage() {
           <p className="mt-3 text-sm">{data.execution === "hosted"
             ? data.hosted_online ? "Hosted worker online · supported applications can continue with your browser closed." : "Hosted worker offline · external applications are waiting."
             : data.executor_ready ? "Connected browser ready · it sends external applications while it is open." : "Approved applications wait in Needs you, ready for you to send. Nothing to install."}</p>
-        </div>
+        </div>}
         <details className="rounded-2xl border border-zinc-200 p-4 dark:border-white/10">
           <summary className="cursor-pointer rounded-lg p-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-500">Your full career journey · {data.steps.filter((step) => step.done).length} of {data.steps.length} steps ready</summary>
         <ol className="mt-4 grid gap-4 md:grid-cols-2">{data.steps.map((step, index) => <li key={step.id} className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900" aria-current={data.next_step === step.id ? "step" : undefined}>

@@ -388,13 +388,13 @@ function CustomMock({
     <details open={open} className="group">
       <summary
         className={cx(
-          "flex cursor-pointer list-none items-center gap-2 rounded-xl py-1 font-display text-base font-semibold text-zinc-800 dark:text-zinc-100 [&::-webkit-details-marker]:hidden",
+          "flex cursor-pointer list-none flex-wrap items-center gap-x-2 rounded-xl py-1 font-display text-base font-semibold text-zinc-800 dark:text-zinc-100 [&::-webkit-details-marker]:hidden",
           focusRing,
         )}
       >
         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
         Build your own round
-        <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">role, type, interviewer and length</span>
+        <span className="basis-full pl-6 text-sm font-normal text-zinc-500 sm:basis-auto sm:pl-0 dark:text-zinc-400">role, type, interviewer and length</span>
       </summary>
       <Card className="mt-3">
         <p className="mb-5 text-sm text-zinc-500 dark:text-zinc-400">Orbit asks, listens, follows up, and gives you a short report at the end.</p>

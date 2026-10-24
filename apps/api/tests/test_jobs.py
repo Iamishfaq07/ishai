@@ -957,6 +957,35 @@ def test_fit_checks_are_free_cached_and_capped_per_day(jobs: TestClient, monkeyp
     assert jobs.post(f"/v1/jobs/listings/{uuid.uuid4()}/fit", headers=h).status_code == 404
 
 
+def test_a_job_added_by_hand_gets_a_fit_check_from_its_pasted_post(jobs: TestClient,
+                                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+    h = _register(jobs)
+    entry = jobs.post("/v1/jobs/tracker/manual", headers=h,
+                      json={"company": "Paste Co", "title": "Backend Engineer"}).json()
+    post = "Backend Engineer. You will build Go services on Kubernetes and run Kafka. Java and Spring Boot a plus."
+    fit = f"/v1/jobs/tracker/{entry['id']}/fit"
+    assert jobs.post(fit, headers=h, json={}).status_code == 422  # nothing pasted or saved yet
+    assert jobs.post(fit, headers=h, json={"job_text": post}).status_code == 422  # no resume yet
+    make_resume(jobs, h)
+    monkeypatch.setattr(get_settings(), "jobs_fit_daily", 2)
+    first = jobs.post(fit, headers=h, json={"job_text": post})
+    assert first.status_code == 200, first.text
+    assert first.json()["cached"] is False and first.json()["left"] == 1
+    # The post is kept on the job: asking again without pasting reuses it, from the cache.
+    again = jobs.post(fit, headers=h, json={}).json()
+    assert again["cached"] is True and again["left"] == 1
+    mission = jobs.get(f"/v1/jobs/tracker/{entry['id']}/mission", headers=h).json()
+    assert mission["fit"]["verdict"] == first.json()["check"]["verdict"]
+    # An edited post is a new check, counted against the same daily allowance as a listing's.
+    edited = jobs.post(fit, headers=h, json={"job_text": post + " Remote within India."}).json()
+    assert edited["cached"] is False and edited["left"] == 0
+    # A job with its post in Orbit is checked from its listing; someone else's job isn't found.
+    (lid,) = insert(jobs, _listing(title="Platform Engineer"))
+    saved = jobs.post("/v1/jobs/tracker", headers=h, json={"listing_id": lid}).json()
+    assert jobs.post(f"/v1/jobs/tracker/{saved['id']}/fit", headers=h, json={}).status_code == 409
+    assert jobs.post(fit, headers=_register(jobs), json={"job_text": post}).status_code == 404
+
+
 def test_the_admin_has_no_daily_fit_check_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     from tests.test_signup_approval import _client
 
