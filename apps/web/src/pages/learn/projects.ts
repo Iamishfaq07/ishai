@@ -13,3 +13,19 @@ export function validProjects(v: unknown): v is ProjectWorkspace {
 export function projectExcerpt(title: string, w: ProjectWork): string {
   return `${title}\n\nInitial work\n${w.initial}\n\nRevision after changed requirement\n${w.revision}\n\nReflection and review notes\n${w.reflection}\n\nCandidate self-checks (not independent verification)\n${w.checks.join("\n")}`;
 }
+
+export interface ProjectNextStep { id: string; title: string; action: string }
+/** Completion of candidate-entered records only; never a skill or execution assessment. */
+export function projectNextSteps(work: ProjectWork, rubric: readonly string[]): ProjectNextStep[] {
+  const steps: ProjectNextStep[] = [];
+  if (!work.initial.trim()) steps.push({ id: "initial", title: "Record your first solution", action: "Include your own contribution, the inputs you used and the actual output. Label synthetic data clearly." });
+  if (!work.revision.trim()) steps.push({ id: "revision", title: "Respond to the changed requirement", action: "Save a revised solution and explain how it differs from your first attempt." });
+  if (!work.reflection.trim()) steps.push({ id: "reflection", title: "Explain what you learned", action: "Record a tradeoff, a limitation and a concrete improvement. Add reviewer feedback only if someone actually provided it." });
+  for (const criterion of rubric) {
+    if (!work.checks.includes(criterion)) steps.push({ id: `rubric:${criterion}`, title: criterion, action: "Review your work against this criterion. Add the supporting example or result before marking the self-check." });
+  }
+  return steps;
+}
+export function reviewerWorksheet(title: string, work: ProjectWork, rubric: readonly string[]): string {
+  return `${projectExcerpt(title, work)}\n\nReviewer worksheet\nThis is candidate-authored practice work. Verify authorship and execution separately.\n\n${rubric.map((criterion) => `Criterion: ${criterion}\nSupporting excerpt or observed result:\nMissing evidence:\nSuggested revision:\n`).join("\n")}\nOverall feedback:\nOne next task:\nReviewer name (optional):\nReview date:\n`;
+}

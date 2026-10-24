@@ -140,3 +140,11 @@ tradeoffs. Accounts with the existing evidence-vault feature can also write a fa
 explicitly confirm its accuracy, and save it through the existing manual-evidence API.
 Only the reviewed claim is copied; project notes and reviewer links are excluded. The claim
 is candidate-authored and should identify synthetic practice, with no inferred certification.
+
+## Continuation: project review plans
+
+Practical projects now show next steps for missing initial work, revisions, reflections and
+unchecked role-specific criteria. These reflect record completion and candidate self-review,
+not correctness or skill assessment. A downloadable reviewer worksheet includes project
+content plus spaces for supporting observations, missing evidence, suggested revisions and
+one next task. Candidates review the file before sharing; downloaded copies cannot be revoked.
