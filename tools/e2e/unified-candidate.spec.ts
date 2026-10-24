@@ -20,7 +20,8 @@ for (const width of [320, 360, 390, 768, 1024, 1440, 1920]) {
       const dir = resolve("docs/implementation/screenshots/unified"); await mkdir(dir, { recursive: true });
       for (const path of ["/", "/career"]) {
         await page.goto(path); await page.waitForLoadState("networkidle");
-        await expect(page.getByRole("heading", { name: path === "/" ? "Today" : "My Career", exact: true })).toBeVisible();
+        // Today opens with a greeting ("Good evening, Ana"); My Career keeps its name.
+        await expect(path === "/" ? page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ }) : page.getByRole("heading", { name: "My Career", exact: true })).toBeVisible();
         if (!before) {
           const audit = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
           expect(audit.violations).toEqual([]);

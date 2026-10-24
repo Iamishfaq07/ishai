@@ -28,14 +28,14 @@ with engine.begin() as prerequisite:
                              '(user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
 cfg = Config('alembic.ini')
 command.stamp(cfg, '47b9e3d0a6f2')
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, '58ca94f2d7e3')
 with engine.connect() as c:
     assert c.execute(text('SELECT COUNT(*) FROM biz_automations')).scalar() == 0
     assert c.execute(text('SELECT COUNT(*) FROM biz_hiring_tasks')).scalar() == 0
 assert any(i['name'] == 'uq_biz_task_source' for i in inspect(engine).get_unique_constraints('biz_hiring_tasks'))
 command.downgrade(cfg, '47b9e3d0a6f2')
 assert 'biz_hiring_tasks' not in inspect(engine).get_table_names()
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, '58ca94f2d7e3')
 with engine.connect() as c:
     assert c.execute(text('SELECT id FROM biz_applications')).scalar() == 'existing-row'
     assert c.execute(text('SELECT id FROM application_packets')).scalar() == 'retained-packet'

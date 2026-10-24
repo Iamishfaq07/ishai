@@ -82,7 +82,10 @@ async def progress(db: AsyncSession, user: User, resume_id: str | None) -> dict[
     ])
     by_id = {f["id"]: f for f in facts}
     actions = await queue(db, user)
-    focus = next((item for item in actions["items"] if item["id"] == actions["focus_id"]), None)
+    # A suggestion (the contact finder for a fresh application) is offered on Today but isn't a saved action, so it
+    # never becomes the plan's next step ahead of the candidate's own setup.
+    saved = [item for item in actions["items"] if item.get("rule") != "find_contacts"]
+    focus = next((item for item in saved if item["id"] == actions["focus_id"]), saved[0] if saved else None)
     if focus:
         # Reuse the action desk's priority and owned links, but only send static explanations to the model.
         # Job/contact names, company details and notes are deliberately excluded from plan facts.

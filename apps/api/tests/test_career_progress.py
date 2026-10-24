@@ -190,7 +190,8 @@ def test_saved_followup_is_actionable_and_date_change_invalidates_plan(client: T
     assert client.patch(f"/v1/jobs/tracker/{record['id']}", headers=auth(user),
                         json={"clear_next": True}).status_code == 200
     after = source(client, user)
-    assert after["activity"]["count"] == 0
+    # Only the contact-finder suggestion for the fresh application is left; the follow-up itself is gone.
+    assert after["activity"]["count"] == 1
     assert after["next_step"]["id"] == "resume"
     assert after["next_step"]["action"] == "Choose your master resume"
     assert after["version"] != current["version"]

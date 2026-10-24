@@ -133,7 +133,7 @@ def test_second_reader_rejects_stale_sources_before_using_ai(app: TestClient, mo
     assert not llm.requests
 
 
-@pytest.mark.parametrize("bad", ["quote", "source", "duplicate", "malformed"])
+@pytest.mark.parametrize("bad", ["quote", "source", "malformed"])
 def test_second_reader_rejects_ungrounded_or_malformed_ai(app: TestClient, monkeypatch: pytest.MonkeyPatch,
         bad: str) -> None:
     h, pid = prepared(app)
@@ -149,6 +149,23 @@ def test_second_reader_rejects_ungrounded_or_malformed_ai(app: TestClient, monke
     monkeypatch.setattr("orbit_api.workflow_ai.get_llm_provider", lambda: llm)
     assert app.post(path, headers=h, json={"version": source["version"]}).status_code == 502
     assert len(llm.requests) == 1
+
+
+def test_second_reader_keeps_one_copy_of_a_repeated_tip(app: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A tip repeated by the model is kept once (workflow_advice.validate_advice): one bad row doesn't cost the
+    candidate the whole review, and every tip kept still quotes its source exactly."""
+    h, pid = prepared(app)
+    path = review_path(pid)
+    source = app.get(path, headers=h).json()
+    fact = source["facts"][0]
+    tip = {"fact_id": fact["id"], "source_quote": fact["text"][:100],
+        "suggestion": "Check the stated requirements against your experience.",
+        "success_check": "Re-read the exact materials before changing them."}
+    llm = MockLLMProvider(script=[json.dumps({"tips": [tip, tip]})])
+    monkeypatch.setattr("orbit_api.workflow_ai.get_llm_provider", lambda: llm)
+    response = app.post(path, headers=h, json={"version": source["version"]})
+    assert response.status_code == 200, response.text
+    assert [t["fact_id"] for t in response.json()["tips"]] == [fact["id"]]
 
 
 def test_second_reader_detects_concurrent_edits_and_has_durable_daily_budget(app: TestClient,

@@ -241,7 +241,7 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-hiring-desk-mobile.png"), fullPage: true });
   await page.goto("/jobs/journey");
-  await expect(page.getByRole("heading", { name: "Application agent", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Auto Apply", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Continue · Add or build your resume", exact: true })).toBeVisible();
   await a11y(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

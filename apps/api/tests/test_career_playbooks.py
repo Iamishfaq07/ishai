@@ -101,7 +101,8 @@ def test_recent_future_and_terminal_jobs_never_get_automatic_followups(client: T
     for days, status in [(2, "applied"), (-8, "applied"), (30, "rejected"), (30, "hired"), (30, "saved")]:
         job(client, user, days, status)
     assert settings(client, user, follow_up_days=7).status_code == 200
-    assert actions(client, user)["items"] == []
+    # The recent application may still be offered the contact finder ("Find who's hiring"); that isn't a follow-up.
+    assert [i for i in actions(client, user)["items"] if i.get("rule") != "find_contacts"] == []
 
 
 def test_preparation_enriches_the_real_interview_and_keeps_its_date(client: TestClient) -> None:

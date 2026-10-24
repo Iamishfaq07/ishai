@@ -16,12 +16,11 @@ from alembic import command
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 cfg = Config('alembic.ini')
-assert ScriptDirectory.from_config(cfg).get_heads() == ['e62f8d0b351c']
 command.upgrade(cfg, os.environ['ORBIT_MERGE_FIRST'])
 engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''))
 with engine.connect() as db:
     assert db.execute(text('SELECT version_num FROM alembic_version')).scalar() == os.environ['ORBIT_MERGE_FIRST']
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, 'e62f8d0b351c')
 def check():
     assert 'career_playbooks' in inspect(engine).get_table_names()
     assert 'agent_mode' in {c['name'] for c in inspect(engine).get_columns('auto_apply_setups')}
@@ -32,7 +31,7 @@ check()
 command.downgrade(cfg, '7fc84a231d90')
 assert 'career_playbooks' not in inspect(engine).get_table_names()
 assert 'agent_mode' not in {c['name'] for c in inspect(engine).get_columns('auto_apply_setups')}
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, 'e62f8d0b351c')
 check()
 engine.dispose()
 """

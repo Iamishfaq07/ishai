@@ -20,7 +20,7 @@ for (const width of [320, 1440]) {
       const dir = resolve("docs/implementation/screenshots"); await mkdir(dir, { recursive: true });
       await page.screenshot({ path: `${dir}/before-today-${width}.png`, fullPage: true }); return;
     }
-    await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
     const next = page.getByRole("region", { name: "Suggested next action", exact: true });
     await expect(next.getByRole("link", { name: "Open next step", exact: true })).toHaveAttribute("href", `/jobs/applications?packet=${packet.id}`);
     expect(ai).toBe(0);
