@@ -65,6 +65,7 @@ from orbit_api.business.screening import router as business_screening_router
 from orbit_api.business.withdrawal import public_router as business_withdrawal_public_router
 from orbit_api.business.withdrawal import router as business_withdrawal_router
 from orbit_api.career.routes import router as career_router
+from orbit_api.career_workspace.checkpoints import router as transition_checkpoints_router
 from orbit_api.career_workspace.prep import router as career_prep_router
 from orbit_api.career_workspace.shares import router as career_shares_router
 from orbit_api.career_workspace.state import router as career_workspace_router
@@ -463,6 +464,7 @@ def create_app() -> FastAPI:
     app.include_router(linkedin_router)
     app.include_router(code_router)
     app.include_router(gmail_router)
+    app.include_router(transition_checkpoints_router)
     app.include_router(transition_review_router)
     app.include_router(career_workspace_router)
     app.include_router(career_prep_router)

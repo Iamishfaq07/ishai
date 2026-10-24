@@ -195,3 +195,14 @@ a draft action and then save separately; evidence and self-assessed status are n
 Mock-provider responses are labelled as demo output. Quote checks establish source presence,
 not factual correctness of every sentence or the usefulness of advice. No hiring prediction
 or independent readiness assessment is made.
+
+## Transition progress checkpoints
+
+Candidates can explicitly capture a saved transition-plan revision with a reflection and
+retain up to ten checkpoints. Each checkpoint preserves the plan as captured; later plan
+edits do not rewrite it. Comparisons show changed/added requirements, removed requirements
+and role/motivation changes against the currently displayed plan, including local drafts.
+Checkpoints can be downloaded or deleted individually. Duplicate revision captures and stale
+requests are rejected. Data uses a separate account-owned workspace record, so existing
+account export and deletion apply without a schema migration. Comparisons describe recorded
+changes and self-assessments, not independent skill improvement.

@@ -1,3 +1,4 @@
+import { TransitionCheckpoints } from "./TransitionCheckpoints";
 import { TransitionReview } from "./TransitionReview";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -42,6 +43,7 @@ export function TransitionPlanner() {
         </article>)}
       </Card>
     </fieldset>
+    <TransitionCheckpoints plan={plan} revision={sync.revision} enabled={sync.loaded && !sync.dirty && !sync.conflict && !sync.saving && sync.revision > 0} />
     <TransitionReview key={JSON.stringify(plan)} plan={plan} revision={sync.revision} enabled={sync.loaded && !sync.dirty && !sync.conflict && !sync.saving} onAction={(id, action) => change(id, { nextAction: action })} />
     <Card className="space-y-3"><h3 className="font-semibold">Next actions to schedule</h3>
       {actions.length ? <ol className="list-decimal space-y-2 pl-5">{actions.map((r) => <li key={r.id} className="text-sm"><strong>{r.nextAction}</strong><p>{r.requirement} · {r.due || "Choose a due date"}{r.due && r.due < today ? " · overdue" : ""}</p></li>)}</ol> : <p className="text-sm">Add an action to an unfinished requirement to build your plan.</p>}
