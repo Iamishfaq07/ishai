@@ -20,7 +20,7 @@ with engine.begin() as prerequisite:
                              '(user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
 cfg = Config('alembic.ini')
 command.stamp(cfg, 'c407e21a6d93')
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, 'd51e7c9a240b')
 with engine.begin() as db:
     assert tuple(db.execute(text('SELECT id,item_key,task_data FROM job_plan_checks')).one()) == (
         'legacy','2026-10-20:gap:0',None)
@@ -29,7 +29,7 @@ command.downgrade(cfg, 'c407e21a6d93')
 assert 'task_data' not in {c['name'] for c in inspect(engine).get_columns('job_plan_checks')}
 with engine.connect() as db:
     assert tuple(db.execute(text('SELECT id,item_key FROM job_plan_checks')).one()) == ('legacy','2026-10-20:gap:0')
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, 'd51e7c9a240b')
 with engine.connect() as db:
     assert db.execute(text('SELECT task_data FROM job_plan_checks')).scalar() is None
 engine.dispose()

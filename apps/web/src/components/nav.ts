@@ -68,7 +68,7 @@ const JOBS_TASK: NavItem = { ...JOBS, label: "Job Search", tab: "Jobs", to: "/jo
 // Orbit Apply's home: every saved job prepared with a resume tailored to it, reviewed and sent within your limits.
 const AUTO_APPLY: NavItem = { id: "auto-apply", to: "/jobs/journey", label: "Auto Apply", icon: Rocket, current: (p) => AUTO_APPLY_PATH.test(p) };
 const PREPARE: NavItem = { id: "prepare", label: "Interview Prep", tab: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
-  current: (p) => /^\/(prepare|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code)(\/|$)/.test(p) };
+  current: (p) => /^\/(prepare|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code|interview)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: UserRound,
   current: (p) => /^\/(?:career|career-gap|github-projects)(\/|$)/.test(p) };
 

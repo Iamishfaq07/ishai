@@ -26,7 +26,7 @@ with engine.begin() as prerequisite:
                              '(user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
 cfg = Config('alembic.ini')
 command.stamp(cfg, '36a8f2c9d7e1')
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, 'e62f8d0b351c')
 with engine.connect() as c:
     assert tuple(c.execute(text('SELECT execution,stop_when_hired FROM auto_apply_setups')).one()) == ('browser',1)
     assert c.execute(text('SELECT agent_mode FROM auto_apply_setups')).scalar() == 0
@@ -35,7 +35,7 @@ with engine.connect() as c:
 assert 'apply_worker_heartbeats' in inspect(engine).get_table_names()
 command.downgrade(cfg, '36a8f2c9d7e1')
 assert 'execution' not in {c['name'] for c in inspect(engine).get_columns('auto_apply_setups')}
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, 'e62f8d0b351c')
 with engine.connect() as c:
     assert c.execute(text('SELECT status FROM application_packets')).scalar() == 'ready'
 engine.dispose()

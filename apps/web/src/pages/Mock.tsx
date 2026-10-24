@@ -62,7 +62,7 @@ const PRESET_SPOT: Record<PresetId, SpotKind> = { hr5: "screen", tmay10: "intro"
 /**
  * Practice: the AI plays interviewer (spoken with the browser's voice), you answer by voice. A mock starts in one tap
  * from a preset (`?preset=` highlights one, `?role=` names the role, `?jd=` picks the job post); the full form is under
- * "Customise". Then your progress and the weekly goal, and prep from a job post.
+ * "Build your own round". Then your progress and the weekly goal, and prep from a job post.
  */
 const LANGUAGE_KEY = "orbit.practiceLanguage";
 const LANGUAGE_LABEL: Record<string, string> = { en: "English", hi: "हिन्दी (Hindi)", hinglish: "Hinglish (Hindi + English)" };
@@ -314,7 +314,7 @@ function MockSetup() {
 
 const PERSONAS: MockPersona[] = ["recruiter", "hiring_manager", "engineer", "staff_engineer", "executive"];
 
-/** "Customise": every setting of a mock interview, for when a preset isn't it. The job post is the one picked above. */
+/** "Build your own round": every setting of a mock interview, for when a preset isn't it. The job post is the one picked above. */
 function CustomMock({
   knownRole,
   linkedType,
@@ -393,7 +393,7 @@ function CustomMock({
         )}
       >
         <ChevronDown className="h-4 w-4 text-zinc-400 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
-        Customise
+        Build your own round
         <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">role, type, interviewer and length</span>
       </summary>
       <Card className="mt-3">

@@ -134,7 +134,7 @@ export function companyMockLink(company: Pick<BankCompany, "name">): string {
   return `/mock?${new URLSearchParams({ company: company.name })}`;
 }
 
-/** Practice with the role filled in and its round chosen under "Customise" (Mock.tsx reads `?role=`, `?type=`,
+/** Practice with the role filled in and its round chosen under "Build your own round" (Mock.tsx reads `?role=`, `?type=`,
  *  `?persona=` and `?customise`). */
 export function roleMockLink(role: Pick<BankRole, "name" | "mock">): string {
   return `/mock?${new URLSearchParams({ role: role.name, type: role.mock.interview_type, persona: role.mock.persona, customise: "1" })}`;

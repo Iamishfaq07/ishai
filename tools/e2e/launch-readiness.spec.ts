@@ -53,11 +53,11 @@ test("mobile target context survives a reload and a trip through Home", async ({
   await expect(page.getByLabel("Interview stage", { exact: true })).toHaveValue("Staff panel");
   // Today routes through the contextual Prepare space. Its plain /mock link restores this tab's target.
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("mobile-home.png"), fullPage: true });
-  await page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Prepare", exact: true }).click();
-  await page.getByRole("link", { name: "Prepare my Saba session", exact: true }).click();
+  await page.getByRole("navigation", { name: "Main", exact: true }).getByRole("link", { name: "Prepare: Interview Prep", exact: true }).click();
+  await page.getByRole("link", { name: "Start practice", exact: true }).click();
   await expect(page).toHaveURL(/\/mock\?.*company=Acme/);
   await expect(page.getByLabel("Company (optional)", { exact: true })).toHaveValue("Acme");
 });

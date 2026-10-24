@@ -61,7 +61,7 @@ function ScoreRing({ score }: { score: number }) {
   return <span ref={ref} className="relative grid h-14 w-14 shrink-0 place-items-center" aria-label={`ATS score ${score} out of 100`}>
     <svg viewBox="0 0 48 48" className="absolute inset-0 -rotate-90" aria-hidden>
       <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" className="stroke-zinc-200 dark:stroke-white/10" />
-      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" strokeLinecap="round" className={cx(stroke, "motion-safe:transition-[stroke-dashoffset] motion-safe:duration-1000 motion-safe:ease-out")}
+      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="4" strokeLinecap="round" className={cx(stroke, "motion-safe:transition-[stroke-dashoffset] motion-safe:duration-moment motion-safe:ease-out")}
         strokeDasharray={c} strokeDashoffset={inView ? c * (1 - Math.max(0, Math.min(100, score)) / 100) : c} />
     </svg>
     <span className="relative text-center leading-none" aria-hidden><span className="block font-display text-base font-semibold tabular-nums">{score}</span><span className="text-[0.55rem] text-zinc-500">ATS</span></span>

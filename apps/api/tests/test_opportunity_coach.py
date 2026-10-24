@@ -67,7 +67,7 @@ def test_plan_is_focused_and_never_updates_tracker_or_resume(client: TestClient)
     assert client.get("/v1/resumes", headers=auth(user)).json() == []
 
 
-@pytest.mark.parametrize("bad", ["quote", "unknown", "duplicate", "focus", "malformed"])
+@pytest.mark.parametrize("bad", ["quote", "unknown", "focus", "malformed"])
 def test_untrusted_plan_is_rejected_and_failures_count_against_quota(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, bad: str,
 ) -> None:

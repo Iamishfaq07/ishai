@@ -28,7 +28,7 @@ with engine.begin() as prerequisite:
                              '(user_id VARCHAR(36) PRIMARY KEY, resume_id VARCHAR(36))'))
 cfg = Config('alembic.ini')
 command.stamp(cfg, '58ca94f2d7e3')
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, '69db05a3e8f4')
 assert 'career_weekly_goals' in inspect(engine).get_table_names()
 with engine.begin() as c:
     c.execute(text("INSERT INTO career_weekly_goals VALUES ('existing-user', 1, 8, 2, 0, '2026-10-20')"))
@@ -40,7 +40,7 @@ command.downgrade(cfg, '58ca94f2d7e3')
 assert 'career_weekly_goals' not in inspect(engine).get_table_names()
 with engine.connect() as c:
     assert c.execute(text('SELECT id FROM users')).scalar() == 'retained-user'
-command.upgrade(cfg, 'head')
+command.upgrade(cfg, '69db05a3e8f4')
 with engine.connect() as c:
     assert c.execute(text('SELECT id FROM application_packets')).scalar() == 'retained-packet'
 engine.dispose()

@@ -476,6 +476,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/public/business/applications/{token}/clarification"),
     ("GET", "/v1/public/business/applications/{token}/calendar.ics"),
     ("GET", "/v1/public/business/applications/{token}/conversation"),
+    # A candidate's shared project excerpt: a 7-day, revocable link anyone with the token may read, by design.
+    ("GET", "/v1/career/evidence-shares/view/{token}"),
     # Scheduling uses the same private, emailed application token rather than a signed-in Orbit session.
     ("GET", "/v1/public/business/applications/{token}/scheduling-requests"),
     ("POST", "/v1/public/business/applications/{token}/scheduling-requests"),

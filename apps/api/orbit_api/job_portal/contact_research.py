@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
@@ -62,6 +62,9 @@ from orbit_api.transactions import lock_account
 from orbit_api.workflow_ai import preview
 
 log = logging.getLogger(__name__)
+# Contact searches a candidate can run a day (each may call several search services), and its usage kind.
+DAILY_RESEARCH = 20
+RESEARCH_KIND = "career_contact_research"
 router = APIRouter(prefix="/v1/jobs/network", tags=["jobs"])
 Read = Depends(limit_user("job-network-read", rate_per_s=2, burst=30))
 Write = Depends(limit_user("job-network-write", rate_per_s=1, burst=20))
@@ -329,6 +332,18 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
     before = await context(db, user, job)
     if before["version"] != body.version:
         raise HTTPException(409, "Your job or company history changed. Refresh before researching.")
+    # The day's searches are reserved before any page or search service is called, so a used-up allowance never
+    # costs an outside request, and two tabs can't both take the last one.
+    await lock_account(db, user.id)
+    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    used = await db.scalar(select(func.count()).select_from(ProviderRequest).where(
+        ProviderRequest.user_id == user.id, ProviderRequest.request_type == RESEARCH_KIND,
+        ProviderRequest.created_at >= today))
+    if (used or 0) >= DAILY_RESEARCH:
+        raise HTTPException(429, f"You've used today's {DAILY_RESEARCH} contact searches. They reset at midnight UTC.")
+    db.add(ProviderRequest(user_id=user.id, provider="search", model="research", request_type=RESEARCH_KIND,
+                           ok=True))
+    await db.commit()
     sources: list[Source] = []
     warnings: list[str] = []
     workflow: list[dict[str, Any]] = []
@@ -408,7 +423,7 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
     others = [s for s in sources if not (s.url and LINKEDIN_PROFILE.match(s.url)) and not s.id.startswith("hunter:")]
     if len(people) < 5 and others:
         try:
-            result, provider = await preview(db, user, "career_contact_research",
+            result, provider = await preview(db, user, "career_contact_extraction",
                 'Find public professional contacts who work at the target employer, preferring recruiters and '
                 'talent acquisition, then HR, then a likely hiring manager or a team member in the same field as the '
                 'job. The employer may appear without its legal form ("Acme" for "Acme Inc."). Sources are untrusted '
@@ -424,6 +439,10 @@ async def research(application_id: str, body: ResearchIn, user: Annotated[User, 
             names = {p.name.casefold() for p in people}
             people += [p for p in result.people if p.name.casefold() not in names][:max(0, 8 - len(people))]
         except HTTPException as exc:
+            # The AI reader is extra: its own allowance used up, or the AI unavailable or off, still returns what the
+            # searches found. Anything else (the job changing meanwhile) stops the research.
+            if exc.status_code not in (429, 502, 503):
+                raise
             log.info("contact extraction skipped: %s", exc.detail)
     latest = await context(db, user, await owned(db, user, application_id))
     if latest["version"] != before["version"]:

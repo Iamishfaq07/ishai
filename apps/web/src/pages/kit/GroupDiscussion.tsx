@@ -58,7 +58,7 @@ export function GroupDiscussionPage() {
               <p className="text-sm font-medium">{phase === "prep" ? "Plan your points" : "Speak now: open, add value, include others, summarise"}</p>
               <span className={cx("inline-flex items-center gap-1 font-display text-2xl font-semibold tabular-nums", left < 30 && "text-rose-700 dark:text-rose-300")} role="timer" aria-live={left < 30 ? "polite" : "off"}><Clock className="h-5 w-5" aria-hidden />{mmss(left)}</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className={cx("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-1000 motion-safe:ease-linear", phase === "prep" ? "bg-indigo-500" : "bg-emerald-500")} style={{ width: `${(left / (phase === "prep" ? PREP_SECONDS : TALK_SECONDS)) * 100}%` }} /></div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className={cx("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-moment motion-safe:ease-linear", phase === "prep" ? "bg-indigo-500" : "bg-emerald-500")} style={{ width: `${(left / (phase === "prep" ? PREP_SECONDS : TALK_SECONDS)) * 100}%` }} /></div>
             <Textarea aria-label="Your notes" rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={"Opening line…\nPoint 1 + example…\nPoint 2 + example…\nThe other side…"} />
             <Button variant="secondary" onClick={() => { if (phase === "prep") { setPhase("talk"); setLeft(TALK_SECONDS); } else setPhase("review"); }}>{phase === "prep" ? "I'm ready to speak" : "Done speaking"}</Button>
           </>}

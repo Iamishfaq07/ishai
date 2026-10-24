@@ -77,12 +77,13 @@ export function SessionsPage() {
         </div>
       </header>
 
-      <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Four "None yet" boxes say nothing a first visit needs; the counts appear with the first session. */}
+      {all?.length !== 0 && <Reveal stagger className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Sessions" value={all ? all.length : null} hint="Copilot and mock sessions" />
         <Stat label="Questions handled" value={all ? all.reduce((n, s) => n + s.question_count, 0) : null} hint="Detected across all sessions" />
         <Stat label="Minutes" value={all ? Math.round(all.reduce((n, s) => n + (s.duration_seconds ?? 0), 0) / 60) : null} hint="Time in sessions" />
         <Stat label="Unfinished" value={all ? unfinished.length : null} hint="Resume or end them below" />
-      </Reveal>
+      </Reveal>}
 
       {unfinished.length > 0 && <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/70 bg-amber-50 p-4 text-sm text-amber-950 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-100">
         <p><span className="font-semibold">{unfinished.length} session{unfinished.length === 1 ? "" : "s"} still open.</span> Resume to continue, or end to save the report. Open sessions end on their own after an hour.</p>

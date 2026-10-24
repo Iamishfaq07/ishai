@@ -105,7 +105,7 @@ def test_capture_is_idempotent_concurrent_and_preserves_prior_notes(client: Test
 
 
 @pytest.mark.parametrize("bad", ["person", "email", "title", "quote", "profile", "automatic", "partial", "extra"])
-def test_research_rejects_invented_or_unassociated_model_facts(client: TestClient,
+def test_research_drops_invented_or_unassociated_model_facts(client: TestClient,
     monkeypatch: pytest.MonkeyPatch, bad: str) -> None:
     h, jid = world(client)
     person: dict[str, Any] = {"source_id": "paste", "name": "Alex Rivera", "title": "Talent Acquisition Partner",
@@ -119,8 +119,12 @@ def test_research_rejects_invented_or_unassociated_model_facts(client: TestClien
     person.update(changes[bad])
     mock = MockLLMProvider(script=[json.dumps({"people": [person]})])
     monkeypatch.setattr("orbit_api.workflow_ai.get_llm_provider", lambda: mock)
+    # A lead the model invented or couldn't tie to its source is dropped on its own; the research still answers.
     response = find(client, h, jid)
-    assert response.status_code == 502, response.text
+    assert response.status_code == 200, response.text
+    people = response.json()["people"]
+    for key, value in changes[bad].items():
+        assert all(p.get(key) != value for p in people), (key, people)
     assert context(client, h, jid)["saved_contacts"] == []
 
 
@@ -130,7 +134,7 @@ def test_research_reserves_budget_before_external_tools_and_rechecks_job(client:
     monkeypatch.setattr(get_settings(), "contact_search_key", SecretStr("fixture-key"))
     called = []
 
-    async def search(company: str, title: str) -> list[Source]:
+    async def search(company: str, title: str, **_: Any) -> list[Source]:
         async with sessionmaker()() as db:
             assert await db.scalar(select(ProviderRequest.id).where(ProviderRequest.user_id == uid(h),
                 ProviderRequest.request_type == "career_contact_research"))
@@ -148,7 +152,7 @@ def test_daily_research_budget_stops_tools_and_stale_context_stops_ai(client: Te
     h, jid = world(client)
     async def exhaust(db: Any) -> None:
         db.add_all([ProviderRequest(user_id=uid(h), provider="mock", model="mock",
-            request_type="career_contact_research", ok=False) for _ in range(5)])
+            request_type="career_contact_research", ok=False) for _ in range(research.DAILY_RESEARCH)])
     db_call(client, exhaust)
     async def forbidden(*args: Any) -> Any:
         raise AssertionError("No external tool after the durable budget is exhausted")
@@ -273,7 +277,8 @@ def test_searxng_enabled_context_and_failure_keep_other_sources(
     monkeypatch.setattr(research, "search_sources", unavailable)
     result = find(client, h, jid, search_web=True)
     assert result.status_code == 200 and result.json()["people"][0]["name"] == "Alex Rivera"
-    assert result.json()["warnings"] == ["Live search is unavailable. Other supplied sources were still checked."]
+    assert result.json()["warnings"] == [
+        "Live search isn't available right now. You can still check a company page or a recruiter's message."]
 
 
 @pytest.mark.parametrize("url", ["file:///etc/passwd", "https://user:pass@search.com", "https://search.com?q=x",
@@ -287,10 +292,10 @@ def test_searxng_config_rejects_unsafe_service_urls(url: str) -> None:
 @pytest.mark.parametrize("address", ["candidate@example.com", "noreply@acme.com", "automated@acme.com"])
 def test_self_and_automatic_mailboxes_with_exact_evidence_are_rejected(address: str) -> None:
     text = f"Alex Rivera, Recruiter, {address}"
-    person = {"source_id": "x", "name": "Alex Rivera", "title": "Recruiter", "email": address, "quote": text}
+    person = research.Person(source_id="x", name="Alex Rivera", title="Recruiter", email=address, linkedin_url=None,
+                             quote=text)
     with pytest.raises(ValueError):
-        research.validate_people({"people": [person]}, [Source(id="x", kind="pasted_reply", text=text)],
-            {"candidate@example.com"}, "Acme")
+        research.check_person(person, Source(id="x", kind="pasted_reply", text=text), {"candidate@example.com"}, "Acme")
 
 
 def test_capture_revalidates_evidence_and_distinguishes_same_name_contacts(client: TestClient) -> None:

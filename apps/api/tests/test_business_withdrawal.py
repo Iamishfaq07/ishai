@@ -22,7 +22,7 @@ from orbit_api.models import (
     JobApplication,
     User,
 )
-from tests.business_helpers import auth, db_call, make_client, new_company, new_job, outbox, register, uid
+from tests.business_helpers import auth, db_call, make_client, new_company, new_job, outbox, register, uid, wait_ranked
 from tests.test_business_hiring_studio import save_plan, setup
 
 
@@ -384,6 +384,8 @@ def test_ranking_already_in_flight_does_not_publish_after_withdrawal(
     from orbit_api.business import ranking
 
     owner, cid, _job, aid, token = setup(client)
+    # Confirming the email queues a ranking of its own; let it finish first, so the only ranking in flight is ours.
+    wait_ranked(client, owner, cid, aid)
     original = ranking.get_business_ai()
     started, release = Event(), Event()
 

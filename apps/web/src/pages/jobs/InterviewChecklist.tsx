@@ -38,7 +38,7 @@ export function InterviewChecklist({ entryId }: { entryId: string }) {
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">The things that go wrong on the day, ticked off in advance. Saved on this device.</p></div>
       <span className="shrink-0 rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold tabular-nums dark:bg-white/10">{done}/{CHECKLIST.length}</span>
     </div>
-    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className="h-full rounded-full bg-emerald-500 motion-safe:transition-[width] motion-safe:duration-300" style={{ width: `${(done / CHECKLIST.length) * 100}%` }} /></div>
+    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className="h-full rounded-full bg-emerald-500 motion-safe:transition-[width] motion-safe:duration-page" style={{ width: `${(done / CHECKLIST.length) * 100}%` }} /></div>
     {groups.map((g) => <div key={g}><p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">{g}</p>
       <ul className="mt-2 space-y-1">{CHECKLIST.filter((c) => c.group === g).map((c) => {
         const on = ticked.includes(c.id);

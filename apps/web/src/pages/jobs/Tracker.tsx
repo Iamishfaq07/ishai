@@ -127,11 +127,12 @@ export function JobTrackerPage() {
           </div>
         }
       />
-      {tracker.data && <SearchInsightsPanel entries={tracker.data} />}
-      {tracker.data && <div className="mt-6"><ActivityMap entries={tracker.data} /></div>}
+      {/* The jobs themselves first: people open the tracker to see and move them; the numbers follow. */}
+      <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />
+      {tracker.data && tracker.data.length > 0 && <div className="mt-8"><SearchInsightsPanel entries={tracker.data} /></div>}
+      {tracker.data && tracker.data.length > 0 && <div className="mt-6"><ActivityMap entries={tracker.data} /></div>}
       {tracker.data && tracker.data.length > 1 && <div className="mt-6"><ShortlistSkills revision={tracker.data.length} /></div>}
       {tracker.data && tracker.data.length > 2 && <div className="mt-4"><WhatsWorking revision={tracker.data.length} /></div>}
-      <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />
       <SafetyCard compact className="mt-6" />
       <AddJob
         open={adding}
@@ -545,13 +546,13 @@ function TrackerCard({
       <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs coarse:mt-1 coarse:gap-y-0">
         <Link
           to={missionPath(entry.id)}
-          aria-label={`Open ${entry.title} at ${entry.company}`}
           className={cx("inline-flex items-center gap-1 font-semibold text-indigo-700 hover:underline coarse:min-h-11 dark:text-indigo-300", focusRing)}
         >
-          Open job <ArrowRight className="h-3 w-3" aria-hidden />
+          {/* The visible words start the name, so voice control ("click Open job") still finds it. */}
+          Open job<span className="sr-only">: {entry.title} at {entry.company}</span> <ArrowRight className="h-3 w-3" aria-hidden />
         </Link>
-        <Link to={`${missionPath(entry.id)}?contacts=1`} aria-label={`Find contacts at ${entry.company}`} className={cx(rowAction, focusRing)}>
-          <Users className="h-3 w-3" aria-hidden /> Contacts
+        <Link to={`${missionPath(entry.id)}?contacts=1`} className={cx(rowAction, focusRing)}>
+          <Users className="h-3 w-3" aria-hidden /> Contacts<span className="sr-only"> at {entry.company}</span>
         </Link>
         {entry.status === "saved" && apply && (
           <a href={apply} target="_blank" rel="noopener" className={cx(rowAction, focusRing)}>

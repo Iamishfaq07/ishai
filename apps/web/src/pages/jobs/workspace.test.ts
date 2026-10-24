@@ -30,7 +30,7 @@ describe("Jobs task navigation", () => {
   });
 
   it("keeps context links short and marks deep tools in their parent", () => {
-    expect(workspaceTools("applications").map((tool) => tool.label)).toEqual(["Tracker", "Auto-apply", "Needs you", "People"]);
+    expect(workspaceTools("applications").map((tool) => tool.label)).toEqual(["Tracker", "Apply priority", "Auto-apply", "Needs you", "People"]);
     // The launchpad merged into Today; People stays one click away from applying.
     expect(workspaceTools("find").map((tool) => tool.label)).toEqual(["Matches", "Search preferences"]);
     expect(currentJobTool("/jobs/auto-apply/")).toBe("/jobs/journey");

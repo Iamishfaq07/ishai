@@ -55,7 +55,7 @@ export function StarCheckPage() {
         <Card className="flex items-center gap-4">
           <svg viewBox="0 0 100 100" className="h-24 w-24 shrink-0 -rotate-90" aria-hidden>
             <circle cx="50" cy="50" r="42" className="fill-none stroke-zinc-100 dark:stroke-white/10" strokeWidth="9" />
-            <circle cx="50" cy="50" r="42" className={cx("fill-none motion-safe:transition-[stroke-dashoffset] motion-safe:duration-500", has ? RING[b.tone] : "stroke-zinc-300")} strokeWidth="9" strokeLinecap="round"
+            <circle cx="50" cy="50" r="42" className={cx("fill-none motion-safe:transition-[stroke-dashoffset] motion-safe:duration-page", has ? RING[b.tone] : "stroke-zinc-300")} strokeWidth="9" strokeLinecap="round"
               strokeDasharray={circumference} strokeDashoffset={circumference * (1 - (has ? report.score : 0) / 100)} />
           </svg>
           <div><p className="font-display text-3xl font-semibold tabular-nums">{has ? report.score : "–"}<span className="text-base text-zinc-500">/100</span></p>

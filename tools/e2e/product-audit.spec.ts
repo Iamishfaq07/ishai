@@ -15,7 +15,7 @@ async function signup(context: BrowserContext, country = "IN") {
 test("a failed session check says Orbit can't be reached, and doesn't sign anyone out", async ({ page, context }) => {
   await signup(context);
   await page.goto("/sessions");
-  await expect(page.getByRole("heading", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Copilot", exact: true })).toBeVisible();
   // The API restarting: the session check gets a 503.
   await page.route(`${API}/v1/auth/me`, (route) => route.fulfill({ status: 503, body: "upstream restarting" }));
   await page.reload();
@@ -24,7 +24,7 @@ test("a failed session check says Orbit can't be reached, and doesn't sign anyon
   expect(new URL(page.url()).pathname).toBe("/sessions"); // not sent to /login
   await page.unroute(`${API}/v1/auth/me`);
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("heading", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Copilot", exact: true })).toBeVisible();
 });
 
 test("someone who isn't the admin is told an admin page is the admin's", async ({ page, context }) => {

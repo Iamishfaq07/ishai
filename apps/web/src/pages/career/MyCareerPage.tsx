@@ -38,7 +38,7 @@ function Progress({ done, total }: { done: number; total: number }) {
   const pct = total ? Math.round((done / total) * 100) : 0;
   return <div ref={ref} role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done} aria-label={`${done} of ${total} set up`}
     className="h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10">
-    <div className="h-full rounded-full bg-indigo-600 motion-safe:transition-[width] motion-safe:duration-700 motion-safe:ease-out" style={{ width: `${inView ? pct : 0}%` }} />
+    <div className="h-full rounded-full bg-indigo-600 motion-safe:transition-[width] motion-safe:duration-moment motion-safe:ease-out" style={{ width: `${inView ? pct : 0}%` }} />
   </div>;
 }
 

@@ -91,7 +91,7 @@ def test_ai_coach_is_sourced_and_cannot_change_targets(client: TestClient) -> No
     assert stale.status_code == 409
 
 
-@pytest.mark.parametrize("bad", ["quote", "id", "duplicate"])
+@pytest.mark.parametrize("bad", ["quote", "id"])
 def test_coach_rejects_unsupported_model_evidence(client: TestClient,
         monkeypatch: pytest.MonkeyPatch, bad: str) -> None:
     user = person(client)

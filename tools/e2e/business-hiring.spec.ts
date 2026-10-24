@@ -241,7 +241,7 @@ test("Business Hiring Studio: plan, private draft, candidate challenge, debrief 
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: info.outputPath("business-hiring-desk-mobile.png"), fullPage: true });
   await page.goto("/jobs/journey");
-  await expect(page.getByRole("heading", { name: "Application agent", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Auto Apply", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Continue · Add or build your resume", exact: true })).toBeVisible();
   await a11y(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -374,6 +374,8 @@ test("Candidate withdrawal: review, cancel, withdraw and leave the active hiring
   expect(tracked.ok(), await tracked.text()).toBe(true);
   await page.setViewportSize({ width: 1024, height: 900 });
   await page.goto("/jobs/tracker");
+  // On a wide board, closed jobs (hired, not this time, withdrawn) fold away under "Closed".
+  await page.locator("summary").filter({ hasText: "Closed" }).click();
   await expect(page.getByText("Independently tracked role", { exact: true })).toBeVisible();
   await expect(page.getByText("A tracker edit alone does not notify an employer.", { exact: false })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

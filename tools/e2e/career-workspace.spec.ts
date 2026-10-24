@@ -42,11 +42,12 @@ test("practical project sharing requires excerpt review and can be revoked on mo
   await register(context);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/learn");
-  await expect(page.getByText("Account version loaded", { exact: false })).toBeVisible();
+  await expect(page.getByText("Account version loaded", { exact: false }).first()).toBeVisible();
   await page.getByLabel("Initial work and test results").fill("Synthetic SQL dataset: three repeat buyers among ten eligible customers. Tests passed locally.");
   await page.getByLabel("Your revised solution").fill("Excluded refunded orders and incomplete observation windows; rechecked the denominator.");
-  await page.getByRole("button", { name: "Save changes", exact: true }).click();
-  await expect(page.getByText("Account version loaded", { exact: false })).toBeVisible();
+  // /learn holds two workspaces (projects and the transition planner), each with its own Save.
+  await page.getByRole("button", { name: "Save changes", exact: true }).and(page.locator(":not(#transition-planner *)")).click();
+  await expect(page.getByText("Account version loaded", { exact: false }).first()).toBeVisible();
   await page.getByRole("button", { name: "Review excerpt to share" }).click();
   await expect(page.getByRole("heading", { name: "This exact excerpt will be shared" })).toBeVisible();
   await page.getByRole("button", { name: "Create 7-day reviewer link" }).click();

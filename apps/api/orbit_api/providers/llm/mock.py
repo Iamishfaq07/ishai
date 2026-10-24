@@ -438,7 +438,7 @@ class MockLLMProvider(LLMProvider):
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
             return json.dumps({"matches": [{"question_id": q["id"], "source": q["candidates"][0], "confidence": 0.99}
                 for q in data["questions"] if len(q["candidates"]) == 1]})
-        if request.request_type == "career_contact_research":
+        if request.request_type == "career_contact_extraction":
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
             people = []
