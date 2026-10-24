@@ -1685,3 +1685,19 @@ class EmployerMessageImport(TimestampMixin, Base):
     subject: Mapped[str] = mapped_column(String(300))
     sent_at: Mapped[str] = mapped_column(String(120))
     changes: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class GmailConnection(Base):
+    __tablename__ = "gmail_connections"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    data: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class GmailAttempt(TimestampMixin, Base):
+    __tablename__ = "gmail_attempts"
+    __table_args__ = (UniqueConstraint("user_id", "application_id", name="uq_gmail_application"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"))
+    status: Mapped[str] = mapped_column(String(16), default="ready")
+    data: Mapped[dict[str, Any]] = mapped_column(JSON)

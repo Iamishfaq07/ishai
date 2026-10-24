@@ -1,3 +1,4 @@
+import { GmailApply } from "./GmailApply";
 import { SubmissionMaterials } from "./SubmissionMaterials";
 import { PrepDownload } from "./PrepDownload";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
@@ -153,6 +154,7 @@ export function JobMissionPage() {
                 mission.reload();
               }}
             />
+            <GmailApply key={`gmail:${entry.id}`} entryId={entry.id} />
             <PrepDownload key={`prep:${entry.id}`} entryId={entry.id} />
             <JobApplyPeople key={`apply:${entry.id}`} entry={entry} />
             <RoomNavigation tab={tab} suggested={opportunityStart(entry.status, m)} onSelect={setTab} />

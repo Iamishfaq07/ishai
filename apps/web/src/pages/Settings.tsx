@@ -1,3 +1,4 @@
+import { GmailConnection } from "./GmailConnection";
 import { useEffect, useMemo, useState, type FormEvent, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { AdminConfig, AdminConfigUpdate, SignedInDevice } from "@orbit/types";
@@ -49,6 +50,7 @@ export function SettingsPage() {
     <div className="lg:grid lg:grid-cols-[minmax(0,48rem)_11rem] lg:gap-10">
       <div className="max-w-3xl space-y-6">
         <PageHeader eyebrow="Account" icon={SettingsIcon} title="Settings" />
+        <GmailConnection />
         <Link
           to="/billing"
           className={cx(

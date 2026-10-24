@@ -33,6 +33,7 @@ from orbit_api.models import (
     Document,
     EmployerMessageImport,
     EvidenceItem,
+    GmailAttempt,
     JobApplication,
     JobCommitment,
     JobContact,
@@ -95,6 +96,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                           .order_by(Document.created_at))).all()],
         "employer_message_imports": [_row(r) for r in (await db.scalars(select(EmployerMessageImport).where(
             EmployerMessageImport.user_id == user_id))).all()],
+        "gmail_attempts": [_row(r) for r in (await db.scalars(select(GmailAttempt).where(
+            GmailAttempt.user_id == user_id))).all()],
         "application_stage_events": [_row(r) for r in (await db.scalars(select(ApplicationStageEvent).where(
             ApplicationStageEvent.user_id == user_id))).all()],
         "career_evidence_shares": [{k: v for k, v in _row(r).items() if k != "token_hash"} for r in (

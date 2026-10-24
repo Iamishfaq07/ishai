@@ -160,3 +160,14 @@ block automatic resend. Unit tests use HTTP mocks; no real email was sent.
 This module is not yet exposed as a sending endpoint. OAuth connection, encrypted token
 storage, persistent attempt reservation, account limits and the reviewed-send UI still need
 to be connected before Gmail delivery is available to users.
+
+## Gmail reviewed-send workflow
+
+The Gmail groundwork is now connected to Settings and opportunity rooms. Account-bound
+OAuth/PKCE stores encrypted refresh credentials; candidates prepare immutable email drafts,
+review recipient/body/PDF and confirm each send. Durable conditional reservation blocks
+repeat sends, including ambiguous/crashed attempts. Accepted sends retain Gmail's message
+ID and move saved opportunities to applied. Tokens are excluded from exports. Deployment
+configuration, behavior and live-validation limits are documented in `docs/GMAIL.md`.
+Mailbox reading, continuous inbox synchronization and unattended automation rules remain
+outside this sending workflow.
