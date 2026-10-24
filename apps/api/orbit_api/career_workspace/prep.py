@@ -2,14 +2,14 @@
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.security import current_user
 from orbit_api.db import get_db
 from orbit_api.job_portal.message_updates import owned
-from orbit_api.models import Document, JobInterviewRound, Resume, User
+from orbit_api.models import Document, JobInterviewRound, Resume, ResumeSnapshot, User
 
 router = APIRouter(prefix="/v1/career", tags=["career workspace"])
 
@@ -49,3 +49,24 @@ async def prep_pack(entry_id: str, user: Annotated[User, Depends(current_user)],
         "Prepare two questions for the team.\nCheck the latest invitation before travelling or joining."})
     return {"title": f"{row.company} — {row.title}", "generated_at": datetime.now(UTC).isoformat(),
             "sections": sections}
+
+
+@router.get("/submission-materials/{snapshot_id}")
+async def submission_materials(snapshot_id: str, user: Annotated[User, Depends(current_user)],
+                               db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    from orbit_api.job_portal.resume_lineage import digest, snapshot_origin
+
+    saved = await db.get(ResumeSnapshot, snapshot_id)
+    if saved is None or saved.user_id != user.id:
+        raise HTTPException(404, "Saved version not found")
+    origin = snapshot_origin(saved)
+    materials = origin.packet_materials if origin else None
+    if materials is None:
+        return {"available": False, "note": "Packet materials were not captured for this saved version."}
+    assert origin is not None
+    content = materials.model_dump(exclude={"content_digest"})
+    return {"available": True, "snapshot_id": saved.id, "observation": origin.observation,
+            "recorded_at": origin.recorded_at, "content": content, "digest": materials.content_digest,
+            "integrity_matches": digest(content) == materials.content_digest,
+            "note": "Structured content captured with this observation. This does not verify uploaded file bytes "
+                    "or employer receipt."}

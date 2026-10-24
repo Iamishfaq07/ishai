@@ -125,3 +125,9 @@ captured alongside the existing candidate-recorded/executor-reported origin and 
 through the existing snapshot export/deletion lifecycle. Later nested packet edits do not
 change captured materials. Historical snapshots are not reconstructed. This does not
 capture uploaded binary file bytes or establish employer acknowledgement.
+
+Captured packet materials can now be inspected and downloaded from packet-origin saved
+versions in the opportunity resume panel. The owned read endpoint recomputes the canonical
+content digest and reports mismatches explicitly. A matching digest establishes consistency
+with the captured record, not authenticity, file delivery or employer receipt. Older saved
+versions without captured packet content return an explicit unavailable result.

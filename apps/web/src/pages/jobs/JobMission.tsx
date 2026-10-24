@@ -1,3 +1,4 @@
+import { SubmissionMaterials } from "./SubmissionMaterials";
 import { PrepDownload } from "./PrepDownload";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -429,6 +430,7 @@ function ResumePanel({ mission, entry, onMission }: { mission: JobMission; entry
                     {s.origin?.kind === "resume" && !s.resume_id ? " · source resume deleted; saved content retained" : ""}
                   </p>
                   <SnapshotSource origin={s.origin} />
+                  {s.origin?.kind === "packet" && <SubmissionMaterials snapshotId={s.id} />}
                 </div>
                 <Button size="sm" variant="secondary" aria-pressed={selectedSnapshot?.id === s.id} disabled={busy} onClick={() => { const next = new URLSearchParams(params); next.set("snapshot", s.id); setParams(next); }}>Compare with linked resume</Button>
                 <Button
