@@ -131,3 +131,12 @@ versions in the opportunity resume panel. The owned read endpoint recomputes the
 content digest and reports mismatches explicitly. A matching digest establishes consistency
 with the captured record, not authenticity, file delivery or employer receipt. Older saved
 versions without captured packet content return an explicit unavailable result.
+
+## Continuation: project-to-preparation tools
+
+Projects with an initial solution and revision now offer a downloadable interview worksheet
+with the candidate's work and prompts about contribution, tests, changed requirements and
+tradeoffs. Accounts with the existing evidence-vault feature can also write a factual claim,
+explicitly confirm its accuracy, and save it through the existing manual-evidence API.
+Only the reviewed claim is copied; project notes and reviewer links are excluded. The claim
+is candidate-authored and should identify synthetic practice, with no inferred certification.

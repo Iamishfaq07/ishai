@@ -1,3 +1,4 @@
+import { ProjectEvidence } from "./ProjectEvidence";
 import { useState } from "react";
 import { Button, Card, ErrorNote, Select } from "../../components/ui";
 import { WorkspaceSync } from "../../components/WorkspaceSync";
@@ -53,6 +54,7 @@ export function Projects() {
           <Button variant="secondary" disabled={!work.initial.trim() || !work.revision.trim()} onClick={() => setReview(true)}>Review excerpt to share</Button></div>
       </Card>
     </fieldset>
+    {!!work.initial.trim() && !!work.revision.trim() && <ProjectEvidence key={selected + excerpt} title={project.title} excerpt={excerpt} />}
     {review && <Card className="space-y-3"><h3 className="font-semibold">This exact excerpt will be shared</h3><pre className="max-h-64 overflow-auto whitespace-pre-wrap text-sm">{excerpt}</pre>
       <p className="text-sm">Anyone with the link can read and copy this excerpt for 7 days. Remove personal or confidential data first. Revocation stops future access but cannot remove copies. Private resumes and practice sessions are not included.</p>
       <Button disabled={sharing} onClick={() => void createShare()}>Create 7-day reviewer link</Button></Card>}
