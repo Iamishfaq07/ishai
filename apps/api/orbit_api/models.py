@@ -1670,3 +1670,18 @@ class JobPostingVersion(Base):
     listing_id: Mapped[str] = mapped_column(String(36), index=True)
     observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     data: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class EmployerMessageImport(TimestampMixin, Base):
+    """Only reviewed email-file provenance; no raw body, HTML or attachments retained."""
+    __tablename__ = "employer_message_imports"
+    __table_args__ = (UniqueConstraint("user_id", "source_key", name="uq_employer_import_owner_source"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"), index=True)
+    source_key: Mapped[str] = mapped_column(String(64))
+    body_digest: Mapped[str] = mapped_column(String(64))
+    sender: Mapped[str] = mapped_column(String(300))
+    subject: Mapped[str] = mapped_column(String(300))
+    sent_at: Mapped[str] = mapped_column(String(120))
+    changes: Mapped[dict[str, Any]] = mapped_column(JSON)

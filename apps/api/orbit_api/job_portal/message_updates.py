@@ -5,16 +5,18 @@ import re
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
-from orbit_api.models import ApplicationStageEvent, JobApplication, User
+from orbit_api.job_portal import email_import
+from orbit_api.models import ApplicationStageEvent, EmployerMessageImport, JobApplication, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.workflow_ai import preview
 
@@ -42,6 +44,7 @@ class Contract(BaseModel):
 
 class MessageIn(Contract):
     message: str = Field(min_length=20, max_length=10000)
+    source_receipt: str | None = Field(None, max_length=8000)
     mode: Literal["rules", "ai"] = "rules"
     version: str = Field(pattern=r"^[0-9a-f]{64}$")
 
@@ -122,6 +125,8 @@ async def propose(entry_id: str, body: MessageIn, user: Annotated[User, Depends(
     current = state(await owned(db, user, entry_id))
     if current["version"] != body.version:
         raise HTTPException(409, "This job changed. Refresh its saved state before reviewing the message.")
+    if body.source_receipt:
+        email_import.verify(body.source_receipt, user.id, entry_id, body.message)
     provider = "rules"
     if body.mode == "ai":
         def validate(raw: object) -> Analysis:
@@ -150,6 +155,7 @@ async def propose(entry_id: str, body: MessageIn, user: Annotated[User, Depends(
 class ConfirmIn(Contract):
     version: str = Field(pattern=r"^[0-9a-f]{64}$")
     confirmed: bool = Field(strict=True)
+    source_receipt: str | None = Field(None, max_length=8000)
     status: Stage | None = None
     next_at: AwareDatetime | None = None
     clear_next: bool = Field(False, strict=True)
@@ -186,6 +192,18 @@ async def confirm(entry_id: str, body: ConfirmIn, user: Annotated[User, Depends(
         changes["next_at"] = body.next_at.astimezone(UTC)
     if len(changes) == 1:
         raise HTTPException(422, "Choose a change to save")
+    if body.source_receipt:
+        receipt = email_import.verify(body.source_receipt, user.id, entry_id)
+        db.add(EmployerMessageImport(user_id=user.id, application_id=row.id, source_key=receipt.source_key,
+            body_digest=receipt.digest, sender=receipt.sender, subject=receipt.subject, sent_at=receipt.sent_at,
+            changes={key: value.isoformat() if isinstance(value, datetime) else value
+                     for key, value in changes.items() if key in {"status", "next_at"}}))
+        try:
+            await db.flush()  # Reserve this source in the same transaction as the tracker update.
+        except IntegrityError:
+            await db.rollback()
+            raise HTTPException(409, "This imported message was already reviewed. "
+                                "Use the tracker for corrections.") from None
     # Compare and update atomically, including writers using the regular tracker API.
     previous_status = row.status
     changed = await db.execute(update(JobApplication).where(JobApplication.id == row.id,
@@ -196,6 +214,34 @@ async def confirm(entry_id: str, body: ConfirmIn, user: Annotated[User, Depends(
         raise HTTPException(409, "This job changed during saving. Refresh and review again.")
     if "status" in changes:
         db.add(ApplicationStageEvent(user_id=user.id, application_id=row.id, from_status=previous_status,
-                                     to_status=changes["status"], source="reviewed_message"))
+                                     to_status=changes["status"],
+                                     source="reviewed_email" if body.source_receipt else "reviewed_message"))
     await db.commit()
     return state(await owned(db, user, entry_id))
+
+
+@router.post("/{entry_id}/message-update/import")
+async def import_file(entry_id: str, file: UploadFile, user: Annotated[User, Depends(require_verified_email)],
+                      db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
+    await owned(db, user, entry_id)
+    try:
+        raw = await file.read(email_import.MAX_BYTES + 1)
+    finally:
+        await file.close()
+    parsed = email_import.parse(raw)
+    duplicate = await db.scalar(select(EmployerMessageImport.id).where(
+        EmployerMessageImport.user_id == user.id, EmployerMessageImport.source_key == parsed.source_key))
+    if duplicate:
+        raise HTTPException(409, "This imported message was already reviewed. Use the tracker for corrections.")
+    return {**parsed.model_dump(exclude={"source_key"}), "source_receipt": email_import.sign(parsed, user.id, entry_id)}
+
+
+@router.get("/{entry_id}/message-update/imports")
+async def imports(entry_id: str, user: Annotated[User, Depends(current_user)],
+                   db: Annotated[AsyncSession, Depends(get_db)]) -> list[dict[str, Any]]:
+    await owned(db, user, entry_id)
+    rows = await db.scalars(select(EmployerMessageImport).where(
+        EmployerMessageImport.user_id == user.id, EmployerMessageImport.application_id == entry_id)
+        .order_by(EmployerMessageImport.created_at.desc()).limit(50))
+    return [{"id": row.id, "sender": row.sender, "subject": row.subject, "sent_at": row.sent_at,
+             "reviewed_at": row.created_at.isoformat(), "changes": row.changes} for row in rows]

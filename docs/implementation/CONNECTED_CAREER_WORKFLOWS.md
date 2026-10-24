@@ -96,3 +96,23 @@ These items are **not implemented** by this change:
 
 These require further implementation and validation; their absence is not described as a
 configuration-only problem. This PR should be reviewed as the foundation release.
+
+## Continuation: reviewed email-file intake
+
+Employer-message review now accepts a single exported `.eml` file up to 512 KB.
+The parser selects the main plain-text or HTML body, extracts text without loading
+remote resources, and ignores attachments. Bodies must contain 20–10,000 characters.
+Header sender/date values are explicitly unverified; the header date is never treated
+as an interview date.
+
+Import and preview retain no email on the server. A purpose-bound signed receipt
+expires after 30 minutes and binds the extracted text to the account and opportunity.
+Editing the text detaches the receipt in the UI; reopening the panel requires another
+import to retain file provenance. Only explicit confirmation saves header metadata,
+content hashes and chosen changes. A unique account/source constraint prevents replay
+in the same transaction as the tracker update. Metadata appears in reviewed-import
+history and account export, and cascades on account/opportunity deletion.
+
+Migration `c9f1a3b5d7e9` follows the foundation migration. The existing pasted-message
+workflow remains available. This is manual email-file intake, not mailbox OAuth,
+continuous email synchronization, sender authentication or calendar reconciliation.
