@@ -33,6 +33,7 @@ _SECRET_PATTERNS = [
     (re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}"), "[jwt-redacted]"),
     (re.compile(r"(?i)((?:ticket|token|api_key|key|password)=)[^&\s\"']+"), r"\1[redacted]"),
     (re.compile(r"(?i)(token\s+)[a-f0-9]{32,}"), r"\1[redacted]"),  # Deepgram "Authorization: Token <hex>"
+    (re.compile(r"(/v1/career/evidence-shares/view/)[A-Za-z0-9_-]+"), r"\1[redacted]"),
     # A phone-share code in a path (the old POST /v1/companion/<code>): a reusable credential for hours.
     (re.compile(r"(/v1/companion/)[A-Za-z0-9_-]{16,}"), r"\1[redacted]"),
 ]

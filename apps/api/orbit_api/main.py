@@ -65,6 +65,12 @@ from orbit_api.business.screening import router as business_screening_router
 from orbit_api.business.withdrawal import public_router as business_withdrawal_public_router
 from orbit_api.business.withdrawal import router as business_withdrawal_router
 from orbit_api.career.routes import router as career_router
+from orbit_api.career_workspace.checkpoints import router as transition_checkpoints_router
+from orbit_api.career_workspace.overview import router as career_overview_router
+from orbit_api.career_workspace.prep import router as career_prep_router
+from orbit_api.career_workspace.shares import router as career_shares_router
+from orbit_api.career_workspace.state import router as career_workspace_router
+from orbit_api.career_workspace.transition_review import router as transition_review_router
 from orbit_api.code.routes import router as code_router
 from orbit_api.config import get_settings
 from orbit_api.contact.routes import router as contact_router
@@ -77,6 +83,9 @@ from orbit_api.entitlements import plans as configured_plans
 from orbit_api.evidence.routes import router as evidence_router
 from orbit_api.extension.routes import router as extension_router
 from orbit_api.geo import router as region_router
+from orbit_api.gmail.job_posts import router as gmail_jobs_router
+from orbit_api.gmail.routes import router as gmail_router
+from orbit_api.job_portal import stage_history  # noqa: F401 — register transactional tracker history
 from orbit_api.job_portal.actions import router as job_actions_router
 from orbit_api.job_portal.alerts import router as job_alerts_router
 from orbit_api.job_portal.calendar_intake import router as calendar_intake_router
@@ -98,11 +107,13 @@ from orbit_api.job_portal.opportunity_coach import router as opportunity_coach_r
 from orbit_api.job_portal.pitch import router as pitch_router
 from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.playbooks import router as job_playbook_router
+from orbit_api.job_portal.posting_history import router as posting_history_router
 from orbit_api.job_portal.references import router as references_router
 from orbit_api.job_portal.refresh import running_refresher as running_job_refresher
 from orbit_api.job_portal.resume_performance import router as resume_performance_router
 from orbit_api.job_portal.round_journal import router as round_journal_router
 from orbit_api.job_portal.routes import router as jobs_router
+from orbit_api.job_portal.semantic_preview import router as semantic_preview_router
 from orbit_api.job_portal.skill_gaps import router as skill_gaps_router
 from orbit_api.job_portal.weekly import router as job_weekly_router
 from orbit_api.linkedin.routes import router as linkedin_router
@@ -454,6 +465,16 @@ def create_app() -> FastAPI:
     app.include_router(offers_router)
     app.include_router(linkedin_router)
     app.include_router(code_router)
+    app.include_router(gmail_jobs_router)
+    app.include_router(gmail_router)
+    app.include_router(transition_checkpoints_router)
+    app.include_router(transition_review_router)
+    app.include_router(career_overview_router)
+    app.include_router(career_workspace_router)
+    app.include_router(career_prep_router)
+    app.include_router(career_shares_router)
+    app.include_router(posting_history_router)
+    app.include_router(semantic_preview_router)
     app.include_router(contact_router)
     app.include_router(support_router)
     app.include_router(support_admin_router)

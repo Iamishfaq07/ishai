@@ -60,3 +60,8 @@ def test_sentry_is_off_without_a_dsn_and_scrubs_what_it_would_send() -> None:
     assert out["request"] == {"url": "https://api/v1/sessions/s/live"}
     assert "breadcrumbs" not in out and "user" not in out
     assert "abcdefghijklmnop" not in out["message"]
+
+
+def test_reviewer_link_credentials_are_redacted() -> None:
+    assert redact("GET /v1/career/evidence-shares/view/" + "x" * 43) == (
+        "GET /v1/career/evidence-shares/view/[redacted]")

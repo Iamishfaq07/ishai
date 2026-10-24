@@ -35,6 +35,19 @@ def parts(version: Resume | ResumeSnapshot) -> dict[str, Any]:
     return result
 
 
+class PacketMaterials(BaseModel):
+    answers: list[dict[str, Any]]
+    fields: dict[str, Any]
+    cover_letter: str | None
+    content_digest: str
+
+
+def packet_materials(answers: list[dict[str, Any]], fields: dict[str, Any],
+                    cover_letter: str | None) -> dict[str, Any]:
+    material = json.loads(canonical({"answers": answers, "fields": fields, "cover_letter": cover_letter}))
+    return PacketMaterials(**material, content_digest=digest(material)).model_dump()
+
+
 class SnapshotOrigin(BaseModel):
     kind: Literal["resume", "packet"]
     source_id: str
@@ -46,6 +59,7 @@ class SnapshotOrigin(BaseModel):
     packet_result: str | None = None
     # Packet snapshots preserve structured data, not proof of the exact uploaded PDF/rendering.
     design_captured: bool = True
+    packet_materials: PacketMaterials | None = None
 
 
 def capture_origin(source: Resume | ResumeSnapshot, *, kind: Literal["resume", "packet"],

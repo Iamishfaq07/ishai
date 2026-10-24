@@ -194,6 +194,7 @@ class Settings(BaseSettings):
     # {ORBIT_WEB_URL}/api/v1/auth/google/callback in production, where the site proxies /api.
     google_client_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_ID"))
     google_client_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_SECRET"))
+    gmail_redirect_uri: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GMAIL_REDIRECT_URI"))
     google_redirect_uri: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_REDIRECT_URI"))
     # The API's own public base URL (https://api.orbitanswer.com in production). When known, links the API hands out
     # (desktop installer downloads) are built from it instead of the request's Host header. Unset, Railway's

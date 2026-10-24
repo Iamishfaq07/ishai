@@ -1,14 +1,17 @@
+import { validReadiness } from "../../lib/workspaceValidation";
+import { useCareerWorkspace } from "../../lib/useCareerWorkspace";
+import { WorkspaceSync } from "../../components/WorkspaceSync";
 import { SpotArt } from "../../components/SpotArt";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Gauge, Plus, Reveal, Target, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
+import { Gauge, Plus, Reveal, Target, cx, focusRing } from "@orbit/ui";
 import { Button, Card, Input, PageHeader, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 import { ACTIONS, KINDS, nextStep, readiness, trend, type EvidenceKind, type SkillRecord } from "./readiness";
 
 const KEY = "orbit.readiness";
-const isRecords = (v: unknown): v is SkillRecord[] => Array.isArray(v) && v.every((r) => typeof r === "object" && r !== null && "skill" in r && "evidence" in r);
+const EMPTY: SkillRecord[] = [];
 interface Demand { skill: string; jobs: number }
 interface Gaps { jobs: number; missing: Demand[]; shown: Demand[] }
 
@@ -17,11 +20,12 @@ const TONE = (v: number | null) => v === null ? "bg-zinc-300 dark:bg-white/20" :
 /**
  * Prepare → Skill readiness (readiness.ts): the skills your saved jobs ask for (GET /v1/jobs/skill-gaps) plus your own,
  * each with a readiness from the evidence you log, and a plan that brings weak, in-demand skills back first.
- * Evidence stays on this device.
+ * Evidence is saved to the account explicitly; unsaved drafts stay on this device.
  */
 export function ReadinessPage() {
-  const [records, setRecords] = useState<SkillRecord[]>(() => readJSON(safeLocal, KEY, [], isRecords));
-  const save = (next: SkillRecord[]) => { setRecords(next); safeLocal.setItem(KEY, JSON.stringify(next)); };
+  const sync = useCareerWorkspace("readiness", EMPTY, validReadiness, KEY);
+  const records = sync.value;
+  const save = sync.change;
   const gaps = useAsync(() => api.call<Gaps>("/v1/jobs/skill-gaps"), [], "skill-gaps|0");
   const [newSkill, setNewSkill] = useState("");
   const [log, setLog] = useState<{ skill: string; score: number; kind: EvidenceKind; note: string }>({ skill: "", score: 3, kind: "practice", note: "" });
@@ -61,6 +65,8 @@ export function ReadinessPage() {
   const plan = skills.slice(0, 5);
 
   return <div>
+    <WorkspaceSync {...sync} />
+    <fieldset disabled={!sync.loaded || sync.saving || sync.conflict} className="min-w-0">
     <PageHeader art={<SpotArt kind="practice" />} eyebrow="Interview preparation" icon={Gauge} title="Skill readiness"
       subtitle="Every skill your target jobs ask for, how ready you are from the evidence you log, and what to work on next." />
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
@@ -103,5 +109,6 @@ export function ReadinessPage() {
         <p className="px-1 text-xs text-zinc-600 dark:text-zinc-400">Real interviews count most, self-checks least, and evidence halves in weight every 30 days, so old practice fades. A faint bar means little or old evidence.</p>
       </aside>
     </div>
+    </fieldset>
   </div>;
 }
