@@ -148,3 +148,15 @@ unchecked role-specific criteria. These reflect record completion and candidate 
 not correctness or skill assessment. A downloadable reviewer worksheet includes project
 content plus spaces for supporting observations, missing evidence, suggested revisions and
 one next task. Candidates review the file before sharing; downloaded copies cannot be revoked.
+
+## Gmail delivery groundwork
+
+The Gmail delivery module composes a reviewed plain-text application with an optional PDF
+attachment and stable attempt Message-ID. Its send-once transport distinguishes a Gmail
+message receipt, explicit rejection and uncertain delivery. Connection loss, inconclusive
+server errors and success responses without a readable receipt remain uncertain and must
+block automatic resend. Unit tests use HTTP mocks; no real email was sent.
+
+This module is not yet exposed as a sending endpoint. OAuth connection, encrypted token
+storage, persistent attempt reservation, account limits and the reviewed-send UI still need
+to be connected before Gmail delivery is available to users.
