@@ -15,14 +15,14 @@ export function SemanticPreview() {
   const compare = async () => {
     setBusy(true); setError(""); setResult(null);
     try { setResult(await api.call<Result>("/v1/jobs/semantic-preview", { method: "POST", body: JSON.stringify({ goal }) })); }
-    catch { setError("Comparison unavailable. Your regular matches are still available."); }
+    catch { setError("This isn't available right now. Your regular matches still work."); }
     finally { setBusy(false); }
   };
-  return <details className="rounded-xl border border-zinc-200 p-3 dark:border-white/10"><summary className="cursor-pointer text-sm font-medium">Compare semantic recommendations · experiment</summary>
-    <p className="my-2 text-xs text-zinc-500">Describe responsibilities you want. Compares ordering within your saved profile’s eligible matches; it does not use this page’s temporary search filters.</p>
+  return <details className="rounded-xl border border-zinc-200 p-3 dark:border-white/10"><summary className="cursor-pointer text-sm font-medium">Rank your matches by what you want to do (preview)</summary>
+    <p className="my-2 text-xs text-zinc-500">Describe the work you want to do, and Orbit reorders your matches by it. It uses your saved search, not the filters on this page.</p>
     <Input aria-label="Responsibilities you want" value={goal} maxLength={1000} onChange={(e) => setGoal(e.target.value)} placeholder="Investigate incidents and improve service reliability" />
-    <Button className="mt-2" variant="secondary" disabled={goal.trim().length < 10 || busy} onClick={() => void compare()}>Compare ordering</Button>
+    <Button className="mt-2" variant="secondary" disabled={goal.trim().length < 10 || busy} onClick={() => void compare()}>Reorder my matches</Button>
     {error && <ErrorNote>{error}</ErrorNote>}
-    {result && <><p className="my-2 text-xs">{result.scope} Model: {result.model}. Compared {result.candidate_count} jobs.</p><ol className="space-y-2">{result.results.map((r, i) => <li key={r.id} className="text-sm"><Link className="underline" to={jobPath(r.id)}>{i + 1}. {r.title} · {r.company}</Link><span className="text-xs"> · regular rank {r.baseline_rank}</span></li>)}</ol></>}
+    {result && <><p className="my-2 text-xs">Reordered {result.candidate_count} of your matches.</p><ol className="space-y-2">{result.results.map((r, i) => <li key={r.id} className="text-sm"><Link className="underline" to={jobPath(r.id)}>{i + 1}. {r.title} · {r.company}</Link><span className="text-xs"> · was #{r.baseline_rank}</span></li>)}</ol></>}
   </details>;
 }

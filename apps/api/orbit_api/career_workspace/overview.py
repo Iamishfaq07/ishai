@@ -38,5 +38,5 @@ async def overview(user: Annotated[User, Depends(current_user)],
                 JobApplication.next_at >= now, JobApplication.next_at <= now + timedelta(days=7)),
             "gmail_sent": email.get("sent", 0), "gmail_drafts": email.get("ready", 0),
             "gmail_needs_review": sum(email.get(s, 0) for s in ("sending", "uncertain", "rejected")),
-            "note": "Counts reflect your saved records. Earlier unrecorded stages remain unknown. "
-                    "Gmail acceptance is not employer receipt; counts do not measure causal resume performance."}
+            "note": "From what you've recorded in Orbit. An interview or offer still counts after a later "
+                    "rejection."}

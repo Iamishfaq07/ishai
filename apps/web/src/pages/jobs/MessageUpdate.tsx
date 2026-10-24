@@ -116,14 +116,14 @@ export function MessageUpdate({ entryId, onSaved }: { entryId: string; onSaved: 
           const file = event.target.files?.[0]; event.target.value = ""; if (file) void importEmail(file);
         }} /></Field>
         {busy === "import" && <p role="status">Reading the email file…</p>}
-        {imported && <div className="rounded-lg bg-zinc-500/5 p-3 text-sm"><p className="font-medium">Imported email · sender and job match are not verified</p>
+        {imported && <div className="rounded-lg bg-zinc-500/5 p-3 text-sm"><p className="font-medium">Imported email · check it's from this employer and about this job</p>
           <p className="break-words">From: {imported.sender || "Not stated"}</p><p className="break-words">Subject: {imported.subject || "Not stated"}</p>
-          {imported.sent_at && <p className="break-words">Email header date: {imported.sent_at} (not an interview date)</p>}
-          <p className="mt-2 text-xs">Review within 30 minutes. Saving retains these headers, content hashes and your chosen changes for duplicate detection. The email body and attachments are not stored. Editing the text below turns it into a pasted draft without the import reference.</p></div>}
+          {imported.sent_at && <p className="break-words">Sent {imported.sent_at} (the email's date, not an interview date)</p>}
+          <p className="mt-2 text-xs">Review it within 30 minutes. Orbit keeps only the sender, subject and date, so the same email isn't imported twice: not the message itself or its attachments.</p></div>}
         <Field htmlFor={`${id}-message`} label="2. Paste the relevant employer message"><Textarea id={`${id}-message`} value={message} maxLength={10000} rows={5} onChange={(event) => { setMessage(event.target.value); setImported(null); invalidate(); }} placeholder="Paste the latest relevant reply, without unrelated email history." /></Field>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">Free pattern review uses no AI. Ask AI sends this text to the configured provider. The full message is not saved on the server, attachments are ignored, and links are not opened. Draft text stays in this tab’s memory for navigation; closing the tab discards it.</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">The free review doesn't use AI. "Ask AI" sends this text to Orbit's AI to read it. The message isn't saved, attachments are ignored and links aren't opened.</p>
         <div className="flex flex-wrap gap-2"><Button variant="ghost" disabled={!message} onClick={() => { setMessage(""); setImported(null); invalidate(); }}>Discard draft</Button><Button disabled={message.trim().length < 20} loading={busy === "rules"} onClick={() => void analyze("rules")}>Review message for free</Button><Button variant="secondary" disabled={message.trim().length < 20} loading={busy === "ai"} onClick={() => void analyze("ai")}>Ask AI to interpret</Button></div>
-        <p className="text-xs text-zinc-600 dark:text-zinc-400">AI: up to 5 requests per UTC day, including failures. A pasted message does not verify the sender or the job match.</p>
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">AI: up to 5 a day. Orbit can't confirm who sent a pasted message.</p>
       </fieldset>
       {proposal && <div className="space-y-4 rounded-xl bg-zinc-500/5 p-4 motion-safe:animate-menu-in">
         <h3 ref={review} tabIndex={-1} className="scroll-mt-28 rounded font-semibold outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">3. Review suggested changes</h3>

@@ -121,8 +121,19 @@ async def callback(state: str, user: Annotated[User, Depends(current_user)],
 @router.delete("", status_code=204)
 async def disconnect(user: Annotated[User, Depends(current_user)],
                      db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    row = await db.get(GmailConnection, user.id)
+    refresh = row.data.get("refresh") if row else None
     await db.execute(delete(GmailConnection).where(GmailConnection.user_id == user.id))
     await db.commit()
+    if refresh:
+        # Also end the grant at Google, so Orbit drops out of the account's third-party access. Best effort: the
+        # stored token is already gone, and the candidate can still remove the grant in their Google account.
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post("https://oauth2.googleapis.com/revoke", data={"token": _decrypt_secret(refresh)},
+                                  timeout=10)
+        except (httpx.HTTPError, ValueError):
+            pass
 
 
 @router.post("/draft/{entry_id}", status_code=201)
