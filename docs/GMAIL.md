@@ -45,8 +45,9 @@ A Gmail receipt marks the attempt sent. A timeout, inconclusive response, or pro
 after reservation cannot cause automatic resend. `sending`/`uncertain` records require
 manual checking in Gmail Sent. Rejected attempts are also retained and cannot be
 resubmitted through this flow. Do not delete durable attempt records to retry delivery.
-Pending drafts can be discarded and prepared again. Account/opportunity deletion cascades
-attempt records; account exports include MIME/content records but never connection tokens.
+Pending drafts can be discarded and prepared again. Ordinary tracker deletion is blocked
+once a Gmail attempt leaves ready; withdraw the opportunity to preserve delivery history.
+Account erasure still removes account-owned attempt records; account exports include MIME/content records but never connection tokens.
 A matching content hash is checked before send.
 
 ## Validation limits
@@ -85,3 +86,14 @@ This workflow automatically prepares applications; it does not send unattended o
 that every address in a post belongs to a recruiter. No live LinkedIn discovery or live Gmail
 delivery was exercised in local validation; Google OAuth deployment configuration is still
 required for real connected accounts.
+
+
+## Send authorization boundary
+
+Connection flows carry a generation. Final OAuth storage and send reservation recheck that
+generation under the account lock; a disconnected or replaced connection cannot authorize
+a new reservation. The opportunity is reloaded and locked at reservation, and terminal
+opportunities must be explicitly reopened. Tracker deletion uses the same account lock and
+refuses to erase reserved/completed delivery history. After reservation commits, Gmail may
+already be processing delivery; later disconnect or withdrawal cannot retract that request.
+Account erasure remains a separate privacy lifecycle rather than a retry mechanism.

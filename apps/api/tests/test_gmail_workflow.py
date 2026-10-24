@@ -74,8 +74,10 @@ def test_gmail_review_send_and_oauth_state(client: TestClient, monkeypatch: pyte
     assert client.get("/v1/gmail", headers=h).json()["connected"] is False
 
 
+@pytest.mark.parametrize("replace_connection", [False, True])
 def test_successful_oauth_verifies_identity_and_encrypts_refresh(client: TestClient,
-                                                                monkeypatch: pytest.MonkeyPatch) -> None:
+                                                                monkeypatch: pytest.MonkeyPatch,
+                                                                replace_connection: bool) -> None:
     from datetime import UTC, datetime, timedelta
     from types import SimpleNamespace
 
@@ -97,12 +99,25 @@ def test_successful_oauth_verifies_identity_and_encrypts_refresh(client: TestCli
         "email": "connected@example.com", "email_verified": True}, key, algorithm="RS256")
     monkeypatch.setattr(routes._jwks, "get_signing_key_from_jwt", lambda token: SimpleNamespace(key=key.public_key()))
     original = httpx.AsyncClient
-    def handle(request: httpx.Request) -> httpx.Response:
+    async def handle(request: httpx.Request) -> httpx.Response:
+        if replace_connection:
+            from orbit_api.db import sessionmaker
+
+            async with sessionmaker()() as db:
+                row = await db.get(GmailConnection, user_id)
+                assert row is not None
+                row.data = {"email": "newer@example.com", "generation": "newer-flow",
+                            "refresh": encrypt_secret("newer-refresh")}
+                await db.commit()
         return httpx.Response(200, json={"id_token": identity, "scope": routes.SCOPE,
                                         "refresh_token": "private-refresh-token"})
     monkeypatch.setattr(routes.httpx, "AsyncClient", lambda: original(transport=httpx.MockTransport(handle)))
     result = client.get("/v1/gmail/callback", headers=h,
         params={"state": query["state"][0], "code": "test-authorization-code"}, follow_redirects=False)
+    if replace_connection:
+        assert result.status_code == 409, result.text
+        assert client.get("/v1/gmail", headers=h).json()["email"] == "newer@example.com"
+        return
     assert result.status_code == 303, result.text
     assert client.get("/v1/gmail", headers=h).json()["email"] == "connected@example.com"
     async def encrypted(db: AsyncSession) -> None:

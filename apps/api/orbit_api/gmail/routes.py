@@ -24,9 +24,10 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.gmail.delivery import ApplicationEmail, ResumeAttachment, compose, send_once
 from orbit_api.job_portal.message_updates import owned
-from orbit_api.models import GmailAttempt, GmailConnection, User
+from orbit_api.models import GmailAttempt, GmailConnection, JobApplication, User
 from orbit_api.ratelimit import limit_user
 from orbit_api.runtime_config import _decrypt_secret, encrypt_secret, secrets_editable
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/gmail", tags=["gmail"],
     dependencies=[Depends(limit_user("gmail", rate_per_s=1, burst=15))])
@@ -62,8 +63,11 @@ async def connect(user: Annotated[User, Depends(require_verified_email)],
     require_config()
     s = get_settings()
     state, verifier, nonce = secrets.token_urlsafe(32), secrets.token_urlsafe(48), secrets.token_urlsafe(32)
-    row = await db.get(GmailConnection, user.id)
+    await lock_account(db, user.id)
+    row = await db.get(GmailConnection, user.id, populate_existing=True)
     data = dict(row.data) if row else {}
+    generation = str(uuid.uuid4())
+    data["generation"] = generation
     data["pending"] = {"state": hashlib.sha256(state.encode()).hexdigest(), "verifier": encrypt_secret(verifier),
                        "nonce": nonce, "expires": (datetime.now(UTC) + timedelta(minutes=10)).timestamp()}
     if row:
@@ -84,11 +88,13 @@ async def callback(state: str, user: Annotated[User, Depends(current_user)],
                    error: str | None = None) -> RedirectResponse:
     require_config()
     s = get_settings()
+    await lock_account(db, user.id)
     row = await db.scalar(select(GmailConnection).where(GmailConnection.user_id == user.id).with_for_update())
     pending = row.data.get("pending", {}) if row else {}
     if not row or not secrets.compare_digest(pending.get("state", ""), hashlib.sha256(state.encode()).hexdigest()) \
             or pending.get("expires", 0) < datetime.now(UTC).timestamp():
         raise HTTPException(409, "Gmail connection expired. Connect again from Settings.")
+    generation = row.data.get("generation")
     data = dict(row.data)
     data.pop("pending", None)
     row.data = data
@@ -110,9 +116,14 @@ async def callback(state: str, user: Annotated[User, Depends(current_user)],
                               issuer=["https://accounts.google.com", "accounts.google.com"])
         if identity.get("nonce") != pending["nonce"] or identity.get("email_verified") is not True:
             raise ValueError("Unverified identity")
-        data = {"email": identity["email"], "refresh": encrypt_secret(token["refresh_token"])}
+        data = {"email": identity["email"], "refresh": encrypt_secret(token["refresh_token"]),
+                "generation": generation}
     except (httpx.HTTPError, ValueError, KeyError, jwt.PyJWTError) as exc:
         raise HTTPException(502, "Google connection could not be verified. Connect again from Settings.") from exc
+    await lock_account(db, user.id)
+    latest = await db.get(GmailConnection, user.id, populate_existing=True)
+    if latest is None or latest.data.get("generation") != generation:
+        raise HTTPException(409, "A newer Gmail connection replaced this flow. Continue from Settings.")
     await db.execute(update(GmailConnection).where(GmailConnection.user_id == user.id).values(data=data))
     await db.commit()
     return RedirectResponse(s.web_url.rstrip("/") + "/settings?gmail=connected", status_code=303)
@@ -121,6 +132,7 @@ async def callback(state: str, user: Annotated[User, Depends(current_user)],
 @router.delete("", status_code=204)
 async def disconnect(user: Annotated[User, Depends(current_user)],
                      db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    await lock_account(db, user.id)
     await db.execute(delete(GmailConnection).where(GmailConnection.user_id == user.id))
     await db.commit()
 
@@ -190,6 +202,7 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
         raise HTTPException(404, "Email attempt not found")
     if not connection or connection.data.get("email") != row.data.get("sender"):
         raise HTTPException(409, "Reconnect the same Gmail account used for this draft.")
+    connection_stamp = (connection.data.get("generation"), connection.data.get("refresh"))
     refresh = _decrypt_secret(connection.data.get("refresh", ""))
     if not refresh:
         raise HTTPException(409, "Reconnect Gmail to restore access.")
@@ -207,6 +220,16 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
                 raise ValueError("Refresh rejected")
         except (httpx.HTTPError, ValueError) as exc:
             raise HTTPException(409, "Gmail access could not be refreshed. Reconnect before sending.") from exc
+        await lock_account(db, user.id)
+        latest = await db.get(GmailConnection, user.id, populate_existing=True)
+        if latest is None or (latest.data.get("generation"), latest.data.get("refresh")) != connection_stamp:
+            raise HTTPException(409, "Gmail was disconnected or changed before delivery. Review the connection again.")
+        entry = await db.scalar(select(JobApplication).where(JobApplication.id == row.application_id,
+            JobApplication.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        if entry is None:
+            raise HTTPException(409, "This opportunity was removed before delivery.")
+        if entry.status in {"withdrawn", "rejected", "hired"}:
+            raise HTTPException(409, "This opportunity is closed. Reopen it explicitly before sending an application.")
         reserved = await db.scalar(update(GmailAttempt).where(GmailAttempt.id == row.id,
             GmailAttempt.user_id == user.id, GmailAttempt.status == "ready").values(status="sending")
             .returning(GmailAttempt.id))
