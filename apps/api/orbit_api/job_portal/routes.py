@@ -718,6 +718,13 @@ async def fit_check(request: Request, listing_id: str, user: Annotated[User, Dep
     """How well the resume fits this job, by the AI: free, ORBIT_JOBS_FIT_DAILY a day (the admin has no cap). The
     same job and the same resume content are answered from the last check, at no cost to the allowance."""
     row = await _listing(db, listing_id)
+    return await run_fit(request, db, user, row, row.description or row.snippet)
+
+
+async def run_fit(request: Request | None, db: AsyncSession, user: User, row: JobListing, text: str,
+                  pasted: bool = False) -> FitOut:
+    """The fit check for one job's post (a feed listing, or a job added by hand with the post the candidate pasted):
+    cached per job, resume content and post text, and counted against the same daily allowance."""
     _, prefs, resume = await _profile(db, user)
     if resume is None:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -727,6 +734,8 @@ async def fit_check(request: Request, listing_id: str, user: Annotated[User, Dep
     rhash = resume_hash(data)
     if evidence:  # new or changed evidence is a new check, as a changed resume is
         rhash = hashlib.sha256(f"{rhash}\n{evidence}".encode()).hexdigest()
+    if pasted:  # a post the candidate pasted: a new or edited one is a new check
+        rhash = hashlib.sha256(f"{rhash}\n{text}".encode()).hexdigest()
     cap = get_settings().jobs_fit_daily
     async with _lock(user.id):
         cached = await db.scalar(select(JobFitCheck).where(JobFitCheck.user_id == user.id,
@@ -743,8 +752,7 @@ async def fit_check(request: Request, listing_id: str, user: Annotated[User, Dep
                            + ("at 5:30 am India time" if _country(user, request) == "IN" else "at midnight UTC")
                            + "). Checks you've already run stay open."})
         match = _match_for(row, prefs, data)
-        job = {"title": row.title, "company": row.company, "location": _location_line(row),
-               "text": row.description or row.snippet}
+        job = {"title": row.title, "company": row.company, "location": _location_line(row), "text": text}
         try:
             resp = await _generate(db, user, fitcheck.fit_request(data.visible(), job, {
                 "matched": match.matched, "missing": match.missing}, get_llm_provider(), user.country, evidence))

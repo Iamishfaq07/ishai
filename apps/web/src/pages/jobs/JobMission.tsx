@@ -20,7 +20,7 @@ import {
 } from "@orbit/ui";
 import { BackLink } from "../../components/BackLink";
 import { KashSecContext } from "../../components/KashSec";
-import { Button, Card, ErrorNote, IconButton, Input, Select } from "../../components/ui";
+import { Button, Card, ErrorNote, Field, IconButton, Input, Select, Textarea } from "../../components/ui";
 import { isSecurityRole } from "../../lib/security";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -193,7 +193,7 @@ export function JobMissionPage() {
                     {(entry.status === "interviewing" || entry.status === "offer") && <Fold title="Prepare your references" hint={`Brief the people ${entry.company} may call`}><ReferenceBrief key={`references:${entry.id}`} entryId={entry.id} company={entry.company} /></Fold>}
                   </div>}
                   {tab === "plan" && <PrepPlanPanel key={entry.id} entry={entry} onOpenInterview={() => setTab("interview")} />}
-                  {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
+                  {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} onChecked={mission.reload} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel key={entry.id} mission={m} entry={entry} onMission={update} />}
                   {tab === "resume" && <FirstLook key={`first-look:${entry.id}`} entryId={entry.id} resumeId={m.resume?.id} />}
                   {tab === "company" && <CompanyPanel key={entry.id} entry={entry} />}
@@ -267,8 +267,46 @@ const TONE = {
   missing: "bg-rose-500/10 text-rose-800 ring-rose-500/25 dark:text-rose-200",
 } as const;
 
+/** A job added by hand has no post in Orbit: the candidate pastes it (or uses the one saved on the job), and the
+ *  check runs on that, kept on the job for prep and practice too (POST /v1/jobs/tracker/{id}/fit). */
+function PastedFit({ entry, onChecked }: { entry: JobTrackerEntry; onChecked: () => void }) {
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const check = async (body: { job_text: string }) => {
+    setBusy(true); setError(null);
+    try {
+      await api.call(`/v1/jobs/tracker/${encodeURIComponent(entry.id)}/fit`, { method: "POST", body: JSON.stringify(body) });
+      onChecked();
+    } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
+  };
+  const short = text.trim().length < 40;
+  return (
+    <Card>
+      <h2 className="flex items-center gap-3 font-display text-base font-semibold"><Spot kind="fit" />Check your fit</h2>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        You added this job yourself, so Orbit doesn't have its post. Paste the description from the job's page: the check reads it
+        against your resume, requirement by requirement, and quotes both. The post is kept on this job for your prep and practice too.
+      </p>
+      <form className="mt-4 space-y-3" onSubmit={(e) => { e.preventDefault(); if (!short) void check({ job_text: text.trim() }); }}>
+        <Field label="Job description" htmlFor={`fit-post-${entry.id}`}>
+          <Textarea id={`fit-post-${entry.id}`} rows={6} maxLength={20000} value={text} onChange={(e) => setText(e.target.value)}
+            placeholder="Paste the role, responsibilities and requirements…" />
+        </Field>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="submit" loading={busy} disabled={busy || short} disabledReason={short && !busy ? "Paste at least a few lines of the post first." : undefined}>
+            <Sparkles className="h-4 w-4" aria-hidden /> Check my fit
+          </Button>
+        </div>
+      </form>
+      {error && <div className="mt-3"><ErrorNote>{error}</ErrorNote></div>}
+    </Card>
+  );
+}
+
 /** What the job asks for, quoted, next to what the resume shows for it, quoted: never a claim without its source. */
-function FitPanel({ fit, entry, onPractice }: { fit: MissionFit | null; entry: JobTrackerEntry; onPractice: () => void }) {
+function FitPanel({ fit, entry, onPractice, onChecked }: { fit: MissionFit | null; entry: JobTrackerEntry; onPractice: () => void; onChecked: () => void }) {
+  if (!fit && !entry.live) return <PastedFit entry={entry} onChecked={onChecked} />;
   if (!fit) {
     return (
       <Card>

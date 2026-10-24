@@ -37,6 +37,18 @@ def listing_from(entry: JobApplication) -> JobListing | None:
     """The listing a hand-added entry stands for (not added to the session), or None without a usable link."""
     if not is_manual(entry.listing_id) or not _link(entry) or not entry.company or not entry.title:
         return None
+    return _listing(entry)
+
+
+def post_listing(entry: JobApplication, text: str) -> JobListing:
+    """A hand-added entry with the post the candidate pasted, to check fit against (never added to the session; a
+    link isn't needed to read a post)."""
+    row = _listing(entry)
+    row.description = text
+    return row
+
+
+def _listing(entry: JobApplication) -> JobListing:
     location = entry.location or ""
     cities = geo.world_cities(location)
     countries = geo.countries_in(location)
