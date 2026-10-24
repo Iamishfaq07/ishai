@@ -145,7 +145,7 @@ export function ApplyPriorityPage() {
                 const auto = r.auto[d.id];
                 return <li key={d.id} className="grid items-center gap-2 sm:grid-cols-[11rem_minmax(0,1fr)_auto]">
                   <span className="text-sm"><span className="font-medium">{d.label}</span><span className="block text-xs text-zinc-500">{auto != null ? `From your records: ${auto}` : d.auto ? "Not known yet: rate it" : d.hint}</span></span>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className={cx("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500", part.known ? "bg-indigo-500" : "bg-zinc-300 dark:bg-white/20")} style={{ width: `${((part.value ?? 3) / 5) * 100}%` }} /></div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className={cx("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-page", part.known ? "bg-indigo-500" : "bg-zinc-300 dark:bg-white/20")} style={{ width: `${((part.value ?? 3) / 5) * 100}%` }} /></div>
                   <div role="radiogroup" aria-label={`${d.label} for ${r.job.title}`} className="flex gap-1">{[1, 2, 3, 4, 5].map((n) => {
                     const on = saved.ratings[r.job.id]?.[d.id] === n;
                     return <button key={n} type="button" role="radio" aria-checked={on} aria-label={`${n}`} onClick={() => rate(r.job.id, d.id, n)}

@@ -486,7 +486,7 @@ export function SupportChat() {
         className={cx(
           "pointer-events-auto relative grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-popover hover:bg-indigo-500",
           keyboard.inset > 0 && "hidden", // typing: the panel has its own close button, and needs the room
-          "motion-safe:transition-[transform,opacity] motion-safe:duration-200",
+          "motion-safe:transition-[transform,opacity] motion-safe:duration-quick",
           tucked && "pointer-events-none translate-y-16 opacity-0",
           focusRing,
         )}

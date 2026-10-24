@@ -87,7 +87,7 @@ export function DecisionMatrix({ offers }: { offers: JobOfferRecord[] }) {
     <h3 className="mt-6 font-semibold">How they rank for you</h3>
     <ol className="mt-3 space-y-3">{(sameCurrency ? ranked : rank(offers, { ...weights, pay: 0 }, saved.ratings)).map((r, i) => <li key={r.offer.id}>
       <div className="flex items-center justify-between gap-3 text-sm"><span className="font-medium">{i + 1}. {r.offer.company}{r.offer.role ? ` · ${r.offer.role}` : ""}</span><span className="tabular-nums font-semibold">{r.value}/100</span></div>
-      <div className="mt-1 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10"><div className={cx("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500", i === 0 ? "bg-emerald-500" : "bg-indigo-500")} style={{ width: `${r.value}%` }} /></div>
+      <div className="mt-1 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10"><div className={cx("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-page", i === 0 ? "bg-emerald-500" : "bg-indigo-500")} style={{ width: `${r.value}%` }} /></div>
       {r.best && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Strongest on {r.best.label.toLowerCase()} ({r.best.score}/5).</p>}
     </li>)}</ol>
     <p className="mt-4 text-xs text-zinc-600 dark:text-zinc-400">A way to see your own priorities side by side, not advice on which to accept.</p>

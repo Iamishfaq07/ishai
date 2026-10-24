@@ -110,7 +110,7 @@ export function AptitudePage() {
       <span className="font-medium">Question {index + 1} of {test.length} · {SECTIONS.find((s) => s.id === q.section)?.label}</span>
       {timed && <span className={cx("inline-flex items-center gap-1 tabular-nums", left < 60 && "font-semibold text-rose-700 dark:text-rose-300")} aria-live={left < 60 ? "polite" : "off"}><Clock className="h-4 w-4" aria-hidden />{mmss(left)}</span>}
     </div>
-    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className="h-full rounded-full bg-indigo-600 motion-safe:transition-[width] motion-safe:duration-300" style={{ width: `${(answered / test.length) * 100}%` }} /></div>
+    <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className="h-full rounded-full bg-indigo-600 motion-safe:transition-[width] motion-safe:duration-page" style={{ width: `${(answered / test.length) * 100}%` }} /></div>
     <Card key={q.id} className="motion-safe:animate-fade-up">
       <p className="text-[13px] font-medium text-zinc-600 dark:text-zinc-400">{q.topic}</p>
       <h1 className="mt-2 text-lg font-semibold leading-snug">{q.prompt}</h1>
