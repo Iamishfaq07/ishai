@@ -127,11 +127,12 @@ export function JobTrackerPage() {
           </div>
         }
       />
-      {tracker.data && <SearchInsightsPanel entries={tracker.data} />}
-      {tracker.data && <div className="mt-6"><ActivityMap entries={tracker.data} /></div>}
+      {/* The jobs themselves first: people open the tracker to see and move them; the numbers follow. */}
+      <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />
+      {tracker.data && tracker.data.length > 0 && <div className="mt-8"><SearchInsightsPanel entries={tracker.data} /></div>}
+      {tracker.data && tracker.data.length > 0 && <div className="mt-6"><ActivityMap entries={tracker.data} /></div>}
       {tracker.data && tracker.data.length > 1 && <div className="mt-6"><ShortlistSkills revision={tracker.data.length} /></div>}
       {tracker.data && tracker.data.length > 2 && <div className="mt-4"><WhatsWorking revision={tracker.data.length} /></div>}
-      <JobTracker tracker={tracker} onAdd={() => setAdding(true)} />
       <SafetyCard compact className="mt-6" />
       <AddJob
         open={adding}
