@@ -61,7 +61,9 @@ def priority(item: dict[str, Any], now: datetime) -> tuple[int, str, str]:
     elif kind == "application" and item.get("rule"):
         # Workflow-rule suggestions (a saved job to decide on, contacts to find) carry no application packet status,
         # and no date: they come after everything that is actually dated.
-        rank, why = 7, "A workflow rule you turned on suggests this step."
+        # Finding contacts is always on; the other suggestions come from rules the candidate enabled.
+        rank, why = 7, ("No one is saved at this company yet." if item["rule"] == "find_contacts"
+                        else "A workflow rule you turned on suggests this step.")
     else:
         rank, why = 6, "This is the next saved date in your seven-day plan."
     item["priority_reason"] = why

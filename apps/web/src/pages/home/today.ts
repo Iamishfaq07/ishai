@@ -10,6 +10,8 @@ export interface QueueItem {
   id: string; kind: "interview" | "follow_up" | "contact" | "application" | "preparation";
   title: string; detail: string; due_at: string | null; overdue: boolean; path: string;
   action_label?: string; priority_reason?: string;
+  /** Set on undated suggestions from workflow rules (job_portal/playbooks.py). */
+  rule?: string;
 }
 export interface Queue { items: QueueItem[]; focus_id?: string | null }
 
@@ -32,6 +34,14 @@ export function activeJobs(entries: JobTrackerEntry[]): JobTrackerEntry[] {
  *  job to apply to, else the first step of a search. */
 export function pickNextStop(queue: Queue | null, entries: JobTrackerEntry[] | null, now = Date.now()): NextStop | null {
   const focus = queue?.items.find((i) => i.id === queue.focus_id) ?? queue?.items[0];
+  // An undated rule suggestion (find contacts, decide on a saved job) never outranks an offer waiting for a decision
+  // or an interview still to prepare for.
+  const pressing = focus && !focus.due_at && focus.rule && entries ? activeJobs(entries).find((j) => j.status === "offer" || j.status === "interviewing") : undefined;
+  if (pressing) return pressing.status === "offer"
+    ? { title: `${pressing.title} · ${pressing.company}`, when: null, detail: "You have an offer here. See what it pays each month, how it compares and what to ask for, then decide.",
+        reason: "An offer waiting for your decision comes before suggestions.", action: "Review the offer", to: `${missionPath(pressing.id)}?tab=offer` }
+    : { title: `${pressing.title} · ${pressing.company}`, when: null, detail: "You're interviewing here. Add the date if you have it, then work through the preparation plan.",
+        reason: "An interview in progress comes before suggestions.", action: "Prepare for interview", to: `${missionPath(pressing.id)}?tab=plan` };
   if (focus) return { title: focus.title, when: focus.due_at ? `${KIND[focus.kind]} · ${whenLabel(focus.due_at, now)}` : null, detail: focus.detail, reason: focus.priority_reason ?? null, action: focus.action_label ?? "Open", to: focus.path };
   if (!entries) return null;
   const jobs = activeJobs(entries);
