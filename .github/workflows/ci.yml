@@ -65,7 +65,7 @@ jobs:
           tests/test_business_career_cycle.py tests/test_business_handoff.py tests/test_business_withdrawal.py
           tests/test_business_automations.py tests/test_business_coordination.py tests/test_business_races.py
           tests/test_workflow_ai.py tests/test_gmail_lifecycle_boundaries.py tests/test_gmail_workflow.py
-          tests/test_gmail_job_posts.py tests/test_gmail_retry.py
+          tests/test_gmail_job_posts.py tests/test_gmail_retry.py tests/test_gmail_artifacts.py
           tests/test_career_weekly.py tests/test_business_control_room.py
           tests/test_application_agent.py
           tests/test_career_playbooks.py tests/test_offer_automations.py tests/test_job_mission.py

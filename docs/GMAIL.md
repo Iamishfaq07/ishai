@@ -119,3 +119,29 @@ exact attachment bytes. Default interview-version selection can use the new snap
 explicit candidate version choices are respected. Source resumes are not rewritten. Resume
 performance uses the sent Gmail attempt's captured source rather than a later tracker relink.
 Earlier sent attempts are not reconstructed or backfilled.
+
+
+### Reviewed email storage and account exports
+
+Reviewed MIME bytes are stored separately in `gmail_artifacts`, linked to the attempt
+by a cascading foreign key. Attempt lists, Today actions, performance attribution, and
+delivery-state updates use metadata without loading or rewriting the MIME payload.
+Sending and attachment download fetch one artifact and check the original SHA-256.
+New drafts are limited to 100 MB of stored MIME per account, serialized with the existing
+account lock. Discarding a draft without delivery history frees its artifact; account
+erasure removes owned artifacts through the attempt cascade. Existing accounts above
+the limit retain their emails but cannot add more until space is available.
+
+The account export remains a JSON file with base64 `gmail_attempts[].data.mime` for
+compatibility. Its response streams Gmail records one artifact at a time, scoped to
+the authenticated account, rather than assembling all emails in memory. Other account
+sections still use the existing in-memory export builder. Exports are not an atomic
+snapshot of edits made while a download runs. No connection tokens are exported.
+
+Migration `eb13c5d7f9a1` moves legacy base64 MIME out of attempt JSON one row at a time;
+downgrade restores it. Exact bytes, hashes, delivery history and metadata are preserved.
+Invalid legacy base64 fails migration instead of silently dropping the reviewed email.
+Pause Gmail requests during the migration and API restart: old API workers expect inline
+MIME and must not continue serving after migration. Deploy the migration before running
+the updated API. This storage remains in the
+application database; external object storage and resumable archives are separate work.

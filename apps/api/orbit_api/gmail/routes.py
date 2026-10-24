@@ -24,7 +24,16 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.gmail.delivery import ApplicationEmail, ResumeAttachment, compose, send_once
 from orbit_api.job_portal.message_updates import owned
-from orbit_api.models import Document, GmailAttempt, GmailConnection, JobApplication, Resume, ResumeSnapshot, User
+from orbit_api.models import (
+    Document,
+    GmailArtifact,
+    GmailAttempt,
+    GmailConnection,
+    JobApplication,
+    Resume,
+    ResumeSnapshot,
+    User,
+)
 from orbit_api.ratelimit import limit_user
 from orbit_api.runtime_config import _decrypt_secret, encrypt_secret, secrets_editable
 from orbit_api.transactions import lock_account
@@ -32,6 +41,7 @@ from orbit_api.transactions import lock_account
 router = APIRouter(prefix="/v1/gmail", tags=["gmail"],
     dependencies=[Depends(limit_user("gmail", rate_per_s=1, burst=15))])
 SCOPE = "https://www.googleapis.com/auth/gmail.send"
+MAX_STORED_MIME_BYTES = 100_000_000
 
 
 def enabled() -> bool:
@@ -197,12 +207,19 @@ async def save_draft(db: AsyncSession, user: User, entry_id: str, message: Appli
         GmailAttempt.created_at >= datetime.now(UTC) - timedelta(days=1)))
     if (count or 0) >= 20:
         raise HTTPException(429, "Up to 20 Gmail application drafts per rolling day.")
+    stored_bytes = await db.scalar(select(func.coalesce(func.sum(func.length(GmailArtifact.content)), 0))
+        .join(GmailAttempt, GmailArtifact.attempt_id == GmailAttempt.id).where(GmailAttempt.user_id == user.id))
+    if (stored_bytes or 0) + len(mime) > MAX_STORED_MIME_BYTES:
+        raise HTTPException(409, "Gmail email storage is limited to 100 MB per account. "
+                            "Discard unsent drafts to free space; delivery records are retained.")
     row = GmailAttempt(id=identity, user_id=user.id, application_id=entry_id, status="ready", data={
-        **message.model_dump(), "sender": sender, "mime": base64.b64encode(mime).decode(),
+        **message.model_dump(), "sender": sender,
         "sha256": hashlib.sha256(mime).hexdigest(), "attachment": attachment_name,
         **(extra or {})})
     db.add(row)
     try:
+        await db.flush()
+        db.add(GmailArtifact(attempt_id=identity, content=mime))
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -233,7 +250,7 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
     refresh = _decrypt_secret(connection.data.get("refresh", ""))
     if not refresh:
         raise HTTPException(409, "Reconnect Gmail to restore access.")
-    mime = base64.b64decode(row.data["mime"])
+    mime = await captured_mime(db, row)
     if hashlib.sha256(mime).hexdigest() != row.data["sha256"]:
         raise HTTPException(409, "Draft content is inconsistent. Do not send this record.")
     async with httpx.AsyncClient() as client:
@@ -360,7 +377,7 @@ async def attachment(attempt_id: str, user: Annotated[User, Depends(current_user
     row = await db.get(GmailAttempt, attempt_id)
     if row is None or row.user_id != user.id:
         raise HTTPException(404, "Email attempt not found")
-    mime = base64.b64decode(row.data["mime"])
+    mime = await captured_mime(db, row)
     if hashlib.sha256(mime).hexdigest() != row.data["sha256"]:
         raise HTTPException(409, "Captured email content is inconsistent")
     mail = BytesParser(policy=policy.default).parsebytes(mime)
@@ -370,3 +387,10 @@ async def attachment(attempt_id: str, user: Annotated[User, Depends(current_user
     name = "resume.docx" if part.get_content_subtype().endswith("document") else "resume.pdf"
     return Response(part.get_payload(decode=True), media_type=part.get_content_type(),
                     headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
+
+
+async def captured_mime(db: AsyncSession, row: GmailAttempt) -> bytes:
+    content = await db.scalar(select(GmailArtifact.content).where(GmailArtifact.attempt_id == row.id))
+    if content is None:
+        raise HTTPException(409, "The captured email is missing. Do not send this record.")
+    return content

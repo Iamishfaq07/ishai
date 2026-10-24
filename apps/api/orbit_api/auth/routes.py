@@ -1,4 +1,3 @@
-import json
 from typing import Annotated, Literal
 from urllib.parse import urlsplit
 
@@ -725,13 +724,15 @@ async def export_my_data(user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> Response:
     """Everything Orbit stores about the account, as one JSON file (profile, documents, workspaces, sessions with
     transcripts/questions/answers/reports, usage, security log). Secrets and derived search data are left out."""
-    from orbit_api.auth.export import build_export
+    from fastapi.responses import StreamingResponse
+
+    from orbit_api.auth.export import build_export, export_chunks
 
     data = await build_export(db, user.id)
     stamp = data["exported_at"][:10]
-    return Response(content=json.dumps(data, ensure_ascii=False, indent=1, default=str),
-                    media_type="application/json",
-                    headers={"Content-Disposition": f'attachment; filename="orbit-export-{stamp}.json"'})
+    return StreamingResponse(export_chunks(data, user.id), media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="orbit-export-{stamp}.json"',
+                 "Cache-Control": "no-store"})
 
 
 from orbit_api.auth.google import mount as _mount_google  # noqa: E402
