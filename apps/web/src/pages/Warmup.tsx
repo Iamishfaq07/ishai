@@ -6,6 +6,7 @@ import {
   BookOpen,
   Briefcase,
   CircleAlert,
+  ChevronDown,
   CircleCheck,
   Code2,
   GraduationCap,
@@ -32,6 +33,7 @@ import { pickRound, trackById, tracksFor, type Track, type TrackId, type WarmupQ
 import { useCountry } from "../lib/country";
 import { MIN_WORDS, checkAnswer, spokenTime, summarise, words, type Check, type Verdict } from "../lib/warmup/checks";
 import { logWarmupAnswer } from "../lib/weeklyGoal";
+import { WARMUP_FAQ } from "../../worker/faqs/warmup.js";
 
 /**
  * The Interview Warm-up (`/warmup`, public: no sign-in, no AI, no minutes). Pick a track, answer five questions by
@@ -162,6 +164,26 @@ const TRACK_ICON: Record<TrackId, LucideIcon> = {
   mba: Briefcase,
 };
 
+/** The page's questions, word for word what its FAQPage markup states (worker/faqs/warmup.js, D79). */
+function WarmupQuestions() {
+  return (
+    <section aria-labelledby="warmup-faq" className="mt-12">
+      <h2 id="warmup-faq" className="font-display text-lg font-semibold">Questions about the warm-up</h2>
+      <div className="mt-3 divide-y divide-zinc-200 border-y border-zinc-200 dark:divide-white/10 dark:border-white/10">
+        {WARMUP_FAQ.map(([q, a]) => (
+          <details key={q} className="group">
+            <summary className={cx("flex min-h-12 cursor-pointer list-none items-center gap-3 rounded py-3 text-[0.9375rem] font-medium [&::-webkit-details-marker]:hidden", focusRing)}>
+              <span className="flex-1">{q}</span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-zinc-500 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+            </summary>
+            <p className="pb-4 pr-6 text-sm leading-relaxed text-zinc-600 dark:text-zinc-300">{a}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function PickTrack({ onPick }: { onPick: (track: Track) => void }) {
   const country = useCountry();
   return (
@@ -230,6 +252,7 @@ function PickTrack({ onPick }: { onPick: (track: Track) => void }) {
           </Link>
           .
         </p>
+        <WarmupQuestions />
       </section>
     </>
   );

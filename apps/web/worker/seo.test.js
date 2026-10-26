@@ -397,7 +397,7 @@ describe("structured data (site.js)", () => {
   });
 
   it("states a product page's questions as FAQ markup only where the page shows them, word for word (D79)", () => {
-    for (const p of ["/resume-ai", "/jobs", "/linkedin-ai", "/interview-copilot", "/mock-interview"]) {
+    for (const p of ["/resume-ai", "/jobs", "/linkedin-ai", "/interview-copilot", "/mock-interview", "/warmup"]) {
       const faq = structuredDataFor(p, { title: "t", description: "d" })["@graph"].find((n) => n["@type"] === "FAQPage");
       expect(faq.mainEntity.map((q) => [q.name, q.acceptedAnswer.text]), p).toEqual(faqsFor(p).map(([q, a]) => [q, a]));
       expect(faq["@id"]).toBe(`${SITE}${p}#faq`);
@@ -407,7 +407,7 @@ describe("structured data (site.js)", () => {
       }
     }
     // Pages without a visible FAQ get none.
-    for (const p of ["/", "/pricing", "/warmup", "/contact", "/technical"]) {
+    for (const p of ["/", "/pricing", "/contact", "/technical"]) {
       expect(structuredDataFor(p, { title: "t", description: "d" })["@graph"].map((n) => n["@type"]), p).not.toContain("FAQPage");
     }
   });

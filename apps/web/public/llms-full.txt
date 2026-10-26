@@ -37,7 +37,19 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 - Filters for freshers and internships (entry-level outside India), the user's city or remote work.
 - A tracker from saved to offer, with follow-ups, and messages to ask for a referral.
 - Apply always opens the original job post. LinkedIn and Naukri (LinkedIn and Indeed outside India) get search links filled in; Orbit doesn't copy their listings.
+- A job found anywhere (any careers page, LinkedIn or Naukri) can be added to the tracker from its link. Its fit check runs on the description the user pastes, which is kept on the job for interview prep and practice.
 - Free: matches, the tracker and a few AI fit checks a day.
+
+### Auto Apply
+
+- For each saved job, Orbit prepares a resume tailored to it and the application's answers. The user approves their master resume and the rules (which jobs, how many a day) once.
+- Supported employer forms (Greenhouse, Lever, Ashby, Workday, SmartRecruiters, Workable and Recruitee) can be sent for the user where hosted applying is on. Human checks, logins, unknown declarations and other sites come back to the user, and applying can be paused at any time.
+- Every application and its result is recorded on the job in the tracker.
+
+### Orbit for Business (https://orbitanswer.com/business)
+
+- For employers: a careers page whose jobs Google for Jobs can read, one-click applications, and AI ranking of applicants with the reasons for each, while the hiring team makes the decisions.
+- Free to start.
 
 ### More tools in the same account
 
