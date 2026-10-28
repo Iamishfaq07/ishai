@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, CompanyLogo, FileText, Headphones, IdCard, Plus, Rocket, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
 import type { JobStatus } from "@orbit/types";
 import { NewNoticeCard } from "../components/NoticesBell";
@@ -43,6 +43,9 @@ const textLink = cx("rounded font-medium text-indigo-700 underline-offset-4 hove
  */
 export function HomePage() {
   const { user } = useAuth();
+  // "/#follow-up-rules" (the reminder emails' unsubscribe page links it): the rules live in the action queue, so it
+  // opens, even on a new account, and the rules editor focuses itself.
+  const rulesLink = useLocation().hash === "#follow-up-rules";
   const now = new Date();
   const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
   const queue = useAsync(() => api.call<Queue>("/v1/jobs/actions"), [], "job-actions-today");
@@ -186,7 +189,7 @@ export function HomePage() {
         </Link></li>)}</ul>
     </section>
 
-    {!fresh && <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+    {(!fresh || rulesLink) && <details open={rulesLink || undefined} className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
       <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>
         <span>Your action queue{queue.data ? ` (${queue.data.items.length})` : ""}</span>
         <ArrowRight className="h-4 w-4 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />

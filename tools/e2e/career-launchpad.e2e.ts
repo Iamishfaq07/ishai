@@ -39,8 +39,9 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await launchpad.getByRole("button", { name: "Review my search", exact: true }).click();
     await launchpad.getByRole("button", { name: "Save this search", exact: true }).click();
     await expect(launchpad.getByRole("button", { name: "Search settings saved", exact: true })).toBeDisabled();
-    await page.getByRole("link", { name: "← Back to all career steps", exact: true }).click();
+    await page.getByRole("link", { name: "← Back to Today", exact: true }).click();
     await expect(launchpad).not.toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
     await page.goBack();
     await launchpad.getByRole("button", { name: "Continue to role ideas", exact: true }).click();
     await expect(launchpad.getByLabel("Job title to explore")).toHaveValue("Junior analyst");
@@ -77,23 +78,15 @@ test("No resume: manual search, resume starter and stale settings recovery", asy
 });
 
 for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: "mobile", width: 360, height: 800 }]) {
-  test(`Launchpad home and step navigation scroll correctly (${viewport.name})`, async ({ page, context }, info) => {
+  test(`Old launchpad address opens Today; search setup steps scroll correctly (${viewport.name})`, async ({ page, context }) => {
     await page.setViewportSize(viewport);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
     await seed(context);
     await page.goto("/jobs");
-    await expect(page.getByRole("heading", { name: "Career launchpad", exact: true })).toBeVisible();
-    const steps = page.getByRole("navigation", { name: "Your career steps", exact: true });
-    await expect(steps.getByRole("listitem")).toHaveCount(5);
-    await steps.getByText("Tools for this step", { exact: true }).nth(2).click();
-    await expect(steps.getByRole("link", { name: "Auto-apply agent", exact: true })).toBeVisible();
-    await expect(steps.getByRole("link", { name: "Contacts & outreach", exact: true })).toBeVisible();
-    await a11y(page);
-    await page.screenshot({ path: info.outputPath(`career-hub-${viewport.name}.png`), fullPage: true });
-    // Open a query-only page transition from a real, scrolled position.
-    await steps.getByText("Tools for this step", { exact: true }).nth(0).click();
-    await steps.getByRole("link", { name: "Search setup", exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    await page.goto("/jobs?start=1");
+    await expect(page.getByRole("heading", { name: "Search setup", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue to role ideas", exact: true })).toBeEnabled();
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.getByRole("button", { name: "Continue to role ideas", exact: true }).click();
