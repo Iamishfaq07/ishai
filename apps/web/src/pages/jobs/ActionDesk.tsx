@@ -88,7 +88,7 @@ export function JobActionDeskPage({ embedded = false }: { embedded?: boolean } =
       <span className="text-xs text-zinc-500 dark:text-zinc-400">5 AI previews/day · resets at midnight UTC.</span>
     </div>
     <details className="rounded-xl border border-zinc-200 p-3 dark:border-white/10">
-      <summary className={cx("cursor-pointer rounded text-sm font-medium", focusRing)}>Filters, refresh & calendar{filter !== "all" ? " · filter active" : ""}</summary>
+      <summary className={cx("cursor-pointer rounded py-1 text-sm font-medium", focusRing)}>Filters, refresh & calendar{filter !== "all" ? " · filter active" : ""}</summary>
       <div className="mt-3 flex flex-wrap gap-2" aria-label="Filter actions">{[["all", "All"], ["overdue", "Past due"], ["interview", "Interviews"], ["follow_up", "Job follow-ups"], ["contact", "Contacts"], ["application", "Applications"], ["preparation", "Preparation"], ["playbook", "Playbook"]].map(([key, label]) =>
         <Button key={key} size="sm" variant={filter === key ? "primary" : "secondary"} aria-pressed={filter === key} onClick={() => setFilter(key!)}>{label}</Button>)}</div>
       <div className="mt-3 flex flex-wrap gap-2"><Button variant="secondary" disabled={busy} onClick={() => setLoad((n) => n + 1)}>Refresh records</Button>
@@ -110,7 +110,7 @@ export function JobActionDeskPage({ embedded = false }: { embedded?: boolean } =
     {!queue && !error && <p role="status">Loading your saved actions…</p>}
     {queue && !queue.items.length && !queue.truncated && <div className="rounded-xl border border-zinc-200 p-5 dark:border-white/10"><h3 className="font-medium">Room for your next opportunity</h3>
       <p className="mt-2 text-sm">Add your next interview or follow-up date in the tracker, or a contact follow-up in People. Actions appear here when they are due within seven days.</p>
-      <Link to="/jobs/tracker" className={cx("mt-3 inline-flex items-center gap-2 rounded text-sm hover:underline", focusRing)}>Open tracker <ArrowRight className="h-4 w-4" /></Link></div>}
+      <Link to="/jobs/tracker" className={cx("mt-3 inline-flex min-h-6 items-center gap-2 rounded text-sm hover:underline", focusRing)}>Open tracker <ArrowRight className="h-4 w-4" /></Link></div>}
     {queue && queue.items.length > 0 && !visible.length && !focus && <p className="text-sm">No actions in this filter.</p>}
     {focus && visible.length > 0 && <h3 className="text-sm font-semibold">Other saved actions</h3>}
     <ul className="space-y-3">{visible.map((action) => <li key={action.id} className="rounded-xl border border-zinc-200 bg-white p-4 transition-colors motion-reduce:transition-none dark:border-white/10 dark:bg-zinc-900">
@@ -118,7 +118,7 @@ export function JobActionDeskPage({ embedded = false }: { embedded?: boolean } =
         <span className="text-xs text-zinc-500 dark:text-zinc-400">{action.overdue ? "Past due · " : ""}{action.due_at ? shortDate(action.due_at) : "Needs your review"}</span></div>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{action.detail}</p>
       {action.rule && <p className="mt-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300">Your playbook · {RULE_NAMES[action.rule]}</p>}
-      <Link to={action.path} className={cx("mt-3 inline-flex items-center gap-2 rounded text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>{action.action_label ?? "Open workspace"} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
+      <Link to={action.path} className={cx("mt-3 inline-flex min-h-6 items-center gap-2 rounded text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300", focusRing)}>{action.action_label ?? "Open workspace"} <ArrowRight className="h-4 w-4" aria-hidden /></Link>
     </li>)}</ul>
     {queue?.truncated && <Callout>This queue is bounded to 100 actions. Resolve or reschedule records, and review your tracker for the full list.</Callout>}
     <PlaybookEditor onChanged={(saved) => { setLoad((n) => n + 1); setBrief(null); setSavedRules(saved); }} />

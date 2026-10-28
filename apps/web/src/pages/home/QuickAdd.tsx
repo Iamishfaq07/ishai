@@ -144,7 +144,7 @@ export function QuickAddJob() {
         {error && <p role="alert" className="text-sm text-rose-700 dark:text-rose-300">{error}</p>}
         {mode === "link" && !read && (
           <button type="button" onClick={() => { setMode("post"); setError(null); }}
-                  className="text-sm font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-300">
+                  className="min-h-6 text-sm font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-300">
             No link? Paste the job post instead
           </button>
         )}

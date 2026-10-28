@@ -166,7 +166,7 @@ export function ColumnChart({
         <span>{axis[1]}</span>
       </div>
       <details className="mt-1 text-xs">
-        <summary className={cx("w-fit cursor-pointer select-none rounded text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100", focusRing)}>
+        <summary className={cx("w-fit cursor-pointer select-none rounded py-1 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100", focusRing)}>
           Show the numbers
         </summary>
         <table className="mt-1 w-full text-left">

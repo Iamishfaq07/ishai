@@ -182,7 +182,7 @@ export function HomePage() {
     {/* The tools people reach for most, by name, and the way to every other one. */}
     <section aria-labelledby="quick-tools" className="space-y-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 id="quick-tools" className="font-semibold">Your AI tools</h2>
-        <Link to="/toolkit" className="text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300">See all tools</Link></div>
+        <Link to="/toolkit" className="inline-flex min-h-6 items-center text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300">See all tools</Link></div>
       <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">{QUICK_TOOLS.map(({ to, label, line, icon: Icon }, i) => <li key={to} className="route-rise" style={{ ["--i" as string]: i + 1 }}>
         <Link to={to} className={cx("workspace-panel route-card flex h-full flex-col gap-2 p-4", focusRing)}>
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"><Icon className="h-4 w-4" aria-hidden /></span>
