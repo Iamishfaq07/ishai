@@ -11,7 +11,7 @@ import { toolIcon } from "./homes";
 /** Tools that work on one job, and the tab of that job's page they live on. They open on your most recent active job
  *  instead of the tracker, so they're one click away instead of three. */
 const JOB_TAB: Record<string, string> = {
-  "first-look": "resume", "scam-check": "company", pitch: "practice", references: "interview", promises: "interview",
+  "first-look": "resume", "cover-letter": "resume", "scam-check": "company", pitch: "practice", references: "interview", promises: "interview",
   "red-flags": "interview", "interview-checklist": "interview", debrief: "interview", "first-90": "offer",
 };
 const CLOSED = new Set(["hired", "rejected", "withdrawn"]);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { JobDetail, JobListing, JobStatus, JobTrackerEntry, JobTrackerUpdate } from "@orbit/types";
 import {
@@ -43,10 +43,9 @@ import {
   JobWhen,
   MatchBadge,
   NoMatchNote,
-  PrepareButton,
   SkillsMatch,
   SourceCredit,
-  TailorButton,
+  MoreJobActions,
   TrackButton,
   TrustBadges,
 } from "./JobCard";
@@ -118,6 +117,11 @@ function BackLink() {
 
 function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }) {
   const country = useCountry();
+  // "#people" (Find contacts, from a card's More menu): the people section, once the job is on the page.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash === "#people") document.getElementById("people")?.scrollIntoView({ block: "start" });
+  }, [hash]);
   const { profile, tracker } = useJobsAi();
   const resumeId = profile.data?.resume?.id ?? null;
   // A change made here shows at once; the page and the tracker are then asked again for the server's copy, which
@@ -150,7 +154,8 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
 
   return (
     <article aria-labelledby="job-title" className="space-y-6">
-      <header className="glass-panel relative overflow-hidden rounded-3xl p-5 sm:p-8">
+      {/* Not clipped, and above the cards after it: its More menu opens over them. */}
+      <header className="glass-panel relative z-10 rounded-3xl p-5 sm:p-8">
         <div className="relative flex items-start gap-4">
           <div className="min-w-0 flex-1">
             <SourceCredit job={job} />
@@ -177,9 +182,8 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
               <Target className="h-4 w-4" aria-hidden /> Prepare for interview
             </Link>
           )}
-          <TailorButton actions={actions} />
           {/* Once saved, the job's own page and "Prepare for interview" are where preparing happens. */}
-          {!entry && <PrepareButton actions={actions} />}
+          {!entry && <FullPrepButton actions={actions} compact />}
           {/* Written from the resume tailored for this job if there is one, else the one it's matched to. */}
           <Link
             to={outreachPath({ job: job.id, resume: entry?.resume_id ?? resumeId })}
@@ -193,15 +197,34 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
               <ExternalLink className="h-4 w-4" aria-hidden /> View original post
             </a>
           )}
+          <MoreJobActions job={job} actions={actions} page />
         </div>
         <div className="relative">
           <ActionNotes actions={actions} />
-      {!entry && <FullPrepButton actions={actions} />}
         </div>
       </header>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="min-w-0 space-y-6">
+          {/* The free AI fit check first: it's the next thing to do with a job you're looking at. */}
+          {actions.fit.result || actions.fit.loading || actions.fit.error ? (
+            <FitPanel fit={actions.fit} onTailor={actions.tailor} card />
+          ) : (
+            <Card className="flex flex-wrap items-center gap-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
+                <Sparkles className="h-5 w-5" aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1 basis-56">
+                <h2 className="font-display text-base font-semibold">Check my fit</h2>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                  The AI compares your resume with this job: why you fit, the gaps, and honest tweaks. Free, a few a day.
+                </p>
+              </div>
+              <Button onClick={actions.checkFit} className="w-full sm:w-auto">
+                <Sparkles className="h-4 w-4" aria-hidden /> Check my fit
+              </Button>
+            </Card>
+          )}
           <Card>
             <h2 className="font-display text-base font-semibold">About this job</h2>
             {job.snippet ? (
@@ -223,7 +246,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
           </Card>
 
           {/* The people behind the posting: HR, recruiters and the team, from public sources with their pages. */}
-          <div className="grid min-w-0 gap-4"><JobPeople company={job.company} listingId={job.id} applicationId={job.tracked?.id ?? null}
+          <div id="people" className="grid min-w-0 scroll-mt-24 gap-4"><JobPeople company={job.company} listingId={job.id} applicationId={job.tracked?.id ?? null}
             onSave={actions.toggleSaved} saving={actions.busy !== null} /></div>
 
           {showMatch && job.match && (job.match.matched.length > 0 || job.match.missing.length > 0) && (
@@ -236,24 +259,6 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             </Card>
           )}
 
-          {actions.fit.result || actions.fit.loading || actions.fit.error ? (
-            <FitPanel fit={actions.fit} onTailor={actions.tailor} card />
-          ) : (
-            <Card className="flex flex-wrap items-center gap-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200 dark:bg-white/5 dark:text-zinc-300 dark:ring-white/10">
-                <Sparkles className="h-5 w-5" aria-hidden />
-              </span>
-              <div className="min-w-0 flex-1 basis-56">
-                <h2 className="font-display text-base font-semibold">Check my fit</h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                  The AI compares your resume with this job: why you fit, the gaps, and honest tweaks. Free, a few a day.
-                </p>
-              </div>
-              <Button onClick={actions.checkFit} className="w-full sm:w-auto">
-                <Sparkles className="h-4 w-4" aria-hidden /> Check my fit
-              </Button>
-            </Card>
-          )}
         </div>
 
         <aside className="min-w-0 space-y-6" aria-label="About this job">
@@ -272,13 +277,8 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
                   <time dateTime={job.posted_at}>{new Date(job.posted_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</time>
                 </dd>
               </div>
-              <div className="flex gap-3">
-                <dt className="w-24 shrink-0 text-zinc-500 dark:text-zinc-400">Source</dt>
-                <dd className="min-w-0">
-                  <SourceCredit job={job} className="!text-sm font-medium !text-zinc-900 dark:!text-zinc-100" />
-                </dd>
-              </div>
             </dl>
+            <Provenance job={job} also={detail.also_listed ?? []} />
           </Card>
 
           <TrackerPanel
@@ -293,7 +293,6 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
           />
 
           <PostingCheck checks={detail.checks ?? []} />
-          <Provenance job={job} also={detail.also_listed ?? []} />
           <ScamCheck posting={[job.title, job.company, job.salary ?? "", job.snippet ?? ""].join("\n")} />
           <SafetyCard job={{ id: job.id, title: job.title, company: job.company, url: job.url }} />
           {isSecurityRole(job.title) && <KashSecContext placement="listing" />}
@@ -466,8 +465,8 @@ function PostingCheck({ checks }: { checks: NonNullable<JobDetail["checks"]> }) 
 function Provenance({ job, also }: { job: JobListing; also: NonNullable<JobDetail["also_listed"]> }) {
   const open = stillOpenAt(job);
   return (
-    <Card>
-      <h2 className="font-display text-base font-semibold">Where this post came from</h2>
+    <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-white/10">
+      <h3 className="text-sm font-semibold">Where this post came from</h3>
       <dl className="mt-2 space-y-1.5 text-sm">
         <div className="flex justify-between gap-3">
           <dt className="text-zinc-500 dark:text-zinc-400">Source</dt>
@@ -500,6 +499,6 @@ function Provenance({ job, also }: { job: JobListing; also: NonNullable<JobDetai
           </ul>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
