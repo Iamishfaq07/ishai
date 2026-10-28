@@ -410,6 +410,36 @@ def test_the_questions_spend_one_resume_credit(client: TestClient) -> None:
     assert client.get(f"/v1/jobs/tracker/{eid}/interview", headers=h).json()["questions"] is not None
 
 
+def test_a_cover_letter_for_the_job_reads_its_resume_and_post(client: TestClient) -> None:
+    h = _register(client)
+    eid, _ = _job(client, h)
+    r = client.post(f"/v1/jobs/tracker/{eid}/cover-letter", headers=h, json={})
+    assert r.status_code == 409 and "resume" in r.json()["detail"]
+    _sent(client, h, eid)
+    llm = get_llm_provider()
+    assert isinstance(llm, MockLLMProvider)
+    before = len(llm.requests)
+    r = client.post(f"/v1/jobs/tracker/{eid}/cover-letter", headers=h, json={"tone": "warm", "length": "short"})
+    assert r.status_code == 200, r.text
+    assert r.json()["text"].strip()
+    prompt = "\n".join(m.content for req in llm.requests[before:] for m in req.messages)
+    assert "idempotent payment retry flows" in prompt  # the job's saved post
+    # Someone else's job is not found.
+    other = _register(client)
+    assert client.post(f"/v1/jobs/tracker/{eid}/cover-letter", headers=other, json={}).status_code == 404
+
+
+@pytest.mark.usefixtures("enforce")
+def test_a_job_cover_letter_spends_one_resume_credit(client: TestClient) -> None:
+    h = _signup(client, _new_ip())
+    eid, _ = _job(client, h)
+    assert client.post(f"/v1/jobs/tracker/{eid}/cover-letter", headers=h, json={}).status_code == 409
+    assert _wallet(client, h)["resume"] == 1  # no resume to write from: nothing spent
+    _sent(client, h, eid)
+    assert client.post(f"/v1/jobs/tracker/{eid}/cover-letter", headers=h, json={}).status_code == 200
+    assert _wallet(client, h)["resume"] == 0
+
+
 def test_the_migration_adds_and_removes_the_links() -> None:
     api = Path(__file__).resolve().parents[1]
     db = Path(tempfile.mkdtemp(prefix="orbit-interview-")) / "m.db"

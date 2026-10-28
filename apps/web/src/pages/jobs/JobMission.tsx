@@ -1,5 +1,6 @@
 import { GmailApply } from "./GmailApply";
 import { PrepareAll } from "./PrepareAll";
+import { JobCoverLetter } from "./JobCoverLetter";
 import { GmailGate } from "../../components/GmailGate";
 import { SubmissionMaterials } from "./SubmissionMaterials";
 import { PrepDownload } from "./PrepDownload";
@@ -198,6 +199,7 @@ export function JobMissionPage() {
                   {tab === "fit" && <><FitPanel fit={m.fit} entry={entry} onPractice={openWorkshop} onChecked={mission.reload} /><Suspense fallback={<p role="status">Opening requirement practice…</p>}><RequirementWorkshop key={entry.id} entryId={entry.id} onRehearse={() => setTab("practice")} /></Suspense></>}
                   {tab === "resume" && <ResumePanel key={entry.id} mission={m} entry={entry} onMission={update} />}
                   {tab === "resume" && <FirstLook key={`first-look:${entry.id}`} entryId={entry.id} resumeId={m.resume?.id} />}
+                  {tab === "resume" && <JobCoverLetter key={`letter:${entry.id}`} entry={entry} mission={m} />}
                   {tab === "company" && <CompanyPanel key={entry.id} entry={entry} />}
                   {tab === "company" && <ScamCheck key={`scam:${entry.id}`} />}
                   {tab === "practice" && <PitchBuilder key={`pitch:${entry.id}`} entryId={entry.id} />}

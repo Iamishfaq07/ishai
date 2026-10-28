@@ -29,6 +29,10 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await editor.getByRole("button", { name: "Save & return to job", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/jobs/mission/${job.id}\\?guide=1&tab=resume$`));
     expect((await (await context.request.get(`${API}/v1/resumes/${resume.id}`)).json()).data.basics.name).toBe("Robin Graduate");
+    // A cover letter for this job, from its resume: this one has no experience yet, so it says what to add.
+    const letter = page.getByRole("region", { name: "A cover letter for this job", exact: true });
+    await letter.getByRole("button", { name: "Write my cover letter", exact: true }).click();
+    await expect(letter.getByRole("alert")).toContainText("Add your name and some experience first");
     await sections.getByRole("button", { name: /^Requirements/ }).click();
     const heading = guide.getByRole("heading", { name: "Evidence & fit", exact: true });
     await expect(heading).toBeFocused();

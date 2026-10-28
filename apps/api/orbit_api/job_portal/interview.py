@@ -65,9 +65,19 @@ from orbit_api.models import (
     User,
 )
 from orbit_api.ratelimit import limit_user
+from orbit_api.resumes import ai as resume_ai
 from orbit_api.resumes import interview_prep
 from orbit_api.resumes.allowance import Allowance
-from orbit_api.resumes.routes import MAX_JOB_TEXT, account_allowance, ai_limit, ai_user_limit, prep_questions
+from orbit_api.resumes.routes import (
+    MAX_JOB_TEXT,
+    CoverLetterIn,
+    CoverLetterOut,
+    account_allowance,
+    ai_limit,
+    ai_user_limit,
+    cover_letter,
+    prep_questions,
+)
 from orbit_api.resumes.schema import ResumeData
 from orbit_api.retrieval.embeddings import get_embedder
 from orbit_api.retrieval.index import SessionIndex
@@ -525,6 +535,34 @@ async def interview_questions(entry_id: str, user: Annotated[User, Depends(requi
                                  "result": out.model_dump(mode="json")}
     await db.commit()
     return out
+
+
+class JobLetterIn(BaseModel):
+    tone: resume_ai.LetterTone = "professional"
+    length: resume_ai.LetterLength = "standard"
+
+
+@router.post("/{entry_id}/cover-letter", response_model=CoverLetterOut,
+             dependencies=[Depends(ai_limit), Depends(ai_user_limit)])
+async def job_cover_letter(entry_id: str, body: JobLetterIn, user: Annotated[User, Depends(require_verified_email)],
+                           db: Annotated[AsyncSession, Depends(get_db)],
+                           allowance: Annotated[Allowance, Depends(account_allowance)]) -> CoverLetterOut:
+    """A cover letter for this job, from the resume version it uses and its saved post: Resume AI's letter, one resume
+    credit, grounded the same way (nothing the resume doesn't say). Without a saved post it's written to the role and
+    company alone; nothing is spent when there's no resume to write from."""
+    entry = await _entry(db, entry_id, user)
+    snaps, resume, _ = await _versions(db, user, entry)
+    chosen = chosen_version(entry.interview_version, snaps, resume)
+    if chosen is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Link a resume to this job first.")
+    listing, doc = await _post(db, user, entry)
+    job = (doc.source_text or "") if doc is not None else (
+        _job_text(listing, listing.description or listing.snippet) if listing is not None else "")
+    if not job.strip():
+        job = f"{entry.title} at {entry.company}"
+    letter = CoverLetterIn(data=ResumeData.model_validate(chosen.data or {}), job_text=job[:MAX_JOB_TEXT],
+                           tone=body.tone, length=body.length)
+    return await cover_letter(letter, user, db, allowance)
 
 
 class ContextDoc(BaseModel):
