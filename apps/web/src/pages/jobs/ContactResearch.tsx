@@ -81,7 +81,7 @@ function Finder({ applicationId, onSaved, autoRun }: { applicationId: string; on
       <h3 className="text-sm font-semibold">Saved at {company}</h3>
       <ul className="mt-2 grid gap-2 sm:grid-cols-2">{saved.map((c) => <li key={c.id}>
         <PersonRow name={c.name} title={c.title} profile={c.linkedin_url} email={c.email}
-          action={<Button size="sm" variant="secondary" onClick={() => setDraftFor(c)}>Write a message</Button>} />
+          action={<Button size="sm" variant="secondary" aria-label={`Write a message to ${c.name}`} onClick={() => setDraftFor(c)}>Write a message</Button>} />
       </li>)}</ul>
     </div>}
 

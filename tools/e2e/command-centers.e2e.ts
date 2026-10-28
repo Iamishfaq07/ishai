@@ -74,7 +74,9 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
       title: "Data engineer", company: "Northstar", status: "interviewing", next_at: new Date(Date.now() + 86400000).toISOString(),
     } });
     expect(manual.status(), await manual.text()).toBe(201);
+    // Daily actions are Today's action queue now.
     await page.goto("/jobs/actions");
+    await page.locator("summary").filter({ hasText: "Your action queue" }).click();
     const file = page.waitForEvent("download");
     await page.getByText("Filters, refresh & calendar", { exact: true }).click();
     await page.getByRole("button", { name: "Export upcoming dates", exact: true }).click();

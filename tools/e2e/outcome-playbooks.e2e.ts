@@ -23,14 +23,15 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     expect(created.status(), await created.text()).toBe(201);
     const id = (await created.json()).id as string;
     ageFixture(id, "application");
-    await page.goto("/jobs/actions");
-    await page.getByText("Your follow-up playbook", { exact: true }).click();
+    // The rules live in Today's action queue; their link opens it with the rules showing.
+    await page.goto("/#follow-up-rules");
+    await expect(page.getByText("Your workflow rules", { exact: true })).toBeFocused();
     await page.getByLabel("Application follow-ups", { exact: true }).check();
     const days = page.getByLabel("Wait after application or latest contact (days)", { exact: true });
     await days.fill("");
     await expect(days).toBeEnabled();
     await days.fill("7");
-    await page.getByRole("button", { name: "Save follow-up rules", exact: true }).click();
+    await page.getByRole("button", { name: "Save workflow rules", exact: true }).click();
     await expect(page.getByText("Your playbook · Application follow-up", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Build my AI brief", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Demo AI brief", exact: true })).toBeVisible();
@@ -38,7 +39,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     const changed = await context.request.put(`${API}/v1/jobs/playbook`, { data: { base_revision: current.revision, follow_up_days: 8, prep_hours: 24 } });
     expect(changed.ok(), await changed.text()).toBe(true);
     await days.fill("10");
-    await page.getByRole("button", { name: "Save follow-up rules", exact: true }).click();
+    await page.getByRole("button", { name: "Save workflow rules", exact: true }).click();
     await expect(page.getByText(/Your draft is kept/)).toBeVisible();
     await expect(days).toHaveValue("10");
     await page.getByRole("button", { name: "Reload saved rules", exact: true }).click();
@@ -54,7 +55,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await expect(page.getByText("Your playbook · Interview preparation", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Demo AI brief", exact: true })).toHaveCount(0);
     await page.reload();
-    await page.getByText("Your follow-up playbook", { exact: true }).click();
+    await expect(page.getByText("Your workflow rules", { exact: true })).toBeFocused();
     await expect(days).toHaveValue("8");
   });
 
