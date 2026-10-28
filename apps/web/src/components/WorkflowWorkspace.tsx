@@ -7,12 +7,13 @@ import { errorText } from "../lib/format";
 export interface WorkflowFact { id: string; label: string; text: string; path: string }
 interface Advice { version: string; source: "ai" | "mock"; tips: { fact_id: string; source_quote: string; suggestion: string; success_check: string }[] }
 
-export function WorkspaceHero({ title, description, labels }: {
-  title: string; description: string; labels: [string, string, string];
+export function WorkspaceHero({ title, description, labels, headingLevel = 2 }: {
+  title: string; description: string; labels: [string, string, string]; headingLevel?: 1 | 2;
 }) {
+  const Heading = headingLevel === 1 ? "h1" : "h2";
   const gradient = `flow-${title.replace(/\W/g, "")}`;
   return <section className="grid items-center gap-5 rounded-2xl bg-zinc-950 p-6 text-white md:grid-cols-2">
-    <div><h2 className="font-display text-3xl font-semibold tracking-tight">{title}</h2>
+    <div><Heading className="font-display text-3xl font-semibold tracking-tight">{title}</Heading>
       <p className="mt-3 text-sm text-zinc-300">{description}</p></div>
     <svg viewBox="0 0 360 160" className="w-full" role="img" aria-label={labels.join(" connects to ")}>
       <defs><linearGradient id={gradient}><stop stopColor="#818cf8" /><stop offset="1" stopColor="#c4b5fd" /></linearGradient></defs>

@@ -66,6 +66,7 @@ import { atsReading, type Reading } from "./atsReading";
 import { ATS_80, ats80Step } from "./atsMilestone";
 import { AiCostNote, AiErrorNote, AllowanceBanner, AllowanceContext, isUpgradeError, useAllowance, useResumeAllowance } from "./allowance";
 import { saveQueueFor, useBackend } from "./backend";
+import { resumeAiSource } from "./aiSource";
 import { drafts, type Draft } from "./saveQueue";
 import { useAuth } from "../../lib/auth";
 import { useCountry } from "../../lib/country";
@@ -134,7 +135,7 @@ export function ResumeEditorPage() {
   const { resumeId = "" } = useParams();
   const location = useLocation();
   const job = resumeReturnJob(location.search);
-  return job ? <JobResumeGuard key={`${job}:${resumeId}`} job={job} resumeId={resumeId} /> : <ResumeEditor />;
+  return job ? <JobResumeGuard key={`${job}:${resumeId}`} job={job} resumeId={resumeId} /> : <ResumeEditor key={resumeId} />;
 }
 
 function JobResumeGuard({ job, resumeId }: { job: string; resumeId: string }) {
@@ -518,6 +519,7 @@ function ResumeEditor() {
    *  lines, to fit one page, `linesOver` printed lines too long at the most compact layout. */
   const askAi = async (mode: "improve" | "tailor" | "shorten", check?: string, focus?: string, linesOver?: number) => {
     if (!resume) return;
+    const source = resumeAiSource(resume);
     setTab("ai");
     setAiBusy(
       focus
@@ -539,6 +541,10 @@ function ResumeEditor() {
         ...(mode === "shorten" && linesOver ? { lines_over: linesOver } : {}),
       });
       if (latest.current?.id !== resume.id) return;
+      if (resumeAiSource(latest.current) !== source) {
+        setAiError("Your resume changed while AI was working. Your edits were kept; request fresh suggestions for this version.");
+        return;
+      }
       setSuggestions(res.suggestions);
       if (res.suggestions.length) setScan((n) => n + 1);
       if (res.upgrade_required) {
@@ -591,6 +597,7 @@ function ResumeEditor() {
   const runFix = async (check: string | null, facts?: Record<string, string>, followup?: string | null) => {
     const r = latest.current;
     if (!r || fixing) return;
+    const source = resumeAiSource(r);
     setFixing(check ?? "all");
     setFixError(null);
     try {
@@ -602,6 +609,10 @@ function ResumeEditor() {
         ...(facts ? { facts } : {}),
         ...(followup ? { followup } : {}),
       });
+      if (!latest.current || resumeAiSource(latest.current) !== source) {
+        setFixError({ text: "Your resume changed while AI was working. Your edits were kept and these older fixes were not applied.", upgrade: false });
+        return;
+      }
       const rank = new Map((out.order ?? []).map((id, i) => [id, i]));
       change((cur) => {
         // Each change names the text it replaces: a line edited while the AI worked is left as the user wrote it.
@@ -719,7 +730,7 @@ function ResumeEditor() {
     scored={scored} evidence={evidence} checks={report?.checks ?? []} />;
   return (
     <AllowanceContext.Provider value={allowance}>
-    <div>
+    <div role="region" aria-label="Resume editor">
       <div className="workspace-panel animate-fade-up mb-5 flex flex-wrap items-center gap-3 p-3 sm:p-4">
         <Link to={RESUME_AI_HOME} aria-label="All resumes" className={cx("rounded-lg p-1.5 text-zinc-500 hover:text-zinc-900 dark:hover:text-white", focusRing)}>
           <ArrowLeft className="h-5 w-5" />
@@ -763,9 +774,16 @@ function ResumeEditor() {
           )}
           <SaveToDocuments resume={resume} />
           {/* Word, JSON and the website fold into one menu: Download PDF is the one most people need. */}
-          <details className="group relative">
+          <details className="group relative"
+            onBlur={(event) => { if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}
+            onKeyDown={(event) => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}
+            onClick={(event) => { if (event.target instanceof Element && event.target.closest("button")) event.currentTarget.open = false; }}>
+
             <summary className={cx(buttonClass("ghost"), "list-none cursor-pointer")}>More formats <ChevronDown className="h-4 w-4 motion-safe:transition-transform group-open:rotate-180" aria-hidden /></summary>
-            <div className="absolute right-0 z-30 mt-1 flex w-56 flex-col items-stretch gap-1 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-popover dark:border-white/10 dark:bg-zinc-900 [&>*]:justify-start">
+            <div className="absolute left-0 z-30 mt-1 flex w-56 max-w-[calc(100vw-2rem)] flex-col sm:left-auto sm:right-0 items-stretch gap-1 rounded-xl border border-zinc-200 bg-white p-1.5 shadow-popover dark:border-white/10 dark:bg-zinc-900 [&>*]:justify-start">
+          <Button variant="ghost" aria-label="Download as plain text" onClick={() => void okToDownload().then((ok) => {
+            if (ok) downloadText(`${fileName(resume)}.txt`, resumeToText(resume.data), "text/plain;charset=utf-8");
+          })}><FileText className="h-4 w-4" /> Plain text</Button>
           <DownloadWord resume={resume} confirm={okToDownload} />
           <Button
             variant="ghost"
@@ -1734,7 +1752,7 @@ function ScorePanel({
           </div>
         )}
       </Panel>
-      <AtsReadingPanel data={resume.data} />
+      <AtsReadingPanel data={resume.data} design={resume.design} />
     </div>
   );
 }
@@ -1744,16 +1762,25 @@ function ScorePanel({
  * would trip on: contact details it can't find, headings it doesn't know, dates it can't read, a sidebar read first,
  * icon characters. Read from the on-screen preview when opened, so it's the real layout's order.
  */
-function AtsReadingPanel({ data }: { data: ResumeData }) {
+function AtsReadingPanel({ data, design }: { data: ResumeData; design: ResumeDesign }) {
   const [reading, setReading] = useState<Reading | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState("");
   const read = () => {
-    const el = document.querySelector<HTMLElement>("[data-resume-preview]");
-    setReading(atsReading(el?.innerText ?? resumeToText(data), data));
+    const text = document.querySelector<HTMLElement>("[data-resume-preview]")?.innerText;
+    setReading(atsReading(text?.trim() ? text : resumeToText(data), data));
   };
+  const opened = reading !== null;
   useEffect(() => {
-    if (reading) read();
-  }, [data]); // eslint-disable-line react-hooks/exhaustive-deps -- re-read an open view when the resume changes
+    if (!opened) return;
+    let frame = 0;
+    const refresh = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(read); };
+    const preview = document.querySelector<HTMLElement>("[data-resume-preview]");
+    const observer = new MutationObserver(refresh);
+    if (preview) observer.observe(preview, { childList: true, subtree: true, characterData: true });
+    refresh();
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [opened, data, design]); // eslint-disable-line react-hooks/exhaustive-deps -- observe the deferred preview after edits/layout changes
   const ok = (good: boolean, yes: string, no: string) => (
     <li className="flex items-start gap-2">
       {good ? <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" aria-hidden /> : <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden />}
@@ -1791,9 +1818,14 @@ function AtsReadingPanel({ data }: { data: ResumeData }) {
             <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-lg bg-zinc-500/[0.06] p-3 font-mono text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
               {reading.text}
             </pre>
-            <Button size="sm" variant="ghost" className="mt-1" onClick={() => void navigator.clipboard?.writeText(reading.text).then(() => setCopied(true))}>
+            <Button size="sm" variant="ghost" className="mt-1" onClick={async () => {
+              setCopied(false); setCopyError("");
+              try { await navigator.clipboard.writeText(reading.text); setCopied(true); }
+              catch { setCopyError("Could not copy. Select the text above or download the plain-text format instead."); }
+            }}>
               <Copy className="h-3.5 w-3.5" /> {copied ? "Copied" : "Copy the plain text"}
             </Button>
+            {copyError && <p role="alert" className="mt-2 text-sm text-rose-700 dark:text-rose-300">{copyError}</p>}
           </details>
         </div>
       )}

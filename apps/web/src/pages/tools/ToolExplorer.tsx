@@ -1,8 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { MOCK_INTERVIEW_ENABLED, Reveal, buttonClass, cx, focusRing } from "@orbit/ui";
 import { toolIcon } from "./homes";
-import { PublicHeader } from "../../marketing/PublicHeader";
-import { PublicFooter } from "../../marketing/PublicFooter";
+import { PublicLayout } from "../../marketing/PublicLayout";
 import { useAuth } from "../../lib/auth";
 import { filterTools, STAGES, type Stage, type Audience } from "./catalog";
 
@@ -34,9 +33,8 @@ export function ToolExplorerPage() {
   const clear = () => setParams({ audience: new URLSearchParams(window.location.search).get("audience") === "business" ? "business" : "personal" }, { replace: true });
   const tools = filterTools(audience, query, stage, kind).filter((tool) => !["saba", "video"].includes(tool.id) || MOCK_INTERVIEW_ENABLED);
   const active = Math.max(0, STAGES.findIndex((s) => s.id === stage));
-  return <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-white">
-    <PublicHeader />
-    <main id="main-content" className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+  return <PublicLayout className="bg-zinc-50 dark:bg-zinc-950">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6">
       <header className="grid items-center gap-6 rounded-3xl border border-indigo-200 bg-white p-6 sm:p-8 md:grid-cols-2 dark:border-indigo-500/20 dark:bg-zinc-900">
         <div><h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">Find your next move.</h1>
           <p className="mt-3 text-zinc-600 dark:text-zinc-400">A connected workspace for finding a role or building a team. Choose a step to discover the tools that help.</p>
@@ -77,6 +75,6 @@ export function ToolExplorerPage() {
       <aside className="rounded-2xl border border-zinc-200 bg-white p-5 text-sm dark:border-white/10 dark:bg-zinc-900"><h2 className="font-semibold">Where should I start?</h2><p className="mt-2 text-zinc-500">{audience === "personal" ? "Start with your resume, save a few good matches, then configure your application agent. Keep the action desk nearby for anything that needs you." : "Start with a verified company and a role. Add your team, agree on interview criteria, then configure the reminders your hiring process needs."}</p>
         <Link to={audience === "personal" ? "/jobs/journey" : "/business/app"} className={buttonClass("primary", "md", "mt-4")}>{audience === "personal" ? "Open your application agent" : "Open your business workspace"}</Link>
       </aside>
-    </main><PublicFooter />
-  </div>;
+    </div>
+  </PublicLayout>;
 }

@@ -55,3 +55,10 @@ describe("routeTitle", () => {
     expect(routeTitle("/contact", true)).toBe("Contact us");
   });
 });
+
+
+it("names standalone tools rather than falling back to Orbit", () => {
+  for (const path of ["/star-check", "/bullet-builder", "/career-gap", "/group-discussion", "/readiness", "/campus", "/github-projects", "/aptitude", "/admin/insights"]) {
+    expect(routeTitle(path), path).not.toBeNull();
+  }
+});

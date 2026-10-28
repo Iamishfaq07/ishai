@@ -7,7 +7,10 @@ import { useEffect } from "react";
 export function useDocumentTitle(title: string | null | undefined, description?: string | null, exact = false): void {
   useEffect(() => {
     document.title = title ? (exact ? title : `${title} · Orbit`) : "Orbit";
-    if (!description) return;
+    if (!description) {
+      document.querySelectorAll('meta[name="description"]').forEach((node) => node.remove());
+      return;
+    }
     let el = document.querySelector('meta[name="description"]');
     if (!el) {
       el = document.createElement("meta");

@@ -10,7 +10,7 @@
 /** @type {Record<string, { title: string; description: string }>} */
 export const PAGE_META = {
   "/tools": {
-    title: "Explore Orbit tools: personal careers and business hiring",
+    title: "AI career tools: resumes, jobs and interview prep | Orbit",
     description: "Find AI resume tools, hosted applications, interview practice and hiring automations. Explore Personal and Business workflows step by step.",
   },
   "/": {
@@ -26,7 +26,7 @@ export const PAGE_META = {
   "/jobs": {
     title: "Orbit Jobs: jobs that fit your resume, from careers pages",
     description:
-      "The latest openings from companies' careers pages, matched to your resume, with a tracker and free AI fit checks. Apply always opens the original post.",
+      "Find fresh jobs from company careers pages, compare them with your resume, track applications and review your options before applying.",
   },
   "/warmup": {
     title: "Free Google Interview Warmup alternative | Orbit",

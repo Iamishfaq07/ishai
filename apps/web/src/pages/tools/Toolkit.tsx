@@ -1,8 +1,7 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { JobTrackerEntry } from "@orbit/types";
 import { ArrowRight, LayoutGrid, MOCK_INTERVIEW_ENABLED, Search, cx, focusRing } from "@orbit/ui";
-import { Input, PageHeader } from "../../components/ui";
+import { Button, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 import { missionPath } from "../jobs/paths";
@@ -23,19 +22,27 @@ const CLOSED = new Set(["hired", "rejected", "withdrawn"]);
  * public tools page reads (catalog.ts), so the two never disagree.
  */
 export function ToolkitPage() {
-  const [query, setQuery] = useState("");
+  const [params, setParams] = useSearchParams();
+  const query = params.get("q") ?? "";
+  const setQuery = (value: string) => {
+    const next = new URLSearchParams(window.location.search);
+    if (value) next.set("q", value); else next.delete("q");
+    setParams(next, { replace: true });
+  };
   const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
   const job = (tracker.data ?? []).filter((e) => !CLOSED.has(e.status)).sort((a, b) => b.status_at.localeCompare(a.status_at))[0];
   const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
   const tools = TOOLS.filter((t) => t.audience === "personal" && (MOCK_INTERVIEW_ENABLED || !["saba", "video"].includes(t.id))
     && words.every((w) => `${t.name} ${t.line} ${t.detail} ${(t.keywords ?? []).join(" ")}`.toLowerCase().includes(w)));
-  const count = TOOLS.filter((t) => t.audience === "personal").length;
+  const count = TOOLS.filter((t) => t.audience === "personal" && (MOCK_INTERVIEW_ENABLED || !["saba", "video"].includes(t.id))).length;
   return <div className="workspace-page">
     <PageHeader icon={LayoutGrid} title="All tools" subtitle={`Everything Orbit can do for your search, ${count} tools in all, from your first resume to your first 90 days.`} />
     <div className="relative max-w-xl">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden />
       <Input type="search" aria-label="Search tools" placeholder="Search tools: salary, GitHub, scam, aptitude…" value={query} onChange={(e) => setQuery(e.target.value)} className="!pl-9" />
     </div>
+    <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">{tools.length} of {count} tools{query ? ` matching “${query}”` : " available"}</p>
+      {query && <Button variant="ghost" onClick={() => setQuery("")}>Clear tool search</Button>}</div>
     {/* Four stages, 40-odd tools: on a phone the page is long, so each stage is one tap away. */}
     {!words.length && <nav aria-label="Jump to a stage" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
       {STAGES.map((stage) => {

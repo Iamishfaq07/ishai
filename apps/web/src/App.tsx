@@ -10,6 +10,7 @@ import { EmptyState, Skeleton, toast } from "@orbit/ui";
 import { signedInHereBefore, useAuth } from "./lib/auth";
 import { routeDescription, routeTitle } from "./lib/routeTitle";
 import { servedHeadFor } from "./lib/servedHead";
+import { useRouteMetadata } from "./lib/useRouteMetadata";
 import { useDocumentTitle } from "./lib/useDocumentTitle";
 import { Prerendered, handOff, useHandOffElsewhere } from "./lib/prerender";
 import { JOBS_AI_HOME, movedJobsPath } from "./pages/jobs/paths";
@@ -213,6 +214,7 @@ function useRouteTitle(): void {
   // Signed out on the page the document was served as, its own served title and description stay (lib/servedHead.ts).
   const served = user ? null : servedHeadFor(pathname);
   useDocumentTitle(served?.title ?? routeTitle(pathname, !loading && !user), served ? served.description : routeDescription(pathname), !!served);
+  useRouteMetadata(pathname, !!user && ["/", "/resume-ai", "/jobs"].includes(pathname.replace(/\/+$/, "") || "/"));
 }
 
 /** Continue with Google took an unconfirmed password account: say so once, then drop the query. */
