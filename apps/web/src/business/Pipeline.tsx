@@ -40,8 +40,8 @@ import {
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { planPath } from "./hiringModel";
-import { SourceTable, hours } from "./Dashboard";
-import { applicationPath, applyMove, downloadBlob, groupByStage, jobPath, matchLabel, neighbourStage, rejectedMessage, relTime, scoreTone, sortApplications, toggleId, type SortKey } from "./model";
+import { SourceTable, firstReply } from "./Dashboard";
+import { applicationPath, applyMove, careersPath, downloadBlob, groupByStage, jobPath, matchLabel, neighbourStage, rejectedMessage, relTime, scoreTone, sortApplications, toggleId, type SortKey } from "./model";
 import { JobStatusBadge, Loading, LoadError, Panel, errorText } from "./ui";
 
 type View = "board" | "list";
@@ -308,7 +308,13 @@ export function Pipeline() {
   const [data, setData] = useState<BizApplicationList | null>(null);
   const [stats, setStats] = useState<BizJobAnalytics | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [view, setView] = useState<View>(() => (safeLocal.getItem(VIEW_KEY) === "list" ? "list" : "board"));
+  // The board's columns don't fit a phone (one shows, the rest are off to the side): a phone starts on the list
+  // until the person picks a view, which is then remembered.
+  const [view, setView] = useState<View>(() => {
+    const saved = safeLocal.getItem(VIEW_KEY);
+    if (saved === "list" || saved === "board") return saved;
+    return typeof window !== "undefined" && window.matchMedia?.("(max-width: 639px)").matches ? "list" : "board";
+  });
   const [sort, setSort] = useState<SortKey>("score");
   const [q, setQ] = useState("");
   const [tag, setTag] = useState("");
@@ -340,7 +346,7 @@ export function Pipeline() {
     biz.jobAnalytics(company.id, jid).then((s) => { if (live) setStats(s); }).catch(() => undefined);
     return () => { live = false; };
   }, [company.id, jid, n]);
-  useEffect(() => safeLocal.setItem(VIEW_KEY, view), [view]);
+  const pickView = (v: View) => { setView(v); safeLocal.setItem(VIEW_KEY, v); };
 
   const canMove = company.permissions.move_applicants && company.status === "active";
   const tags = useMemo(() => [...new Set((data?.items ?? []).flatMap((a) => a.tags))].sort(), [data]);
@@ -396,8 +402,8 @@ export function Pipeline() {
         title={data.job.title}
         subtitle={
           <span className="inline-flex flex-wrap items-center gap-2">
-            <JobStatusBadge status={data.job.status} /> {data.items.length} applicants
-            {stats && ` · first reply ${hours(stats.median_first_response_hours).toLowerCase()}`}
+            <JobStatusBadge status={data.job.status} /> {data.items.length} {data.items.length === 1 ? "applicant" : "applicants"}
+            {stats && stats.applicants > 0 && firstReply(stats.median_first_response_hours)}
           </span>
         }
         actions={
@@ -420,7 +426,7 @@ export function Pipeline() {
           label="View"
           size="sm"
           value={view}
-          onChange={setView}
+          onChange={pickView}
           options={[
             { value: "board", label: <span className="inline-flex items-center gap-1"><ChartColumn className="h-3.5 w-3.5" aria-hidden /> Board</span> },
             { value: "list", label: <span className="inline-flex items-center gap-1"><List className="h-3.5 w-3.5" aria-hidden /> List</span> },
@@ -503,7 +509,15 @@ export function Pipeline() {
         <EmptyState
           icon={Users}
           title="No applicants yet"
-          body={data.job.status === "open" ? "Share the job page, or put the jobs widget on your own site (Settings)." : "Publish the job to start taking applications."}
+          body={data.job.status === "open" ? "Share your careers page, or put the jobs widget on your own site (Settings)." : "Publish the job to start taking applications."}
+          action={data.job.status === "open" ? <span className="flex flex-wrap justify-center gap-2">
+            <Link to={careersPath(company.slug)} className={buttonClass("secondary", "sm")}>Open careers page</Link>
+            <Button size="sm" variant="ghost" onClick={() => {
+              const link = `${window.location.origin}${careersPath(company.slug)}`;
+              void navigator.clipboard?.writeText(link).then(() => toast({ message: "Careers page link copied", tone: "success" }),
+                () => toast({ message: link, tone: "info" }));
+            }}>Copy link</Button>
+          </span> : undefined}
         />
       ) : view === "board" ? (
         <Board data={visible} cid={company.id} selected={selected} setSelected={setSelected} onMove={(ids, to) => void move(ids, to)} sort={sort} canMove={canMove} />

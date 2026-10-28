@@ -20,6 +20,11 @@ const SOURCE_LABEL: Record<string, string> = {
   other: "Other",
 };
 
+/** " · first reply 3 h", or " · no replies yet": the stat as it reads after an applicant count. */
+export function firstReply(h: number | null): string {
+  return h === null ? " · no replies yet" : ` · first reply ${hours(h).toLowerCase()}`;
+}
+
 export function hours(h: number | null): string {
   if (h === null) return "No replies yet";
   if (h < 1) return "Under an hour";
@@ -130,7 +135,7 @@ export function Dashboard() {
                         {j.title}
                       </Link>
                       <span className="text-xs text-zinc-600 dark:text-zinc-400">
-                        {j.applicants} applicants · first reply {hours(j.median_first_response_hours).toLowerCase()}
+                        {j.applicants} {j.applicants === 1 ? "applicant" : "applicants"}{j.applicants > 0 ? firstReply(j.median_first_response_hours) : ""}
                       </span>
                     </div>
                     <ol className="mt-2 flex flex-wrap gap-2 text-xs" aria-label={`${j.title}: applicants who reached each stage`}>

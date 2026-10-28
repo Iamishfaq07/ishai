@@ -31,7 +31,8 @@ export function HiringDeskPage() {
   </li>)}</ul> : <p className="py-6 text-sm text-zinc-500">{due ? "No outstanding feedback in the last seven days." : "No upcoming booked interviews."}</p>;
   return <div className="space-y-5">
     <PageTitle title="Hiring desk" subtitle="Your team's next actions, from candidate questions to interview debriefs." actions={<Button variant="secondary" onClick={() => setLoad((n) => n + 1)}>Refresh</Button>} />
-    <div className="grid gap-3 sm:grid-cols-3"><Stat label="Candidate attention" value={data.attention.length} detail="Shown in this queue" /><Stat label="Upcoming interviews" value={data.upcoming.length} detail="Next booked conversations" /><Stat label="Feedback due" value={data.feedback_due.length} detail="Completed interviews · last 7 days" /></div>
+    {/* Three zeros say nothing to a new team; the counts come with the first item. */}
+    {(data.attention.length + data.upcoming.length + data.feedback_due.length) > 0 && <div className="grid gap-3 sm:grid-cols-3"><Stat label="Candidate attention" value={data.attention.length} detail="Shown in this queue" /><Stat label="Upcoming interviews" value={data.upcoming.length} detail="Next booked conversations" /><Stat label="Feedback due" value={data.feedback_due.length} detail="Completed interviews · last 7 days" /></div>}
     <div className="grid gap-5 lg:grid-cols-2">
       <div className="space-y-5"><Panel title="Candidates waiting on your team" hint="Questions, completed challenges, deletion requests and applications beyond the job's response target.">
         {data.attention.length ? <ul className="divide-y divide-zinc-200 dark:divide-white/10">{data.attention.map((a) => <li key={a.application_id} className="py-4">
