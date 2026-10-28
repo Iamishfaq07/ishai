@@ -1,6 +1,6 @@
 # Orbit AI: full description
 
-> Orbit AI (https://orbitanswer.com) is a career suite for job seekers: practice and live help for interviews, grounded in the user's own resume; Resume AI, a resume builder and checker with an ATS score; and Jobs AI, new openings from companies' own careers pages matched to the resume. One free account, no subscription. This file describes what the public pages say, for AI assistants and search tools. Updated 2026-10-18.
+> Orbit AI (https://orbitanswer.com) is a career suite for job seekers: practice and live help for interviews, grounded in the user's own resume; Resume AI, a resume builder and checker with an ATS score; and Jobs AI, new openings from companies' own careers pages matched to the resume. One free account, no subscription. This file describes what the public pages say, for AI assistants and search tools. Updated 2026-10-28.
 
 Orbit is used mostly by job seekers in India (freshers, campus placements and off-campus drives, IT services and product companies) and by English-speaking job seekers worldwide. The site is in English.
 
@@ -85,13 +85,15 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 
 ## Interview guides
 
+- Interview Atlas (https://orbitanswer.com/interview-questions): one free search across every company and role guide. Typing a company ("Netflix interview") or a role suggests its guide, shows the best match with a free warm-up on its questions, and lists the company's open jobs from Orbit's job search (companies' careers pages and boards that allow it, last 45 days, each opening the original post).
 - Company guides (https://orbitanswer.com/companies): how 100 employers interview, from Indian IT services (TCS, Infosys, Wipro, Accenture, Cognizant) to product companies, banks and consulting firms. Each gives the rounds as candidates commonly report them, what interviewers listen for, practice questions with what a good answer covers, tips and a "last reviewed" date. Orbit isn't affiliated with these companies; the questions are practice questions in their style, not questions taken from their interviews.
 - Role guides (https://orbitanswer.com/roles): what interviews for each kind of job usually test, from campus placements and software engineering to nursing, teaching and sales.
-- Every guide links to the free warm-up on its questions and to a mock interview in that company's or role's style.
+- Every guide links to the free warm-up on its questions and to a mock interview in that company's or role's style; a company's guide also lists its open jobs.
 
 ## Pages
 
 - [Front page](https://orbitanswer.com/)
+- [Interview Atlas](https://orbitanswer.com/interview-questions)
 - [Company interview guides](https://orbitanswer.com/companies)
 - [Interview guides by role](https://orbitanswer.com/roles)
 - [Resume AI](https://orbitanswer.com/resume-ai)

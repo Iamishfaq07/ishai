@@ -2246,6 +2246,36 @@ export interface JobMatch {
   missing: string[];
 }
 
+/** A company guide's open jobs (GET /v1/public/companies/{slug}/jobs): public post fields only. */
+export interface PublicCompanyJobs {
+  company: string;
+  /** Its posts in Orbit's job cache from the last 45 days. */
+  total: number;
+  items: Array<{
+    title: string;
+    place: string;
+    posted_at: string;
+    apply_url: string | null;
+    source_label: string;
+    /** From the company's own careers page. */
+    direct: boolean;
+    /** The feed's name and link, where its terms ask for one. */
+    credit: { label: string; url: string } | null;
+  }>;
+}
+
+/** A job or a company the candidate hid from Discover ("Not interested"). `value` is the listing id or the company key. */
+export interface HiddenJob {
+  kind: "job" | "company";
+  value: string;
+  label: string;
+  at: string;
+}
+
+export interface HiddenJobs {
+  items: HiddenJob[];
+}
+
 export interface JobListing {
   id: string;
   source: string;

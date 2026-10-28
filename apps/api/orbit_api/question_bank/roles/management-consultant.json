@@ -1,7 +1,16 @@
 {
   "slug": "management-consultant",
   "name": "Management consultant",
-  "aliases": ["consultant", "management consulting", "strategy consultant", "strategy consulting", "business consultant", "associate consultant", "consulting analyst", "case interview"],
+  "aliases": [
+    "consultant",
+    "management consulting",
+    "strategy consultant",
+    "strategy consulting",
+    "business consultant",
+    "associate consultant",
+    "consulting analyst",
+    "case interview"
+  ],
   "group": "business",
   "summary": "Management consulting interviews are known for the case interview: you're given a business problem, such as falling profits or whether to enter a new market, and talk through how you'd solve it, with some maths along the way. Firms commonly pair cases with questions on your past experience and leadership, and some add an online problem-solving test, such as McKinsey's Solve, or a written case.",
   "rounds": [
@@ -188,6 +197,36 @@
         "What you'd learn in consulting that you need for it",
         "Showing you've thought about the job's demands"
       ]
+    },
+    {
+      "text": "Here's a chart of a client's costs by region over three years. What's the one thing you'd tell the client, and what would you check next?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The headline the chart actually supports, said first",
+        "The number behind it, read correctly",
+        "One sensible next question or data request"
+      ]
+    },
+    {
+      "text": "A bank wants more young customers to open accounts. Brainstorm the ways it could do that.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A clear split of the ideas (product, price, channels, partnerships)",
+        "Ideas that are specific rather than generic",
+        "Which two you'd test first, and why"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to work with data you didn't fully trust.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What made the data doubtful",
+        "How you checked it or worked around it",
+        "How you told others how sure you were"
+      ]
     }
   ],
   "tips": [
@@ -196,11 +235,22 @@
     "Do mental maths every day: percentages, growth rates, large multiplications. Round sensibly and say your assumptions.",
     "When you summarise, lead with the answer, then give the reasons.",
     "Prepare three or four stories (leadership, persuasion, failure, teamwork) with your exact part and results; firms commonly probe them in depth.",
-    "Read each firm's own careers pages on how it interviews; some publish example cases to practise with."
+    "Read each firm's own careers pages on how it interviews; some publish example cases to practise with.",
+    "Bain publishes case interview preparation with practice cases on its careers site, and McKinsey's careers site describes the personal experience questions it asks; read both firms' own material before paid guides."
   ],
   "mock": {
     "interview_type": "mixed",
     "persona": "executive"
   },
-  "reviewed": "2026-10-18"
+  "reviewed": "2026-10-28",
+  "sources": [
+    {
+      "title": "Bain: preparing for the case interview",
+      "url": "https://www.bain.com/careers/hiring-process/case-interview/"
+    },
+    {
+      "title": "McKinsey careers blog: taking interviews step by step",
+      "url": "https://www.mckinsey.com/careers/meet-our-people/careers-blog/yan-yan"
+    }
+  ]
 }

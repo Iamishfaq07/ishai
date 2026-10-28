@@ -4,6 +4,8 @@ import type { AnswerKind, BankCard, BankCompany, BankQuestion, BankRole, Company
 
 export type BankKind = "company" | "role";
 
+/** Interview Atlas: one search across every company and role guide, with each company's open jobs. */
+export const ATLAS_PATH = "/interview-questions";
 export const COMPANIES_PATH = "/companies";
 export const ROLES_PATH = "/roles";
 

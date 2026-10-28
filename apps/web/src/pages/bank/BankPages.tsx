@@ -24,6 +24,7 @@ import { Container, Eyebrow, IconTile } from "../../marketing/primitives";
 import { useAuth } from "../../lib/auth";
 import { NotFoundPage } from "../NotFound";
 import {
+  ATLAS_PATH,
   COMPANIES_PATH,
   COMPANY_GROUPS,
   ROLES_PATH,
@@ -41,6 +42,7 @@ import {
   warmupLink,
   type BankKind,
 } from "./content";
+import { CompanyJobs } from "./CompanyJobs";
 import { loadCompany, loadRole } from "./docs";
 import type { BankCard, BankCompany, BankQuestion, BankRole } from "./types";
 
@@ -58,17 +60,20 @@ const ROLE_TOTAL = roleCards.length;
 const sum = (cards: readonly BankCard[]) => cards.reduce((n, c) => n + c.questions, 0).toLocaleString("en-US");
 
 /** The guides' own tabs (Companies, Roles, the free warm-up), under the site's header. */
-function GuideTabs({ kind }: { kind: BankKind }) {
+function GuideTabs({ kind }: { kind: BankKind | "atlas" }) {
   const tab = (active: boolean) =>
     cx(
-      "inline-flex min-h-10 items-center border-b-2 px-1 text-sm font-medium transition-colors duration-quick",
+      "inline-flex min-h-10 shrink-0 items-center whitespace-nowrap border-b-2 px-1 text-sm font-medium transition-colors duration-quick",
       active
         ? "border-zinc-900 text-zinc-950 dark:border-white dark:text-white"
         : "border-transparent text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white",
       focusRing,
     );
   return (
-    <nav aria-label="Interview guides" className="flex gap-6 border-b mk-line">
+    <nav aria-label="Interview guides" className="flex gap-6 overflow-x-auto border-b mk-line">
+      <Link to={ATLAS_PATH} className={tab(kind === "atlas")} aria-current={kind === "atlas" ? "page" : undefined}>
+        Search all
+      </Link>
       <Link to={COMPANIES_PATH} className={tab(kind === "company")} aria-current={kind === "company" ? "page" : undefined}>
         Companies
       </Link>
@@ -84,7 +89,7 @@ function GuideTabs({ kind }: { kind: BankKind }) {
 
 /** A guide page in the public site's layout (marketing/PublicLayout): its header and footer, the guides' tabs, the
  *  grid. Signed in, the header's next step is Practice. */
-function BankShell({ kind, children }: { kind: BankKind; children: ReactNode }) {
+export function BankShell({ kind, children }: { kind: BankKind | "atlas"; children: ReactNode }) {
   const { user } = useAuth();
   return (
     <PublicLayout
@@ -106,7 +111,7 @@ function BankShell({ kind, children }: { kind: BankKind; children: ReactNode }) 
   );
 }
 
-function Breadcrumbs({ items }: { items: Array<{ label: string; to?: string }> }) {
+export function Breadcrumbs({ items }: { items: Array<{ label: string; to?: string }> }) {
   return (
     <nav aria-label="Breadcrumb" className="pt-6 text-sm text-zinc-600 dark:text-zinc-400">
       <ol className="flex flex-wrap items-center gap-1.5">
@@ -241,7 +246,7 @@ export function BankIndexView({ kind }: { kind: BankKind }) {
   );
 }
 
-function CardGrid({ kind, cards }: { kind: BankKind; cards: readonly BankCard[] }) {
+export function CardGrid({ kind, cards }: { kind: BankKind; cards: readonly BankCard[] }) {
   return (
     <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map((c) => (
@@ -305,7 +310,9 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
   const others = related(company ? companyCards : roleCards, entry.slug);
   const across = crossLinks(kind, entry, { companies: companyCards, roles: roleCards });
   const groupLabel = (company ? COMPANY_GROUPS : ROLE_GROUPS).find(([g]) => g === entry.group)?.[1] ?? "";
-  const title = company ? `${name} interview process and practice questions` : `${name} interview questions and what to expect`;
+  const year = entry.reviewed.slice(0, 4);
+  const title = company ? `${name} interview process and questions (${year})` : `${name} interview questions and what to expect (${year})`;
+  const note = company ? (entry as BankCompany).note : undefined;
 
   const actions = (dark: boolean) => (
     <div className="flex flex-wrap gap-3">
@@ -344,6 +351,11 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
           <h1 id="guide-title" className="mk-h2 mt-5 max-w-4xl text-zinc-950 dark:text-white">
             {title}
           </h1>
+          {note && (
+            <p className="mt-5 flex max-w-3xl gap-2 rounded-xl border mk-line mk-band px-4 py-3 text-sm text-zinc-700 dark:text-zinc-300">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden /> <span>{note}</span>
+            </p>
+          )}
           <p className="mk-lead mt-5 max-w-3xl text-zinc-600 dark:text-zinc-300">{entry.summary}</p>
           <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
             {company ? "As candidates commonly report it; it varies by team, level and year." : "What candidates commonly report; it varies by employer, level and country."}{" "}
@@ -392,6 +404,10 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
             </ul>
           </section>
         </div>
+
+        <QuickAnswers kind={kind} entry={entry} />
+
+        {company && <div className="mt-8"><CompanyJobs slug={entry.slug} name={name} /></div>}
 
         {questionSections(kind, name).map(([type, heading]) => (
           <QuestionSection key={type} id={`q-${type}`} heading={heading} questions={entry.questions.filter((q) => q.type === type)} />
@@ -501,6 +517,40 @@ function QuestionSection({ id, heading, questions }: { id: string; heading: stri
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+/**
+ * The guide in four lines, first thing after the process (search engines and assistants quote a page's direct answers):
+ * every line is the guide's own content, restated, never anything it doesn't show.
+ */
+function QuickAnswers({ kind, entry }: { kind: BankKind; entry: BankCompany | BankRole }) {
+  const company = kind === "company";
+  const name = entry.name;
+  const behavioral = entry.questions.find((q) => q.type === "behavioral");
+  const role = entry.questions.find((q) => q.type === "role");
+  const rows: Array<[string, string]> = [
+    [company ? `How many interview rounds does ${name} have?` : `What are the stages of a ${name.toLowerCase()} interview?`,
+      `Candidates commonly report ${entry.rounds.length} stages: ${entry.rounds.join("; ")}. It varies by team, level and year.`],
+    [company ? `What does ${name} look for in an interview?` : `What do ${name.toLowerCase()} interviews check?`,
+      `${entry.looks_for.slice(0, 5).join("; ")}${entry.looks_for.length > 5 ? "; and more below" : ""}.`],
+    [company ? `What questions does ${name} ask?` : `What questions come up in a ${name.toLowerCase()} interview?`,
+      [behavioral && `Expect behavioural questions such as “${behavioral.text}”`, role && `questions about the work such as “${role.text}”`].filter(Boolean).join(", and ") +
+        `. This guide has ${entry.questions.length} practice questions, each with what a good answer covers.`],
+    [company ? `How do I prepare for a ${name} interview?` : `How do I prepare for a ${name.toLowerCase()} interview?`, entry.tips.slice(0, 2).join(" ")],
+  ];
+  return (
+    <section aria-labelledby="quick-title" className="mt-8 rounded-2xl border mk-line mk-surface p-6">
+      <h2 id="quick-title" className={sectionTitle}>In short</h2>
+      <dl className="mt-4 space-y-4 text-sm">
+        {rows.map(([q, a]) => (
+          <div key={q}>
+            <dt className="font-semibold text-zinc-950 dark:text-white">{q}</dt>
+            <dd className="mt-1 text-zinc-700 dark:text-zinc-300">{a}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

@@ -295,12 +295,17 @@ def _norm(text: str) -> str:
 
 def dedupe_key(company: str, title: str, cities: list[str], workplace: str | None) -> str:
     """The same job posted twice (on the company's board and on a feed): same company, title and city."""
-    company_key = re.sub(r"\b(private|pvt|limited|ltd|inc|llc|technologies|technology|labs|india)\b", "",
-                         _norm(company)).strip()
     place = cities[0].lower() if cities else ("remote" if workplace == "remote" else "")
     # Word order and "developer" vs "engineer" don't make it another job.
     words = sorted({"engineer" if w in ("developer", "dev") else w for w in _norm(title).split()})
-    return f"{re.sub(r' +', ' ', company_key)}|{' '.join(words)}|{place}"[:300]
+    return f"{company_key(company)}|{' '.join(words)}|{place}"[:300]
+
+
+def company_key(company: str) -> str:
+    """A company the way duplicates are told apart: "Acme Technologies Pvt Ltd" and "acme" are the same one."""
+    key = re.sub(r"\b(private|pvt|limited|ltd|inc|llc|technologies|technology|labs|india)\b", "",
+                 _norm(company)).strip()
+    return re.sub(r" +", " ", key)
 
 
 def listing_id(source: str, external_id: str) -> str:

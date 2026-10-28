@@ -17,6 +17,7 @@ import { ResumeAiPublicPage } from "../pages/resume/ResumeAiPublic";
 import { LinkedInPublicPage } from "../pages/linkedin/LinkedInPublic";
 import { BusinessLandingPage } from "../business/BusinessLanding";
 import { BankIndexView, GuideView } from "../pages/bank/BankPages";
+import { AtlasPage } from "../pages/bank/Atlas";
 import { COMPANIES_PATH, ROLES_PATH, companyPath, rolePath } from "../pages/bank/content";
 import { loadCompany, loadRole } from "../pages/bank/docs";
 import { ARTICLES, GUIDES_PATH, guidePath, publishedArticles } from "../pages/guides/articles";
@@ -55,6 +56,7 @@ const WORKER_PAGES: Record<string, () => ReactNode> = {
   "/linkedin-ai": () => <LinkedInPublicPage />,
   "/business": () => <BusinessLandingPage />,
   "/tools": () => <ToolExplorerPage />,
+  "/interview-questions": () => <AtlasPage />,
 };
 
 /** Where the Worker finds a PAGE_META page's built copy (worker/prerendered.js `prerenderedAsset`). */

@@ -81,14 +81,23 @@ export function guideHead(kind: BankKind, entry: BankCompany | BankRole): Head {
   const company = kind === "company";
   const path = company ? companyPath(entry.slug) : rolePath(entry.slug);
   const n = entry.questions.length;
+  // The year it was last checked: searchers pick a current guide over an undated one (Search Console showed page-one
+  // guides with no clicks).
+  const year = entry.reviewed.slice(0, 4);
   const title = company
     ? titled(
-        `${entry.name} interview process and practice questions`,
+        `${entry.name} interview process & questions (${year})`,
+        `${entry.name} interview questions (${year})`,
         `${entry.name} interview process and questions`,
         `${entry.name} interview questions`,
         `${entry.name} interview guide`,
       )
-    : titled(`${entry.name} interview questions and what to expect`, `${entry.name} interview questions`, `${entry.name} interview guide`);
+    : titled(
+        `${entry.name} interview questions & what to expect (${year})`,
+        `${entry.name} interview questions (${year})`,
+        `${entry.name} interview questions`,
+        `${entry.name} interview guide`,
+      );
   // The first wording that fits in the ~160 characters results show.
   const fits = (...wordings: string[]) => wordings.find((w) => w.length <= 160) ?? wordings[wordings.length - 1]!;
   const description = company

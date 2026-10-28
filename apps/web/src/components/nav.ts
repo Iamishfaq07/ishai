@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, Banknote, GraduationCap, Headphones, House, INDIA, IdCard, LayoutGrid, MOCK_INTERVIEW_ENABLED, Rocket, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
+import { BadgeIndianRupee, Banknote, BookOpen, GraduationCap, Headphones, House, INDIA, IdCard, LayoutGrid, MOCK_INTERVIEW_ENABLED, Rocket, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
 import { LINKEDIN_HOME } from "../pages/linkedin/model";
@@ -69,6 +69,9 @@ const JOBS_TASK: NavItem = { ...JOBS, label: "Job Search", tab: "Jobs", to: "/jo
 const AUTO_APPLY: NavItem = { id: "auto-apply", to: "/jobs/journey", label: "Auto Apply", icon: Rocket, current: (p) => AUTO_APPLY_PATH.test(p) };
 const PREPARE: NavItem = { id: "prepare", label: "Interview Prep", tab: "Prepare", to: "/prepare", icon: PRODUCTS.practice.icon,
   current: (p) => /^\/(prepare|warmup|aptitude|star-check|group-discussion|readiness|campus|learn|code|interview)(\/|$)/.test(p) };
+// Interview Atlas (pages/bank/Atlas.tsx): every company's and role's interview guide, searchable, with open jobs.
+const ATLAS: NavItem = { id: "atlas", label: "Interview Atlas", to: "/interview-questions", icon: BookOpen,
+  current: (p) => /^\/(?:interview-questions|companies|roles)(\/|$)/.test(p) };
 const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/career", icon: UserRound,
   current: (p) => /^\/(?:career|career-gap|github-projects)(\/|$)/.test(p) };
 
@@ -77,7 +80,7 @@ const CAREER: NavItem = { id: "career", label: "My Career", tab: "Me", to: "/car
  *  Learning stays in Prepare, and every other tool is one search away. */
 export function navGroups(mock: boolean = MOCK_INTERVIEW_ENABLED, country: string = INDIA): NavGroup[] {
   return [
-    { label: null, items: [HOME, JOBS_TASK, PREPARE, CAREER] },
+    { label: null, items: [HOME, JOBS_TASK, PREPARE, ATLAS, CAREER] },
     { label: "AI tools", items: [AUTO_APPLY, RESUME, ...(mock ? [PRACTICE] : []), LINKEDIN, isIndia(country) ? OFFER : OFFER_WORLD, ALL_TOOLS] },
     { label: "Live", items: [COPILOT] },
   ];
