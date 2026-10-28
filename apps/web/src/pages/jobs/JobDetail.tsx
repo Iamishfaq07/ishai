@@ -178,7 +178,8 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
             </Link>
           )}
           <TailorButton actions={actions} />
-          <PrepareButton actions={actions} />
+          {/* Once saved, the job's own page and "Prepare for interview" are where preparing happens. */}
+          {!entry && <PrepareButton actions={actions} />}
           {/* Written from the resume tailored for this job if there is one, else the one it's matched to. */}
           <Link
             to={outreachPath({ job: job.id, resume: entry?.resume_id ?? resumeId })}
@@ -195,7 +196,7 @@ function Job({ detail, onChanged }: { detail: JobDetail; onChanged: () => void }
         </div>
         <div className="relative">
           <ActionNotes actions={actions} />
-      <FullPrepButton actions={actions} />
+      {!entry && <FullPrepButton actions={actions} />}
         </div>
       </header>
 

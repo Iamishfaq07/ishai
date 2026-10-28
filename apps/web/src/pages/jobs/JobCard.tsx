@@ -330,7 +330,7 @@ export function PrepareButton({ actions }: { actions: JobActions }) {
 export function FullPrepButton({ actions }: { actions: JobActions }) {
   return <Button variant="primary" size="sm" className="mt-3 w-full sm:w-auto" disabled={Boolean(actions.busy)} onClick={actions.fullPrep}
     title="Tailors a resume diff using one Resume credit and prepares a Practice link for this exact job">
-    <Target className="h-4 w-4" aria-hidden />{actions.busy === "fullprep" ? "Preparing your career loop…" : "Launch Full Prep for This Job"}
+    <Target className="h-4 w-4" aria-hidden />{actions.busy === "fullprep" ? "Tailoring and preparing…" : "Tailor my resume and prepare"}
   </Button>;
 }
 
