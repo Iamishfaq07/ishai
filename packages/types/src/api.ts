@@ -2821,12 +2821,15 @@ export interface MissionResume {
 
 /** Creation-time source observation; an executor report is not independent employer delivery proof. */
 export interface SnapshotOrigin {
-  kind: "resume" | "packet";
+  kind: "resume" | "packet" | "gmail";
   source_id: string;
   source_revision: number | null;
   content_digest: string;
   recorded_at: string;
-  observation: "saved_copy" | "candidate_recorded" | "executor_reported";
+  observation: "saved_copy" | "candidate_recorded" | "executor_reported" | "provider_accepted";
+  source_resume_id?: string | null;
+  gmail_message_id?: string | null;
+  mime_digest?: string | null;
   packet_status: string | null;
   packet_result: string | null;
   design_captured: boolean;

@@ -24,13 +24,24 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.gmail.delivery import ApplicationEmail, ResumeAttachment, compose, send_once
 from orbit_api.job_portal.message_updates import owned
-from orbit_api.models import GmailAttempt, GmailConnection, User
+from orbit_api.models import (
+    Document,
+    GmailArtifact,
+    GmailAttempt,
+    GmailConnection,
+    JobApplication,
+    Resume,
+    ResumeSnapshot,
+    User,
+)
 from orbit_api.ratelimit import limit_user
 from orbit_api.runtime_config import _decrypt_secret, encrypt_secret, secrets_editable
+from orbit_api.transactions import lock_account
 
 router = APIRouter(prefix="/v1/gmail", tags=["gmail"],
     dependencies=[Depends(limit_user("gmail", rate_per_s=1, burst=15))])
 SCOPE = "https://www.googleapis.com/auth/gmail.send"
+MAX_STORED_MIME_BYTES = 100_000_000
 
 
 def enabled() -> bool:
@@ -62,8 +73,11 @@ async def connect(user: Annotated[User, Depends(require_verified_email)],
     require_config()
     s = get_settings()
     state, verifier, nonce = secrets.token_urlsafe(32), secrets.token_urlsafe(48), secrets.token_urlsafe(32)
-    row = await db.get(GmailConnection, user.id)
+    await lock_account(db, user.id)
+    row = await db.get(GmailConnection, user.id, populate_existing=True)
     data = dict(row.data) if row else {}
+    generation = str(uuid.uuid4())
+    data["generation"] = generation
     data["pending"] = {"state": hashlib.sha256(state.encode()).hexdigest(), "verifier": encrypt_secret(verifier),
                        "nonce": nonce, "expires": (datetime.now(UTC) + timedelta(minutes=10)).timestamp()}
     if row:
@@ -84,11 +98,13 @@ async def callback(state: str, user: Annotated[User, Depends(current_user)],
                    error: str | None = None) -> RedirectResponse:
     require_config()
     s = get_settings()
+    await lock_account(db, user.id)
     row = await db.scalar(select(GmailConnection).where(GmailConnection.user_id == user.id).with_for_update())
     pending = row.data.get("pending", {}) if row else {}
     if not row or not secrets.compare_digest(pending.get("state", ""), hashlib.sha256(state.encode()).hexdigest()) \
             or pending.get("expires", 0) < datetime.now(UTC).timestamp():
         raise HTTPException(409, "Gmail connection expired. Connect again from Settings.")
+    generation = row.data.get("generation")
     data = dict(row.data)
     data.pop("pending", None)
     row.data = data
@@ -110,9 +126,14 @@ async def callback(state: str, user: Annotated[User, Depends(current_user)],
                               issuer=["https://accounts.google.com", "accounts.google.com"])
         if identity.get("nonce") != pending["nonce"] or identity.get("email_verified") is not True:
             raise ValueError("Unverified identity")
-        data = {"email": identity["email"], "refresh": encrypt_secret(token["refresh_token"])}
+        data = {"email": identity["email"], "refresh": encrypt_secret(token["refresh_token"]),
+                "generation": generation}
     except (httpx.HTTPError, ValueError, KeyError, jwt.PyJWTError) as exc:
         raise HTTPException(502, "Google connection could not be verified. Connect again from Settings.") from exc
+    await lock_account(db, user.id)
+    latest = await db.get(GmailConnection, user.id, populate_existing=True)
+    if latest is None or latest.data.get("generation") != generation:
+        raise HTTPException(409, "A newer Gmail connection replaced this flow. Continue from Settings.")
     await db.execute(update(GmailConnection).where(GmailConnection.user_id == user.id).values(data=data))
     await db.commit()
     return RedirectResponse(s.web_url.rstrip("/") + "/settings?gmail=connected", status_code=303)
@@ -121,7 +142,8 @@ async def callback(state: str, user: Annotated[User, Depends(current_user)],
 @router.delete("", status_code=204)
 async def disconnect(user: Annotated[User, Depends(current_user)],
                      db: Annotated[AsyncSession, Depends(get_db)]) -> None:
-    row = await db.get(GmailConnection, user.id)
+    await lock_account(db, user.id)
+    row = await db.get(GmailConnection, user.id, populate_existing=True)
     refresh = row.data.get("refresh") if row else None
     await db.execute(delete(GmailConnection).where(GmailConnection.user_id == user.id))
     await db.commit()
@@ -167,17 +189,37 @@ async def draft(entry_id: str, payload: Annotated[str, Form()], user: Annotated[
 async def save_draft(db: AsyncSession, user: User, entry_id: str, message: ApplicationEmail, mime: bytes,
                      identity: str, attachment_name: str | None, sender: str,
                      extra: dict[str, Any] | None = None) -> dict[str, Any]:
-    await db.scalar(select(User).where(User.id == user.id).with_for_update())
+    await lock_account(db, user.id)
+    materials = (extra or {}).get("tailoring")
+    if materials:
+        entry = await db.scalar(select(JobApplication).where(JobApplication.id == entry_id,
+            JobApplication.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        source = await db.scalar(select(Resume).where(Resume.id == materials["resume_id"],
+            Resume.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        doc = await db.scalar(select(Document).where(Document.id == materials["document_id"],
+            Document.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        if (entry is None or source is None or doc is None or entry.document_id != doc.id
+                or entry.status in {"withdrawn", "rejected", "hired"}
+                or source.revision != materials["resume_revision"]
+                or hashlib.sha256((doc.source_text or "")[:20000].encode()).hexdigest() != materials["job_digest"]):
+            raise HTTPException(409, "Application sources changed. Prepare a fresh reviewed draft.")
     count = await db.scalar(select(func.count()).select_from(GmailAttempt).where(GmailAttempt.user_id == user.id,
         GmailAttempt.created_at >= datetime.now(UTC) - timedelta(days=1)))
     if (count or 0) >= 20:
         raise HTTPException(429, "Up to 20 Gmail application drafts per rolling day.")
+    stored_bytes = await db.scalar(select(func.coalesce(func.sum(func.length(GmailArtifact.content)), 0))
+        .join(GmailAttempt, GmailArtifact.attempt_id == GmailAttempt.id).where(GmailAttempt.user_id == user.id))
+    if (stored_bytes or 0) + len(mime) > MAX_STORED_MIME_BYTES:
+        raise HTTPException(409, "Gmail email storage is limited to 100 MB per account. "
+                            "Discard unsent drafts to free space; delivery records are retained.")
     row = GmailAttempt(id=identity, user_id=user.id, application_id=entry_id, status="ready", data={
-        **message.model_dump(), "sender": sender, "mime": base64.b64encode(mime).decode(),
+        **message.model_dump(), "sender": sender,
         "sha256": hashlib.sha256(mime).hexdigest(), "attachment": attachment_name,
         **(extra or {})})
     db.add(row)
     try:
+        await db.flush()
+        db.add(GmailArtifact(attempt_id=identity, content=mime))
         await db.commit()
     except IntegrityError:
         await db.rollback()
@@ -201,10 +243,14 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
         raise HTTPException(404, "Email attempt not found")
     if not connection or connection.data.get("email") != row.data.get("sender"):
         raise HTTPException(409, "Reconnect the same Gmail account used for this draft.")
+    if row.status != "ready":
+        raise HTTPException(409, "Only a reviewed ready draft can be sent. Review its delivery record first.")
+    review_generation = row.data.get("review_generation")
+    connection_stamp = (connection.data.get("generation"), connection.data.get("refresh"))
     refresh = _decrypt_secret(connection.data.get("refresh", ""))
     if not refresh:
         raise HTTPException(409, "Reconnect Gmail to restore access.")
-    mime = base64.b64decode(row.data["mime"])
+    mime = await captured_mime(db, row)
     if hashlib.sha256(mime).hexdigest() != row.data["sha256"]:
         raise HTTPException(409, "Draft content is inconsistent. Do not send this record.")
     async with httpx.AsyncClient() as client:
@@ -218,8 +264,27 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
                 raise ValueError("Refresh rejected")
         except (httpx.HTTPError, ValueError) as exc:
             raise HTTPException(409, "Gmail access could not be refreshed. Reconnect before sending.") from exc
+        await lock_account(db, user.id)
+        latest = await db.get(GmailConnection, user.id, populate_existing=True)
+        if latest is None or (latest.data.get("generation"), latest.data.get("refresh")) != connection_stamp:
+            raise HTTPException(409, "Gmail was disconnected or changed before delivery. Review the connection again.")
+        entry = await db.scalar(select(JobApplication).where(JobApplication.id == row.application_id,
+            JobApplication.user_id == user.id).with_for_update().execution_options(populate_existing=True))
+        if entry is None:
+            raise HTTPException(409, "This opportunity was removed before delivery.")
+        if entry.status in {"withdrawn", "rejected", "hired"}:
+            raise HTTPException(409, "This opportunity is closed. Reopen it explicitly before sending an application.")
+        await db.refresh(row)
+        if row.data.get("review_generation") != review_generation:
+            raise HTTPException(409, "This email returned for a new review. Confirm its current review before sending.")
+        history = list(row.data.get("deliveries", []))
+        if len(history) >= 5:
+            raise HTTPException(409, "This email has reached its five-send limit. Review the delivery history.")
+        history.append({"number": len(history) + 1, "status": "sending",
+                        "reserved_at": datetime.now(UTC).isoformat()})
         reserved = await db.scalar(update(GmailAttempt).where(GmailAttempt.id == row.id,
-            GmailAttempt.user_id == user.id, GmailAttempt.status == "ready").values(status="sending")
+            GmailAttempt.user_id == user.id, GmailAttempt.status == "ready")
+            .values(status="sending", data={**row.data, "deliveries": history})
             .returning(GmailAttempt.id))
         if not reserved:
             raise HTTPException(409, "This attempt has already been sent or reserved. "
@@ -232,11 +297,55 @@ async def send(attempt_id: str, body: Confirmation, user: Annotated[User, Depend
         entry = await owned(db, user, row.application_id)
         if entry.status == "saved":
             _move(entry, "applied")
+        materials = row.data.get("tailoring")
+        if materials and materials.get("resume_data"):
+            from orbit_api.job_portal.resume_lineage import capture_origin
+
+            source = await db.get(Resume, materials.get("resume_id"))
+            source_id = source.id if source and source.user_id == user.id else None
+            saved = ResumeSnapshot(user_id=user.id, application_id=entry.id, resume_id=source_id,
+                title="Resume accepted by Gmail", data=materials["resume_data"],
+                design=materials.get("resume_design", {}), job_text=materials.get("job_text", ""),
+                score=materials.get("resume_score", 0),
+                note="Gmail accepted the application email; employer receipt is not verified")
+            saved.origin = {**capture_origin(saved, kind="gmail", source_id=row.id,
+                source_revision=materials.get("resume_revision"), observation="provider_accepted",
+                design_captured="resume_design" in materials), "source_resume_id": materials.get("resume_id"),
+                "gmail_message_id": result.message_id, "mime_digest": row.data["sha256"]}
+            db.add(saved)
+            if entry.resume_id is None and source_id:
+                entry.resume_id = source_id
+    recorded_at = datetime.now(UTC).isoformat()
+    receipt = {"status": result.status, "message_id": result.message_id, "reason": result.reason,
+               "retryable": result.retryable, "retry_after": result.retry_after,
+               "http_status": result.http_status, "recorded_at": recorded_at}
+    history[-1] = {**history[-1], **receipt}
     row.status = result.status
-    row.data = {**row.data, "message_id": result.message_id, "reason": result.reason,
-                "recorded_at": datetime.now(UTC).isoformat()}
+    row.data = {**row.data, **{k: v for k, v in receipt.items() if k != "status"}, "deliveries": history}
     await db.commit()
     return {"id": row.id, "status": row.status, "message_id": result.message_id, "reason": result.reason}
+
+
+@router.post("/attempts/{attempt_id}/retry")
+async def retry(attempt_id: str, body: Confirmation, user: Annotated[User, Depends(require_verified_email)],
+                db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, str]:
+    if not body.confirmed:
+        raise HTTPException(422, "Confirm returning the rejected email to review.")
+    await lock_account(db, user.id)
+    row = await db.get(GmailAttempt, attempt_id, populate_existing=True)
+    if row is None or row.user_id != user.id:
+        raise HTTPException(404, "Email attempt not found")
+    if row.status != "rejected" or row.data.get("retryable") is not True:
+        raise HTTPException(409, "Only a recorded, definite Gmail rejection can return to review.")
+    if len(row.data.get("deliveries", [])) >= 5:
+        raise HTTPException(409, "This email has reached its five-send limit.")
+    retry_after = row.data.get("retry_after")
+    if not retry_after or datetime.fromisoformat(retry_after) > datetime.now(UTC):
+        raise HTTPException(409, "Gmail's retry cooldown has not elapsed. Wait before returning to review.")
+    row.status = "ready"
+    row.data = {**row.data, "review_generation": str(uuid.uuid4())}
+    await db.commit()
+    return {"id": row.id, "status": row.status}
 
 
 @router.get("/attempts/{entry_id}")
@@ -251,10 +360,11 @@ async def attempts(entry_id: str, user: Annotated[User, Depends(current_user)],
 @router.delete("/attempts/{attempt_id}", status_code=204)
 async def discard(attempt_id: str, user: Annotated[User, Depends(current_user)],
                    db: Annotated[AsyncSession, Depends(get_db)]) -> None:
-    removed = await db.scalar(delete(GmailAttempt).where(GmailAttempt.id == attempt_id,
-        GmailAttempt.user_id == user.id, GmailAttempt.status == "ready").returning(GmailAttempt.id))
-    if not removed:
-        raise HTTPException(409, "Only an unsent draft can be discarded.")
+    await lock_account(db, user.id)
+    row = await db.get(GmailAttempt, attempt_id, populate_existing=True)
+    if row is None or row.user_id != user.id or row.status != "ready" or row.data.get("deliveries"):
+        raise HTTPException(409, "Only an unsent draft without delivery history can be discarded.")
+    await db.delete(row)
     await db.commit()
 
 
@@ -267,7 +377,7 @@ async def attachment(attempt_id: str, user: Annotated[User, Depends(current_user
     row = await db.get(GmailAttempt, attempt_id)
     if row is None or row.user_id != user.id:
         raise HTTPException(404, "Email attempt not found")
-    mime = base64.b64decode(row.data["mime"])
+    mime = await captured_mime(db, row)
     if hashlib.sha256(mime).hexdigest() != row.data["sha256"]:
         raise HTTPException(409, "Captured email content is inconsistent")
     mail = BytesParser(policy=policy.default).parsebytes(mime)
@@ -277,3 +387,10 @@ async def attachment(attempt_id: str, user: Annotated[User, Depends(current_user
     name = "resume.docx" if part.get_content_subtype().endswith("document") else "resume.pdf"
     return Response(part.get_payload(decode=True), media_type=part.get_content_type(),
                     headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
+
+
+async def captured_mime(db: AsyncSession, row: GmailAttempt) -> bytes:
+    content = await db.scalar(select(GmailArtifact.content).where(GmailArtifact.attempt_id == row.id))
+    if content is None:
+        raise HTTPException(409, "The captured email is missing. Do not send this record.")
+    return content

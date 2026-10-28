@@ -981,7 +981,17 @@ MAX_TIMELINE_EVENTS = 300
 @router.delete("/tracker/{entry_id}", status_code=204, dependencies=[Depends(read_limit)])
 async def delete_tracker(entry_id: str, user: Annotated[User, Depends(current_user)],
                          db: Annotated[AsyncSession, Depends(get_db)]) -> None:
-    await db.delete(await _owned_entry(db, entry_id, user))
+    from orbit_api.models import GmailAttempt
+    from orbit_api.transactions import lock_account
+
+    await lock_account(db, user.id)
+    entry = await _owned_entry(db, entry_id, user)
+    delivery = await db.scalar(select(GmailAttempt).where(GmailAttempt.user_id == user.id,
+        GmailAttempt.application_id == entry.id).limit(1))
+    if delivery and (delivery.status != "ready" or delivery.data.get("deliveries")):
+        raise HTTPException(409, "This job has delivery history that must be preserved. "
+                            "Withdraw the opportunity instead of deleting it.")
+    await db.delete(entry)
     await db.commit()
 
 

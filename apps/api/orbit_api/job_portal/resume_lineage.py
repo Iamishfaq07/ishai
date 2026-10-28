@@ -48,23 +48,29 @@ def packet_materials(answers: list[dict[str, Any]], fields: dict[str, Any],
     return PacketMaterials(**material, content_digest=digest(material)).model_dump()
 
 
+Observation = Literal["saved_copy", "candidate_recorded", "executor_reported", "provider_accepted"]
+
+
 class SnapshotOrigin(BaseModel):
-    kind: Literal["resume", "packet"]
+    kind: Literal["resume", "packet", "gmail"]
     source_id: str
     source_revision: int | None = None
     content_digest: str
     recorded_at: str
-    observation: Literal["saved_copy", "candidate_recorded", "executor_reported"]
+    observation: Observation
     packet_status: str | None = None
     packet_result: str | None = None
     # Packet snapshots preserve structured data, not proof of the exact uploaded PDF/rendering.
     design_captured: bool = True
     packet_materials: PacketMaterials | None = None
+    source_resume_id: str | None = None
+    gmail_message_id: str | None = None
+    mime_digest: str | None = None
 
 
-def capture_origin(source: Resume | ResumeSnapshot, *, kind: Literal["resume", "packet"],
+def capture_origin(source: Resume | ResumeSnapshot, *, kind: Literal["resume", "packet", "gmail"],
                    source_id: str, source_revision: int | None = None,
-                   observation: Literal["saved_copy", "candidate_recorded", "executor_reported"] = "saved_copy",
+                   observation: Observation = "saved_copy",
                    packet_status: str | None = None, packet_result: str | None = None,
                    design_captured: bool = True) -> dict[str, Any]:
     return SnapshotOrigin(kind=kind, source_id=source_id, source_revision=source_revision,

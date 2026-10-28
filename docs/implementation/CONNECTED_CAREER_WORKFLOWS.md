@@ -231,3 +231,27 @@ completed employer rounds remain represented after later rejection. Earlier unre
 history stays unknown. Counts are descriptive, not proof of employer receipt or causal
 resume performance. The overview refreshes when the user returns to the page. Existing
 Today/action-queue infrastructure remains the single next-action surface.
+
+
+## Audit remediation: Gmail lifecycle boundaries
+
+The first remediation pass addresses the three P1 findings from the audit of 5702d703.
+Closed opportunities cannot authorize delivery; connection generations are revalidated after
+refresh and at reservation; tracker deletion cannot erase an in-flight or completed Gmail
+attempt. The same generation protects final OAuth storage from an older callback replacing
+a newer connection. Account/row locks define the reservation boundary. A request already
+reserved at Google cannot be retracted by later local actions. Controlled interleaving tests
+are included in SQLite validation and added to the PostgreSQL CI race job. Other audit
+findings, including resume handoff, existing-job intake, rejection recovery and artifact
+storage/export remain open; this does not close the entire audit.
+
+## Audit remediation: resume handoff and existing-job source intake
+
+The next pass resolves the two reproduced P2 handoff/intake findings. Successful tailored
+Gmail sends create frozen resume snapshots with provider-accepted provenance and links to
+the retained MIME/message receipt. Interview prep can select these versions; current master
+resumes are not modified. Gmail outcome attribution follows captured source IDs. Existing
+active opportunities support explicitly reviewed, version-checked source attachment, with
+prior documents retained and prepared-attempt replacement blocked. Tailored-draft persistence
+rechecks locked source rows and revisions after rendering. Historical sends are not backfilled.
+Safe rejection recovery and artifact storage/export hardening remain open.

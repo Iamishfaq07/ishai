@@ -6,6 +6,9 @@ Messages sent from the Contact page while signed in are included as sent, with t
 the admin's note on them and the network hash are the admin's, not the account's.
 """
 
+import base64
+import json
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
 
@@ -35,6 +38,7 @@ from orbit_api.models import (
     Document,
     EmployerMessageImport,
     EvidenceItem,
+    GmailArtifact,
     GmailAttempt,
     JobApplication,
     JobCommitment,
@@ -98,8 +102,6 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                                                           .order_by(Document.created_at))).all()],
         "employer_message_imports": [_row(r) for r in (await db.scalars(select(EmployerMessageImport).where(
             EmployerMessageImport.user_id == user_id))).all()],
-        "gmail_attempts": [_row(r) for r in (await db.scalars(select(GmailAttempt).where(
-            GmailAttempt.user_id == user_id))).all()],
         "application_stage_events": [_row(r) for r in (await db.scalars(select(ApplicationStageEvent).where(
             ApplicationStageEvent.user_id == user_id))).all()],
         "career_evidence_shares": [{k: v for k, v in _row(r).items() if k != "token_hash"} for r in (
@@ -190,3 +192,46 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
                          for a in (await db.scalars(select(AuditLog).where(AuditLog.user_id == user_id)
                                                     .order_by(AuditLog.created_at))).all()],
     }
+
+
+async def export_chunks(data: dict[str, Any], user_id: str) -> AsyncIterator[str]:
+    """Keep the JSON export contract, reading at most one Gmail MIME artifact per iteration.
+
+    The rest of the account export still uses build_export's existing in-memory representation.
+    A separate session belongs to this response and closes on completion or client cancellation.
+    """
+    from orbit_api.db import sessionmaker
+
+    encoder = json.JSONEncoder(ensure_ascii=False, default=str)
+    yield "{"
+    for key, value in data.items():
+        yield json.dumps(key) + ":"
+        for chunk in encoder.iterencode(value):
+            yield chunk
+        yield ","
+    yield '"gmail_attempts":['
+    after = ""
+    first = True
+    async with sessionmaker()() as db:
+        while True:
+            record = (await db.execute(select(GmailAttempt, GmailArtifact.content).outerjoin(
+                GmailArtifact, GmailArtifact.attempt_id == GmailAttempt.id).where(
+                    GmailAttempt.user_id == user_id, GmailAttempt.id > after,
+                    GmailAttempt.created_at <= datetime.fromisoformat(data["exported_at"]))
+                .order_by(GmailAttempt.id).limit(1))).first()
+            if record is None:
+                break
+            attempt, content = record
+            after = attempt.id
+            exported = _row(attempt)
+            if content is not None:
+                exported["data"] = {**attempt.data, "mime": base64.b64encode(content).decode("ascii")}
+            if not first:
+                yield ","
+            first = False
+            for chunk in encoder.iterencode(exported):
+                yield chunk
+            # Release the ORM identity and previous byte/string buffers before fetching another artifact.
+            db.expunge(attempt)
+            del exported, content, record, attempt
+    yield "]}"

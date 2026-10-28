@@ -1738,3 +1738,10 @@ class GmailAttempt(TimestampMixin, Base):
     application_id: Mapped[str] = mapped_column(ForeignKey("job_applications.id", ondelete="CASCADE"))
     status: Mapped[str] = mapped_column(String(16), default="ready")
     data: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class GmailArtifact(Base):
+    """Exact reviewed MIME, kept out of metadata queries and delivery-state updates."""
+    __tablename__ = "gmail_artifacts"
+    attempt_id: Mapped[str] = mapped_column(ForeignKey("gmail_attempts.id", ondelete="CASCADE"), primary_key=True)
+    content: Mapped[bytes] = mapped_column(LargeBinary)

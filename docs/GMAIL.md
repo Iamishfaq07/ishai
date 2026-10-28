@@ -43,10 +43,17 @@ Up to 20 retained drafts/attempts can be created per rolling day. PDFs are limit
 
 A Gmail receipt marks the attempt sent. A timeout, inconclusive response, or process crash
 after reservation cannot cause automatic resend. `sending`/`uncertain` records require
-manual checking in Gmail Sent. Rejected attempts are also retained and cannot be
-resubmitted through this flow. Do not delete durable attempt records to retry delivery.
-Pending drafts can be discarded and prepared again. Account/opportunity deletion cascades
-attempt records; account exports include MIME/content records but never connection tokens.
+manual checking in Gmail Sent and cannot be retried through Orbit. Definite HTTP 401,
+403 and 429 rejections can explicitly return to review, then require a new send confirmation.
+Reconnect or resolve the provider restriction first. Orbit honors Retry-After and applies
+at least a minute's cooldown to 403/429; malformed cooldown headers default to a day.
+Other rejection codes and historical records without a known rejection classification
+remain blocked. There are at most five delivery requests per email, with every reservation
+and outcome retained. Retries preserve the exact MIME and Message-ID; no automatic retry
+runs. Only drafts without delivery history can be discarded. Ordinary tracker deletion is
+blocked for every email with delivery history, including those returned to review; withdraw
+the opportunity instead.
+Account erasure still removes account-owned attempt records; account exports include MIME/content records but never connection tokens.
 A matching content hash is checked before send.
 
 ## Validation limits
@@ -85,3 +92,56 @@ This workflow automatically prepares applications; it does not send unattended o
 that every address in a post belongs to a recruiter. No live LinkedIn discovery or live Gmail
 delivery was exercised in local validation; Google OAuth deployment configuration is still
 required for real connected accounts.
+
+
+## Send authorization boundary
+
+Connection flows carry a generation. Final OAuth storage and send reservation recheck that
+generation under the account lock; a disconnected or replaced connection cannot authorize
+a new reservation. The opportunity is reloaded and locked at reservation, and terminal
+opportunities must be explicitly reopened. Tracker deletion uses the same account lock and
+refuses to erase reserved/completed delivery history. After reservation commits, Gmail may
+already be processing delivery; later disconnect or withdrawal cannot retract that request.
+Account erasure remains a separate privacy lifecycle rather than a retry mechanism.
+
+## Existing opportunities and interview handoff
+
+Email-post intake can explicitly attach a reviewed source to an existing active opportunity.
+The current opportunity version is loaded when selected; changing the opportunity elsewhere
+invalidates the attachment request. Previous documents remain available. A Gmail attempt
+must be discarded while still unsent before its source can change; delivery history cannot
+be replaced. New-job duplicate detection runs before document ingestion.
+
+Accepted tailored Gmail applications now create frozen resume snapshots for interview prep,
+with source resume revision, captured job text/design, Gmail message ID and MIME hash. The
+snapshot preserves prepared structured content; the Gmail attempt remains authoritative for
+exact attachment bytes. Default interview-version selection can use the new snapshot, while
+explicit candidate version choices are respected. Source resumes are not rewritten. Resume
+performance uses the sent Gmail attempt's captured source rather than a later tracker relink.
+Earlier sent attempts are not reconstructed or backfilled.
+
+
+### Reviewed email storage and account exports
+
+Reviewed MIME bytes are stored separately in `gmail_artifacts`, linked to the attempt
+by a cascading foreign key. Attempt lists, Today actions, performance attribution, and
+delivery-state updates use metadata without loading or rewriting the MIME payload.
+Sending and attachment download fetch one artifact and check the original SHA-256.
+New drafts are limited to 100 MB of stored MIME per account, serialized with the existing
+account lock. Discarding a draft without delivery history frees its artifact; account
+erasure removes owned artifacts through the attempt cascade. Existing accounts above
+the limit retain their emails but cannot add more until space is available.
+
+The account export remains a JSON file with base64 `gmail_attempts[].data.mime` for
+compatibility. Its response streams Gmail records one artifact at a time, scoped to
+the authenticated account, rather than assembling all emails in memory. Other account
+sections still use the existing in-memory export builder. Exports are not an atomic
+snapshot of edits made while a download runs. No connection tokens are exported.
+
+Migration `eb13c5d7f9a1` moves legacy base64 MIME out of attempt JSON one row at a time;
+downgrade restores it. Exact bytes, hashes, delivery history and metadata are preserved.
+Invalid legacy base64 fails migration instead of silently dropping the reviewed email.
+Pause Gmail requests during the migration and API restart: old API workers expect inline
+MIME and must not continue serving after migration. Deploy the migration before running
+the updated API. This storage remains in the
+application database; external object storage and resumable archives are separate work.

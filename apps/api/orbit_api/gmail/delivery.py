@@ -3,8 +3,10 @@ import base64
 import io
 import zipfile
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from email.policy import SMTP
+from email.utils import parsedate_to_datetime
 from typing import Literal
 
 import httpx
@@ -69,6 +71,9 @@ class DeliveryResult:
     status: Literal["sent", "rejected", "uncertain"]
     message_id: str | None = None
     reason: str | None = None
+    retryable: bool = False
+    retry_after: str | None = None
+    http_status: int | None = None
 
 
 async def send_once(client: httpx.AsyncClient, access_token: str, mime: bytes) -> DeliveryResult:
@@ -89,5 +94,23 @@ async def send_once(client: httpx.AsyncClient, access_token: str, mime: bytes) -
             pass
         return DeliveryResult("uncertain", reason="Gmail returned success without a readable message receipt.")
     if 400 <= response.status_code < 500 and response.status_code != 408:
-        return DeliveryResult("rejected", reason=f"Gmail rejected this request ({response.status_code}).")
+        retryable = response.status_code in {401, 403, 429}
+        now = datetime.now(UTC)
+        wait_until = now + timedelta(seconds=60 if response.status_code in {403, 429} else 0)
+        retry_header = response.headers.get("Retry-After", "")
+        try:
+            if retry_header.isdecimal():
+                requested = now + timedelta(seconds=int(retry_header))
+            else:
+                requested = parsedate_to_datetime(retry_header)
+                if requested.tzinfo is None:
+                    requested = requested.replace(tzinfo=UTC)
+            wait_until = max(wait_until, requested)
+        except (ValueError, TypeError, OverflowError):
+            if retry_header:
+                # An unreadable provider cooldown must not result in an immediate retry.
+                wait_until = max(wait_until, now + timedelta(days=1))
+        return DeliveryResult("rejected", reason=f"Gmail rejected this request ({response.status_code}).",
+                              retryable=retryable, retry_after=wait_until.isoformat() if retryable else None,
+                              http_status=response.status_code)
     return DeliveryResult("uncertain", reason=f"Gmail returned an inconclusive response ({response.status_code}).")
