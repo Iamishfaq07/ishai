@@ -12,7 +12,7 @@ export function FirstOrderBanner() {
   if (!offer.data?.enabled) return null;
   return <aside aria-label="First purchase offer" className="border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-sm text-emerald-950 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
     <strong>10% off your first purchase.</strong>{" "}Use <strong className="font-mono">FIRST10</strong> in your cart.
-    <span className="ml-1">For accounts with no previous purchases. One use per account.</span>{" "}
+    {/* Phones: the offer and the code in a line or two; the rules are in the cart. */}<span className="ml-1 hidden sm:inline">For accounts with no previous purchases. One use per account.</span>{" "}
     <Link to="/pricing" className="rounded underline underline-offset-2 focus-visible:outline focus-visible:outline-2">View plans</Link>
   </aside>;
 }
