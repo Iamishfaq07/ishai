@@ -18,6 +18,7 @@ const loaders = {
   warmup: () => import("./pages/bank/WarmupRoute"),
   // The question bank's public pages: /companies, /roles and a guide per company and role.
   bank: () => import("./pages/bank/BankPages"),
+  atlas: () => import("./pages/bank/Atlas"),
   // Orbit's interview-prep articles: /guides and one page per article (pages/guides).
   guides: () => import("./pages/guides/GuidesPages"),
   contact: () => import("./pages/Contact"),
@@ -81,6 +82,7 @@ export const ToolExplorerPage = page(loaders.tools, (m) => m.ToolExplorerPage);
 export const ToolkitPage = page(loaders.toolkit, (m) => m.ToolkitPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
 export const WarmupPage = page(loaders.warmup, (m) => m.WarmupRoute);
+export const AtlasPage = page(loaders.atlas, (m) => m.AtlasPage);
 export const CompaniesPage = page(loaders.bank, (m) => m.CompaniesPage);
 export const CompanyPage = page(loaders.bank, (m) => m.CompanyPage);
 export const RolesPage = page(loaders.bank, (m) => m.RolesPage);

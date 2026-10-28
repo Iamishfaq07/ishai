@@ -95,6 +95,7 @@ import type {
   JobFeedQuery,
   HiddenJob,
   HiddenJobs,
+  PublicCompanyJobs,
   JobFitResponse,
   JobLinkInfo,
   JobManualTrack,
@@ -769,6 +770,9 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         timeoutMs: LONG_TIMEOUT_MS,
       }),
+    /** A company guide's open jobs (public: no account needed), newest first. */
+    publicCompanyJobs: (slug: string) =>
+      json<PublicCompanyJobs>(`/v1/public/companies/${encodeURIComponent(slug)}/jobs`),
     /** "Not interested": this job (or, with `company`, every job from its company) leaves the feed and job alerts. */
     hideJob: (listingId: string, company = false) =>
       json<HiddenJobs>("/v1/jobs/hidden", { method: "POST", body: body({ listing_id: listingId, company }) }),

@@ -71,7 +71,7 @@ describe("the built public pages", () => {
       const html = files.get(`companies/${c.slug}.html`)!;
       const words = text(html);
       expect(squash(tag(html, /<h1[^>]*>([\s\S]*?)<\/h1>/).replace(/<[^>]+>/g, "").replace(/&#x27;/g, "'").replace(/&amp;/g, "&")), c.slug).toBe(
-        `${c.name} interview process and practice questions`,
+        `${c.name} interview process and questions (${c.reviewed.slice(0, 4)})`,
       );
       for (const s of [c.summary, ...c.rounds, ...c.looks_for, ...c.tips]) expect(words, c.slug).toContain(squash(s));
       for (const q of c.questions) {

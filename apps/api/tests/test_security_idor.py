@@ -464,6 +464,7 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     # only the company and a masked address; the applicant's high-entropy emailed link is its own credential.
     ("GET", "/v1/public/business/companies/{slug}"), ("GET", "/v1/public/business/companies/{slug}/jobs/{job_slug}"),
     ("GET", "/v1/public/business/companies/{slug}/logo"), ("GET", "/v1/public/business/sitemap"),
+    ("GET", "/v1/public/companies/{slug}/jobs"),  # a company guide's open jobs: public posts only
     ("POST", "/v1/public/business/jobs/{job_id}/apply"), ("POST", "/v1/public/business/jobs/{job_id}/report"),
     ("GET", "/v1/public/business/invites/{token}"),
     ("GET", "/v1/public/business/applications/{token}"),

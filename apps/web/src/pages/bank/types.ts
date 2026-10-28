@@ -38,6 +38,8 @@ interface Entry {
 export interface BankCompany extends Entry {
   group: CompanyGroup;
   market: Market;
+  /** A line shown before the summary: what this page isn't (a name people confuse with something else). */
+  note?: string;
   /** What candidates outside India report instead (India's campus rounds); a field left out is the same. */
   abroad?: { rounds: string[]; looks_for?: string[]; questions?: BankQuestion[]; tips?: string[] };
 }

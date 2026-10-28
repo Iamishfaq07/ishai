@@ -64,8 +64,8 @@ export function PublicHeader({ authState, context, actions }: { authState?: { fr
         )}
         <nav aria-label="Main" className="ml-6 hidden items-center gap-0.5 text-sm lg:flex">
           <ProductsMenu />
-          <NavLink to={SITE_LINKS.companies} also={/^\/roles(\/|$)/} className="hidden lg:inline-flex">
-            Interview guides
+          <NavLink to={SITE_LINKS.atlas} also={/^\/(?:companies|roles)(\/|$)/} className="hidden lg:inline-flex">
+            Interview Atlas
           </NavLink>
           <NavLink to={SITE_LINKS.pricing}>Pricing</NavLink>
           <NavLink to={SITE_LINKS.security} className="hidden lg:inline-flex">
@@ -265,6 +265,7 @@ export function MobileMenu({ authState, className }: { authState?: { from: strin
               <ul className="grid gap-0.5">
                 {[
                   [SITE_LINKS.warmup, "Free practice question"],
+                  [SITE_LINKS.atlas, "Interview Atlas: search any company"],
                   [SITE_LINKS.companies, "Interview guides by company"],
                   [SITE_LINKS.roles, "Interview guides by role"],
                   [SITE_LINKS.pricing, "Pricing"],

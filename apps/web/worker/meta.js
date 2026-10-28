@@ -28,6 +28,11 @@ export const PAGE_META = {
     description:
       "Find fresh jobs from company careers pages, compare them with your resume, track applications and review your options before applying.",
   },
+  "/interview-questions": {
+    title: "Interview questions and processes by company | Orbit",
+    description:
+      "Search any company or role: the interview rounds, what interviewers listen for, practice questions with what a good answer covers, and open jobs. Free.",
+  },
   "/warmup": {
     title: "Free Google Interview Warmup alternative | Orbit",
     description:
@@ -80,6 +85,7 @@ export const PAGE_IMAGES = {
   "/resume-ai": "/og/resume-ai.jpg",
   "/jobs": "/og/jobs.jpg",
   "/warmup": "/og/warmup.jpg",
+  "/interview-questions": "/og/companies.jpg",
   "/contact": "/og/contact.jpg",
   "/technical": "/og/technical.jpg",
   "/interview-copilot": "/og/interview-copilot.jpg",

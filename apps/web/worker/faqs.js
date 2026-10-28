@@ -12,8 +12,9 @@ import { COPILOT_FAQ } from "./faqs/interview-copilot.js";
 import { PRACTICE_FAQ } from "./faqs/mock-interview.js";
 import { BUSINESS_FAQ } from "./faqs/business.js";
 import { WARMUP_FAQ } from "./faqs/warmup.js";
+import { ATLAS_FAQ } from "./faqs/atlas.js";
 
-export { RESUME_AI_FAQ, JOBS_AI_FAQ, LINKEDIN_AI_FAQ, COPILOT_FAQ, PRACTICE_FAQ, BUSINESS_FAQ, WARMUP_FAQ };
+export { RESUME_AI_FAQ, JOBS_AI_FAQ, LINKEDIN_AI_FAQ, COPILOT_FAQ, PRACTICE_FAQ, BUSINESS_FAQ, WARMUP_FAQ, ATLAS_FAQ };
 
 /** @type {Record<string, ReadonlyArray<readonly [string, string]>>} */
 export const PAGE_FAQS = {
@@ -24,6 +25,7 @@ export const PAGE_FAQS = {
   "/mock-interview": PRACTICE_FAQ,
   "/business": BUSINESS_FAQ,
   "/warmup": WARMUP_FAQ,
+  "/interview-questions": ATLAS_FAQ,
 };
 
 /** The questions a page shows, or none. */

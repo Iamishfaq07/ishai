@@ -197,6 +197,17 @@ const PRODUCT_PAGES = {
   },
 };
 
+PRODUCT_PAGES["/interview-questions"] = {
+  crumb: "Interview Atlas",
+  app: {
+    id: "atlas",
+    name: "Orbit Interview Atlas",
+    description:
+      "A free search across company and role interview guides: the rounds candidates report, what interviewers listen for, practice questions and each company's open jobs.",
+    category: "EducationalApplication",
+  },
+};
+
 PRODUCT_PAGES["/business"] = {
   crumb: "Orbit for Business",
   app: {

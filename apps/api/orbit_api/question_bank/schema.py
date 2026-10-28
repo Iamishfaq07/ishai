@@ -145,6 +145,9 @@ class CompanyGuide(_Entry):
     group: CompanyGroup
     market: Market
     abroad: Abroad | None = None
+    # A line shown before the summary, for a name people confuse with something else (Tech Mahindra's own "Orbit"
+    # portal): what this page is and isn't.
+    note: Text | None = None
 
     @model_validator(mode="after")
     def _enough_of_each(self) -> "CompanyGuide":
