@@ -103,6 +103,7 @@ from orbit_api.job_portal.digest import router as weekly_digest_router
 from orbit_api.job_portal.digest import week_router as career_week_router
 from orbit_api.job_portal.first_look import router as first_look_router
 from orbit_api.job_portal.first_ninety import router as first_ninety_router
+from orbit_api.job_portal.hidden import router as job_hidden_router
 from orbit_api.job_portal.interview import router as job_interview_router
 from orbit_api.job_portal.interview_debrief import router as interview_debrief_router
 from orbit_api.job_portal.launchpad import router as job_launchpad_router
@@ -433,6 +434,7 @@ def create_app() -> FastAPI:
     app.include_router(resumes_router)
     app.include_router(resume_kit_router)
     app.include_router(job_alerts_router)
+    app.include_router(job_hidden_router)
     app.include_router(weekly_digest_router)
     app.include_router(career_week_router)
     app.include_router(interview_debrief_router)

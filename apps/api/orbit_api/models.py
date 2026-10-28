@@ -829,6 +829,20 @@ class JobSourceState(Base):
     month_calls: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class HiddenJob(TimestampMixin, Base):
+    """A job or a whole company the candidate said they're not interested in (Discover's "Not interested"): left out
+    of their feed and job alerts until they bring it back (job_portal/hidden.py). `value` is the listing id, or the
+    company as postings.company_key reads it; `label` is what the list of hidden ones shows."""
+
+    __tablename__ = "job_hidden"
+    __table_args__ = (UniqueConstraint("user_id", "kind", "value", name="uq_job_hidden"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(8))  # "job" | "company"
+    value: Mapped[str] = mapped_column(String(300))
+    label: Mapped[str] = mapped_column(String(300), default="")
+
+
 class JobSearchProfile(TimestampMixin, Base):
     """What the user's job feed looks for: filled in from a resume by the AI (`suggested`, cached per resume content
     hash), then theirs to edit (`prefs`, job_portal/profile.py)."""

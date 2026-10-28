@@ -40,6 +40,7 @@ from orbit_api.models import (
     EvidenceItem,
     GmailArtifact,
     GmailAttempt,
+    HiddenJob,
     JobApplication,
     JobCommitment,
     JobContact,
@@ -136,6 +137,8 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             AccountNotice.user_id == user_id).order_by(AccountNotice.created_at))).all()],
         "activity": [_row(e) for e in (await db.scalars(select(ActivityEvent).where(
             ActivityEvent.user_id == user_id).order_by(ActivityEvent.created_at))).all()],
+        "hidden_jobs": [_row(r) for r in (await db.scalars(select(HiddenJob).where(
+            HiddenJob.user_id == user_id).order_by(HiddenJob.created_at))).all()],
         "answer_ratings": [_row(f) for f in (await db.scalars(
             select(AnswerFeedback).where(AnswerFeedback.user_id == user_id)
             .order_by(AnswerFeedback.created_at))).all()],

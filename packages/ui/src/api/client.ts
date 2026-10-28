@@ -93,6 +93,8 @@ import type {
   JobDetail,
   JobFeed,
   JobFeedQuery,
+  HiddenJob,
+  HiddenJobs,
   JobFitResponse,
   JobLinkInfo,
   JobManualTrack,
@@ -767,6 +769,13 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         timeoutMs: LONG_TIMEOUT_MS,
       }),
+    /** "Not interested": this job (or, with `company`, every job from its company) leaves the feed and job alerts. */
+    hideJob: (listingId: string, company = false) =>
+      json<HiddenJobs>("/v1/jobs/hidden", { method: "POST", body: body({ listing_id: listingId, company }) }),
+    /** A hidden job or company back in the feed (Undo, and the list in search settings). */
+    unhideJob: (kind: HiddenJob["kind"], value: string) =>
+      json<void>(`/v1/jobs/hidden?${new URLSearchParams({ kind, value })}`, { method: "DELETE" }),
+    hiddenJobs: () => json<HiddenJobs>("/v1/jobs/hidden"),
     /** A copy of the resume aimed at this job (may read the full post from its page first). */
     tailorForJob: (id: string, resumeId?: string | null) =>
       json<JobTailorResponse>(`/v1/jobs/listings/${encodeURIComponent(id)}/tailor`, {

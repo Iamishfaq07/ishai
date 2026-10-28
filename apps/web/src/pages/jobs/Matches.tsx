@@ -20,12 +20,14 @@ import {
   focusRing,
   regionWords,
   sampleCity,
+  toast,
 } from "@orbit/ui";
 import { KashSecContext } from "../../components/KashSec";
 import { Button, Card, ErrorNote, PageHeader, Select } from "../../components/ui";
 import { isSecurityRole } from "../../lib/security";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
+import { trackAction } from "../../lib/activity";
 import { useCountry } from "../../lib/country";
 import { RESUME_AI_HOME, resumePath } from "../resume/paths";
 import { JobCard } from "./JobCard";
@@ -104,16 +106,50 @@ function Matches({ profile }: { profile: JobProfile }) {
   const [moreError, setMoreError] = useState<string | null>(null);
   const extra = more?.key === key ? more : null;
 
+  // "Not interested": hidden here at once (the server leaves them out of the next page and of job alerts).
+  const [gone, setGone] = useState<{ jobs: string[]; companies: string[] }>({ jobs: [], companies: [] });
+
   const items = useMemo(() => {
     const seen = new Set<string>();
     const out: JobListing[] = [];
     for (const j of [...(feed.data?.items ?? []), ...(extra?.items ?? [])]) {
-      if (seen.has(j.id)) continue;
+      if (seen.has(j.id) || gone.jobs.includes(j.id) || gone.companies.includes(j.company)) continue;
       seen.add(j.id);
       out.push(j);
     }
     return withTracked(out, changed, tracker.data);
-  }, [feed.data, extra, changed, tracker.data]);
+  }, [feed.data, extra, changed, tracker.data, gone]);
+
+  const mark = (job: JobListing, company: boolean, on: boolean) => setGone((g) => {
+    const key = company ? "companies" : "jobs";
+    const value = company ? job.company : job.id;
+    return { ...g, [key]: on ? [...g[key], value] : g[key].filter((v) => v !== value) };
+  });
+  const hide = async (job: JobListing, company: boolean) => {
+    mark(job, company, true);
+    try {
+      const out = await api.hideJob(job.id, company);
+      const item = out.items.find((i) => (company ? i.kind === "company" && i.label === job.company : i.kind === "job" && i.value === job.id));
+      trackAction(company ? "Hid a company's jobs" : "Hid a job", job.company);
+      toast({
+        message: company ? `Jobs from ${job.company} are hidden` : "Job hidden",
+        detail: "Bring them back any time in your search settings.",
+        ...(item ? { action: { label: "Undo", onClick: () => void undo(job, company, item.kind, item.value) } } : {}),
+      });
+    } catch (err) {
+      mark(job, company, false);
+      toast({ message: errorText(err), tone: "error" });
+    }
+  };
+  const undo = async (job: JobListing, company: boolean, kind: "job" | "company", value: string) => {
+    try {
+      await api.unhideJob(kind, value);
+      mark(job, company, false);
+      feed.reload();
+    } catch (err) {
+      toast({ message: errorText(err), tone: "error" });
+    }
+  };
 
   const loadMore = async () => {
     const page = (extra?.page ?? 1) + 1;
@@ -303,6 +339,7 @@ function Matches({ profile }: { profile: JobProfile }) {
                       setChanged((prev) => ({ ...prev, [id]: t }));
                       tracker.reload();
                     }}
+                    onHide={(j, company) => void hide(j, company)}
                   />
                 </li>
               ))}

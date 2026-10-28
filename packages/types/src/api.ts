@@ -2246,6 +2246,18 @@ export interface JobMatch {
   missing: string[];
 }
 
+/** A job or a company the candidate hid from Discover ("Not interested"). `value` is the listing id or the company key. */
+export interface HiddenJob {
+  kind: "job" | "company";
+  value: string;
+  label: string;
+  at: string;
+}
+
+export interface HiddenJobs {
+  items: HiddenJob[];
+}
+
 export interface JobListing {
   id: string;
   source: string;
