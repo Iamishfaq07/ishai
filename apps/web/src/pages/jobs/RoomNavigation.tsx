@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { MissionTool } from "./mission";
 import { cx, focusRing } from "@orbit/ui";
 
@@ -9,9 +10,18 @@ const ORDER: { id: MissionTool; label: string }[] = [
   { id: "timeline", label: "History" }, { id: "offer", label: "Offer" },
 ];
 
-/** One row of sections (it scrolls sideways on a phone). The section this job's stage suggests carries a dot. */
+/** One row of sections (it scrolls sideways on a phone), pinned under the header so every section stays one tap away
+ *  on a long page. The section this job's stage suggests carries a dot. */
 export function RoomNavigation({ tab, suggested, onSelect }: { tab: MissionTool; suggested: MissionTool; onSelect: (tool: MissionTool) => void }) {
-  return <nav aria-label="Sections of this job" className="-mx-4 overflow-x-auto border-b border-zinc-200 px-4 sm:mx-0 sm:px-0 dark:border-white/10">
+  const nav = useRef<HTMLElement>(null);
+  // On a phone the row scrolls sideways: keep the open section in sight (sideways only, never moving the page).
+  useEffect(() => {
+    const row = nav.current, current = row?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!row || !current) return;
+    const box = row.getBoundingClientRect(), item = current.getBoundingClientRect();
+    if (item.left < box.left || item.right > box.right) row.scrollLeft += item.left - box.left - 16;
+  }, [tab]);
+  return <nav ref={nav} aria-label="Sections of this job" className="sticky top-16 z-10 -mx-4 overflow-x-auto md:top-[60px] border-b border-zinc-200 bg-[rgb(var(--canvas))] px-4 sm:mx-0 sm:px-0 dark:border-white/10">
     <ul className="flex min-w-max gap-1">
       {ORDER.map((item) => <li key={item.id}>
         <button type="button" aria-controls="mission-tool-panel" aria-current={tab === item.id ? "page" : undefined} onClick={() => onSelect(item.id)}

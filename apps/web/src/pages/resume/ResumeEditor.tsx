@@ -853,7 +853,7 @@ function ResumeEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="min-w-0">
-          {(!guided || tab !== "content") && <div className="sticky top-16 z-10 -mx-4 mb-4 flex gap-1 overflow-x-auto border-b border-zinc-200 bg-[rgb(var(--canvas))] px-4 sm:mx-0 sm:px-0 dark:border-white/10">
+          {(!guided || tab !== "content") && <div className="sticky top-16 z-10 -mx-4 mb-4 flex gap-1 md:top-[60px] overflow-x-auto border-b border-zinc-200 bg-[rgb(var(--canvas))] px-4 sm:mx-0 sm:px-0 dark:border-white/10">
             <div role="tablist" aria-label="Resume editor" className="flex min-w-max flex-1 gap-1">
               {TABS.map(({ id, label, short, icon: Icon }) => (
                 <button
