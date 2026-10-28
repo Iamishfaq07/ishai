@@ -1,4 +1,5 @@
 import { GmailApply } from "./GmailApply";
+import { PrepareAll } from "./PrepareAll";
 import { GmailGate } from "../../components/GmailGate";
 import { SubmissionMaterials } from "./SubmissionMaterials";
 import { PrepDownload } from "./PrepDownload";
@@ -155,6 +156,7 @@ export function JobMissionPage() {
                 mission.reload();
               }}
             />
+            <PrepareAll key={`prepare-all:${entry.id}`} entry={entry} mission={m} onDone={() => { tracker.reload(); mission.reload(); }} onInterview={() => setTab("interview")} />
             <GmailGate><GmailApply key={`gmail:${entry.id}`} entryId={entry.id} /></GmailGate>
             {/* The sections come straight after the next step: on a phone the cards below used to push them a screen
                 and a half down. Applying, people and the offline copy follow the open section. */}

@@ -160,7 +160,7 @@ export { Compass, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 export { Captions, CaptionsOff, PhoneOff, ScanFace, VideoOff, VolumeX } from "lucide-react";
 
 // The component system (round 3): callouts, sortable table headers, menus.
-export { ArrowDown, ArrowUp, ChevronUp, ChevronsUpDown, Ellipsis, TriangleAlert } from "lucide-react";
+export { ArrowDown, ArrowUp, ChevronUp, ChevronsUpDown, Ellipsis, LoaderCircle, TriangleAlert } from "lucide-react";
 
 // The public site (front door): its security, how-it-works and comparison sections, and the theme switch.
 export { BadgeCheck, CalendarCheck, Cookie, Database, LockKeyhole, Laptop, Languages, MonitorSmartphone, Wallet } from "lucide-react";
