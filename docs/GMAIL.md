@@ -18,7 +18,9 @@ exact callback URL (for example `https://api.example.com/v1/gmail/callback`) and
 - `ORBIT_CONFIG_SECRET` to a persistent encryption secret shared by API replicas
 - the existing `ORBIT_WEB_URL` and frontend CORS/cookie settings for the deployed sites
 
-Apply `uv run alembic upgrade head`; Gmail tables are migration `da02b4c6e8f0`.
+Apply `uv run alembic upgrade head`. Gmail tables start at `da02b4c6e8f0`; merge revision
+`ad418a8cecb0` joins Gmail artifact storage and workflow lease migrations. Upgrades from
+either `eb13c5d7f9a1` or `ec24d6e8f0b2` are covered by migration tests.
 The connection button stays disabled until the required configuration exists.
 Google OAuth consent requests `openid`, `email` and `gmail.send`. It does not request
 inbox-reading access. Configure consent-screen branding, privacy policy, authorized
