@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { JobTrackerEntry } from "@orbit/types";
 import { cx } from "@orbit/ui";
 import { activityByDay, dayKey, grid, level, streak, total } from "./activity";
@@ -16,6 +16,9 @@ export function ActivityMap({ entries }: { entries: JobTrackerEntry[] }) {
     const shown = weeks.flat().map((d) => total(days.get(dayKey(d))));
     return { weeks, days, max: Math.max(0, ...shown), sum: shown.reduce((a, b) => a + b, 0), run: streak(days), active: shown.filter(Boolean).length };
   }, [entries]);
+  // On a narrow screen the map scrolls sideways: open it on the latest weeks, where today is.
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => { const el = scroller.current; if (el) el.scrollLeft = el.scrollWidth; }, [sum]);
   if (!sum) return null;
   const today = dayKey(new Date());
   const width = 28 + weeks.length * (CELL + GAP), height = 16 + 7 * (CELL + GAP);
@@ -26,7 +29,7 @@ export function ActivityMap({ entries }: { entries: JobTrackerEntry[] }) {
       <h2 id="activity-map" className="font-semibold">Your search, day by day</h2>
       <p className="text-sm text-zinc-600 dark:text-zinc-400"><span className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{run}</span>-day streak · <span className="tabular-nums">{active}</span> active {active === 1 ? "day" : "days"}</p>
     </div>
-    <div className="mt-3 overflow-x-auto" tabIndex={0} role="region" aria-label="Activity map (scrolls sideways)">
+    <div ref={scroller} className="mt-3 overflow-x-auto" tabIndex={0} role="region" aria-label="Activity map (scrolls sideways)">
       <svg width={width} height={height} role="img" aria-label={summary} className="block">
         {weeks.map((w, wi) => {
           const first = w[0]!;

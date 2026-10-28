@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CreditCard, LoadGate, Skeleton, Sparkles, Spot, cx, focusRing, rupees } from "@orbit/ui";
+import { CreditCard, LoadGate, Skeleton, Sparkles, Spot, cx, focusRing, rupees, wholeMinutes } from "@orbit/ui";
 import type { CreditPack, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { SpotArt } from "../components/SpotArt";
@@ -257,6 +257,17 @@ export function BillingPage() {
         <Skeleton variant="card" count={3} label="Loading plans and credits" className="min-h-[70vh]" />
       ) : (
       <>
+      {/* What you have, first: the balance card sits under every plan and pack, thousands of pixels down on a phone. */}
+      {e && (
+        <p className="mb-6 mt-4 flex flex-wrap items-baseline gap-x-2 text-sm text-zinc-700 dark:text-zinc-300">
+          <span>
+            {e.credits
+              ? <>You have <span className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{wholeMinutes(e.credits.interview_minutes_left)}</span> interview minutes and <span className="font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{e.credits.resume}</span> Resume {e.credits.resume === 1 ? "credit" : "credits"}.</>
+              : <>You're on <span className="font-semibold text-zinc-900 dark:text-zinc-100">{e.label}</span>{e.until ? ` until ${formatDate(e.until)}` : ""}.</>}
+          </span>
+          <a href="#your-balance" className={cx("tap-y font-medium text-indigo-700 underline-offset-2 hover:underline dark:text-indigo-300", focusRing)}>Details and payments</a>
+        </p>
+      )}
       {!invite.data && firstOffer > 0 && (
         <p role="status" className="mb-8 flex items-start gap-2 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -350,7 +361,7 @@ export function BillingPage() {
         </p>
       </section>
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="self-start lg:col-span-1">
+        <Card id="your-balance" className="scroll-mt-24 self-start lg:col-span-1">
           <h2 className="mb-1 flex items-center gap-3 font-semibold"><Spot kind="usage" />{e?.credits ? "Your credits" : "This month"}</h2>
           <p className="mb-4 text-sm text-zinc-500">
             {/* Packs add credits; they don't change the plan, so "Plan: Free" after buying one only confuses. */}
