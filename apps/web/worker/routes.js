@@ -109,6 +109,9 @@ export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/_prerender/", "/live/", "/sess
 export function movedPath(pathname, search = "") {
   // security.txt's old address (RFC 9116 moved it under /.well-known/).
   if (pathname === "/security.txt") return { pathname: "/.well-known/security.txt", search: "" };
+  // The addresses people type or other sites link for signing up and in: Orbit's are /register and /login.
+  if (/^\/(?:signup|sign-up|join|create-account|get-started)$/i.test(pathname)) return { pathname: "/register", search };
+  if (/^\/(?:signin|sign-in|log-in)$/i.test(pathname)) return { pathname: "/login", search };
   // Without regard to case, like React Router; an id keeps its own case.
   if (/^\/resume-maker$/i.test(pathname)) return { pathname: "/resume-ai", search };
   const resume = /^\/documents\/resumes(?:\/([^/]+))?$/i.exec(pathname);

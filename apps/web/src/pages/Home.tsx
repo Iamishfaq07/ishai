@@ -62,6 +62,10 @@ export function HomePage() {
   // A brand-new account (no jobs, nothing queued): the overview, week, routes and queue would only be zeros and
   // empty states repeating the "save a job" step, so Today shows setup, the first step and the tools until then.
   const fresh = tracker.data?.length === 0 && queue.data?.items.length === 0;
+  // No resume yet on a fresh account: that comes first (matches, fit checks, tailoring and auto-apply all read it),
+  // so the big card asks for it instead of a first job, matching the setup steps beside it.
+  const resumes = useAsync(() => api.listResumes(), [], "resumes");
+  const resumeFirst = Boolean(fresh && resumes.data && resumes.data.length === 0);
 
   return <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
     {/* Phones: the greeting, then anything new and the next stop, before the overview's numbers (order classes). */}
@@ -79,14 +83,14 @@ export function HomePage() {
 
     {/* A new account's few setup steps, until they're all done: first while nothing is tracked, after the next stop
         once there's a job to move (an interview shouldn't sit under a checklist). */}
-    {!tracker.data?.length && <div className="max-sm:order-[-1]"><SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} /></div>}
+    {!tracker.data?.length && !resumeFirst && <div className="max-sm:order-[-1]"><SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} /></div>}
 
     <section aria-labelledby="next-stop" className="max-sm:order-[-1] route-rise relative overflow-hidden rounded-2xl bg-white px-6 py-7 ring-1 ring-zinc-200 sm:px-8 dark:bg-zinc-900 dark:ring-white/10">
       <h2 id="next-stop" className="sr-only">Your next stop</h2>
       {/* The route picture: it lights as many stops as the furthest job has reached (one on a first visit). */}
       {stop && <RouteMapArt stops={Math.max(1, ...jobs.map((j) => routeIndex(j.status) + 1)) + (stop.first ? 0 : 1)}
         className="pointer-events-none absolute -right-6 bottom-0 hidden h-full max-h-56 w-auto md:block" />}
-      {!stop ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div> : <div className="relative md:pr-72">
+      {!stop ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div> : !resumeFirst && <div className="relative md:pr-72">
         {stop.when && <p className="mb-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">{stop.when}</p>}
         <p className="max-w-3xl font-title text-[2rem] font-semibold leading-[1.15] tracking-[-0.015em] sm:text-[2.375rem]">{stop.title}</p>
         <p className="mt-3 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">{stop.detail}</p>
@@ -96,9 +100,19 @@ export function HomePage() {
           {stop.first && <Link className={textLink} to="/jobs/tracker?add=1">Or add a job you found elsewhere</Link>}
         </div>
       </div>}
+      {stop && resumeFirst && <div className="relative mt-0 md:pr-72" data-resume-first>
+        <p className="max-w-3xl font-title text-[2rem] font-semibold leading-[1.15] tracking-[-0.015em] sm:text-[2.375rem]">Start with your resume</p>
+        <p className="mt-3 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">Matches, fit checks, tailoring and auto-apply all read it. Upload the one you have, or build one from your real experience in a few minutes.</p>
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <Link className={buttonClass("primary", "lg")} to="/resume-ai?start=import&guide=1">Upload my resume <ArrowRight className="h-4 w-4" aria-hidden /></Link>
+          <Link className={buttonClass("secondary", "lg")} to="/resume-ai?start=new&guide=1">Build one</Link>
+          <Link className={textLink} to={stop.to}>Or find jobs first</Link>
+        </div>
+      </div>}
     </section>
 
-    {Boolean(tracker.data?.length) && <SetupChecklist jobsSaved={tracker.data!.length} />}
+    {/* With "Start with your resume" above, the steps follow it instead of repeating it first. */}
+    {(Boolean(tracker.data?.length) || resumeFirst) && <SetupChecklist jobsSaved={tracker.data?.length ?? 0} />}
 
     <QuickAddJob />
 
