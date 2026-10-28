@@ -54,6 +54,7 @@ from orbit_api.models import (
     UserSession,
     UserTwoFactor,
 )
+from orbit_api.notices import credits_given, notify
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.runtime_config import (
     ANNOUNCEMENT_MAX,
@@ -668,10 +669,13 @@ async def set_access(user_id: str, body: AccessIn, background: BackgroundTasks,
             subject, when = f"You have Orbit {label} until {until}", f"until {until}"
         mail = OutgoingEmail(to=u.email, subject=subject, text=(f"Your Orbit account now has the {label} plan {when}."
                                                                 f"\n\nSign in and start a session: {web}/login"))
+        notify(db, u.id, "plan", subject.replace("You have Orbit", "You have"),
+               f"Your account has the {label} plan {when}.", "/billing")
     elif body.action == "approve":
         u.approved = True
         mail = OutgoingEmail(to=u.email, subject="Your Orbit account is ready",
                              text=f"Your Orbit account has been approved. Sign in to get started: {web}/login")
+        notify(db, u.id, "approved", "Your account is ready", "It's been approved: every tool is open to you.", "/")
     else:
         u.approved = False
         clear_grants(u)  # and anything waiting its turn
@@ -695,7 +699,8 @@ class CreditsIn(BaseModel):
 
 
 @router.post("/users/{user_id}/credits", response_model=AdminUser)
-async def give_credits(user_id: str, body: CreditsIn, admin: Annotated[User, Depends(require_admin)],
+async def give_credits(user_id: str, body: CreditsIn, background: BackgroundTasks,
+                       admin: Annotated[User, Depends(require_admin)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> AdminUser:
     """Add resume-AI credits and/or interview minutes to an account by hand (a goodwill top-up, a payment made some
     other way). They never expire. (Taking them away: POST /users/{id}/credits/remove.)"""
@@ -711,5 +716,7 @@ async def give_credits(user_id: str, body: CreditsIn, admin: Annotated[User, Dep
         credits.add(db, u.id, "interview_seconds", body.interview_minutes * 60, GIVEN).note = note
     db.add(AuditLog(user_id=admin.id, action="admin.credits",
                     target=f"{u.id} resume+{body.resume} interview+{body.interview_minutes}m"))
+    mail = credits_given(db, u, body.resume, body.interview_minutes, note)
     await db.commit()
+    background.add_task(send_safely, mail)
     return (await admin_rows(db, [u]))[0]

@@ -27,12 +27,12 @@ export function CodeEntry({ offer, canEnter, prefill, onApplied }: {
   const [error, setError] = useState<string | null>(null);
 
   if (offer && offer.percent > 0) {
-    const who = offer.kind === "invite" ? "from a friend's invite" : `with code ${offer.code}${offer.label ? ` (${offer.label})` : ""}`;
+    const who = offer.kind === "first" ? "" : offer.kind === "invite" ? ", from a friend's invite" : `, with code ${offer.code}${offer.label ? ` (${offer.label})` : ""}`;
     return (
       <p role="status" className="flex items-start gap-2 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
         <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <span>
-          <span className="font-semibold">{offer.percent}% off your first purchase</span>, {who}. The prices below include it.
+          <span className="font-semibold">{offer.percent}% off your first purchase</span>{who}. The prices below include it.
         </span>
       </p>
     );
@@ -50,7 +50,7 @@ export function CodeEntry({ offer, canEnter, prefill, onApplied }: {
     setError(null);
     try {
       const got = await api.redeemCode(typed);
-      toast(got.percent ? `Code ${got.code} saved: ${got.text}.` : `Code ${got.code} saved.`);
+      toast(got.kind === "first" ? `Code ${typed} saved. Your first-purchase offer (${got.percent}% off) is more, so that one applies.` : got.percent ? `Code ${got.code} saved: ${got.text}.` : `Code ${got.code} saved.`);
       onApplied(got);
     } catch (err) {
       setError(errorText(err));

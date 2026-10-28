@@ -45,7 +45,9 @@ import {
 import { api } from "../lib/api";
 import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
+import { trackAs, trackPage } from "../lib/activity";
 import { useCountry } from "../lib/country";
+import { resetNotices } from "../lib/notices";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
@@ -61,6 +63,8 @@ import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { AppError } from "./AppError";
+import { DesktopTip } from "./DesktopTip";
+import { NoticesBell } from "./NoticesBell";
 import { COPILOT_PATH, LEARNING_PATH, SIDEBAR_KEY, exploreItems, navGroups, phoneTabs, sidebarCollapsed, type NavItem } from "./nav";
 import { PRODUCTS, ProductTabs, type ProductSection } from "./products";
 import { Sheet } from "./Sheet";
@@ -155,11 +159,22 @@ export function Layout() {
   const { pathname } = location;
   const navigate = useNavigate();
   const navigationType = useNavigationType();
+  // Insights for the admin (lib/activity.ts): each page opened, named by its title once it has set it.
+  useEffect(() => {
+    trackAs(user?.id ?? null);
+  }, [user?.id]);
+  useEffect(() => {
+    const t = window.setTimeout(() => trackPage(document.title), 800);
+    return () => window.clearTimeout(t);
+  }, [pathname]);
   // A new page opens at its top; Back/Forward (POP) keeps the browser's own scroll position.
   useEffect(() => {
     if (navigationType !== "POP") window.scrollTo(0, 0);
   }, [pathname, navigationType]);
-  const signOut = useCallback(() => void logout().then(() => navigate("/login")), [logout, navigate]);
+  const signOut = useCallback(() => void logout().then(() => {
+    resetNotices();
+    navigate("/login");
+  }), [logout, navigate]);
   const admin = useIsAdmin();
   const [collapsed, toggleSidebar] = useSidebar();
 
@@ -251,6 +266,7 @@ export function Layout() {
               <button type="button" onClick={() => setExploreOpen(true)} aria-label="More tools and account" aria-haspopup="dialog" aria-expanded={exploreOpen} className={cx("grid h-11 w-11 place-items-center rounded-xl md:hidden", focusRing)}><Compass className="h-5 w-5" aria-hidden /></button>
               <WorkspaceSwitch />
               <WaitingForAccess admin={admin} />
+              <NoticesBell />
               <NewMenu onNavigate={navigate} />
               <div className="hidden md:block">
                 <AccountMenu
@@ -292,6 +308,7 @@ export function Layout() {
         )}
 
         <AnnouncementBanner className="sm:px-6" />
+        <DesktopTip />
 
         <main id="main" className="mx-auto min-h-[100dvh] w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           {learning && (

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CompanyLogo, FileText, Headphones, IdCard, Plus, Rocket, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
 import type { JobStatus } from "@orbit/types";
+import { NewNoticeCard } from "../components/NoticesBell";
 import { RouteLine, nextStop, routeIndex } from "../components/RouteLine";
 import { RouteMapArt } from "../components/RouteMapArt";
 import { api } from "../lib/api";
@@ -62,7 +63,8 @@ export function HomePage() {
   const fresh = tracker.data?.length === 0 && queue.data?.items.length === 0;
 
   return <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
-    <header className="flex flex-wrap items-end justify-between gap-4">
+    {/* Phones: the greeting, then anything new and the next stop, before the overview's numbers (order classes). */}
+    <header className="flex flex-wrap items-end justify-between gap-4 max-sm:order-[-2]">
       <div className="min-w-0">
         <h1 className="font-title text-[1.75rem] font-semibold leading-tight tracking-[-0.01em]">{greeting(now.getHours())}{user?.name ? `, ${user.name.split(" ")[0]}` : ""}</h1>
         <p className={cx("mt-1", quiet)}>{now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}{tracker.data ? ` · ${summaryLine(tracker.data)}` : ""}</p>
@@ -71,13 +73,14 @@ export function HomePage() {
     </header>
 
     <Suspense fallback={null}><SecurityNotice /></Suspense>
+    <div className="empty:hidden max-sm:order-[-1]"><NewNoticeCard /></div>
     {!fresh && <Suspense fallback={<Skeleton variant="card" count={1} label="Loading career overview" />}><Overview /></Suspense>}
 
     {/* A new account's few setup steps, until they're all done: first while nothing is tracked, after the next stop
         once there's a job to move (an interview shouldn't sit under a checklist). */}
-    {!tracker.data?.length && <SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} />}
+    {!tracker.data?.length && <div className="max-sm:order-[-1]"><SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} /></div>}
 
-    <section aria-labelledby="next-stop" className="route-rise relative overflow-hidden rounded-2xl bg-white px-6 py-7 ring-1 ring-zinc-200 sm:px-8 dark:bg-zinc-900 dark:ring-white/10">
+    <section aria-labelledby="next-stop" className="max-sm:order-[-1] route-rise relative overflow-hidden rounded-2xl bg-white px-6 py-7 ring-1 ring-zinc-200 sm:px-8 dark:bg-zinc-900 dark:ring-white/10">
       <h2 id="next-stop" className="sr-only">Your next stop</h2>
       {/* The route picture: it lights as many stops as the furthest job has reached (one on a first visit). */}
       {stop && <RouteMapArt stops={Math.max(1, ...jobs.map((j) => routeIndex(j.status) + 1)) + (stop.first ? 0 : 1)}

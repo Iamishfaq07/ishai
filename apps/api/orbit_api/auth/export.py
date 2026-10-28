@@ -15,6 +15,8 @@ from sqlalchemy.orm import selectinload
 
 from orbit_api.job_portal import session_associations
 from orbit_api.models import (
+    AccountNotice,
+    ActivityEvent,
     Answer,
     AnswerBankEntry,
     AnswerFeedback,
@@ -128,6 +130,10 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             DebriefAttempt.user_id == user_id).order_by(DebriefAttempt.created_at))).all()],
         "launch_access_requests": [_row(r) for r in (await db.scalars(select(LaunchAccessClaim).where(
             LaunchAccessClaim.user_id == user_id).order_by(LaunchAccessClaim.created_at))).all()],
+        "notices": [_row(n) for n in (await db.scalars(select(AccountNotice).where(
+            AccountNotice.user_id == user_id).order_by(AccountNotice.created_at))).all()],
+        "activity": [_row(e) for e in (await db.scalars(select(ActivityEvent).where(
+            ActivityEvent.user_id == user_id).order_by(ActivityEvent.created_at))).all()],
         "answer_ratings": [_row(f) for f in (await db.scalars(
             select(AnswerFeedback).where(AnswerFeedback.user_id == user_id)
             .order_by(AnswerFeedback.created_at))).all()],

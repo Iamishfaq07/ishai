@@ -62,6 +62,7 @@ const loaders = {
   adminUsers: () => import("./pages/AdminUsers"),
   adminPayments: () => import("./pages/AdminPayments"),
   adminAudit: () => import("./pages/AdminAudit"),
+  adminInsights: () => import("./pages/AdminInsights"),
   adminInbox: () => import("./pages/AdminInbox"),
   adminSupport: () => import("./pages/AdminSupport"),
   adminReferrals: () => import("./pages/AdminReferrals"),
@@ -143,6 +144,7 @@ export const CompanionPage = page(loaders.companion, (m) => m.CompanionPage);
 export const AdminUsersPage = page(loaders.adminUsers, (m) => m.AdminUsersPage);
 export const AdminPaymentsPage = page(loaders.adminPayments, (m) => m.AdminPaymentsPage);
 export const AdminAuditPage = page(loaders.adminAudit, (m) => m.AdminAuditPage);
+export const AdminInsightsPage = page(loaders.adminInsights, (m) => m.AdminInsightsPage);
 export const AdminInboxPage = page(loaders.adminInbox, (m) => m.AdminInboxPage);
 export const AdminSupportPage = page(loaders.adminSupport, (m) => m.AdminSupportPage);
 export const AdminReferralsPage = page(loaders.adminReferrals, (m) => m.AdminReferralsPage);

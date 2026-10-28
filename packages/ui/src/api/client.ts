@@ -42,6 +42,10 @@ import type {
   ReconcileResult,
   ReferralCodeInfo,
   ReferralInvite,
+  AccountNotices,
+  BillingQuote,
+  AdminJourney,
+  AdminInsights,
   ReferralOffer,
   AdminStats,
   AdminUser,
@@ -899,6 +903,13 @@ export function createApiClient(options: ApiClientOptions) {
       }),
     /** Invite friends: the account's link (made the first time), what a friend gets, and how it's gone. */
     myInvite: () => json<ReferralInvite>("/v1/referrals/me"),
+    /** The cart: one pack or plan priced for this account (its first-purchase discount), and how it's paid. */
+    billingQuote: (pack: string) => json<BillingQuote>(`/v1/billing/quote${queryString({ pack })}`),
+    /** What the account was given lately (credits, a plan, an approval…), newest first, with the unread count. */
+    notices: () => json<AccountNotices>("/v1/notices"),
+    /** Marks these notices read (or all of them, with no ids). */
+    readNotices: (ids?: string[]) =>
+      json<AccountNotices>("/v1/notices/read", { method: "POST", body: body(ids ? { ids } : {}) }),
     /** A code entered at checkout, before the first payment: its discount comes off the next order. */
     redeemCode: (code: string) => json<ReferralOffer>("/v1/referrals/redeem", { method: "POST", body: body({ code }) }),
     /** Public: what a link's code gives, for the sign-up page (404 when it can't be used). */
@@ -974,6 +985,10 @@ export function createApiClient(options: ApiClientOptions) {
       (await raw(`/v1/admin/users/export${queryString({ ...query, q: query.q?.trim() })}`)).blob(),
     /** Admin: one account in full (profile, wallet, ledger, sessions, content, payments, what was done to it). */
     adminUser: (userId: string) => json<AdminUserDetail>(`/v1/admin/users/${encodeURIComponent(userId)}`),
+    /** Admin: where an account came from, the journey's steps (where it's stuck) and what it did, newest first. */
+    adminJourney: (userId: string) => json<AdminJourney>(`/v1/admin/users/${encodeURIComponent(userId)}/journey`),
+    /** Admin: sign-ups' sources and how far they got, the pages people use and the errors they hit. */
+    adminInsights: (days = 30) => json<AdminInsights>(`/v1/admin/insights${queryString({ days })}`),
     /** Admin: name, email verified, private notes. */
     updateAdminUser: (userId: string, patch: AdminUserPatch) =>
       json<AdminUserDetail>(`/v1/admin/users/${encodeURIComponent(userId)}`, { method: "PATCH", body: body(patch) }),

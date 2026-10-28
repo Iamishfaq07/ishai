@@ -42,8 +42,8 @@ def _ip(request: Request) -> str | None:
 class OfferOut(BaseModel):
     """A first-purchase discount: the code, whose it is, and how much off."""
 
-    code: str
-    kind: str  # invite | creator | campus
+    code: str | None  # none: the first-purchase offer every account has
+    kind: str  # invite | creator | campus | first
     label: str | None  # a creator's or campus's name; never an inviter's
     percent: int
     text: str  # "10% off your first purchase"

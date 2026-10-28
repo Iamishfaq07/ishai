@@ -990,13 +990,82 @@ export interface AdminPayments {
 
 /** A first-purchase discount: from an invite link or a creator's or campus's code (POST /v1/referrals/redeem). */
 export interface ReferralOffer {
-  code: string;
-  kind: "invite" | "creator" | "campus";
+  /** None for the first-purchase offer every account has. */
+  code: string | null;
+  kind: "invite" | "creator" | "campus" | "first";
   /** A creator's or campus's name; never an inviter's. */
   label: string | null;
   percent: number;
   /** "10% off your first purchase". */
   text: string;
+}
+
+/** GET /v1/admin/users/{id}/journey: where an account came from, how far it got and what it did. */
+export interface AdminJourney {
+  source: Record<string, string> | null;
+  /** "google", "linkedin", "referral", "direct", "unknown". */
+  source_label: string;
+  steps: Array<{ key: string; label: string; done_at: string | null }>;
+  /** The first step not done yet, or null when every step is. */
+  stuck_at: string | null;
+  last_seen: string | null;
+  active_days_30: number;
+  devices: Array<{ name: string; count: number }>;
+  top_pages: Array<{ name: string; count: number }>;
+  errors_30: number;
+  timeline: Array<{ at: string; kind: "page" | "action" | "error"; name: string; path: string; device: string; detail: string }>;
+}
+
+/** GET /v1/admin/insights: everyone who signed up in the window, and what active people use and hit. */
+export interface AdminInsights {
+  days: number;
+  signups: number;
+  active_1: number;
+  active_7: number;
+  sources: Array<{ source: string; signups: number; resume: number; paid: number }>;
+  funnel: Array<{ key: string; label: string; count: number; stuck: number }>;
+  devices: Array<{ name: string; count: number }>;
+  top_pages: Array<{ name: string; count: number }>;
+  errors: Array<{ name: string; path: string; count: number; people: number }>;
+}
+
+/** GET /v1/billing/quote: the cart for one pack or plan, priced for this account now. */
+export interface BillingQuote {
+  id: string;
+  label: string;
+  kind: "pack" | "plan";
+  /** "25 AI credits", "Never expire", "30 days of Pro". */
+  includes: string[];
+  currency: string;
+  price_text: string;
+  /** 0: no discount. */
+  discount_percent: number;
+  /** "-₹50". */
+  discount_text: string;
+  /** "First purchase offer", "Code PRIYA10 (Campus)", "A friend's invite". */
+  discount_reason: string;
+  total: number;
+  total_text: string;
+  /** How it's paid; null when it can't be bought from here right now. */
+  checkout: "razorpay" | "upi" | "paypal" | null;
+  /** A coupon code can still be entered. */
+  coupons: boolean;
+}
+
+/** Something the account was given (credits, a plan, an approval, a referral reward, a purchase): the app's bell. */
+export interface AccountNotice {
+  id: string;
+  kind: "credits" | "plan" | "approved" | "referral" | "purchase";
+  title: string;
+  body: string;
+  link: string | null;
+  created_at: string;
+  read: boolean;
+}
+
+export interface AccountNotices {
+  items: AccountNotice[];
+  unread: number;
 }
 
 /** GET /v1/referrals/me: Invite friends. */

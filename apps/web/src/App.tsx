@@ -81,6 +81,7 @@ import {
   AdminUsersPage,
   AdminPaymentsPage,
   AdminAuditPage,
+  AdminInsightsPage,
   AdminInboxPage,
   AdminSupportPage,
   AdminReferralsPage,
@@ -368,6 +369,7 @@ export function App() {
         <Route path="admin/users" element={<AdminOnly><AdminUsersPage /></AdminOnly>} />
         <Route path="admin/payments" element={<AdminOnly><AdminPaymentsPage /></AdminOnly>} />
         <Route path="admin/audit" element={<AdminOnly><AdminAuditPage /></AdminOnly>} />
+        <Route path="admin/insights" element={<AdminOnly><AdminInsightsPage /></AdminOnly>} />
         <Route path="admin/inbox" element={<AdminOnly><AdminInboxPage /></AdminOnly>} />
         <Route path="admin/support" element={<AdminOnly><AdminSupportPage /></AdminOnly>} />
         <Route path="admin/referrals" element={<AdminOnly><AdminReferralsPage /></AdminOnly>} />

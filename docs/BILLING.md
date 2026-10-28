@@ -137,6 +137,17 @@ Every 30 days the `premium` plan includes:
     claim (no page says it today). The pricing pages also show an Enterprise tier with no price: its button opens the Contact form
   (topic "Business or partnership"), and you arrange group access by hand (an admin grant per account).
 
+## First-purchase offer and the cart
+
+Every account's first purchase is `ORBIT_FIRST_PURCHASE_PERCENT` (default 10) off, on any pack or plan, in rupees
+or dollars, with or without a code. Set it to 0 to switch the offer off. When the account also has a code (a friend's
+invite, a creator's or a campus code), the bigger discount applies; discounts never add up. It ends with the account's
+first approved payment, and only one open order carries it at a time (`billing/routes.py` `_offered`).
+
+Buy opens a cart (`GET /v1/billing/quote`): the item, what it includes, the discount and why, the total, a coupon box
+(while referrals are on and nothing has been paid) and the pay button for the checkout that applies (Razorpay, UPI or
+PayPal). The order is priced again on the server when it's made, so the cart never decides what's charged.
+
 ## Referrals: invite links, creator and campus codes
 `apps/api/orbit_api/billing/referrals.py` (the rules), `billing/referral_routes.py` (HTTP), DECISIONS D61.
 **Off until you switch it on** (`ORBIT_REFERRALS=true` on Railway): while it's off nothing is attributed, discounted

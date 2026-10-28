@@ -34,6 +34,7 @@ from tests.test_payment_settlement import (  # noqa: F401  (gw: the fixture)
     gw,
 )
 from tests.test_paypal import pp  # noqa: F401  (the fixture)
+from tests.test_signup_approval import _outbox
 
 ADMIN = "growth-admin@example.com"
 PASSWORD = "correct horse battery"
@@ -204,6 +205,12 @@ def test_the_inviter_is_rewarded_once_however_the_payment_lands(client: TestClie
     assert _rewards(client, a_id) == 1
     row = _referral(client, b_id)
     assert (row.status, row.reward_seconds, row.first_payment_id) == ("rewarded", 1800, _payment(client, order).id)
+    # The inviter hears about the reward in the app and by email; the friend sees their purchase land.
+    told = client.get("/v1/notices", headers=a).json()["items"]
+    assert [(n["kind"], n["title"]) for n in told] == [("referral", "You've got 30 interview minutes")]
+    a_email = client.get("/v1/auth/me", headers=a).json()["email"]
+    assert any(m.to == a_email and m.subject == "You've got 30 interview minutes on Orbit" for m in _outbox().sent)
+    assert [n["kind"] for n in client.get("/v1/notices", headers=b).json()["items"]] == ["purchase"]
     # Later payments by the same friend, by any route, add nothing more.
     _pay(client, refs, b)
     _db(client, lambda db: reconcile(db, now=datetime.now(UTC) + timedelta(hours=2)))

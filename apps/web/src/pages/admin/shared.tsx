@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { AdminUser } from "@orbit/types";
-import { Badge, Building2, Headphones, Inbox, IndianRupee, Megaphone, ScrollText, Users, cx, rupees, wholeMinutes } from "@orbit/ui";
+import { Badge, ChartColumn, Building2, Headphones, Inbox, IndianRupee, Megaphone, ScrollText, Users, cx, rupees, wholeMinutes } from "@orbit/ui";
 import { ProductTabs } from "../../components/products";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
@@ -43,6 +43,7 @@ export function AdminTabs({ paymentsWaiting, inboxUnread }: { paymentsWaiting?: 
       label="Admin"
       sections={[
         { to: "/admin/users", label: "Users", icon: Users },
+        { to: "/admin/insights", label: "Insights", icon: ChartColumn },
         { to: "/admin/payments", label: "Payments", icon: IndianRupee, ...(paymentsWaiting ? { count: paymentsWaiting } : {}) },
         { to: "/admin/inbox", label: "Inbox", icon: Inbox, ...(unread ? { count: unread } : {}) },
         { to: "/admin/support", label: "Support", icon: Headphones },

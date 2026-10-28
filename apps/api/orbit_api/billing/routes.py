@@ -149,6 +149,63 @@ async def list_packs(request: Request, user: Annotated[User | None, Depends(opti
     return _priced(public_packs(), pricing.currency_for(request, user), await referrals.offer_for(db, user))
 
 
+class QuoteOut(BaseModel):
+    """The cart: one pack or plan, what it costs this account now, and how it's paid."""
+
+    id: str
+    label: str
+    kind: Literal["pack", "plan"]
+    includes: list[str]  # "10 AI credits", "30 interview minutes", "30 days of Pro"
+    currency: str
+    price_text: str  # the list price
+    discount_percent: int  # 0: none
+    discount_text: str  # "-₹260"
+    discount_reason: str  # "First purchase offer", "Code PRIYA10", "A friend's invite"
+    total: float
+    total_text: str
+    checkout: Literal["razorpay", "upi", "paypal"] | None  # none: can't be bought from here right now
+    coupons: bool  # a code can still be entered (codes are on and nothing's been paid yet)
+
+
+def _reason(offer: referrals.Offer) -> str:
+    if offer.kind == referrals.FIRST:
+        return "First purchase offer"
+    if offer.kind == referrals.INVITE:
+        return "A friend's invite"
+    return f"Code {offer.code}" + (f" ({offer.label})" if offer.label else "")
+
+
+@router.get("/billing/quote", response_model=QuoteOut)
+async def quote(pack: Annotated[str, Query(min_length=1, max_length=32)], request: Request,
+                user: Annotated[User, Depends(current_user)],
+                db: Annotated[AsyncSession, Depends(get_db)]) -> QuoteOut:
+    """What the cart shows before paying: the list price, the first-purchase discount (the offer everyone gets, or a
+    code's), the total and the checkout. Orders charge the same (`_offered`), worked out again when they're made."""
+    pid, label, item, days, resume_credits, minutes = _product(pack)
+    listed = [x for x in (public_packs() if not days else public_monthly()) if x["id"] == pid]
+    if not listed:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
+    offer = await referrals.offer_for(db, user)
+    shown = _priced(listed, pricing.currency_for(request, user), offer)[0]
+    cost = pricing.price_of(item, shown["currency"])
+    percent = offer.percent if offer is not None else 0
+    total, off = referrals.discounted(cost, percent)
+    if days:
+        includes = [f"{days} days of {plan_named(monthly_plans()[pid].plan).label}", "Nothing renews by itself"]
+    else:
+        includes = [x for x in (f"{resume_credits} AI credits" if resume_credits else "",
+                                f"{minutes} interview minutes" if minutes else "") if x] + ["Never expire"]
+    uid = user.id
+    paid = await referrals.has_paid(db, uid)
+    return QuoteOut(id=pid, label=label, kind="plan" if days else "pack", includes=includes,
+                    currency=cost.currency, price_text=cost.text(), discount_percent=percent if off else 0,
+                    discount_text=f"-{pricing.money(cost.currency, off)}" if off else "",
+                    discount_reason=_reason(offer) if offer is not None and off else "",
+                    total=total.major, total_text=total.text(),
+                    checkout=shown.get("checkout") if shown.get("buyable") else None,
+                    coupons=referrals.enabled() and not paid)
+
+
 @router.get("/entitlements")
 async def my_entitlements(user: Annotated[User, Depends(current_user)],
                           db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, Any]:
@@ -262,7 +319,7 @@ async def _offered(db: AsyncSession, user: User, cost: pricing.Price,
     offer = await referrals.offer_for(db, user)
     if offer is None or offer.percent <= 0:
         return cost, {}
-    discounted = (Payment.user_id == user.id, Payment.referral_code_id.is_not(None))
+    discounted = (Payment.user_id == user.id, Payment.discount_minor > 0)
     if await db.scalar(select(func.count()).select_from(Payment)
                        .where(*discounted, Payment.status.in_(("submitted", "processing")))):
         return cost, {}
