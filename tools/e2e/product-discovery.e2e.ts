@@ -9,7 +9,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await page.goto("/tools");
     await expect(page.getByRole("heading", { name: "Find your next move.", exact: true })).toBeVisible();
     await page.getByLabel("Search tools", { exact: true }).fill("Workday");
-    await expect(page.getByRole("heading", { name: "Application agent", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Auto Apply", exact: true })).toBeVisible();
     await expect(page.locator("article")).toHaveCount(1);
     await page.reload();
     await expect(page.getByLabel("Search tools", { exact: true })).toHaveValue("Workday");
@@ -62,7 +62,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     const saved = await context.request.post(`${API}/v1/jobs/tracker`, { data: { listing_id: lid } });
     expect(saved.status(), await saved.text()).toBe(201);
     await page.goto("/jobs/journey");
-    await expect(page.getByRole("heading", { name: "Application agent", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Auto Apply", exact: true })).toBeVisible();
     await page.getByRole("checkbox", { name: "Backend engineer Northstar Studio", exact: true }).check();
     await page.getByRole("button", { name: "Prepare selected (1/20)", exact: true }).click();
     await expect.poll(async () => (await (await context.request.get(`${API}/v1/apply/packets`)).json()).length).toBe(1);
@@ -80,7 +80,7 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await expect(page.getByText("Build reliable APIs and explain engineering trade-offs for a small product team.", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Open AI second reader", exact: true }).click();
     await page.getByRole("button", { name: "Review with AI", exact: true }).click();
-    await expect(page.getByText("Demo response · mock provider", { exact: true })).toBeVisible();
+    await expect(page.getByText("AI suggestions · check against your records", { exact: true })).toBeVisible();
     expect((await (await context.request.get(`${API}/v1/apply/packets/${packet.id}`)).json()).status).toBe("review");
     await a11y(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

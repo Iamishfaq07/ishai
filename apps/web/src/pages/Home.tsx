@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, CompanyLogo, FileText, Headphones, IdCard, Plus, Rocket, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
 import type { JobStatus } from "@orbit/types";
 import { NewNoticeCard } from "../components/NoticesBell";
@@ -43,6 +43,9 @@ const textLink = cx("rounded font-medium text-indigo-700 underline-offset-4 hove
  */
 export function HomePage() {
   const { user } = useAuth();
+  // "/#follow-up-rules" (the reminder emails' unsubscribe page links it): the rules live in the action queue, so it
+  // opens, even on a new account, and the rules editor focuses itself.
+  const rulesLink = useLocation().hash === "#follow-up-rules";
   const now = new Date();
   const tracker = useAsync(() => api.jobTracker(), [], "job-tracker");
   const queue = useAsync(() => api.call<Queue>("/v1/jobs/actions"), [], "job-actions-today");
@@ -90,7 +93,9 @@ export function HomePage() {
       {/* The route picture: it lights as many stops as the furthest job has reached (one on a first visit). */}
       {stop && <RouteMapArt stops={Math.max(1, ...jobs.map((j) => routeIndex(j.status) + 1)) + (stop.first ? 0 : 1)}
         className="pointer-events-none absolute -right-6 bottom-0 hidden h-full max-h-56 w-auto md:block" />}
-      {!stop ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div> : !resumeFirst && <div className="relative md:pr-72">
+      {!stop ? (loading ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div>
+        : <p className={quiet}>Your next stop didn't load. <button type="button" onClick={() => { reloadTracker(); reloadQueue(); }} className={cx("rounded underline underline-offset-4", focusRing)}>Try again</button></p>)
+        : !resumeFirst && <div className="relative md:pr-72">
         {stop.when && <p className="mb-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">{stop.when}</p>}
         <p className="max-w-3xl font-title text-[2rem] font-semibold leading-[1.15] tracking-[-0.015em] sm:text-[2.375rem]">{stop.title}</p>
         <p className="mt-3 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">{stop.detail}</p>
@@ -186,7 +191,7 @@ export function HomePage() {
         </Link></li>)}</ul>
     </section>
 
-    {!fresh && <details className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
+    {(!fresh || rulesLink) && <details open={rulesLink || undefined} className="group rounded-2xl ring-1 ring-zinc-200 dark:ring-white/10">
       <summary className={cx("flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-5 font-medium", focusRing)}>
         <span>Your action queue{queue.data ? ` (${queue.data.items.length})` : ""}</span>
         <ArrowRight className="h-4 w-4 text-zinc-500 motion-safe:transition-transform group-open:rotate-90" aria-hidden />
