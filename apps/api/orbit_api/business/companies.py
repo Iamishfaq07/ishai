@@ -917,9 +917,10 @@ async def notifications(user: Annotated[User, Depends(current_user)],
         .join(BizMember, (BizMember.company_id == BizNotification.company_id) & (BizMember.user_id == user.id))
         .where(BizNotification.user_id == user.id).order_by(BizNotification.created_at.desc()).limit(100))).all()
     return [NotificationOut(id=n.id, company_id=n.company_id, company_name=cname, kind=n.kind, text=n.text,
-                            link=f"/business/app/{n.company_id}/automations" if n.kind == "automation" else (
+                            link=f"/business/app/{n.company_id}/requisitions" if n.kind == "requisition" else (
+                                f"/business/app/{n.company_id}/automations" if n.kind == "automation" else (
                                 f"/business/app/{n.company_id}/applications/{n.application_id}"
-                                if n.application_id else f"/business/app/{n.company_id}"),
+                                if n.application_id else f"/business/app/{n.company_id}")),
                             read=n.read_at is not None, created_at=_aware(n.created_at) or now())
             for n, cname in rows]
 

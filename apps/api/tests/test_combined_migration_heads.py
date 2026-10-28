@@ -16,7 +16,9 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 cfg = Config('alembic.ini')
-assert ScriptDirectory.from_config(cfg).get_heads() == ['ad418a8cecb0']
+heads = ScriptDirectory.from_config(cfg).get_heads()
+assert len(heads) == 1
+assert 'ad418a8cecb0' in {r.revision for r in ScriptDirectory.from_config(cfg).walk_revisions()}
 command.upgrade(cfg, os.environ['TEST_PREVIOUS_REVISION'])
 command.upgrade(cfg, 'head')
 engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''))
@@ -24,7 +26,7 @@ assert 'gmail_artifacts' in inspect(engine).get_table_names()
 columns = {c['name'] for c in inspect(engine).get_columns('jobs')}
 assert {'lease_token', 'lease_until', 'rerun_requested'} <= columns
 with engine.connect() as db:
-    assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == ['ad418a8cecb0']
+    assert db.execute(text('SELECT version_num FROM alembic_version')).scalars().all() == heads
 engine.dispose()
 """
     env = {**os.environ, "ORBIT_ENV": "test", "TEST_PREVIOUS_REVISION": previous,

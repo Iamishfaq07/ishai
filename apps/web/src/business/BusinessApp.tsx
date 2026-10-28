@@ -42,6 +42,7 @@ const Pipeline = lazy(async () => ({ default: (await import("./Pipeline")).Pipel
 const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Candidate }));
 const HiringDesk = lazy(async () => ({ default: (await import("./HiringDesk")).HiringDeskPage }));
 const AutomationCenter = lazy(async () => ({ default: (await import("./AutomationCenter")).AutomationCenter }));
+const RequisitionDesk = lazy(async () => ({ default: (await import("./RequisitionDesk")).RequisitionDesk }));
 const ControlRoom = lazy(async () => ({ default: (await import("./ControlRoom")).ControlRoom }));
 const HiringPlan = lazy(async () => ({ default: (await import("./HiringPlan")).HiringPlanPage }));
 const HiringRoom = lazy(async () => ({ default: (await import("./HiringRoom")).HiringRoomPage }));
@@ -114,6 +115,7 @@ const NAV = [
   { to: "", label: "Dashboard", icon: Gauge, end: true },
   { to: "control-room", label: "Control room", icon: Gauge },
   { to: "jobs", label: "Jobs", icon: Briefcase },
+  { to: "requisitions", label: "Hiring requests", icon: ScrollText },
   { to: "hiring-desk", label: "Hiring desk", icon: Users },
   { to: "automations", label: "Automations", icon: Gauge },
   { to: "team", label: "Team", icon: Users },
@@ -123,7 +125,7 @@ const NAV = [
 ] as const;
 
 function CompanyNav({ company, sidebar = false }: { company: BizCompany; sidebar?: boolean }) {
-  const items = NAV.filter((n) => (n.to === "control-room" ? company.role !== "interviewer" : n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
+  const items = NAV.filter((n) => ((n.to === "control-room" || n.to === "requisitions") ? company.role !== "interviewer" : n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
   return (
     <nav aria-label={`${company.name}`} className={sidebar ? "hidden w-60 shrink-0 space-y-6 border-r border-zinc-200 p-4 dark:border-white/10 lg:block" : "border-b border-zinc-200 dark:border-white/10 lg:hidden"}>
       {sidebar && <div className="space-y-3 rounded-xl bg-zinc-950 p-4 text-white"><p className="text-xsst text-indigo-300">Company workspace</p><p className="truncate font-semibold">{company.name}</p><p className="text-xs text-zinc-300">{ROLE_LABEL[company.role]} · {company.verified ? "Verified" : "Verification pending"}</p></div>}
@@ -245,6 +247,7 @@ function CompanyLayout() {
             <Route path="hiring-desk" element={<HiringDesk />} />
             <Route path="automations" element={<AutomationCenter />} />
             <Route path="control-room" element={<ControlRoom />} />
+            <Route path="requisitions" element={<RequisitionDesk />} />
             <Route path="jobs/:jid/interview-plan" element={<HiringPlan />} />
             <Route path="jobs/:jid/compare" element={<CandidateCompare />} />
             <Route path="applications/:aid" element={<Candidate />} />
@@ -268,7 +271,7 @@ function CompanyLayout() {
 function CompaniesHome() {
   const [search] = useSearchParams();
   const wanted = search.get("tool") ?? "";
-  const tool = ["jobs", "jobs/new", "hiring-desk", "control-room", "automations", "team"].includes(wanted) ? wanted : "";
+  const tool = ["jobs", "jobs/new", "hiring-desk", "control-room", "requisitions", "automations", "team"].includes(wanted) ? wanted : "";
   const [me, setMe] = useState<BizMe | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [n, setN] = useState(0);

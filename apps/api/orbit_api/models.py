@@ -1745,3 +1745,32 @@ class GmailArtifact(Base):
     __tablename__ = "gmail_artifacts"
     attempt_id: Mapped[str] = mapped_column(ForeignKey("gmail_attempts.id", ondelete="CASCADE"), primary_key=True)
     content: Mapped[bytes] = mapped_column(LargeBinary)
+
+
+class BizRequisition(TimestampMixin, Base):
+    """An internal headcount request, kept separate from a public job and applicant records."""
+    __tablename__ = "biz_requisitions"
+    __table_args__ = (Index("ix_biz_requisitions_company_created", "company_id", "created_at", "id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"))
+    requester_id: Mapped[str] = mapped_column(String(36))
+    state: Mapped[str] = mapped_column(String(16), default="draft")
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    content: Mapped[dict[str, Any]] = mapped_column(JSON)
+    approvers: Mapped[list[str]] = mapped_column(JSON, default=list)
+    approved_by: Mapped[list[str]] = mapped_column(JSON, default=list)
+    job_id: Mapped[str | None] = mapped_column(ForeignKey("biz_jobs.id", ondelete="SET NULL"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizRequisitionEvent(TimestampMixin, Base):
+    __tablename__ = "biz_requisition_events"
+    __table_args__ = (Index("ix_biz_requisition_events_request_revision", "requisition_id", "revision"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    requisition_id: Mapped[str] = mapped_column(ForeignKey("biz_requisitions.id", ondelete="CASCADE"))
+    actor_id: Mapped[str] = mapped_column(String(36))
+    actor_name: Mapped[str] = mapped_column(String(200))
+    action: Mapped[str] = mapped_column(String(32))
+    revision: Mapped[int] = mapped_column(Integer)
+    note: Mapped[str] = mapped_column(Text, default="")
+    snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON)
