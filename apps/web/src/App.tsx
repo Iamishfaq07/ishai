@@ -194,6 +194,12 @@ const publicProductPage = (pathname: string): ReactNode => {
   return key ? PUBLIC_PAGES[key] : null;
 };
 
+/** A common address for a page Orbit keeps elsewhere: the same query (a referral, a campaign) carried over. */
+function MovedTo({ pathname }: { pathname: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname, search, hash }} replace />;
+}
+
 /** An old resume maker address (Documents → Resume maker, /resume-maker): the same place in Resume. */
 function MovedResume() {
   const { pathname, search, hash } = useLocation();
@@ -248,6 +254,9 @@ export function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      {/* The addresses people type for these (worker/routes.js movedPath sends them on too, as a 301). */}
+      {["/signup", "/sign-up", "/join", "/create-account", "/get-started"].map((p) => <Route key={p} path={p} element={<MovedTo pathname="/register" />} />)}
+      {["/signin", "/sign-in", "/log-in"].map((p) => <Route key={p} path={p} element={<MovedTo pathname="/login" />} />)}
       {/* Public: an invite (or creator, campus) link. Its code is kept for the sign-up, then on to it. */}
       <Route path="/r/:code" element={<InviteLinkPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

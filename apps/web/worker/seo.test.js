@@ -141,6 +141,12 @@ describe("canonicalLocation (one address per page)", () => {
     expect(movedPath("/resume-ai/jobsearch")).toBeNull();
   });
 
+  it("sends the usual sign-up and sign-in addresses to Orbit's own, keeping a referral or campaign", () => {
+    for (const p of ["/signup", "/sign-up", "/Join", "/create-account", "/get-started"]) expect(at(`${SITE}${p}`)).toBe(`${SITE}/register`);
+    expect(at(`${SITE}/signup?ref=PRIYA10&utm_source=youtube`)).toBe(`${SITE}/register?ref=PRIYA10&utm_source=youtube`);
+    for (const p of ["/signin", "/sign-in", "/log-in"]) expect(at(`${SITE}${p}`)).toBe(`${SITE}/login`);
+  });
+
   it("leaves a canonical address alone (no redirect loops)", () => {
     for (const p of ["/", "/jobs", "/resume-ai", "/warmup?x=1", "/sessions/abc", "/companies/tcs"]) expect(at(`${SITE}${p}`)).toBeNull();
     expect(canonicalLocation(new URL("http://127.0.0.1:5187/"), {})).toBeNull();

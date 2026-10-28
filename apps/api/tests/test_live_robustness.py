@@ -229,6 +229,14 @@ async def test_an_unexpected_error_mid_answer_fails_it_instead_of_hanging() -> N
 # ---- spend that never reached the screen still counts ------------------------------------------------------------
 
 
+async def _until(ready: Any, timeout: float = 3.0) -> None:
+    """Waits for `ready()` (a record written by a task winding down), instead of guessing how long it takes."""
+    loop = asyncio.get_running_loop()
+    end = loop.time() + timeout
+    while not ready() and loop.time() < end:
+        await asyncio.sleep(0.01)
+
+
 async def test_dropped_early_answers_and_cancelled_ones_record_their_spend() -> None:
     rec = Ledger()
     eng, sink = _engine(MockLLMProvider(chunk_delay_s=0.06), recorder=rec, response_timing="balanced")
@@ -238,12 +246,15 @@ async def test_dropped_early_answers_and_cancelled_ones_record_their_spend() -> 
     await _ask(eng, "Specifically, how did you track it down?")  # …the interviewer keeps going: it's dropped unseen
     await asyncio.sleep(0.05)
     assert sink.of("answer.started") == []
+    # The spend is recorded as the dropped answer's task winds down: on a busy machine that's a moment later.
+    await _until(lambda: bool(rec.failed_answers()))
     unseen = rec.failed_answers()
     assert unseen and all(u.input_tokens > 0 for u in unseen)
 
     await sink.wait_for("answer.chunk", timeout=6)  # the whole question fired; its answer is streaming
     await eng.handle_client({"type": "answer.clear", "data": {}})
     await sink.wait_for("answer.cancelled")
+    await _until(lambda: len(rec.failed_answers()) > len(unseen))
     cancelled = rec.failed_answers()[len(unseen):]
     assert len(cancelled) == 1 and cancelled[0].output_tokens > 0  # estimated: the stream never sent its usage
     await eng.end()
