@@ -140,3 +140,28 @@ def test_old_and_rejected_upi_orders_do_not_issue_another_discount(client: TestC
     retry = client.post("/v1/billing/upi/orders", headers=headers, json={"pack": "mini", "code": "FIRST10"})
     assert retry.status_code == 201 and retry.json()["id"] == identity
     assert order(client, headers, pack="starter").status_code == 409
+
+
+def test_an_abandoned_checkout_gives_first10_back(client: TestClient, offer: Gateway) -> None:
+    """A FIRST10 checkout closed unpaid is expired by the reconciler; the offer is then free to use again."""
+    from sqlalchemy import update
+
+    from orbit_api.models import Payment
+    from tests.test_payment_settlement import _db
+
+    headers, _ = _join(client, None)
+    first = order(client, headers)
+    assert first.status_code == 201, first.text
+
+    async def abandon(db: Any) -> None:
+        await db.execute(update(Payment).where(Payment.gateway_order_id == first.json()["order_id"])
+                         .values(status="expired"))
+        await db.commit()
+
+    _db(client, abandon)
+    again = quote(client, headers, code="FIRST10")
+    assert again.status_code == 200, again.text
+    assert again.json()["total_text"] == "₹449"
+    retry = order(client, headers, pack="starter")
+    assert retry.status_code == 201, retry.text
+    assert _payment(client, retry.json()["order_id"]).discount_minor == 26000
