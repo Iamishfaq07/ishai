@@ -294,7 +294,7 @@ function Matches({ profile }: { profile: JobProfile }) {
           <>
             <ul className="space-y-3">
               {items.map((job, i) => (
-                <li key={job.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 8) }}>
+                <li key={job.id} className="route-rise relative has-[[aria-haspopup=menu][aria-expanded=true]]:z-10" style={{ ["--i" as string]: Math.min(i, 8) }}>
                   <JobCard
                     job={job}
                     showMatch={basis !== null}

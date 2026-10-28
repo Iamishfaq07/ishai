@@ -13,7 +13,7 @@ type State = { status: "todo" | "done" | "running" | "failed" | "skipped"; note?
 const MANUAL = "ext:";
 
 /**
- * One tap for a job: check the fit, give it a resume (a tailored copy, or your main resume), keep its post for
+ * One tap for a job: check the fit, give it a resume (a copy for this job, or your main resume), keep its post for
  * practice and write the likely interview questions. Each step is the same call its own tab makes, so the limits,
  * credits and checks are the same; steps already done are skipped and never paid for twice. A step that can't run
  * (no post for a job added by hand, no resume yet) says why and the rest still run.
@@ -38,12 +38,13 @@ export function PrepareAll({ entry, mission, onDone, onInterview }: {
   if (!run && has.fit && has.resume && has.post && has.questions) return null;
   if (!["saved", "applied", "interviewing"].includes(entry.status)) return null;
 
-  const credits = (!has.resume && tailor && !manual ? 1 : 0) + (!has.questions && askQuestions ? 1 : 0);
+  // Only the questions are AI: the job's resume is a copy (or a link), free; tailoring it with AI is Resume Studio's.
+  const credits = !has.questions && askQuestions ? 1 : 0;
   const steps: Array<{ id: StepId; label: string; detail: string }> = [
     { id: "fit", label: "Check your fit", detail: manual && !has.post ? "Needs the job post (paste it on the Requirements tab)" : "Free, within your daily checks" },
-    { id: "resume", label: "A resume for this job", detail: manual ? "Your main resume, linked to this job" : tailor ? "A tailored copy (1 AI credit)" : "Your main resume, linked to this job" },
+    { id: "resume", label: "A resume for this job", detail: manual ? "Your main resume, linked to this job" : tailor ? "A copy for this job, ready to tailor in Resume Studio (free)" : "Your main resume, linked to this job" },
     { id: "post", label: "Keep the job post for practice", detail: manual ? "Saved when you paste the post" : "Free" },
-    { id: "questions", label: "Likely interview questions", detail: askQuestions ? "From this job and its resume (1 AI credit)" : "Skipped" },
+    { id: "questions", label: "Likely interview questions", detail: askQuestions ? "From this job and its resume (1 Resume credit)" : "Skipped" },
   ];
 
   const start = async () => {
@@ -121,7 +122,7 @@ export function PrepareAll({ entry, mission, onDone, onInterview }: {
         <div className="mt-4 space-y-2 text-sm">
           {!has.resume && !manual && (
             <label className="flex items-center gap-2"><input type="checkbox" checked={tailor} onChange={(e) => setTailor(e.target.checked)} className="h-4 w-4" />
-              Tailor a copy of my resume (else link my main resume)</label>
+              Make a copy of my resume for this job (else link my main resume)</label>
           )}
           {!has.questions && (
             <label className="flex items-center gap-2"><input type="checkbox" checked={askQuestions} onChange={(e) => setAskQuestions(e.target.checked)} className="h-4 w-4" />
@@ -138,7 +139,7 @@ export function PrepareAll({ entry, mission, onDone, onInterview }: {
             <Button variant="secondary" onClick={() => setRun(null)}>Done</Button>
           </>
         )}
-        {!run && <span className="text-xs text-zinc-500 dark:text-zinc-400">{credits ? `Uses up to ${credits} AI credit${credits > 1 ? "s" : ""}.` : "No AI credits needed."}</span>}
+        {!run && <span className="text-xs text-zinc-500 dark:text-zinc-400">{credits ? "Uses 1 Resume credit." : "No credits needed."}</span>}
       </div>
     </section>
   );

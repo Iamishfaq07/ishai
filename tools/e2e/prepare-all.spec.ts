@@ -25,7 +25,7 @@ test("Prepare everything links a resume, writes interview questions and skips wh
 
   await page.goto(`/jobs/mission/${job.id}`);
   const card = page.getByRole("region", { name: "Prepare everything for this job" });
-  await expect(card).toContainText("Uses up to 1 AI credit.");
+  await expect(card).toContainText("Uses 1 Resume credit.");
   await card.getByRole("button", { name: "Prepare everything" }).click();
   await expect(card).toContainText("Main resume linked");
   await expect(card).toContainText(/\d+ questions ready on the Interview tab/);

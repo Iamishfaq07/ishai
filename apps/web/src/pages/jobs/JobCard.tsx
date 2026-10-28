@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { JobFitCheck, JobListing, JobMatch } from "@orbit/types";
 import {
   UsersRound,
@@ -11,8 +11,10 @@ import {
   CircleAlert,
   CircleCheck,
   Clock,
+  Ellipsis,
   FileText,
   MapPin,
+  MenuButton,
   Plus,
   Sparkles,
   Target,
@@ -33,6 +35,7 @@ import {
   postedTime,
   safeUrl,
   sourceLine,
+  stillOpenAt,
   trustBadges,
   type TrustBadge,
 } from "./model";
@@ -51,8 +54,7 @@ interface Props {
 
 /**
  * One job in the feed: what it is, how well it matches, where it's from, and what Orbit can do with it. The title
- * opens the job's own page (everything about it, and the same actions). On a phone the card keeps Apply and Save;
- * the fit check, tailoring and prep are a tap away on the job's page.
+ * opens the job's own page (everything about it, and the same actions).
  */
 export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
   const actions = useJobActions(job, resumeId, onTracked);
@@ -71,7 +73,8 @@ export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
         {showMatch && job.match && <MatchBadge match={job.match} />}
       </div>
 
-      <TrustBadges job={job} className="mt-2.5" />
+      {/* "Still open" is only checked on a careers page, so on a card it stands for both; the job's page shows each. */}
+      <TrustBadges job={job} only={stillOpenAt(job) ? ["early", "open"] : ["early", "direct"]} className="mt-2.5" />
 
       {job.snippet && <p className="mt-3 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-300">{job.snippet}</p>}
 
@@ -80,34 +83,20 @@ export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
       {/* A company's own post says so in its badge; a feed's post keeps the credit its terms ask for. */}
       {!job.direct && <SourceCredit job={job} className="mt-3" />}
 
+      {/* Four things to do with a job, the AI one named once: Apply, Save, a free fit check, and Tailor & prepare.
+          The free building blocks behind that last one, and Contacts, are under More. */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <ApplyLink job={job} actions={actions} />
         <TrackButton actions={actions} />
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={actions.fit.loading}
-          aria-expanded={actions.fit.open}
-          onClick={actions.checkFit}
-          className="hidden sm:inline-flex"
-        >
+        <Button variant="secondary" size="sm" disabled={actions.fit.loading} aria-expanded={actions.fit.open} onClick={actions.checkFit}>
           <Sparkles className="h-4 w-4" aria-hidden /> {actions.fit.result && actions.fit.open ? "Hide fit check" : "Check my fit"}
         </Button>
-        <span className="hidden sm:contents">
-          <TailorButton actions={actions} />
-          <PrepareButton actions={actions} />
-        </span>
-        {/* The people behind the post: on a saved job its finder opens straight away; otherwise the job's page offers it. */}
-        <Link to={job.tracked ? `${missionPath(job.tracked.id)}?contacts=1` : jobPath(job.id)} className={linkButton("ghost", "sm")}>
-          <UsersRound className="h-4 w-4" aria-hidden /> Contacts
-        </Link>
-        <Link to={jobPath(job.id)} className={cx(linkButton("ghost", "sm"), "ml-auto sm:hidden")}>
-          Fit check & more <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-        </Link>
+        <FullPrepButton actions={actions} compact />
+        <MoreJobActions job={job} actions={actions} />
       </div>
+      <BusyNote actions={actions} />
 
       <ActionNotes actions={actions} />
-      <FullPrepButton actions={actions} />
       {actions.fit.open && <FitPanel fit={actions.fit} onClose={actions.closeFit} onTailor={actions.tailor} className="mt-4" />}
     </article>
   );
@@ -311,27 +300,37 @@ export function TrackButton({ actions }: { actions: JobActions }) {
   );
 }
 
-export function TailorButton({ actions }: { actions: JobActions }) {
-  return (
-    <Button variant="ghost" size="sm" disabled={actions.busy !== null} onClick={actions.tailor} title="A copy of your resume aimed at this job, opened in Resume">
-      <Wand2 className="h-4 w-4" aria-hidden /> {actions.busy === "tailor" ? "Making a copy…" : "Tailor my resume"}
-    </Button>
-  );
-}
-
-export function PrepareButton({ actions }: { actions: JobActions }) {
-  return (
-    <Button variant="ghost" size="sm" disabled={actions.busy !== null} onClick={actions.prepare} title="Saves the job description for Practice: interview questions and a mock interview">
-      <Target className="h-4 w-4" aria-hidden /> {actions.busy === "prepare" ? "Saving the job…" : "Prepare"}
-    </Button>
-  );
-}
-
-export function FullPrepButton({ actions }: { actions: JobActions }) {
-  return <Button variant="primary" size="sm" className="mt-3 w-full sm:w-auto" disabled={Boolean(actions.busy)} onClick={actions.fullPrep}
-    title="Tailors a resume diff using one Resume credit and prepares a Practice link for this exact job">
-    <Target className="h-4 w-4" aria-hidden />{actions.busy === "fullprep" ? "Tailoring and preparing…" : "Tailor my resume and prepare"}
+/** The AI action for a job: a resume tailored to it (one Resume credit) and its practice set up, in one step. */
+export function FullPrepButton({ actions, compact = false }: { actions: JobActions; compact?: boolean }) {
+  return <Button variant={compact ? "secondary" : "primary"} size="sm" className={compact ? undefined : "mt-3 w-full sm:w-auto"}
+    disabled={Boolean(actions.busy)} onClick={actions.fullPrep}
+    title="Tailors your resume to this job (1 Resume credit) and sets up practice for it">
+    <Target className="h-4 w-4" aria-hidden />
+    {actions.busy === "fullprep" ? "Tailoring and preparing…" : compact ? "Tailor & prepare" : "Tailor my resume and prepare"}
   </Button>;
+}
+
+/**
+ * The rest, one tap further: a plain copy of the resume for this job (free; the AI tailoring is Tailor & prepare),
+ * the post kept for practice, the people behind it, and the job's own page.
+ */
+export function MoreJobActions({ job, actions, page = false }: { job: JobListing; actions: JobActions; page?: boolean }) {
+  const navigate = useNavigate();
+  const busy = actions.busy !== null;
+  return (
+    <MenuButton label={`More for ${job.title}`} icon={Ellipsis} variant="ghost" size="sm" align="end" items={[
+      { label: "Copy my resume for this job", icon: Wand2, disabled: busy, onSelect: actions.tailor },
+      { label: "Keep the post for practice", icon: Target, disabled: busy, onSelect: actions.prepare },
+      { label: "Find contacts", icon: UsersRound, onSelect: () => navigate(job.tracked ? `${missionPath(job.tracked.id)}?contacts=1` : `${jobPath(job.id)}#people`) },
+      ...(page ? [] : [{ label: "Open the job's page", icon: ArrowUpRight, onSelect: () => navigate(jobPath(job.id)) }]),
+    ]} />
+  );
+}
+
+/** What a menu action is doing while it runs (its own button is in the closed menu). */
+function BusyNote({ actions }: { actions: JobActions }) {
+  const text = actions.busy === "tailor" ? "Making a copy of your resume…" : actions.busy === "prepare" ? "Keeping the post for practice…" : null;
+  return text ? <p role="status" className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{text}</p> : null;
 }
 
 /** What an action has to say: "Did you apply?", an error, or a note with where to go next. */

@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ComponentType,
@@ -149,6 +150,15 @@ function MenuPanel({ items, id, label, align, onClose, menuRef, className }: {
   useEffect(() => {
     menuRef.current?.querySelector<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])')?.focus();
   }, [menuRef]);
+  // The side asked for, unless it would leave the screen (a "More" button that wrapped to the start of a row on a
+  // phone): then the other side, measured before it's painted.
+  const [side, setSide] = useState(align);
+  useLayoutEffect(() => {
+    const box = menuRef.current?.getBoundingClientRect();
+    if (!box) return;
+    if (side === "end" && box.left < 8) setSide("start");
+    else if (side === "start" && box.right > window.innerWidth - 8) setSide("end");
+  }, [menuRef, side]);
   return (
     <div
       ref={menuRef}
@@ -156,7 +166,7 @@ function MenuPanel({ items, id, label, align, onClose, menuRef, className }: {
       role="menu"
       aria-label={label}
       onKeyDown={(e) => menuKeys(e, menuRef.current, onClose)}
-      className={cx(floatingClass("menu"), "absolute top-full mt-1.5 min-w-[13rem] animate-menu-in p-1", align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left", className)}
+      className={cx(floatingClass("menu"), "absolute top-full mt-1.5 min-w-[13rem] animate-menu-in p-1", side === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left", className)}
     >
       {items.map(({ label: name, onSelect, icon: Icon, hint, danger, disabled }) => (
         <button
