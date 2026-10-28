@@ -484,7 +484,8 @@ class MockLLMProvider(LLMProvider):
                 for p in data["passages"][:3]]})
         if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader",
                                    "career_next_step_plan", "opportunity_coach", "business_requisition_review",
-                                   "business_knowledge_review", "business_knowledge_reading"):
+                                   "business_knowledge_review", "business_knowledge_reading",
+                                   "business_capacity_brief"):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
             return json.dumps({"tips": [{"fact_id": f["id"], "source_quote": f["text"][:300],

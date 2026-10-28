@@ -1790,6 +1790,20 @@ class BizRequisitionEvent(TimestampMixin, Base):
     snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
 
+class BizCapacityWatch(Base):
+    """Opt-in internal headcount alerts; responsibility does not grant workspace access."""
+    __tablename__ = "biz_capacity_watches"
+    __table_args__ = (Index("ix_biz_capacity_watch_company_enabled", "company_id", "enabled"),)
+    requisition_id: Mapped[str] = mapped_column(
+        ForeignKey("biz_requisitions.id", ondelete="CASCADE"), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    owner_id: Mapped[str | None] = mapped_column(String(36))
+    episode_key: Mapped[str | None] = mapped_column(String(64))
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class BizKnowledgeDocument(TimestampMixin, Base):
     """Business-owned text with a private draft and an independently published snapshot."""
     __tablename__ = "biz_knowledge_documents"

@@ -51,7 +51,7 @@ export function RequisitionDesk() {
   if (selected) return <RequisitionDetail key={selected} id={selected} approvers={data?.approvers ?? []} onBack={() => { setParams({}); void load(); }} />;
   const totals = requisitionTotals(data?.items ?? []);
   return <div className="space-y-6">
-    <PageTitle title="Hiring requests" subtitle="Agree on the need, outcomes and budget before opening a role." />
+    <PageTitle title="Hiring requests" subtitle="Agree on the need, outcomes and budget before opening a role." actions={<Link className={buttonClass("secondary")} to={companyPath(company.id, "capacity")}>Track hiring capacity</Link>} />
     <div className="rounded-2xl bg-zinc-950 p-5 text-white sm:p-7">
       <p className="text-xs font-medium uppercase tracking-wider text-indigo-300">Plan → review → approve → recruit</p>
       <p className="mt-3 max-w-2xl text-xl font-semibold">Give every new role a clear purpose and an accountable approval trail.</p>

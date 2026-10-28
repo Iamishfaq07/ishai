@@ -573,7 +573,7 @@ export interface BizNotification {
   id: string;
   company_id: string;
   company_name: string;
-  kind: "mention" | "automation" | "scheduling" | "requisition" | "knowledge_review";
+  kind: "mention" | "automation" | "scheduling" | "requisition" | "knowledge_review" | "capacity";
   text: string;
   link: string; // an app path: /business/app/<cid>/applications/<aid>
   read: boolean;

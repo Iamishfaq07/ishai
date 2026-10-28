@@ -271,11 +271,13 @@ async def sweep(now: datetime | None = None) -> int:
 @contextlib.asynccontextmanager
 async def running_sweeper() -> AsyncIterator[None]:
     async def loop() -> None:
+        from orbit_api.business.capacity import sweep as capacity_sweep
         from orbit_api.business.knowledge_reviews import sweep as knowledge_review_sweep
 
         await asyncio.sleep(30)
         while True:
-            for name, operation in (("hiring", sweep), ("knowledge reviews", knowledge_review_sweep)):
+            for name, operation in (("hiring", sweep), ("knowledge reviews", knowledge_review_sweep),
+                                    ("capacity", capacity_sweep)):
                 try:
                     await operation()
                 except asyncio.CancelledError:

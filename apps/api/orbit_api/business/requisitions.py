@@ -17,7 +17,15 @@ from orbit_api.business.hiring import aware
 from orbit_api.business.jobs import JobIn, _apply_fields, _unique_job_slug
 from orbit_api.business.rules import DEFAULT_STAGES, one_line
 from orbit_api.db import get_db
-from orbit_api.models import BizJob, BizMember, BizNotification, BizRequisition, BizRequisitionEvent, User
+from orbit_api.models import (
+    BizCapacityWatch,
+    BizJob,
+    BizMember,
+    BizNotification,
+    BizRequisition,
+    BizRequisitionEvent,
+    User,
+)
 from orbit_api.ratelimit import limit_user
 from orbit_api.workflow_advice import INSTRUCTION, validate_advice
 from orbit_api.workflow_ai import preview
@@ -418,6 +426,11 @@ async def act(rid: str, body: Action, ctx: CompanyCtx, db: Annotated[AsyncSessio
         row.job_id, row.state = job.id, "converted"
         audit(db, ctx.company.id, ctx.user, "job.created", job.title, job_id=job.id, requisition_id=row.id)
     row.revision += 1
+    if row.state not in ("approved", "converted"):
+        watch = await db.get(BizCapacityWatch, row.id)
+        if watch is not None and watch.enabled:
+            watch.enabled, watch.episode_key, watch.revision = False, None, watch.revision + 1
+            audit(db, ctx.company.id, ctx.user, "capacity.watch_disabled", row.id, reason="approval_no_longer_current")
     record(db, ctx, row, kind, body.note)
     await db.commit()
     return await output(db, ctx, row)

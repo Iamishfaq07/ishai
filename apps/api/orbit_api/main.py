@@ -45,6 +45,7 @@ from orbit_api.business.apply import public_router as business_apply_public_rout
 from orbit_api.business.apply import router as business_apply_router
 from orbit_api.business.automation import running_sweeper as running_business_automations
 from orbit_api.business.automation_routes import router as business_automation_router
+from orbit_api.business.capacity import router as business_capacity_router
 from orbit_api.business.companies import public_router as business_public_router
 from orbit_api.business.companies import router as business_router
 from orbit_api.business.control_room import router as business_control_router
@@ -477,6 +478,7 @@ def create_app() -> FastAPI:
     app.include_router(career_progress_router)
     app.include_router(job_playbook_router)
     app.include_router(business_control_router)
+    app.include_router(business_capacity_router)
     app.include_router(business_requisitions_router)
     app.include_router(business_knowledge_router)
     app.include_router(business_knowledge_reviews_router)
