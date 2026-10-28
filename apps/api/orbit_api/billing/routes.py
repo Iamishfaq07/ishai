@@ -23,8 +23,8 @@ from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user, optional_user
 from orbit_api.billing import paypal, pricing, razorpay, referrals, settle, upi
 from orbit_api.billing.monthly import monthly_plans, public_monthly
+from orbit_api.billing.packs import checkout, packs, public_packs
 from orbit_api.billing.packs import pack_label as packs_label
-from orbit_api.billing.packs import packs, public_packs
 from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import current_grant, plan_named, running_until
@@ -398,8 +398,9 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
     price = item.price_inr
     if pricing.currency_for(request, user) != pricing.INR:
         raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
-    if not get_settings().upi_id:
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
+    if checkout() != "upi":
+        raise HTTPException(status.HTTP_410_GONE, "Paying a UPI ID by hand has ended. Buy on Plan & billing: "
+                                                  "Razorpay takes UPI apps, cards and netbanking.")
     existing = await _resume_offer(db, user, body.code, pid, "upi", pricing.INR)
     if existing is not None:
         return _order_out(existing)

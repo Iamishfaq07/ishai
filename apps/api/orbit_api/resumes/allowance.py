@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api import credits
 from orbit_api.billing import pricing
-from orbit_api.billing.packs import packs
+from orbit_api.billing.packs import checkout, packs
 from orbit_api.config import get_settings
 from orbit_api.entitlements import plan_for
 from orbit_api.models import CreditEntry, User
@@ -60,7 +60,7 @@ def upgrade_offer() -> UpgradeOffer | None:
         return None
     return UpgradeOffer(pack=cheapest.id, label=cheapest.label, price_inr=cheapest.price_inr,
                         resume_credits=cheapest.resume_credits, interview_minutes=cheapest.interview_minutes,
-                        buyable=bool(get_settings().upi_id))
+                        buyable=checkout() is not None)
 
 
 def offer_price_text(offer: UpgradeOffer, currency: str) -> str:

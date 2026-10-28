@@ -113,10 +113,9 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "buy",
         "How to pay",
-        "Buy on Plan & billing. If Razorpay is on, pay by card, UPI, or netbanking and the credits land as soon as "
-        "it goes through. "
-        "If it isn't, pay the UPI ID shown there and paste the 12-digit UTR. A person checks that UTR before the "
-        "credits land. Outside India, prices are in US dollars and you pay through PayPal.",
+        "Tap Buy on Plan & billing, check your cart (add FIRST10 on a first purchase), then pay with Razorpay: a UPI "
+        "app, a card or netbanking. The credits land as soon as the payment goes through. Outside India, prices are "
+        "in US dollars and you pay through PayPal.",
         ("how to pay", "how do i pay", "how do i buy", "buy a pack", "buy credits", "where to pay"),
         ("razorpay", "paypal", "upi", "utr", "missing"),
         True,
@@ -148,11 +147,10 @@ _TOPICS: tuple[Topic, ...] = (
     ),
     Topic(
         "upi",
-        "Pay by UPI ID",
-        "Manual UPI is only when Razorpay is not offered. Plan & billing shows a UPI ID, a QR, and a reference like "
-        "ORB…. "
-        "Pay that exact amount from GPay, PhonePe, or Paytm, then paste the 12-digit UTR on the billing page. "
-        "A person matches it and adds the credits. A UTR can be used once.",
+        "Pay with a UPI app",
+        "Pay with your UPI app through Razorpay: tap Buy on Plan & billing, then Pay, and choose UPI in Razorpay's "
+        "window (GPay, PhonePe, Paytm or any UPI app). The credits are added as soon as the payment succeeds; there's "
+        "no UTR to paste. Orbit never asks for your UPI PIN.",
         ("upi", "upi id", "gpay", "phonepe", "paytm", "qr code"),
         ("utr", "missing", "razorpay"),
         india_only=True,
@@ -160,9 +158,9 @@ _TOPICS: tuple[Topic, ...] = (
     Topic(
         "utr",
         "Where is the UTR",
-        "The UTR is the 12-digit number your UPI app shows after you pay. Paste it on Plan & billing. "
-        "Orbit never asks for your UPI PIN. If the credits are still missing after a few hours, tap Talk to a person "
-        "and send the UTR.",
+        "You don't need a UTR: payments go through Razorpay and are added by themselves. The UTR is the 12-digit "
+        "number your UPI app shows for a payment. If a payment hasn't landed after a few minutes, tap Talk to a "
+        "person and send it with the pack you bought.",
         ("utr", "12-digit", "12 digit"),
         ("missing", "upi", "refund"),
         india_only=True,
@@ -171,8 +169,8 @@ _TOPICS: tuple[Topic, ...] = (
         "missing",
         "Payment didn't land",
         "Paid with Razorpay or PayPal? Refresh Plan & billing. The credits should already be there. "
-        "Paid the UPI ID? Paste the 12-digit UTR on that page and wait for a person to approve it. "
-        "Still missing? Tap Talk to a person and include the pack, plus the UTR or the email on the payment.",
+        "Still missing after a few minutes? Tap Talk to a person and include the pack, plus the Razorpay payment id "
+        "or the UTR from your UPI app.",
         ("didn't land", "did not land", "not credited", "not showing", "payment failed", "hasn't arrived",
          "has not arrived", "where are my credits", "credits not", "didn't work", "did not work"),
         ("razorpay", "utr", "refund"),

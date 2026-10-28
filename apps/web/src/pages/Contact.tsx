@@ -369,7 +369,7 @@ export function ContactPage() {
                 <li>We reply by email, usually within a working day.</li>
                 <li>
                   {india
-                    ? "Payments: add the UTR so we can find yours fast."
+                    ? "Payments: add the Razorpay payment id or the UTR from your UPI app, so we can find yours fast."
                     : "Payments: add the ORB… reference from Plan & billing, or the PayPal transaction ID."}
                 </li>
               </ul>

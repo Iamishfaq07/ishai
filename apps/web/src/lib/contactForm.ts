@@ -16,7 +16,7 @@ export const MESSAGE_MAX = 3000;
 /** The topics, in the server's order (contact/routes.py TOPICS), each with a line on what helps us answer. */
 export const CONTACT_TOPICS: ReadonlyArray<{ id: ContactTopic; label: string; hint: string }> = [
   { id: "general", label: "General question", hint: "Ask anything about Orbit." },
-  { id: "payment", label: "Payment or credits", hint: "Say how you paid, the amount and the date, and the ORB… reference from Your payments (or the 12-digit UTR for a UPI payment checked by hand)." },
+  { id: "payment", label: "Payment or credits", hint: "Say how you paid, the amount and the date, and the ORB… reference from Your payments, or the Razorpay payment id (or the UTR your UPI app shows)." },
   { id: "technical", label: "Technical problem", hint: "Say what you were doing, what happened, and on which device and browser." },
   { id: "report_job", label: "Report a job", hint: "Tell us what was wrong with the job. Never pay a fee or share an OTP for a job." },
   { id: "report", label: "Report an answer or content", hint: "Something Orbit wrote or said was inappropriate, harmful or wrong: tell us what it was, and roughly when." },

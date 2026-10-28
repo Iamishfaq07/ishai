@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     # be bought. Each payment is checked by the admin against the bank statement (UTR) before its credits land.
     upi_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_UPI_ID"))
     upi_name: str = Field("Orbit", validation_alias=AliasChoices("ORBIT_UPI_NAME"))
+    # Paying the UPI ID by hand (a QR, then a UTR the admin checks). Off: new orders go through Razorpay in India and
+    # PayPal abroad only; UPI orders already open can still be finished and approved.
+    manual_upi: bool = Field(False, validation_alias=AliasChoices("ORBIT_MANUAL_UPI"))
     # Razorpay (billing/razorpay.py): cards (international ones once Razorpay enables them), UPI, netbanking and
     # wallets, confirmed automatically. With the key id and secret set, packs are bought through Razorpay's checkout
     # instead of the manual UPI flow. The webhook secret confirms payments whose page was closed before it returned.

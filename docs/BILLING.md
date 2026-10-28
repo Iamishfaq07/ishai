@@ -298,6 +298,11 @@ Set-up (OWNER ACTION REQUIRED), at developer.paypal.com with your PayPal Busines
 PayPal payments show in Settings → Payments as approved, with nothing to check.
 
 ## Payments: UPI, checked by the admin (when Razorpay isn't set up)
+
+**Off for new orders.** New payments go through Razorpay in India (UPI apps, cards, netbanking) and PayPal abroad.
+Paying the UPI ID by hand is offered again only with `ORBIT_MANUAL_UPI=true`; without it, `POST /v1/billing/upi/orders`
+answers 410 and packs never list `checkout: "upi"`. UPI orders already open can still get their UTR and be approved
+by the admin, as below.
 No payment gateway: people pay `ORBIT_UPI_ID` (shown as `ORBIT_UPI_NAME`) from any UPI app, and the admin confirms
 each payment before its credits land (`apps/api/orbit_api/billing/upi.py`).
 1. **Plan & billing → Buy** makes an order: the amount, a reference (`ORB…`, in the UPI note), a QR and a

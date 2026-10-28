@@ -157,8 +157,8 @@ export function BillingPage() {
           ent.reload();
         }
       } else {
-        setOrder(await api.createUpiOrder(p.id, code));
-        setCart(null);
+        // Paying a UPI ID by hand is no longer offered for new orders (Razorpay takes UPI apps in India).
+        setBuyError("Payments aren't available right now. Try again in a few minutes, or write to us from Contact.");
       }
     } catch (err) {
       // The sheet offers a rupee checkout and a launch-access request: only true of a rupee order. A dollar order
