@@ -43,6 +43,7 @@ const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Can
 const HiringDesk = lazy(async () => ({ default: (await import("./HiringDesk")).HiringDeskPage }));
 const AutomationCenter = lazy(async () => ({ default: (await import("./AutomationCenter")).AutomationCenter }));
 const KnowledgeReviewInbox = lazy(async () => ({ default: (await import("./KnowledgeReviewInbox")).KnowledgeReviewInbox }));
+const KnowledgeReadingDesk = lazy(async () => ({ default: (await import("./KnowledgeReadingDesk")).KnowledgeReadingDesk }));
 const KnowledgeStudio = lazy(async () => ({ default: (await import("./KnowledgeStudio")).KnowledgeStudio }));
 const RequisitionDesk = lazy(async () => ({ default: (await import("./RequisitionDesk")).RequisitionDesk }));
 const ControlRoom = lazy(async () => ({ default: (await import("./ControlRoom")).ControlRoom }));
@@ -119,6 +120,7 @@ const NAV = [
   { to: "jobs", label: "Jobs", icon: Briefcase },
   { to: "requisitions", label: "Hiring requests", icon: ScrollText },
   { to: "knowledge", label: "Knowledge studio", icon: ScrollText },
+  { to: "knowledge-reading", label: "Team reading", icon: ScrollText },
   { to: "knowledge-reviews", label: "Policy reviews", icon: ScrollText },
   { to: "hiring-desk", label: "Hiring desk", icon: Users },
   { to: "automations", label: "Automations", icon: Gauge },
@@ -182,10 +184,10 @@ function Banners({ company }: { company: BizCompany }) {
       </Callout>
     );
   }
-  if (!company.verified) {
+  if (!company.verified && company.permissions.manage_jobs) {
     return (
-      <Callout tone="warning" title="Verify your company to publish jobs" className="mb-5" action={<Link to={companyPath(company.id, "verify")} className={buttonClass("secondary", "sm")}>Verify</Link>}>
-        Until then you can draft jobs and set up your team; they go live once {company.domain} is verified.
+      <Callout tone="warning" title="Company verification is needed to publish jobs" className="mb-5" action={company.permissions.manage_company ? <Link to={companyPath(company.id, "verify")} className={buttonClass("secondary", "sm")}>Verify</Link> : undefined}>
+        {company.permissions.manage_company ? "Verify your company domain to publish jobs." : "Ask a company owner or admin to verify the domain before publishing jobs."} Draft jobs can be prepared while {company.domain} is awaiting verification.
       </Callout>
     );
   }
@@ -253,6 +255,7 @@ function CompanyLayout() {
             <Route path="control-room" element={<ControlRoom />} />
             <Route path="requisitions" element={<RequisitionDesk />} />
             <Route path="knowledge" element={<KnowledgeStudio />} />
+            <Route path="knowledge-reading" element={<KnowledgeReadingDesk />} />
             <Route path="knowledge-reviews" element={<KnowledgeReviewInbox />} />
             <Route path="jobs/:jid/interview-plan" element={<HiringPlan />} />
             <Route path="jobs/:jid/compare" element={<CandidateCompare />} />

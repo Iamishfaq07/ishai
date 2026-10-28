@@ -35,6 +35,7 @@ export function KnowledgeStudio() {
   const rows = filterKnowledge(library.items, query, status);
   return <div className="space-y-6">
     <PageTitle title="Knowledge studio" subtitle="A shared source of truth for your hiring policies, interview playbooks and joining guides." actions={<>
+      <Link to={`/business/app/${company.id}/knowledge-reading`} className={cx("rounded-xl border border-zinc-200 px-3 py-2 text-sm font-medium dark:border-white/10", focusRing)}>Team reading</Link>
       {library?.can_manage && <Link to={`/business/app/${company.id}/knowledge-reviews`} className={cx("rounded-xl border border-zinc-200 px-3 py-2 text-sm font-medium dark:border-white/10", focusRing)}>Review inbox</Link>}
       <Button variant="secondary" onClick={() => void refresh().catch((e: unknown) => setError(new Error(errorText(e))))}>Refresh library</Button>
       {library.can_manage && <Button disabled={company.status !== "active"} onClick={() => setCreating(true)}>Add document</Button>}

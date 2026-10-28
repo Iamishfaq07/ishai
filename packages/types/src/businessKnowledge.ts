@@ -36,3 +36,21 @@ export interface BizKnowledgeReviewBrief {
   tips: Array<{ fact_id: string; source_quote: string; suggestion: string; success_check: string }>;
   facts: Array<{ id: string; text: string }>; revision: number; excerpts_truncated: boolean; source: "mock" | "ai";
 }
+
+export interface BizKnowledgeReadingItem {
+  id: string; title: string; category: BizKnowledgeContent["category"]; audience: BizKnowledgeContent["audience"];
+  published_revision: number; content_hash: string; review_overdue: boolean; needs_update: boolean;
+  acknowledged: boolean; acknowledged_at: string | null; acknowledged_revision: number | null;
+}
+export interface BizKnowledgeReadingDocument extends BizKnowledgeReadingItem { data: BizKnowledgeContent }
+export interface BizKnowledgeReadingList { items: BizKnowledgeReadingItem[]; can_manage: boolean }
+export interface BizKnowledgeCoverageItem extends BizKnowledgeReadingItem { eligible: number; acknowledged_count: number; remaining: number }
+export interface BizKnowledgeCoverage { items: BizKnowledgeCoverageItem[]; as_of: string }
+export interface BizKnowledgeReaders {
+  document: BizKnowledgeReadingItem; total: number; offset: number; limit: number;
+  items: Array<{ id: string; name: string; role: string; acknowledged: boolean; acknowledged_at: string | null; acknowledged_revision: number | null }>;
+}
+export interface BizKnowledgeReadingGuide {
+  tips: BizKnowledgeReviewBrief["tips"]; facts: BizKnowledgeReviewBrief["facts"]; source: "mock" | "ai";
+  content_hash: string; published_revision: number; needs_update: boolean; review_overdue: boolean; excerpts_truncated: boolean;
+}

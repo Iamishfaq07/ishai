@@ -1808,6 +1808,17 @@ class BizKnowledgePublication(TimestampMixin, Base):
     actor_name: Mapped[str] = mapped_column(String(200))
 
 
+class BizKnowledgeReceipt(Base):
+    """Latest explicit self-acknowledgement; never inferred from a page view or an AI call."""
+    __tablename__ = "biz_knowledge_receipts"
+    document_id: Mapped[str] = mapped_column(
+        ForeignKey("biz_knowledge_documents.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    published_revision: Mapped[int] = mapped_column(Integer)
+    acknowledged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class BizKnowledgeEvent(TimestampMixin, Base):
     __tablename__ = "biz_knowledge_events"
     __table_args__ = (Index("ix_biz_knowledge_events_document_revision", "document_id", "revision"),)
