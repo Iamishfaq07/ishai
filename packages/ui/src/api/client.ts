@@ -965,6 +965,13 @@ export function createApiClient(options: ApiClientOptions) {
         method: "POST",
         timeoutMs: LONG_TIMEOUT_MS,
       }),
+    /** A cover letter for this job, from its resume version and saved post: one resume credit. */
+    jobCoverLetter: (id: string, opts: { tone?: CoverLetterTone; length?: CoverLetterLength } = {}) =>
+      json<{ text: string }>(`/v1/jobs/tracker/${encodeURIComponent(id)}/cover-letter`, {
+        method: "POST",
+        body: body(opts),
+        timeoutMs: LONG_TIMEOUT_MS,
+      }),
     /** What a session for this interview starts with: saves the job post and the resume version as documents once. */
     interviewSessionContext: (id: string, tzOffset = -new Date().getTimezoneOffset()) =>
       json<InterviewSessionContext>(
