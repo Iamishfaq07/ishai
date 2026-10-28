@@ -13,10 +13,15 @@ export const questionKey = (question: string, mode: string, version: string, ids
 /** Portable working notes retain the original question, exact quotes and source versions. */
 export function knowledgeAnswerText(question: string, answer: BizKnowledgeAnswer): string {
   return ["AI-generated working notes — verify the cited guidance before use.", `Question: ${question.trim()}`,
-    `Format: ${answer.mode}`, `Source snapshot: ${answer.source_version}`, "",
+    `Format: ${answer.mode}`, `Source snapshot: ${answer.source_version}`, answer.needs_update ? "Attention: a cited document has been flagged for updates." : "", answer.review_overdue ? "Attention: a cited document is past its review date." : "", "",
     ...answer.points.flatMap((point, i) => {
       const source = answer.sources.find(s => s.id === point.passage_id);
       return [`${i + 1}. ${point.text}`, `Source: ${source?.title ?? "Reference"} · version ${source?.revision ?? "unknown"}`,
         `Reference ID: ${source?.document_id ?? "unknown"}`, `Quote: ${point.quote}`, ""];
     })].join("\n");
 }
+
+export const KNOWLEDGE_ACTION_LABELS: Record<string, string> = {
+  publish: "Published", archive: "Archived", restore: "Restored as draft", review_confirm: "Review confirmed",
+  review_owner: "Review owner updated", needs_update: "Updates requested",
+};

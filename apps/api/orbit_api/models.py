@@ -1779,7 +1779,8 @@ class BizRequisitionEvent(TimestampMixin, Base):
 class BizKnowledgeDocument(TimestampMixin, Base):
     """Business-owned text with a private draft and an independently published snapshot."""
     __tablename__ = "biz_knowledge_documents"
-    __table_args__ = (Index("ix_biz_knowledge_company_updated", "company_id", "updated_at", "id"),)
+    __table_args__ = (Index("ix_biz_knowledge_company_updated", "company_id", "updated_at", "id"),
+                      Index("ix_biz_knowledge_review_sweep", "review_reminders", "archived", "company_id"))
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"))
     created_by: Mapped[str] = mapped_column(String(36))
@@ -1788,6 +1789,11 @@ class BizKnowledgeDocument(TimestampMixin, Base):
     published: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     published_revision: Mapped[int | None] = mapped_column(Integer)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_owner_id: Mapped[str | None] = mapped_column(String(36))
+    review_reminders: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    review_needs_update: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    review_reminder_key: Mapped[str | None] = mapped_column(String(64))
+    review_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

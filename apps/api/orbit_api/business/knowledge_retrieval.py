@@ -54,6 +54,7 @@ def retrieve(documents: list[dict[str, Any]], question: str, limit: int = 8) -> 
                     "text": text,
                     "offset": offset,
                     "review_overdue": doc["review_overdue"],
+                    "needs_update": bool(doc.get("needs_update", False)),
                     "counts": counts,
                     "title_terms": set(terms(doc["title"])),
                 }

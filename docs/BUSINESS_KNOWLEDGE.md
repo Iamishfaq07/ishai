@@ -4,6 +4,9 @@ Open **Business → company → Knowledge studio** at `/business/app/:companyId/
 This workspace contains company-owned hiring policies, interview playbooks, joining guides and operations
 procedures. It does not query applicant records or Orbit Personal data.
 
+[Policy review inbox](BUSINESS_KNOWLEDGE_REVIEWS.md) adds document responsibility, explicit confirmations,
+update-request warnings and opt-in internal reminders after publication.
+
 ## Author, publish and review
 
 Owners/admins can create a document from 50–20,000 characters of text. A private draft contains a title,

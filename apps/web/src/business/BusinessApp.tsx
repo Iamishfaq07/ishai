@@ -42,6 +42,7 @@ const Pipeline = lazy(async () => ({ default: (await import("./Pipeline")).Pipel
 const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Candidate }));
 const HiringDesk = lazy(async () => ({ default: (await import("./HiringDesk")).HiringDeskPage }));
 const AutomationCenter = lazy(async () => ({ default: (await import("./AutomationCenter")).AutomationCenter }));
+const KnowledgeReviewInbox = lazy(async () => ({ default: (await import("./KnowledgeReviewInbox")).KnowledgeReviewInbox }));
 const KnowledgeStudio = lazy(async () => ({ default: (await import("./KnowledgeStudio")).KnowledgeStudio }));
 const RequisitionDesk = lazy(async () => ({ default: (await import("./RequisitionDesk")).RequisitionDesk }));
 const ControlRoom = lazy(async () => ({ default: (await import("./ControlRoom")).ControlRoom }));
@@ -118,6 +119,7 @@ const NAV = [
   { to: "jobs", label: "Jobs", icon: Briefcase },
   { to: "requisitions", label: "Hiring requests", icon: ScrollText },
   { to: "knowledge", label: "Knowledge studio", icon: ScrollText },
+  { to: "knowledge-reviews", label: "Policy reviews", icon: ScrollText },
   { to: "hiring-desk", label: "Hiring desk", icon: Users },
   { to: "automations", label: "Automations", icon: Gauge },
   { to: "team", label: "Team", icon: Users },
@@ -127,7 +129,7 @@ const NAV = [
 ] as const;
 
 function CompanyNav({ company, sidebar = false }: { company: BizCompany; sidebar?: boolean }) {
-  const items = NAV.filter((n) => ((n.to === "control-room" || n.to === "requisitions") ? company.role !== "interviewer" : n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
+  const items = NAV.filter((n) => n.to === "knowledge-reviews" ? company.permissions.manage_company : ((n.to === "control-room" || n.to === "requisitions") ? company.role !== "interviewer" : n.to === "automations" ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
   return (
     <nav aria-label={`${company.name}`} className={sidebar ? "hidden w-60 shrink-0 space-y-6 border-r border-zinc-200 p-4 dark:border-white/10 lg:block" : "border-b border-zinc-200 dark:border-white/10 lg:hidden"}>
       {sidebar && <div className="space-y-3 rounded-xl bg-zinc-950 p-4 text-white"><p className="text-xsst text-indigo-300">Company workspace</p><p className="truncate font-semibold">{company.name}</p><p className="text-xs text-zinc-300">{ROLE_LABEL[company.role]} · {company.verified ? "Verified" : "Verification pending"}</p></div>}
@@ -251,6 +253,7 @@ function CompanyLayout() {
             <Route path="control-room" element={<ControlRoom />} />
             <Route path="requisitions" element={<RequisitionDesk />} />
             <Route path="knowledge" element={<KnowledgeStudio />} />
+            <Route path="knowledge-reviews" element={<KnowledgeReviewInbox />} />
             <Route path="jobs/:jid/interview-plan" element={<HiringPlan />} />
             <Route path="jobs/:jid/compare" element={<CandidateCompare />} />
             <Route path="applications/:aid" element={<Candidate />} />

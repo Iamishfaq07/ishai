@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { BizKnowledgeAnswer, BizKnowledgeContent, BizKnowledgeDocument, BizKnowledgeLibrary } from "@orbit/types";
 import { Button, Callout, Field, Input, Select, Textarea, cx, focusRing } from "@orbit/ui";
 import { downloadText } from "../lib/format";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { knowledge } from "./knowledgeApi";
-import { EMPTY_KNOWLEDGE, KNOWLEDGE_AUDIENCES, KNOWLEDGE_CATEGORIES, changedKnowledge, filterKnowledge, knowledgeAnswerText, questionKey } from "./knowledgeModel";
+import { EMPTY_KNOWLEDGE, KNOWLEDGE_ACTION_LABELS, KNOWLEDGE_AUDIENCES, KNOWLEDGE_CATEGORIES, changedKnowledge, filterKnowledge, knowledgeAnswerText, questionKey } from "./knowledgeModel";
 import { LoadError, Loading, Panel, Stat, errorText } from "./ui";
 
 export function KnowledgeStudio() {
@@ -35,6 +35,7 @@ export function KnowledgeStudio() {
   const rows = filterKnowledge(library.items, query, status);
   return <div className="space-y-6">
     <PageTitle title="Knowledge studio" subtitle="A shared source of truth for your hiring policies, interview playbooks and joining guides." actions={<>
+      {library?.can_manage && <Link to={`/business/app/${company.id}/knowledge-reviews`} className={cx("rounded-xl border border-zinc-200 px-3 py-2 text-sm font-medium dark:border-white/10", focusRing)}>Review inbox</Link>}
       <Button variant="secondary" onClick={() => void refresh().catch((e: unknown) => setError(new Error(errorText(e))))}>Refresh library</Button>
       {library.can_manage && <Button disabled={company.status !== "active"} onClick={() => setCreating(true)}>Add document</Button>}
     </>} />
@@ -110,6 +111,7 @@ function KnowledgeAssistant({ library, onOpen }: { library: BizKnowledgeLibrary;
     {answer && <div className="mt-5 space-y-4" aria-live="polite">
       {answer.status === "insufficient" ? <Callout title="Not enough evidence">The available published passages do not support an answer. Try the policy's terminology, select another reference, or ask an owner/admin to add the missing guidance.</Callout> : <>
         <p className="text-xs font-medium">{answer.source === "mock" ? "Test preview · no AI model called" : "AI synthesis · verify against the cited guidance"}</p>
+        {answer.needs_update && <Callout tone="warning">A cited document has been flagged for updates by the company. Confirm the guidance before using it.</Callout>}
         {answer.review_overdue && <Callout tone="warning">Some cited guidance is past its review date. Confirm it is still current with the document owner.</Callout>}
         <div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={deriving} onClick={() => downloadText("orbit-cited-working-notes.txt", knowledgeAnswerText(question, answer), "text/plain;charset=utf-8")}>Download cited notes</Button>{library.can_manage && answer.mode === "checklist" && <Button disabled={busy || company.status !== "active"} loading={deriving} onClick={() => void derive()}>Create draft playbook</Button>}</div>
         {library.can_manage && answer.mode === "checklist" && <p className="text-xs text-zinc-500 dark:text-zinc-400">A draft playbook keeps these citations, starts with coordinator-only access, and requires review and explicit publication.</p>}
@@ -170,6 +172,7 @@ function DocumentEditor({ id, onBack, onCreated }: { id: string | null; onBack: 
     </>} />
     {error && <LoadError error={error} />}
     {dirty && <p role="status" className="text-sm text-amber-700 dark:text-amber-300">Unsaved draft. Save before publishing; download it if another editor changed the document.</p>}
+    {row?.needs_update && <Callout tone="warning">This published guidance has been flagged for updates. Review its current instructions before relying on it.</Callout>}
     {row?.archived && <Callout>This document is archived and excluded from readers and AI. Restore it as an unpublished draft before using it again.</Callout>}
     <Panel title={canManage ? "Document draft" : "Published guidance"}>
       {canManage ? <fieldset disabled={!editable} className="min-w-0 space-y-4"><legend className="sr-only">Document content</legend>
@@ -197,7 +200,7 @@ function DocumentEditor({ id, onBack, onCreated }: { id: string | null; onBack: 
       </Panel>
       <Panel title="Publication history" hint="Only owners/admins can inspect historical versions. Readers use the current published audience and guidance.">
         <ol className="space-y-3">{row.history.map(version => <li key={version.revision} className="rounded-xl border border-zinc-200 p-3 text-sm dark:border-white/10"><p className="font-medium">Version {version.revision} · {version.actor}</p><p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{new Date(version.at).toLocaleString()}</p><Button size="sm" className="mt-2" variant="ghost" onClick={() => void run(async () => { const data = await knowledge.version(company.id, row.id, version.revision); if (live.current) downloadText(`orbit-knowledge-v${version.revision}.json`, JSON.stringify(data, null, 2), "application/json"); })} disabled={busy}>Download version {version.revision}</Button></li>)}</ol>
-        {row.events.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold">Publication actions</h3><ol className="mt-3 space-y-3">{row.events.map(event => <li key={`${event.action}-${event.revision}`} className="text-sm"><p className="font-medium">{event.action} · {event.actor} · revision {event.revision}</p><p className="mt-1 whitespace-pre-wrap break-words text-xs">{event.note}</p></li>)}</ol>{row.events_truncated && <p className="mt-2 text-xs">Showing the latest 50 actions.</p>}</div>}
+        {row.events.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold">Publication actions</h3><ol className="mt-3 space-y-3">{row.events.map(event => <li key={`${event.action}-${event.revision}`} className="text-sm"><p className="font-medium">{KNOWLEDGE_ACTION_LABELS[event.action] ?? event.action.replaceAll("_", " ")} · {event.actor} · revision {event.revision}</p><p className="mt-1 whitespace-pre-wrap break-words text-xs">{event.note}</p></li>)}</ol>{row.events_truncated && <p className="mt-2 text-xs">Showing the latest 50 actions.</p>}</div>}
         {!row.history.length && <p className="text-sm">No published versions yet. Saving a draft does not publish it.</p>}
         {row.history_truncated && <p className="mt-3 text-xs">Showing the latest 20 publications. Older publications remain available by their version number.</p>}
       </Panel>

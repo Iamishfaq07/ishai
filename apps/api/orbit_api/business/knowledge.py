@@ -136,7 +136,13 @@ async def sources_for(db: AsyncSession, ctx: Ctx) -> tuple[list[dict[str, Any]],
         )
     )
     documents = [
-        {**r.published, "id": r.id, "revision": r.published_revision, "review_overdue": overdue(r.published)}
+        {
+            **r.published,
+            "id": r.id,
+            "revision": r.published_revision,
+            "review_overdue": overdue(r.published),
+            "needs_update": bool(r.review_needs_update),
+        }
         for r in rows
         if r.published is not None and can_read(ctx, r.published)
     ]
@@ -154,6 +160,7 @@ def summary(row: BizKnowledgeDocument, ctx: Ctx) -> dict[str, Any]:
         "audience": data["audience"],
         "review_due": data["review_due"],
         "review_overdue": overdue(data),
+        "needs_update": bool(row.review_needs_update),
         "revision": row.revision if ctx.can("manage_company") else row.published_revision,
         "published_revision": row.published_revision,
         "archived": row.archived,
@@ -261,6 +268,7 @@ async def create(body: Create, ctx: CompanyCtx, db: Annotated[AsyncSession, Depe
         company_id=ctx.company.id,
         created_by=ctx.user.id,
         draft=body.data.model_dump(),
+        review_owner_id=ctx.user.id,
         revision=1,
         archived=False,
     )
@@ -335,6 +343,7 @@ async def act(did: str, body: Action, ctx: CompanyCtx, db: Annotated[AsyncSessio
         row.revision += 1
         row.published, row.published_revision = row.draft, row.revision
         row.published_at = datetime.now(UTC)
+        row.review_needs_update = False
         db.add(
             BizKnowledgePublication(
                 document_id=row.id, revision=row.revision, content=row.draft, actor_name=ctx.actor_name
@@ -350,6 +359,7 @@ async def act(did: str, body: Action, ctx: CompanyCtx, db: Annotated[AsyncSessio
         await check_capacity(db, ctx)
         row.archived, row.revision, row.published, row.published_revision = False, row.revision + 1, None, None
         row.published_at = None
+        row.review_needs_update = False
     else:
         # Delete snapshots too: no retained answer threads or vector index copies exist to clean up.
         await db.execute(delete(BizKnowledgePublication).where(BizKnowledgePublication.document_id == row.id))
@@ -398,7 +408,8 @@ async def ask(body: Question, ctx: CompanyCtx, db: Annotated[AsyncSession, Depen
         "Do not use outside knowledge, infer candidate traits, invent policy or make employment decisions. "
         "For mode checklist, return a practical ordered checklist supported by the passages; do not claim actions ran. "
         "If sources conflict, describe the disagreement with separate cited points rather than choosing a winner. "
-        "Review-overdue sources are not proven current. Each point needs an exact quote and its passage_id. "
+        "Review-overdue or needs-update sources are not proven current. "
+        "Each point needs an exact quote and its passage_id. "
         "If evidence does not answer the question, abstain. Return JSON: "
         '{"status":"answered"|"insufficient","points":[{"passage_id":"supplied id",'
         '"quote":"exact substring (8–600 characters)",'
@@ -429,4 +440,5 @@ async def ask(body: Question, ctx: CompanyCtx, db: Annotated[AsyncSession, Depen
         "source_version": version,
         "mode": body.mode,
         "review_overdue": any(s["review_overdue"] for s in cited),
+        "needs_update": any(s.get("needs_update", False) for s in cited),
     }

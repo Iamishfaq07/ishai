@@ -271,14 +271,17 @@ async def sweep(now: datetime | None = None) -> int:
 @contextlib.asynccontextmanager
 async def running_sweeper() -> AsyncIterator[None]:
     async def loop() -> None:
+        from orbit_api.business.knowledge_reviews import sweep as knowledge_review_sweep
+
         await asyncio.sleep(30)
         while True:
-            try:
-                await sweep()
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                log.exception("hiring automation sweep failed")
+            for name, operation in (("hiring", sweep), ("knowledge reviews", knowledge_review_sweep)):
+                try:
+                    await operation()
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    log.exception("%s automation sweep failed", name)
             await asyncio.sleep(300)
     task = asyncio.create_task(loop())
     try:
