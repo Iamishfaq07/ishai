@@ -63,6 +63,7 @@ import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { AppError } from "./AppError";
+import { DesktopTip } from "./DesktopTip";
 import { NoticesBell } from "./NoticesBell";
 import { COPILOT_PATH, LEARNING_PATH, SIDEBAR_KEY, exploreItems, navGroups, phoneTabs, sidebarCollapsed, type NavItem } from "./nav";
 import { PRODUCTS, ProductTabs, type ProductSection } from "./products";
@@ -307,6 +308,7 @@ export function Layout() {
         )}
 
         <AnnouncementBanner className="sm:px-6" />
+        <DesktopTip />
 
         <main id="main" className="mx-auto min-h-[100dvh] w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
           {learning && (

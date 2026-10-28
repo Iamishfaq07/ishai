@@ -21,7 +21,8 @@ const HOW: Record<NonNullable<BillingQuote["checkout"]>, string> = {
 /** The cart: what's being bought, the first-purchase discount or a coupon's, the total, then the payment. The
  * numbers are the server's (GET /v1/billing/quote), and the order charges the same. */
 export function Cart({ pack, onClose, onPay, busy, error, onCodeApplied }: {
-  pack: { id: string; label: string };
+  /** `checkout`: how the page will pay for it (what Pay does), so the button says the same. */
+  pack: { id: string; label: string; checkout?: string | null; buyable?: boolean };
   onClose: () => void;
   onPay: () => void;
   busy: boolean;
@@ -31,16 +32,18 @@ export function Cart({ pack, onClose, onPay, busy, error, onCodeApplied }: {
 }) {
   const quote = useAsync(() => api.billingQuote(pack.id), [pack.id], `quote-${pack.id}`);
   const q = quote.data;
+  const listed = pack.buyable && pack.checkout && pack.checkout in PAY_LABEL ? (pack.checkout as keyof typeof PAY_LABEL) : null;
+  const checkout = listed ?? q?.checkout ?? null;
   const footer = q ? (
     <div className="space-y-2">
       {error && <p role="alert" className="text-sm text-rose-700 dark:text-rose-300">{error}</p>}
-      <Button className="w-full" size="lg" loading={busy} disabled={!q.checkout} onClick={onPay}>
-        {q.checkout ? PAY_LABEL[q.checkout](q.total_text) : "Can't be bought here right now"}
+      <Button className="w-full" size="lg" loading={busy} disabled={!checkout} onClick={onPay}>
+        {checkout ? PAY_LABEL[checkout](q.total_text) : "Can't be bought here right now"}
       </Button>
-      {q.checkout && (
+      {checkout && (
         <p className="flex items-start gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
           <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-          {HOW[q.checkout]} Nothing renews automatically.
+          {HOW[checkout]} Nothing renews automatically.
         </p>
       )}
     </div>

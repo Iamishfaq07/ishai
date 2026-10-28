@@ -57,6 +57,9 @@ test("billing on a phone: a purchase's result is brought into view", async ({ pa
   await stubRazorpay(page);
   await page.goto("/billing");
   await page.getByRole("button", { name: /^Buy · / }).nth(1).click();
+  // Buy opens the cart (the item, any discount, the total); Pay there goes on to Razorpay.
+  const cart = page.getByRole("dialog", { name: "Your cart" });
+  await cart.getByRole("button", { name: /^Pay .* securely$/ }).click();
   const done = page.getByText("3 interview credits added. Thanks!");
   await expect(done).toBeVisible();
   await expect(done).toBeInViewport();

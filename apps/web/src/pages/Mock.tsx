@@ -163,14 +163,14 @@ function MockSetup() {
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 dark:bg-white/[0.06] dark:text-zinc-300">
             <Video className="h-6 w-6" aria-hidden />
           </span>
-          <span className="min-w-0 flex-1">
+          <span className="min-w-[12rem] flex-1">
             <span className="block font-title text-xl font-semibold">AI video interview</span>
             <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">
               Face to face with an AI interviewer who asks from a job description, your resume or any topic, follows up on your
               answers, and grades every one.
             </span>
           </span>
-          <span className={buttonClass("primary")}>Start <ArrowRight className="h-4 w-4 motion-safe:transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
+          <span className={buttonClass("primary", "md", "max-sm:w-full")}>Start <ArrowRight className="h-4 w-4 motion-safe:transition-transform group-hover:translate-x-0.5" aria-hidden /></span>
         </Link>
         <PracticeQueueCard />
 
