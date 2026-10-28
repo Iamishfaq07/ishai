@@ -570,6 +570,8 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/v1/admin/users", {}),
     ("GET", "/v1/admin/users?only=pending&q=idor", {}),
     ("GET", "/v1/admin/users/{target}/activity", {}),
+    ("GET", "/v1/admin/users/{target}/journey", {}),
+    ("GET", "/v1/admin/insights?days=7", {}),
     ("POST", "/v1/admin/users/{target}/access", {"json": {"action": "grant", "plan": "unlimited", "hours": 2}}),
     ("POST", "/v1/admin/users/{target}/access", {"json": {"action": "approve"}}),
     ("POST", "/v1/admin/users/{target}/credits", {"json": {"resume": 5, "interview_minutes": 30}}),

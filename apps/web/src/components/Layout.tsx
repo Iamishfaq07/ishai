@@ -45,6 +45,7 @@ import {
 import { api } from "../lib/api";
 import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
+import { trackAs, trackPage } from "../lib/activity";
 import { useCountry } from "../lib/country";
 import { resetNotices } from "../lib/notices";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
@@ -157,6 +158,14 @@ export function Layout() {
   const { pathname } = location;
   const navigate = useNavigate();
   const navigationType = useNavigationType();
+  // Insights for the admin (lib/activity.ts): each page opened, named by its title once it has set it.
+  useEffect(() => {
+    trackAs(user?.id ?? null);
+  }, [user?.id]);
+  useEffect(() => {
+    const t = window.setTimeout(() => trackPage(document.title), 800);
+    return () => window.clearTimeout(t);
+  }, [pathname]);
   // A new page opens at its top; Back/Forward (POP) keeps the browser's own scroll position.
   useEffect(() => {
     if (navigationType !== "POP") window.scrollTo(0, 0);

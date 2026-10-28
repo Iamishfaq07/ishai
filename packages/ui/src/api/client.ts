@@ -44,6 +44,8 @@ import type {
   ReferralInvite,
   AccountNotices,
   BillingQuote,
+  AdminJourney,
+  AdminInsights,
   ReferralOffer,
   AdminStats,
   AdminUser,
@@ -983,6 +985,10 @@ export function createApiClient(options: ApiClientOptions) {
       (await raw(`/v1/admin/users/export${queryString({ ...query, q: query.q?.trim() })}`)).blob(),
     /** Admin: one account in full (profile, wallet, ledger, sessions, content, payments, what was done to it). */
     adminUser: (userId: string) => json<AdminUserDetail>(`/v1/admin/users/${encodeURIComponent(userId)}`),
+    /** Admin: where an account came from, the journey's steps (where it's stuck) and what it did, newest first. */
+    adminJourney: (userId: string) => json<AdminJourney>(`/v1/admin/users/${encodeURIComponent(userId)}/journey`),
+    /** Admin: sign-ups' sources and how far they got, the pages people use and the errors they hit. */
+    adminInsights: (days = 30) => json<AdminInsights>(`/v1/admin/insights${queryString({ days })}`),
     /** Admin: name, email verified, private notes. */
     updateAdminUser: (userId: string, patch: AdminUserPatch) =>
       json<AdminUserDetail>(`/v1/admin/users/${encodeURIComponent(userId)}`, { method: "PATCH", body: body(patch) }),

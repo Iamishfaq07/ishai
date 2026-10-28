@@ -13,6 +13,7 @@ import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
 import { CreditPackGrid, PlanComparison, PricingTiers } from "../components/PricingTiers";
 import { Cart } from "../components/Cart";
+import { trackAction } from "../lib/activity";
 import { CodeEntry, InviteFriends } from "../components/Referrals";
 import { useAuth } from "../lib/auth";
 import { useCountry } from "../lib/country";
@@ -117,11 +118,13 @@ export function BillingPage() {
     if (isPack && country !== "IN" && !p.international) { setInternationalPack(p); return; }
     setBuyError(null);
     setCart(p);
+    trackAction("Opened cart", p.id);
   };
 
   const pay = async (p: CreditPack | MonthlyPlan, domestic = false) => {
     const isPack = !("days" in p);
     if (!domestic && isPack && country !== "IN" && !p.international) { setInternationalPack(p); return; }
+    trackAction("Started payment", `${p.id} ${p.checkout ?? ""}`.trim());
     setStarting(true);
     setBuyError(null);
     setBought(null);

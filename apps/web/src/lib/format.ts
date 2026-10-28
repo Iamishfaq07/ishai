@@ -67,8 +67,17 @@ export function isNotFound(err: unknown): boolean {
   return err instanceof ApiError && err.status === 404;
 }
 
+let onErrorShown: ((message: string) => void) | null = null;
+
+/** Hears each error message shown (lib/activity.ts logs them for the admin's insights). */
+export function hearErrorsShown(fn: ((message: string) => void) | null): void {
+  onErrorShown = fn;
+}
+
 export function errorText(err: unknown): string {
-  return err instanceof Error ? err.message : "Something went wrong.";
+  const message = err instanceof Error ? err.message : "Something went wrong.";
+  if (!(err instanceof DOMException && err.name === "AbortError")) onErrorShown?.(message);
+  return message;
 }
 
 export function downloadText(filename: string, content: BlobPart, type = "text/markdown"): void {

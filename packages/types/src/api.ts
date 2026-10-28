@@ -1000,6 +1000,35 @@ export interface ReferralOffer {
   text: string;
 }
 
+/** GET /v1/admin/users/{id}/journey: where an account came from, how far it got and what it did. */
+export interface AdminJourney {
+  source: Record<string, string> | null;
+  /** "google", "linkedin", "referral", "direct", "unknown". */
+  source_label: string;
+  steps: Array<{ key: string; label: string; done_at: string | null }>;
+  /** The first step not done yet, or null when every step is. */
+  stuck_at: string | null;
+  last_seen: string | null;
+  active_days_30: number;
+  devices: Array<{ name: string; count: number }>;
+  top_pages: Array<{ name: string; count: number }>;
+  errors_30: number;
+  timeline: Array<{ at: string; kind: "page" | "action" | "error"; name: string; path: string; device: string; detail: string }>;
+}
+
+/** GET /v1/admin/insights: everyone who signed up in the window, and what active people use and hit. */
+export interface AdminInsights {
+  days: number;
+  signups: number;
+  active_1: number;
+  active_7: number;
+  sources: Array<{ source: string; signups: number; resume: number; paid: number }>;
+  funnel: Array<{ key: string; label: string; count: number; stuck: number }>;
+  devices: Array<{ name: string; count: number }>;
+  top_pages: Array<{ name: string; count: number }>;
+  errors: Array<{ name: string; path: string; count: number; people: number }>;
+}
+
 /** GET /v1/billing/quote: the cart for one pack or plan, priced for this account now. */
 export interface BillingQuote {
   id: string;

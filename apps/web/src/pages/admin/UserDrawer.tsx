@@ -19,6 +19,7 @@ import { api } from "../../lib/api";
 import { errorText, formatDate } from "../../lib/format";
 import { AccountHistory } from "./AccountHistory";
 import { CreditsAdjust } from "./CreditsAdjust";
+import { Journey } from "./Journey";
 import { seenText, sinceText } from "./logic";
 import { AccessBadge, Section, SuspendedBadge, Tag, inr, mins, when } from "./shared";
 
@@ -118,6 +119,9 @@ export function UserDrawer({
               )}
               {detail.user.suspended_at && <SuspendedNote detail={detail} onChange={changed} />}
               <UsageGrid user={detail.user} />
+              <Section title="Journey" hint="Where they came from, how far they got, and what they did in the app (pages, steps and errors they saw; never what they typed).">
+                <Journey userId={detail.user.id} />
+              </Section>
               {!detail.is_admin_account && (
                 <>
                   <Section title="Access" hint="A plan for a while (it runs out on its own), approval for good, or back to waiting.">

@@ -90,6 +90,9 @@ class User(TimestampMixin, Base):
     suspended_reason: Mapped[str | None] = mapped_column(String(300))
     # The admin's private notes on the account. Never shown to the account's owner (or in their data export).
     admin_note: Mapped[str | None] = mapped_column(Text)
+    # Where the account came from (insights.py): the referring site, the link's campaign tags and the first page,
+    # as the web app saw them on the first visit. Set once, in the account's first week.
+    signup_source: Mapped[dict[str, Any] | None] = mapped_column(JSON(none_as_null=True))
     # The country the user is applying for jobs in (ISO 3166-1 alpha-2, "IN", "US"): sets the currency, sample
     # salaries, job search and wording they see. Guessed from the browser at first and changed by them any time;
     # None until then.
@@ -1588,6 +1591,22 @@ class BizTemplate(Base):
     subject: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ActivityEvent(TimestampMixin, Base):
+    """What a person did in the web app (insights.py): a page opened, a step taken, an error they saw. Never what they
+    typed or uploaded. Kept 180 days, for the admin to see where people get stuck."""
+
+    __tablename__ = "activity_events"
+    __table_args__ = (Index("ix_activity_events_user_created", "user_id", "created_at"),
+                      Index("ix_activity_events_created", "created_at"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(12))  # page | action | error
+    name: Mapped[str] = mapped_column(String(80))
+    path: Mapped[str] = mapped_column(String(200), default="")
+    device: Mapped[str] = mapped_column(String(8), default="")  # phone | tablet | desktop
+    detail: Mapped[str] = mapped_column(String(200), default="")
 
 
 class AccountNotice(TimestampMixin, Base):
