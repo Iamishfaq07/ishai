@@ -15,6 +15,15 @@ import { publicRoutes, type PageMeta } from "./routes";
 import { SITE, url } from "./seo";
 
 export type { PageMeta, PublicRoute } from "./routes";
+export { POLICIES } from "./routes";
+
+/** A policy page (a plain HTML file in public/) as its Markdown copy: its own title, description and body. */
+export function policyMarkdown(path: string, document: string, lastmod: string): string {
+  const pick = (re: RegExp) => (document.match(re)?.[1] ?? "").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const body = document.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? "";
+  return pageMarkdown({ title: pick(/<title>([^<]*)<\/title>/i), description: pick(/<meta name="description" content="([^"]*)"/i),
+    canonical: url(path) }, body.replace(/<!--[\s\S]*?-->/g, ""), SITE, lastmod);
+}
 
 /** A page as the app draws it at that address, signed out, with the sky behind it (main.tsx). */
 export function renderPage(path: string, page: ReactNode): string {

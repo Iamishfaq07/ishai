@@ -56,6 +56,8 @@ describe("mission dashboard figures", () => {
 
   it("sums it up in one line, or says plainly that nothing is tracked", () => {
     expect(summaryLine([], NOW)).toMatch(/^Nothing tracked yet/);
+    expect(summaryLine([job("hired", null, "Razorpay")], NOW)).toBe("Hired at Razorpay");
+    expect(summaryLine([job("rejected")], NOW)).toMatch(/^Nothing active right now/);
     expect(summaryLine([job("applied"), job("offer"), job("interviewing", "2026-10-17T09:00:00", "Hooli")], NOW))
       .toBe("3 applications in progress · 1 offer · next date tomorrow (Hooli)");
   });

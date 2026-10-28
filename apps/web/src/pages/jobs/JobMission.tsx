@@ -156,8 +156,8 @@ export function JobMissionPage() {
               }}
             />
             <GmailGate><GmailApply key={`gmail:${entry.id}`} entryId={entry.id} /></GmailGate>
-            <PrepDownload key={`prep:${entry.id}`} entryId={entry.id} />
-            <JobApplyPeople key={`apply:${entry.id}`} entry={entry} />
+            {/* The sections come straight after the next step: on a phone the cards below used to push them a screen
+                and a half down. Applying, people and the offline copy follow the open section. */}
             <RoomNavigation tab={tab} suggested={opportunityStart(entry.status, m)} onSelect={setTab} />
             <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_17rem]">
               <aside aria-label="This job's records" className="order-last min-w-0 space-y-4">
@@ -213,6 +213,8 @@ export function JobMissionPage() {
               </div>
 
             </div>
+            <JobApplyPeople key={`apply:${entry.id}`} entry={entry} />
+            <PrepDownload key={`prep:${entry.id}`} entryId={entry.id} />
           </>
         ) : null}
       </LoadGate>
@@ -593,9 +595,19 @@ function NextStepCard({
   const [, rerender] = useState(0);
   const [busy, setBusy] = useState(false);
   const step = sourceStep?.key === "fit" && !entry.live ? {
-    ...sourceStep, title: "Review this job’s requirements", action: "Open job details", to: "interview",
-    why: "This job has no live post in Orbit. Open its saved details or paste the description, then compare the requirements with your real evidence.",
+    ...sourceStep, title: "Check this job’s requirements", action: "Paste the job post", to: "fit",
+    why: "You added this job yourself, so Orbit doesn't have its post. Paste the description and the fit check compares each requirement with your resume.",
   } : sourceStep;
+  if (entry.status === "hired") {
+    return (
+      <section aria-labelledby="next-title" className="route-rise rounded-2xl bg-white px-5 py-6 ring-1 ring-zinc-200 sm:px-7 dark:bg-zinc-900 dark:ring-white/10">
+        <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">You got the job</p>
+        <h2 id="next-title" className="mt-1 font-title text-[1.5rem] font-semibold leading-tight sm:text-[1.75rem]">Congratulations on {entry.company}</h2>
+        <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-300">Start well: a plan for your first 90 days, from this job's own responsibilities: what to learn first, who to meet and what to ask your manager.</p>
+        <Button className="mt-4" onClick={() => onTab("offer")}>Plan my first 90 days</Button>
+      </section>
+    );
+  }
   if (!step) {
     return (
       <Card>
@@ -627,6 +639,7 @@ function NextStepCard({
       return;
     }
     if (step.to === "practise") return onTab("practice");
+    if (step.to === "fit") return onTab("fit");
     if (step.to === "interview") return onTab("interview");
     if (step.to === "notes") return onTab("timeline");
     return undefined;

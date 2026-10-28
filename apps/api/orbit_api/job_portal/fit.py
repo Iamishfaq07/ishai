@@ -121,6 +121,9 @@ def _quoted(quote: Any, source: str, limit: int) -> str:
     return q if len(q) >= 3 and _norm(q) in _norm(source) else ""
 
 
+_PLACEHOLDERS = {"", "none", "none found", "n/a", "na", "nil", "nothing", "not specified", "unknown"}
+
+
 def _requirements(raw: Any, corpus: str, job_text: str, evidence: str = "") -> list[Requirement]:
     """Requirement by requirement, kept to what can be pointed at: a job quote must be in the post, a resume quote in
     the resume and an evidence quote in the confirmed evidence. "met" or "partial" with neither real line becomes
@@ -130,7 +133,7 @@ def _requirements(raw: Any, corpus: str, job_text: str, evidence: str = "") -> l
         if not isinstance(item, dict):
             continue
         name = " ".join(str(item.get("requirement") or "").split())[:120]
-        if not name:
+        if not name or name.strip(" .-").lower() in _PLACEHOLDERS:  # "none", "N/A": not a requirement
             continue
         status = item.get("status") if item.get("status") in ("met", "partial", "missing") else "unclear"
         job_quote = _quoted(item.get("job_quote"), job_text, 240)

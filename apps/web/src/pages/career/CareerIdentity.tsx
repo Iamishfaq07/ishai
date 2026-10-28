@@ -29,6 +29,10 @@ export function CareerIdentity({ userId }: { userId: string }) {
     window.addEventListener("focus", onReturn); document.addEventListener("visibilitychange", onReturn);
     return () => { window.removeEventListener("focus", onReturn); document.removeEventListener("visibilitychange", onReturn); };
   }, [reload]);
+  // With exactly one saved resume and no master, it's the obvious choice: pick it in the list (still the candidate's
+  // own click on "Use as my master"; nothing becomes the master by itself).
+  const only = current && !current.master && current.resumes.length === 1 && !current.resumes[0]!.job_specific ? current.resumes[0]!.id : "";
+  useEffect(() => { if (only) setSelected((was) => was || only); }, [only]);
   const choice = current?.resumes.find((resume) => resume.id === selected);
   const change = async (action: "select" | "approve" | "revoke") => {
     const resume = action === "select" ? choice : current?.master;

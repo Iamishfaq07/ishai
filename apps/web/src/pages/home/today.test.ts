@@ -21,3 +21,20 @@ it("puts an offer or an interview before an undated rule suggestion, never befor
   const dated: Queue = { items: [{ ...contacts.items[0]!, id: "job:a", rule: undefined, due_at: "2026-10-25T09:00:00Z", path: "/jobs/mission/A" }] };
   expect(pickNextStop(dated, [job("F", "offer")], now)?.to).toBe("/jobs/mission/A");
 });
+
+it("after a hire with nothing else open, the next stop is the first 90 days, not a new search", () => {
+  const hired = { id: "H", status: "hired", title: "Backend engineer", company: "Razorpay", next_at: null } as unknown as JobTrackerEntry;
+  const stop = pickNextStop({ items: [] }, [hired], Date.parse("2026-10-28T12:00:00Z"));
+  expect(stop?.title).toBe("You're starting at Razorpay");
+  expect(stop?.to).toBe("/jobs/mission/H?tab=offer");
+  expect(stop?.first).toBeUndefined();
+});
+
+it("names the step a job's stage needs when nothing is dated, and the next search after every route closed", () => {
+  const job = (id: string, status: string) => ({ id, status, title: "SDE 2", company: id, next_at: null }) as unknown as JobTrackerEntry;
+  const now = Date.parse("2026-10-28T12:00:00Z");
+  expect(pickNextStop({ items: [] }, [job("S", "saved"), job("Swiggy", "interviewing")], now)?.to).toBe("/jobs/mission/Swiggy?tab=interview");
+  expect(pickNextStop({ items: [] }, [job("A", "applied"), job("F", "offer")], now)?.to).toBe("/jobs/mission/F?tab=offer");
+  const closed = pickNextStop({ items: [] }, [job("X", "rejected")], now);
+  expect(closed?.title).toBe("Find your next one"); expect(closed?.to).toBe("/jobs/matches");
+});

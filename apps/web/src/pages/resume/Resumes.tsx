@@ -397,6 +397,9 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
     ? SOURCES
     : SOURCES.map((x) => (x.id === "fresher" ? { ...x, label: regionWords(country).student, hint: "One page for graduate jobs and internships: education first, then projects." } : x));
   const [source, setSource] = useState<Source | null>(initial);
+  // Opened below the page's introduction: on a phone that's under the fold, so bring it into view.
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => { panel.current?.scrollIntoView?.({ block: "start" }); }, []);
   const [text, setText] = useState("");
   const [docId, setDocId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -552,6 +555,7 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
   }
 
   return (
+    <div ref={panel} className="scroll-mt-20">
     <Card className="mb-8 animate-fade-up">
       <div className="mb-4 flex items-center gap-2">
         {source && (
@@ -618,5 +622,6 @@ export function NewResume({ onClose, initial = null }: { onClose?: () => void; i
         </ul>
       )}
     </Card>
+    </div>
   );
 }

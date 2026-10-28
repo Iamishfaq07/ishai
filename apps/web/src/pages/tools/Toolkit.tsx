@@ -36,12 +36,20 @@ export function ToolkitPage() {
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden />
       <Input type="search" aria-label="Search tools" placeholder="Search tools: salary, GitHub, scam, aptitude…" value={query} onChange={(e) => setQuery(e.target.value)} className="!pl-9" />
     </div>
+    {/* Four stages, 40-odd tools: on a phone the page is long, so each stage is one tap away. */}
+    {!words.length && <nav aria-label="Jump to a stage" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+      {STAGES.map((stage) => {
+        const n = tools.filter((t) => t.stage === stage.id).length;
+        return n ? <a key={stage.id} href={`#stage-${stage.id}`} className={cx("inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 text-sm font-medium hover:border-indigo-300 dark:border-white/10 dark:bg-zinc-900", focusRing)}>
+          {stage.label === "Next chapter" ? "Offers & next chapter" : stage.label}<span className="text-zinc-500 dark:text-zinc-400">{n}</span></a> : null;
+      })}
+    </nav>}
     {tools.length === 0 && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">No tool matches “{query}”. Try a shorter word.</p>}
     {STAGES.map((stage) => {
       const list = tools.filter((t) => t.stage === stage.id);
       if (!list.length) return null;
       return <section key={stage.id} aria-labelledby={`stage-${stage.id}`} className="space-y-3">
-        <div><h2 id={`stage-${stage.id}`} className="font-title text-xl font-semibold">{stage.label === "Next chapter" ? "Offers & next chapter" : stage.label}</h2>
+        <div><h2 id={`stage-${stage.id}`} className="scroll-mt-24 font-title text-xl font-semibold">{stage.label === "Next chapter" ? "Offers & next chapter" : stage.label}</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{stage.personal}</p></div>
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{list.map((t, i) => <li key={t.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 8) + 1 }}>
           <ToolTile tool={t} job={job} />

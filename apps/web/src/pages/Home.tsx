@@ -73,8 +73,9 @@ export function HomePage() {
     <Suspense fallback={null}><SecurityNotice /></Suspense>
     {!fresh && <Suspense fallback={<Skeleton variant="card" count={1} label="Loading career overview" />}><Overview /></Suspense>}
 
-    {/* A new account's few setup steps, until they're all done. */}
-    <SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} />
+    {/* A new account's few setup steps, until they're all done: first while nothing is tracked, after the next stop
+        once there's a job to move (an interview shouldn't sit under a checklist). */}
+    {!tracker.data?.length && <SetupChecklist jobsSaved={tracker.data ? tracker.data.length : null} />}
 
     <section aria-labelledby="next-stop" className="route-rise relative overflow-hidden rounded-2xl bg-white px-6 py-7 ring-1 ring-zinc-200 sm:px-8 dark:bg-zinc-900 dark:ring-white/10">
       <h2 id="next-stop" className="sr-only">Your next stop</h2>
@@ -92,6 +93,8 @@ export function HomePage() {
         </div>
       </div>}
     </section>
+
+    {Boolean(tracker.data?.length) && <SetupChecklist jobsSaved={tracker.data!.length} />}
 
     {!fresh && <section aria-labelledby="this-week">
       <div className="flex items-baseline justify-between gap-3">

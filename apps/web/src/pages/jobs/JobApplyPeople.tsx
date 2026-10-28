@@ -23,8 +23,9 @@ const textLink = cx("inline-flex min-h-11 items-center gap-1 rounded text-sm fon
 export function JobApplyPeople({ entry }: { entry: JobTrackerEntry }) {
   // Tracker cards and Discover link here with ?contacts=1, finder already open.
   const [params] = useSearchParams();
+  // Applying only matters before it's done: once applied (or further), the people at the company are what's left.
   return <div className="grid min-w-0 gap-4 md:grid-cols-2">
-    <AutoApplyCard entry={entry} />
+    {entry.status === "saved" && <AutoApplyCard entry={entry} />}
     <JobPeople company={entry.company} listingId={entry.listing_id} applicationId={entry.id} defaultOpen={params.get("contacts") === "1"} />
   </div>;
 }
