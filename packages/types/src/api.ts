@@ -990,13 +990,37 @@ export interface AdminPayments {
 
 /** A first-purchase discount: from an invite link or a creator's or campus's code (POST /v1/referrals/redeem). */
 export interface ReferralOffer {
-  code: string;
-  kind: "invite" | "creator" | "campus";
+  /** None for the first-purchase offer every account has. */
+  code: string | null;
+  kind: "invite" | "creator" | "campus" | "first";
   /** A creator's or campus's name; never an inviter's. */
   label: string | null;
   percent: number;
   /** "10% off your first purchase". */
   text: string;
+}
+
+/** GET /v1/billing/quote: the cart for one pack or plan, priced for this account now. */
+export interface BillingQuote {
+  id: string;
+  label: string;
+  kind: "pack" | "plan";
+  /** "25 AI credits", "Never expire", "30 days of Pro". */
+  includes: string[];
+  currency: string;
+  price_text: string;
+  /** 0: no discount. */
+  discount_percent: number;
+  /** "-₹50". */
+  discount_text: string;
+  /** "First purchase offer", "Code PRIYA10 (Campus)", "A friend's invite". */
+  discount_reason: string;
+  total: number;
+  total_text: string;
+  /** How it's paid; null when it can't be bought from here right now. */
+  checkout: "razorpay" | "upi" | "paypal" | null;
+  /** A coupon code can still be entered. */
+  coupons: boolean;
 }
 
 /** Something the account was given (credits, a plan, an approval, a referral reward, a purchase): the app's bell. */

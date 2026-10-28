@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     referral_discount_percent: int = Field(10, ge=0, le=50, validation_alias=AliasChoices(
         "ORBIT_REFERRAL_DISCOUNT_PERCENT"))
     referral_monthly_cap: int = Field(10, ge=0, le=1000, validation_alias=AliasChoices("ORBIT_REFERRAL_MONTHLY_CAP"))
+    # Every account's first purchase is this percent off (0: no such offer), with or without a code; a code that
+    # gives more wins, and discounts never add up (billing/referrals.py `offer_for`).
+    first_purchase_percent: int = Field(10, ge=0, le=50, validation_alias=AliasChoices(
+        "ORBIT_FIRST_PURCHASE_PERCENT"))
     # Career Evidence Vault (evidence/routes.py): off until switched on; while off its API answers 404 and live
     # sessions don't read it.
     evidence_vault: bool = Field(False, validation_alias=AliasChoices("ORBIT_EVIDENCE_VAULT"))

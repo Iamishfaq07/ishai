@@ -43,6 +43,7 @@ import type {
   ReferralCodeInfo,
   ReferralInvite,
   AccountNotices,
+  BillingQuote,
   ReferralOffer,
   AdminStats,
   AdminUser,
@@ -900,6 +901,8 @@ export function createApiClient(options: ApiClientOptions) {
       }),
     /** Invite friends: the account's link (made the first time), what a friend gets, and how it's gone. */
     myInvite: () => json<ReferralInvite>("/v1/referrals/me"),
+    /** The cart: one pack or plan priced for this account (its first-purchase discount), and how it's paid. */
+    billingQuote: (pack: string) => json<BillingQuote>(`/v1/billing/quote${queryString({ pack })}`),
     /** What the account was given lately (credits, a plan, an approval…), newest first, with the unread count. */
     notices: () => json<AccountNotices>("/v1/notices"),
     /** Marks these notices read (or all of them, with no ids). */

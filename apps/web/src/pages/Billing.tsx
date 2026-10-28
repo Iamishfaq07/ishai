@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { CreditCard, LoadGate, Skeleton, Spot, cx, focusRing, rupees } from "@orbit/ui";
+import { CreditCard, LoadGate, Skeleton, Sparkles, Spot, cx, focusRing, rupees } from "@orbit/ui";
 import type { CreditPack, MonthlyPlan, UpiOrder } from "@orbit/types";
 import { Button, Card, ErrorNote, PageHeader } from "../components/ui";
 import { SpotArt } from "../components/SpotArt";
@@ -12,6 +12,7 @@ import { UpiCheckout } from "./UpiCheckout";
 import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
 import { CreditPackGrid, PlanComparison, PricingTiers } from "../components/PricingTiers";
+import { Cart } from "../components/Cart";
 import { CodeEntry, InviteFriends } from "../components/Referrals";
 import { useAuth } from "../lib/auth";
 import { useCountry } from "../lib/country";
@@ -108,7 +109,17 @@ export function BillingPage() {
     monthly.reload();
   }, [paidBefore]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const buy = async (p: CreditPack | MonthlyPlan, domestic = false) => {
+  // Buy opens the cart (the item, the first-purchase discount or a coupon's, the total); Pay there goes on to the
+  // gateway. A pack that can't be paid for from abroad yet goes to the launch-access sheet instead.
+  const [cart, setCart] = useState<CreditPack | MonthlyPlan | null>(null);
+  const buy = (p: CreditPack | MonthlyPlan) => {
+    const isPack = !("days" in p);
+    if (isPack && country !== "IN" && !p.international) { setInternationalPack(p); return; }
+    setBuyError(null);
+    setCart(p);
+  };
+
+  const pay = async (p: CreditPack | MonthlyPlan, domestic = false) => {
     const isPack = !("days" in p);
     if (!domestic && isPack && country !== "IN" && !p.international) { setInternationalPack(p); return; }
     setStarting(true);
@@ -128,6 +139,7 @@ export function BillingPage() {
       if (p.checkout === "razorpay") {
         // Razorpay: its window takes the payment; its signed answer is checked on the server, which adds the pack.
         const checkout = await api.createRazorpayOrder(p.id);
+        setCart(null); // Razorpay's window takes over; the cart's focus trap mustn't pull focus out of it
         const paid = await payWithRazorpay(checkout);
         if (paid) {
           const done = await api.verifyRazorpay(paid);
@@ -141,11 +153,15 @@ export function BillingPage() {
         }
       } else {
         setOrder(await api.createUpiOrder(p.id));
+        setCart(null);
       }
     } catch (err) {
       // The sheet offers a rupee checkout and a launch-access request: only true of a rupee order. A dollar order
       // is charged in dollars whatever the sheet says, so its card's failure is shown as it is.
-      if (err instanceof InternationalPaymentError && country !== "IN" && isPack && p.currency !== "USD") setInternationalPack(p);
+      if (err instanceof InternationalPaymentError && country !== "IN" && isPack && p.currency !== "USD") {
+        setCart(null);
+        setInternationalPack(p);
+      }
       else setBuyError(errorText(err));
     } finally {
       if (!leaving) setStarting(false);
@@ -158,7 +174,7 @@ export function BillingPage() {
     if (wanted === null || !packs.data || !monthly.data) return;
     const p = [...packs.data, ...monthly.data].find((x) => x.id === wanted && x.buyable);
     setParams({}, { replace: true });
-    if (p) void buy(p);
+    if (p) buy(p);
   }, [wanted, packs.data, monthly.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Back from PayPal: ?paypal=return&token=<order id> after approving (the server takes the money and adds what was
@@ -220,18 +236,27 @@ export function BillingPage() {
   const e = ent.data;
   const list = packs.data ?? [];
   const months = monthly.data ?? [];
+  const firstOffer = [...list, ...months].find((x) => x.offer_percent)?.offer_percent ?? 0;
 
   return (
     <div>
       <PageHeader eyebrow="Account" icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." art={<SpotArt kind="plan" />} />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
-        onDomestic={() => { const p = internationalPack; setInternationalPack(null); void buy(p, true); }} />}
+        onDomestic={() => { const p = internationalPack; setInternationalPack(null); void pay(p, true); }} />}
+      {cart && <Cart pack={cart} busy={starting} error={buyError} onClose={() => { if (!starting) setCart(null); }}
+        onPay={() => void pay(cart)} onCodeApplied={() => { invite.reload(); packs.reload(); monthly.reload(); }} />}
       {!shown ? (
         // One placeholder about the page's height until the plans, packs, balance and orders are in: drawn as each
         // arrived, the sections pushed each other down by hundreds of pixels (CLS 0.4 on a desktop, 0.8 on a phone).
         <Skeleton variant="card" count={3} label="Loading plans and credits" className="min-h-[70vh]" />
       ) : (
       <>
+      {!invite.data && firstOffer > 0 && (
+        <p role="status" className="mb-8 flex items-start gap-2 rounded-xl bg-emerald-500/10 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span><span className="font-semibold">{firstOffer}% off your first purchase.</span> The prices below include it.</span>
+        </p>
+      )}
       {invite.data && orders.data && (
         <div className="mb-8">
           <CodeEntry offer={invite.data.offer} canEnter={!paidBefore} prefill={codeFromLink}
@@ -247,7 +272,7 @@ export function BillingPage() {
             </p>
           </div>
           <div className="pt-2">
-            <PricingTiers monthly={months} current={e ? { plan: e.plan, until: e.until ?? null } : null} onBuy={(m) => void buy(m)} busy={starting} />
+            <PricingTiers monthly={months} current={e ? { plan: e.plan, until: e.until ?? null } : null} onBuy={(m) => buy(m)} busy={starting} />
           </div>
           <details className="group">
             <summary className={cx("tap-y cursor-pointer text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>Compare plans</summary>
@@ -268,7 +293,7 @@ export function BillingPage() {
             <ErrorNote onRetry={packs.reload}>{errorText(packs.error)}</ErrorNote>
           ) : (
             <div className="pt-2">
-              <CreditPackGrid packs={list} onBuy={(x) => void buy(x)} busy={starting} />
+              <CreditPackGrid packs={list} onBuy={(x) => buy(x)} busy={starting} />
             </div>
           )}
         </LoadGate>

@@ -242,29 +242,44 @@ async def attribute_signup(db: AsyncSession, user: User, raw: str | None, ip: st
         log.info("sign-up code %r not attributed: %s", normalize(raw), e)
 
 
+# The offer every account's first purchase has (ORBIT_FIRST_PURCHASE_PERCENT), with no code behind it.
+FIRST = "first"
+
+
 @dataclass(frozen=True)
 class Offer:
-    """A first-purchase discount the account has: its code, and the percent off."""
+    """A first-purchase discount the account has: its code (none for the offer everyone gets), and the percent off."""
 
-    code_id: str
-    code: str
+    code_id: str | None
+    code: str | None
     kind: str
     label: str | None
     percent: int
 
 
-async def offer_for(db: AsyncSession, user: User | None) -> Offer | None:
-    """The discount this account's next order gets, if any: it's attributed, hasn't paid yet, and the code still
-    works. `percent` can be 0 (a code the admin made for attribution only); callers take off only a real one."""
-    if user is None or not enabled():
+async def _code_offer(db: AsyncSession, user: User) -> Offer | None:
+    if not enabled():
         return None
     ref = await db.scalar(select(Referral).where(Referral.user_id == user.id))
     if ref is None or ref.status != JOINED or ref.code_id is None:
         return None
     code = await db.get(ReferralCode, ref.code_id)
-    if code is None or await problem(db, code) or await has_paid(db, user.id):
+    if code is None or await problem(db, code):
         return None
     return Offer(code.id, code.code, code.kind, code.label, percent_of(code))
+
+
+async def offer_for(db: AsyncSession, user: User | None) -> Offer | None:
+    """The discount this account's next order gets, if any, until its first payment: its code's (it's attributed and
+    the code still works) or the first-purchase offer everyone gets, whichever is more; never both. `percent` can be
+    0 (a code the admin made for attribution only, with the offer off); callers take off only a real one."""
+    if user is None or await has_paid(db, user.id):
+        return None
+    coded = await _code_offer(db, user)
+    everyone = get_settings().first_purchase_percent
+    if everyone > 0 and (coded is None or coded.percent < everyone):
+        return Offer(None, None, FIRST, None, everyone)
+    return coded
 
 
 async def on_paid(db: AsyncSession, user: User, p: Payment) -> None:
