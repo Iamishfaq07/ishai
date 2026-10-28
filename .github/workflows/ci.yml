@@ -59,6 +59,7 @@ jobs:
         env: { ORBIT_TEST_DATABASE_URL: "postgresql+asyncpg://orbit:orbit@localhost:5432/orbit" }
         run: >-
           uv run pytest -q tests/test_support_lifecycle.py tests/test_payment_settlement.py tests/test_first_purchase.py
+          tests/test_job_leases.py tests/test_admin_workflows.py
           tests/test_razorpay.py tests/test_resume_revision.py tests/test_launch_security_boundaries.py
           tests/test_career_studio.py tests/test_career_depth.py tests/test_launch_readiness.py
           tests/test_business_hiring_studio.py tests/test_business_hiring_operations.py

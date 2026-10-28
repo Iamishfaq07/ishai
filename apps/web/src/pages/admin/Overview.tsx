@@ -7,6 +7,7 @@ import { Button, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
+import { WorkflowHealth } from "./WorkflowHealth";
 import { count, inr, mins } from "./shared";
 
 /** The server at a glance: a row of numbers, sign-ups and interview minutes per day, and the site announcement.
@@ -91,6 +92,7 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
           className={chartBox}
         />
       </div>
+      <WorkflowHealth />
       <AnnouncementEditor />
     </div>
   );

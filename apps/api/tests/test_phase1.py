@@ -6,7 +6,7 @@ import json
 import time
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -514,8 +514,6 @@ def test_report_jobs_retry_then_succeed_and_give_up_after_max_attempts(monkeypat
 
 
 def test_job_left_running_by_a_crashed_worker_is_recovered(monkeypatch: pytest.MonkeyPatch) -> None:
-    from datetime import timedelta
-
     from orbit_api import jobs
     from orbit_api.db import sessionmaker
     from orbit_api.main import create_app
@@ -630,14 +628,15 @@ def test_a_job_left_running_by_a_killed_process_runs_when_the_next_one_starts() 
 
     key = f"k:{uuid.uuid4()}"
 
-    async def plant() -> None:  # the process died mid-job a moment ago: not stale yet
+    async def plant() -> None:  # a legacy process died; recovery waits for its stale threshold
         async with db.sessionmaker()() as s:
-            s.add(Job(kind="test_killed", payload={}, status="running", attempts=1, dedupe_key=key))
+            s.add(Job(kind="test_killed", payload={}, status="running", attempts=1, dedupe_key=key,
+                      updated_at=datetime.now(UTC) - timedelta(hours=1)))
             await s.commit()
         await db.dispose()  # this loop's connections go with it
 
     asyncio.run(plant())
     with TestClient(create_app()) as c:
-        # Picked up straight away. The killed attempt still counts: the job may be what took the process down.
+        # The legacy run is stale. The killed attempt still counts.
         assert _until_done(c, key) == ("done", 2)
     assert done == [True]

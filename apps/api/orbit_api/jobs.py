@@ -1,21 +1,19 @@
-"""Durable background jobs (DB-backed): work that must survive a restart and must not block a request or a
-live-session teardown — today, end-of-session reports.
+"""Durable background jobs with lease ownership, bounded retries and serialized follow-up runs.
 
-Every API process runs one worker loop (started in the app lifespan). A job is claimed with a conditional
-UPDATE (status queued → running), so two processes can never run the same job. Failures retry with backoff
-up to MAX_ATTEMPTS. A job interrupted by shutdown (every deploy) goes straight back in the queue, the attempt not
-counted; one left "running" by a process that died is re-queued when the next one starts (one API instance, D12),
-and by any worker after STALE_AFTER.
+Workers acknowledge only their own lease. Startup recovers expired leases, leaving other live workers alone.
+Handlers remain at-least-once and must make external side effects idempotent: a lease cannot retract a network
+request made by a process that later dies. Graceful shutdown releases its own lease without spending an attempt.
 """
 
 import asyncio
 import contextlib
 import logging
+import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import and_, case, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,25 +50,39 @@ def report_key(session_id: str) -> str:
 async def enqueue(db: AsyncSession, kind: str, payload: dict[str, Any], dedupe_key: str | None = None) -> None:
     """Queue a job in the caller's transaction (commit is the caller's). A job with the same dedupe key is
     re-armed rather than duplicated — e.g. a report re-queued after its session was rejoined and ended again. A
-    running one is left alone unless the payload changed (an Indexing API ping superseded by URL_DELETED): then it's
-    re-armed too, and runs again with the new payload once the current run ends."""
+    running one keeps its lease; a changed payload requests a follow-up run after the current run ends.
+    Repeated changes coalesce into the latest payload."""
     if dedupe_key is not None:
-        existing = await db.scalar(select(Job).where(Job.dedupe_key == dedupe_key))
+        # Acquire the row's write lock before reading state, including on SQLite, where FOR UPDATE is ignored.
+        await db.execute(update(Job).where(Job.dedupe_key == dedupe_key).values(updated_at=Job.updated_at))
+        existing = await db.scalar(select(Job).where(Job.dedupe_key == dedupe_key)
+                                   .execution_options(populate_existing=True))
         if existing is not None:
-            if existing.status != "running" or dict(existing.payload) != payload:
+            changed = existing.kind != kind or dict(existing.payload) != payload
+            if existing.status == "running":
+                if changed:
+                    existing.kind, existing.payload, existing.rerun_requested = kind, payload, True
+            else:
+                existing.kind, existing.payload = kind, payload
                 existing.status, existing.attempts, existing.last_error = "queued", 0, None
-                existing.run_after, existing.payload = datetime.now(UTC), payload
+                existing.run_after, existing.rerun_requested = datetime.now(UTC), False
+                existing.lease_token, existing.lease_until = None, None
             return
     db.add(Job(kind=kind, payload=payload, dedupe_key=dedupe_key))
 
 
 async def enqueue_now(kind: str, payload: dict[str, Any], dedupe_key: str | None = None) -> None:
     async with sessionmaker()() as db:
-        await enqueue(db, kind, payload, dedupe_key)
-        try:
-            await db.commit()
-        except IntegrityError:  # a concurrent enqueue with the same key won; that job covers this one
-            await db.rollback()
+        for attempt in range(2):
+            try:
+                await enqueue(db, kind, payload, dedupe_key)
+                await db.commit()
+                return
+            except IntegrityError:
+                await db.rollback()
+                if attempt:
+                    raise
+                # A concurrent insertion won. Preserve this newer payload through the normal re-arm path.
 
 
 async def job_status(db: AsyncSession, dedupe_keys: list[str]) -> dict[str, str]:
@@ -80,54 +92,82 @@ async def job_status(db: AsyncSession, dedupe_keys: list[str]) -> dict[str, str]
     return {k: s for k, s in rows if k}
 
 
-async def _claim(db: AsyncSession, job_id: str) -> bool:
-    res = await db.execute(
-        update(Job).where(Job.id == job_id, Job.status == "queued")
-        .values(status="running", attempts=Job.attempts + 1, updated_at=datetime.now(UTC))
-    )
+async def _claim(db: AsyncSession, job_id: str) -> str | None:
+    now = datetime.now(UTC)
+    token = str(uuid.uuid4())
+    # Every registered handler is time-bounded; the lease exceeds the longest timeout plus a shutdown margin.
+    lifetime = max([JOB_TIMEOUT_S, *_timeouts.values()]) + 60
+    claimed = await db.scalar(update(Job).where(Job.id == job_id, Job.status == "queued",
+        or_(Job.run_after <= now, Job.run_after.is_(None))).values(status="running", attempts=Job.attempts + 1,
+        lease_token=token, lease_until=now + timedelta(seconds=lifetime), updated_at=now)
+        .returning(Job.id).execution_options(synchronize_session="fetch"))
     await db.commit()
-    return bool(getattr(res, "rowcount", 0))
+    return token if claimed else None
 
 
-async def _requeue(job_id: str) -> None:
-    """Back in the queue now, the claim's attempt taken back: the job was interrupted, it didn't fail."""
+async def _requeue(job_id: str, token: str) -> None:
+    """Release only this worker's claim; a replacement lease can never be cancelled by its predecessor."""
     async with sessionmaker()() as db:
-        await db.execute(update(Job).where(Job.id == job_id, Job.status == "running")
-                         .values(status="queued", attempts=Job.attempts - 1, run_after=datetime.now(UTC)))
+        await db.execute(update(Job).where(Job.id == job_id, Job.status == "running", Job.lease_token == token)
+            .values(status="queued", attempts=case((Job.rerun_requested, 0), (Job.attempts > 0, Job.attempts - 1),
+                else_=0), last_error=case((Job.rerun_requested, None), else_=Job.last_error),
+                run_after=datetime.now(UTC), rerun_requested=False, lease_token=None, lease_until=None))
         await db.commit()
+
+
+def expired(now: datetime) -> Any:
+    return and_(Job.status == "running", or_(Job.lease_until <= now,
+        and_(Job.lease_until.is_(None), Job.updated_at < now - STALE_AFTER)))
 
 
 async def requeue_interrupted() -> int:
-    """At startup: jobs still "running" were cut off with the previous process (killed before it could put them
-    back). They're queued again now rather than after STALE_AFTER: with one API instance (D12) nothing else is
-    running them. Returns how many."""
+    """Recover expired leases, including stale legacy records, without disturbing another live process."""
+    now = datetime.now(UTC)
     async with sessionmaker()() as db:
-        res = await db.execute(update(Job).where(Job.status == "running")
-                               .values(status="queued", run_after=datetime.now(UTC)))
+        result = await db.execute(update(Job).where(expired(now)).values(
+            status=case((Job.rerun_requested, "queued"), (Job.attempts >= MAX_ATTEMPTS, "failed"), else_="queued"),
+            last_error=case((Job.rerun_requested, None),
+                (Job.attempts >= MAX_ATTEMPTS, "WorkerLeaseExpired: worker repeatedly exited before completion"),
+                else_=Job.last_error), run_after=now,
+            attempts=case((Job.rerun_requested, 0), else_=Job.attempts), rerun_requested=False,
+            lease_token=None, lease_until=None))
         await db.commit()
-    n = int(getattr(res, "rowcount", 0) or 0)
-    if n:
-        log.info("re-queued %d job(s) the previous process left running", n)
-    return n
+    count = int(getattr(result, "rowcount", 0) or 0)
+    if count:
+        log.info("recovered %d expired job lease(s)", count)
+    return count
+
+
+async def _finish(job_id: str, token: str, attempts: int, error: str | None) -> bool:
+    """Atomically acknowledge a lease and promote any newer payload into its next run."""
+    now = datetime.now(UTC)
+    status = "done" if error is None else "failed" if attempts >= MAX_ATTEMPTS else "queued"
+    retry_at = now + timedelta(seconds=RETRY_BACKOFF_S[min(max(attempts, 1), 3) - 1])
+    async with sessionmaker()() as db:
+        completed = await db.scalar(update(Job).where(Job.id == job_id, Job.status == "running",
+            Job.lease_token == token).values(status=case((Job.rerun_requested, "queued"), else_=status),
+            attempts=case((Job.rerun_requested, 0), else_=Job.attempts),
+            last_error=case((Job.rerun_requested, None), else_=error),
+            run_after=case((Job.rerun_requested, now), else_=retry_at if error else now),
+            lease_token=None, lease_until=None, rerun_requested=False).returning(Job.id))
+        await db.commit()
+    return completed is not None
 
 
 async def run_due_jobs(limit: int = 5) -> int:
     """Run up to `limit` due jobs; returns how many ran. Also re-queues jobs orphaned by a crashed worker."""
     now = datetime.now(UTC)
+    await requeue_interrupted()
     async with sessionmaker()() as db:
-        await db.execute(
-            update(Job).where(Job.status == "running", Job.updated_at < now - STALE_AFTER)
-            .values(status="queued", run_after=now)
-        )
-        await db.commit()
         ids = (await db.scalars(
             select(Job.id).where(Job.status == "queued", or_(Job.run_after <= now, Job.run_after.is_(None)))
-            .order_by(Job.run_after).limit(limit)
+            .order_by(Job.run_after, Job.created_at, Job.id).limit(limit)
         )).all()
     ran = 0
     for job_id in ids:
         async with sessionmaker()() as db:
-            if not await _claim(db, job_id):
+            token = await _claim(db, job_id)
+            if token is None:
                 continue  # another worker took it
             job = await db.get(Job, job_id)
             if job is None:
@@ -145,23 +185,14 @@ async def run_due_jobs(limit: int = 5) -> int:
             # although this task is being cancelled; the cancellation goes on whatever happens to it.
             log.info("job %s (%s) interrupted by shutdown; re-queued", job_id, kind)
             with contextlib.suppress(Exception):
-                await asyncio.shield(_requeue(job_id))
+                await asyncio.shield(_requeue(job_id, token))
             raise
         except Exception as e:
             error = f"{type(e).__name__}: {e}"[:2000]
             log.warning("job %s (%s) attempt %d failed: %s", job_id, kind, attempts, error)
-        if error is None:
-            values: dict[str, Any] = {"status": "done", "last_error": None}
-        elif attempts >= MAX_ATTEMPTS:
-            values = {"status": "failed", "last_error": error}
-            log.error("job %s (%s) failed permanently after %d attempts", job_id, kind, attempts)
-        else:
-            values = {"status": "queued", "last_error": error,
-                      "run_after": datetime.now(UTC) + timedelta(seconds=RETRY_BACKOFF_S[min(attempts, 3) - 1])}
-        async with sessionmaker()() as db:
-            # Only while it's still ours: a job re-armed during the run (enqueue, new payload) stays queued.
-            await db.execute(update(Job).where(Job.id == job_id, Job.status == "running").values(**values))
-            await db.commit()
+        acknowledged = await _finish(job_id, token, attempts, error)
+        if acknowledged and error and attempts >= MAX_ATTEMPTS:
+            log.error("job %s (%s) exhausted %d attempts", job_id, kind, attempts)
     return ran
 
 
