@@ -56,6 +56,10 @@ export function pickNextStop(queue: Queue | null, entries: JobTrackerEntry[] | n
   if (saved) return { title: `${saved.title} · ${saved.company}`, when: null, detail: "Saved and not applied to yet. Check the fit, tailor your resume, then apply on the employer's site.",
     reason: null, action: "Get ready to apply", to: missionPath(saved.id) };
   if (jobs.length) return { title: `${jobs[0]!.title} · ${jobs[0]!.company}`, when: null, detail: "Nothing is due. Keep this one moving.", reason: null, action: "Open this job", to: missionPath(jobs[0]!.id) };
+  // Hired, and nothing else open: the step after the offer, not a search from scratch.
+  const hired = entries.find((e) => e.status === "hired");
+  if (hired) return { title: `You're starting at ${hired.company}`, when: null, detail: `Congratulations. Plan your first 90 days as ${hired.title}: what to learn first, who to meet and what to ask your manager.`,
+    reason: null, action: "Plan my first 90 days", to: `${missionPath(hired.id)}?tab=offer` };
   return { title: "Save the first job you'd like", when: null, detail: "Every job you save gets its own route: resume, practice, interviews and offer, kept together.",
     reason: null, action: "Find jobs", to: "/jobs/matches", first: true };
 }

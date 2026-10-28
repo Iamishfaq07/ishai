@@ -69,5 +69,9 @@ export function summaryLine(entries: JobTrackerEntry[], now: number = Date.now()
   else if (stages.saved) parts.push(`${stages.saved} saved job${stages.saved === 1 ? "" : "s"} to apply to`);
   if (stages.offer) parts.push(`${stages.offer} offer${stages.offer === 1 ? "" : "s"}`);
   if (next?.next_at) parts.push(`next date ${countdown(next.next_at, now).toLowerCase()} (${next.company})`);
-  return parts.length ? parts.join(" · ") : "Nothing tracked yet. Save a job you like and it shows up here.";
+  const hired = entries.find((e) => e.status === "hired");
+  if (hired) parts.unshift(`hired at ${hired.company}`);
+  if (parts.length) return parts.join(" · ").replace(/^h/, "H");
+  return entries.length ? "Nothing active right now. Save a job you like and it shows up here."
+    : "Nothing tracked yet. Save a job you like and it shows up here.";
 }

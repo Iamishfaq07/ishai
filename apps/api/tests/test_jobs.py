@@ -922,7 +922,8 @@ def test_fit_requirements_point_at_real_lines_in_the_post_and_the_resume() -> No
              "resume_quote": "Java"},
             {"requirement": "Leadership", "status": "partial", "job_quote": "leads a team of ten",
              "resume_quote": ""},
-            {"requirement": "", "status": "met"}, "not an object"]})
+            {"requirement": "", "status": "met"}, {"requirement": "None", "status": "missing"},
+            {"requirement": "n/a", "status": "unclear"}, "not an object"]})
     check = fitcheck.parse_fit(answer, backend_resume(), job, score=70, matched=["Go", "Kubernetes"])
     reqs = [(r.requirement, r.status, r.job_quote, r.resume_quote) for r in check.requirements]
     assert reqs[0] == ("Go on Kubernetes", "met", "build Go services on Kubernetes", "Go microservices on Kubernetes")
