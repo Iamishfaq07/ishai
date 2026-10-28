@@ -15,9 +15,11 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
       next_at: new Date(Date.now() + 72 * 3_600_000).toISOString(),
     } });
     expect(later.status(), await later.text()).toBe(201);
+    // Daily actions now live on Today: the next stop is the recommended action.
     await page.goto("/jobs/actions");
-    const focus = page.getByRole("region", { name: "Recommended next action", exact: true });
-    await expect(focus.getByRole("heading", { name: "Backend engineer · Northstar Studio", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/$/);
+    const focus = page.getByRole("region", { name: "Your next stop", exact: true });
+    await expect(focus.getByText("Backend engineer · Northstar Studio", { exact: true })).toBeVisible();
     await expect(focus.getByText("Your prepared application is waiting for your review.", { exact: true })).toBeVisible();
     await expect(focus.getByRole("link", { name: "Review application", exact: true })).toHaveAttribute("href", `/jobs/applications?packet=${packet.id}`);
     await a11y(page);
@@ -27,16 +29,16 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     const tools = page.getByRole("navigation", { name: "Tools for this application", exact: true });
     await expect(tools.getByRole("link", { name: "Prepare for this role", exact: true })).toHaveAttribute("href", `/jobs/mission/${tracker.id}?tab=plan`);
     await tools.getByRole("link", { name: "Prepare for this role", exact: true }).click();
-    await expect(page.getByLabel("Workspace tool", { exact: true })).toHaveValue("plan");
+    await expect(page.getByRole("region", { name: "Prep plan", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Backend engineer", exact: true })).toBeVisible();
     await page.goBack();
     await tools.getByRole("link", { name: "Find people at this company", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/jobs/outreach\\?job=${encodeURIComponent(listingId)}&network=1$`));
-    await expect(page.getByRole("region", { name: "Contact finder", exact: true }).getByLabel("Job to research", { exact: true })).toHaveValue(tracker.id);
+    await expect(page.getByRole("region", { name: "Contact finder", exact: true }).getByLabel("Job", { exact: true })).toHaveValue(tracker.id);
     const closed = await context.request.patch(`${API}/v1/jobs/tracker/${tracker.id}`, { data: { status: "withdrawn" } });
     expect(closed.ok(), await closed.text()).toBe(true);
-    await page.goto("/jobs/actions");
-    await expect(focus.getByRole("heading", { name: "Later interview · Other company", exact: true })).toBeVisible();
+    await page.goto("/");
+    await expect(focus.getByText("Later interview · Other company", { exact: true })).toBeVisible();
     const current = await (await context.request.get(`${API}/v1/jobs/actions`)).json();
     expect(current.items.some((action: { id: string }) => action.id === `packet:${packet.id}`)).toBe(false);
     expect((await (await context.request.get(`${API}/v1/apply/packets/${packet.id}`)).json()).status).toBe("review");

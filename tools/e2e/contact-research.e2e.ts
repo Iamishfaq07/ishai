@@ -42,16 +42,16 @@ for (const viewport of [{ name: "desktop", width: 1440, height: 1000 }, { name: 
     await a11y(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`contact-research-${viewport.name}.png`), fullPage: true });
-    await finder.getByLabel("Job to research", { exact: true }).selectOption({ label: "Platform Engineer · Other Company" });
+    await finder.getByLabel("Job", { exact: true }).selectOption({ label: "Platform Engineer · Other Company" });
     await expect(finder.getByRole("heading", { name: "Draft for Alex Rivera", exact: true })).toHaveCount(0);
     await expect(finder.getByLabel("Recruiter reply or public profile text (optional)")).toHaveValue("");
     await expect(finder.getByText("No saved contact at this company yet.", { exact: true })).toBeVisible();
     await page.goto("/jobs/outreach?network=1&job=removed-or-unsaved-job");
     const unlinked = page.getByRole("region", { name: "Contact finder", exact: true });
     await expect(unlinked.getByText(/The linked job is not in your tracker/)).toBeVisible();
-    await expect(unlinked.getByLabel("Job to research", { exact: true })).toHaveValue("");
+    await expect(unlinked.getByLabel("Job", { exact: true })).toHaveValue("");
     await expect(unlinked.getByRole("button", { name: "Find contacts with AI", exact: true })).toHaveCount(0);
-    await unlinked.getByLabel("Job to research", { exact: true }).selectOption({ label: "Platform Engineer · Other Company" });
+    await unlinked.getByLabel("Job", { exact: true }).selectOption({ label: "Platform Engineer · Other Company" });
     await expect(unlinked.getByRole("button", { name: "Find contacts with AI", exact: true })).toBeVisible();
   });
 }

@@ -93,7 +93,9 @@ export function HomePage() {
       {/* The route picture: it lights as many stops as the furthest job has reached (one on a first visit). */}
       {stop && <RouteMapArt stops={Math.max(1, ...jobs.map((j) => routeIndex(j.status) + 1)) + (stop.first ? 0 : 1)}
         className="pointer-events-none absolute -right-6 bottom-0 hidden h-full max-h-56 w-auto md:block" />}
-      {!stop ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div> : !resumeFirst && <div className="relative md:pr-72">
+      {!stop ? (loading ? <div className="mt-4"><Skeleton variant="line" count={2} label="Finding your next stop" /></div>
+        : <p className={quiet}>Your next stop didn't load. <button type="button" onClick={() => { reloadTracker(); reloadQueue(); }} className={cx("rounded underline underline-offset-4", focusRing)}>Try again</button></p>)
+        : !resumeFirst && <div className="relative md:pr-72">
         {stop.when && <p className="mb-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">{stop.when}</p>}
         <p className="max-w-3xl font-title text-[2rem] font-semibold leading-[1.15] tracking-[-0.015em] sm:text-[2.375rem]">{stop.title}</p>
         <p className="mt-3 max-w-2xl text-base text-zinc-700 dark:text-zinc-300">{stop.detail}</p>

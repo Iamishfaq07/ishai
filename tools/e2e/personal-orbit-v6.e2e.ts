@@ -21,13 +21,13 @@ for (const width of [320, 1440]) {
       await page.screenshot({ path: `${dir}/before-today-${width}.png`, fullPage: true }); return;
     }
     await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)/ })).toBeVisible();
-    const next = page.getByRole("region", { name: "Suggested next action", exact: true });
-    await expect(next.getByRole("link", { name: "Open next step", exact: true })).toHaveAttribute("href", `/jobs/applications?packet=${packet.id}`);
+    const next = page.getByRole("region", { name: "Your next stop", exact: true });
+    await expect(next.getByRole("link", { name: "Review application", exact: true })).toHaveAttribute("href", `/jobs/applications?packet=${packet.id}`);
     expect(ai).toBe(0);
     await a11y(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: info.outputPath(`today-${width}.png`), fullPage: true });
-    await next.getByRole("link", { name: "Open next step", exact: true }).click();
+    await next.getByRole("link", { name: "Review application", exact: true }).click();
     const tools = page.getByRole("navigation", { name: "Tools for this application", exact: true });
     await tools.getByRole("link", { name: "Prepare for this role", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/jobs/mission/${tracker.id}`));
@@ -36,18 +36,15 @@ for (const width of [320, 1440]) {
     await page.goto(`/jobs/mission/${tracker.id}?tab=timeline&guide=1`);
     const kit = page.getByRole("region", { name: "Application kit for this job", exact: true });
     await expect(kit.getByRole("heading", { name: "Review before sending", exact: true })).toBeVisible();
-    await expect(kit.getByRole("link", { name: "Open this job’s application kit", exact: true })).toHaveAttribute("href", `/jobs/applications?packet=${packet.id}`);
-    await kit.getByRole("link", { name: "Open this job’s application kit", exact: true }).click();
+    await expect(kit.getByRole("link", { name: "Open full application view", exact: true })).toHaveAttribute("href", `/jobs/applications?packet=${packet.id}`);
+    await kit.getByRole("link", { name: "Open full application view", exact: true }).click();
     await expect(tools).toBeVisible();
     expect((await (await context.request.get(`${API}/v1/apply/packets/${packet.id}`)).json()).status).toBe("review");
     await page.goto("/prepare");
-    await expect(page.getByRole("heading", { name: "Prepare", exact: true })).toBeVisible();
-    await page.getByRole("link", { name: /^Backend engineer · Northstar Studio/ }).click();
-    await expect(page).toHaveURL(new RegExp(`/jobs/mission/${tracker.id}`));
+    await expect(page.getByRole("heading", { level: 1, name: "Interview Prep", exact: true })).toBeVisible();
     await page.goto("/career");
     await expect(page.getByRole("heading", { name: "My Career", exact: true })).toBeVisible();
-    await page.getByText("Experience, documents and advanced tools", { exact: true }).click();
-    await expect(page.getByRole("link", { name: /^Resume Build, import/ }).first()).toHaveAttribute("href", "/jobs?work=resume");
+    await expect(page.getByRole("link", { name: /^Resume Studio/ }).first()).toHaveAttribute("href", "/resume-ai");
     await a11y(page);
     await page.screenshot({ path: info.outputPath(`career-${width}.png`), fullPage: true });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -66,8 +63,10 @@ for (const theme of ["light", "dark"] as const) {
     for (const width of [320, 360, 390, 768, 1024, 1280, 1440, 1920]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/");
-      const next = page.getByRole("region", { name: "Suggested next action", exact: true });
-      await expect(next.getByRole("heading", { name: "Add or import a resume", exact: true })).toBeVisible();
+      // A new account with no resume: Today's next stop asks for the resume first.
+      const next = page.getByRole("region", { name: "Your next stop", exact: true });
+      await expect(next.getByText("Start with your resume", { exact: true })).toBeVisible();
+      await expect(next.getByRole("link", { name: "Upload my resume", exact: true })).toHaveAttribute("href", "/resume-ai?start=import&guide=1");
       await expect(page.locator("html")).toHaveAttribute("data-motion", "off");
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       if ([320, 390, 1440].includes(width)) await a11y(page);
@@ -79,13 +78,14 @@ for (const theme of ["light", "dark"] as const) {
         await expect(page.getByRole("button", { name: "More tools and account", exact: true })).toBeFocused();
       }
     }
-    await page.route("**/v1/jobs/launchpad/progress", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "Saved career information is temporarily unavailable" }) }));
+    // Saved jobs fail to load: the next stop says so (never an endless placeholder) and recovers on retry.
+    await page.route("**/v1/jobs/tracker", (route) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "Saved jobs are temporarily unavailable" }) }));
     await page.goto("/");
-    await expect(page.getByText("Saved career information is temporarily unavailable", { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open next step", exact: true })).toHaveCount(0);
-    await page.unroute("**/v1/jobs/launchpad/progress");
-    await page.getByRole("button", { name: "Retry", exact: true }).click();
-    await expect(page.getByRole("link", { name: "Open next step", exact: true })).toBeVisible();
+    const next = page.getByRole("region", { name: "Your next stop", exact: true });
+    await expect(next.getByText(/Your next stop didn't load/)).toBeVisible();
+    await page.unroute("**/v1/jobs/tracker");
+    await next.getByRole("button", { name: "Try again", exact: true }).click();
+    await expect(next.getByRole("link", { name: "Upload my resume", exact: true })).toBeVisible();
     expect(calls).toBe(0);
   });
 }
