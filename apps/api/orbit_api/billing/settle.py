@@ -30,8 +30,9 @@ from orbit_api import credits
 from orbit_api.billing import monthly, paypal, pricing, razorpay, referrals
 from orbit_api.config import get_settings
 from orbit_api.db import sessionmaker
-from orbit_api.entitlements import current_grant, grants, running_until
+from orbit_api.entitlements import current_grant, grants, plan_named, running_until
 from orbit_api.models import AuditLog, Payment, PaymentRefund, User
+from orbit_api.notices import credits_line, notify
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.transactions import lock_account
 
@@ -146,13 +147,18 @@ async def grant(db: AsyncSession, u: User, p: Payment) -> None:
         # Two months paid at the same moment must both add their days: read the plan's end under the account lock.
         await lock_account(db, u.id)
         await db.refresh(u, ["grant_plan", "grant_until", "grant_started_at", "grant_paid", "grant_queue"])
-        monthly.apply(u, p)
+        given = monthly.apply(u, p)
+        label = plan_named(given.plan).label
+        notify(db, u.id, "purchase", f"Your {label} plan is on", f"Paid and active for {p.days} days. Thank you.",
+               "/billing")
     else:
         if p.resume_credits:
             credits.add(db, u.id, "resume", p.resume_credits, "purchase", payment_id=p.id)
         if p.interview_minutes:
             credits.add(db, u.id, "interview_seconds", p.interview_minutes * 60, "purchase", payment_id=p.id)
         u.approved = True
+        notify(db, u.id, "purchase", f"You've got {credits_line(p.resume_credits or 0, p.interview_minutes or 0)}",
+               "Your payment went through and they're in your account. They never expire. Thank you.", "/billing")
     await referrals.on_paid(db, u, p)
 
 

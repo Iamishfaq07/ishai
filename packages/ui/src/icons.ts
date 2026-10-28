@@ -166,7 +166,7 @@ export { ArrowDown, ArrowUp, ChevronUp, ChevronsUpDown, Ellipsis, TriangleAlert 
 export { BadgeCheck, CalendarCheck, Cookie, Database, LockKeyhole, Laptop, Languages, MonitorSmartphone, Wallet } from "lucide-react";
 
 // Orbit for Business (D82): notifications, reports, the pipeline's list and drag handle, tags, invites.
-export { Bell, Flag, GripVertical, List, Tag as TagIcon, UserPlus } from "lucide-react";
+export { Bell, Flag, Gift, GripVertical, List, Tag as TagIcon, UserPlus } from "lucide-react";
 
 // The Personal / Business workspace switch in the top bar.
 export { ArrowLeftRight } from "lucide-react";

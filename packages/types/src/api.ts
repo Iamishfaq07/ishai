@@ -999,6 +999,22 @@ export interface ReferralOffer {
   text: string;
 }
 
+/** Something the account was given (credits, a plan, an approval, a referral reward, a purchase): the app's bell. */
+export interface AccountNotice {
+  id: string;
+  kind: "credits" | "plan" | "approved" | "referral" | "purchase";
+  title: string;
+  body: string;
+  link: string | null;
+  created_at: string;
+  read: boolean;
+}
+
+export interface AccountNotices {
+  items: AccountNotice[];
+  unread: number;
+}
+
 /** GET /v1/referrals/me: Invite friends. */
 export interface ReferralInvite {
   code: string;

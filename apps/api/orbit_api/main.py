@@ -117,6 +117,7 @@ from orbit_api.job_portal.semantic_preview import router as semantic_preview_rou
 from orbit_api.job_portal.skill_gaps import router as skill_gaps_router
 from orbit_api.job_portal.weekly import router as job_weekly_router
 from orbit_api.linkedin.routes import router as linkedin_router
+from orbit_api.notices import router as notices_router
 from orbit_api.observability import configure_logging, crash_middleware, init_sentry, request_id_middleware
 from orbit_api.offers.routes import router as offers_router
 from orbit_api.preflight import router as preflight_router
@@ -397,6 +398,7 @@ def create_app() -> FastAPI:
         return {"status": "ready" if ok else "not_ready", "checks": checks}
 
     app.include_router(auth_router)
+    app.include_router(notices_router)
     app.include_router(documents_router)
     app.include_router(sessions_router)
     app.include_router(career_router)

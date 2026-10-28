@@ -46,6 +46,7 @@ import { api } from "../lib/api";
 import { isWindows } from "../lib/audio";
 import { useAuth } from "../lib/auth";
 import { useCountry } from "../lib/country";
+import { resetNotices } from "../lib/notices";
 import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
@@ -61,6 +62,7 @@ import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { AppError } from "./AppError";
+import { NoticesBell } from "./NoticesBell";
 import { COPILOT_PATH, LEARNING_PATH, SIDEBAR_KEY, exploreItems, navGroups, phoneTabs, sidebarCollapsed, type NavItem } from "./nav";
 import { PRODUCTS, ProductTabs, type ProductSection } from "./products";
 import { Sheet } from "./Sheet";
@@ -159,7 +161,10 @@ export function Layout() {
   useEffect(() => {
     if (navigationType !== "POP") window.scrollTo(0, 0);
   }, [pathname, navigationType]);
-  const signOut = useCallback(() => void logout().then(() => navigate("/login")), [logout, navigate]);
+  const signOut = useCallback(() => void logout().then(() => {
+    resetNotices();
+    navigate("/login");
+  }), [logout, navigate]);
   const admin = useIsAdmin();
   const [collapsed, toggleSidebar] = useSidebar();
 
@@ -251,6 +256,7 @@ export function Layout() {
               <button type="button" onClick={() => setExploreOpen(true)} aria-label="More tools and account" aria-haspopup="dialog" aria-expanded={exploreOpen} className={cx("grid h-11 w-11 place-items-center rounded-xl md:hidden", focusRing)}><Compass className="h-5 w-5" aria-hidden /></button>
               <WorkspaceSwitch />
               <WaitingForAccess admin={admin} />
+              <NoticesBell />
               <NewMenu onNavigate={navigate} />
               <div className="hidden md:block">
                 <AccountMenu

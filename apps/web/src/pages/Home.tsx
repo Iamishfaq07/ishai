@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CompanyLogo, FileText, Headphones, IdCard, Plus, Rocket, Skeleton, buttonClass, cx, focusRing } from "@orbit/ui";
 import type { JobStatus } from "@orbit/types";
+import { NewNoticeCard } from "../components/NoticesBell";
 import { RouteLine, nextStop, routeIndex } from "../components/RouteLine";
 import { RouteMapArt } from "../components/RouteMapArt";
 import { api } from "../lib/api";
@@ -71,6 +72,7 @@ export function HomePage() {
     </header>
 
     <Suspense fallback={null}><SecurityNotice /></Suspense>
+    <NewNoticeCard />
     {!fresh && <Suspense fallback={<Skeleton variant="card" count={1} label="Loading career overview" />}><Overview /></Suspense>}
 
     {/* A new account's few setup steps, until they're all done: first while nothing is tracked, after the next stop

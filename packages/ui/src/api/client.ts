@@ -42,6 +42,7 @@ import type {
   ReconcileResult,
   ReferralCodeInfo,
   ReferralInvite,
+  AccountNotices,
   ReferralOffer,
   AdminStats,
   AdminUser,
@@ -899,6 +900,11 @@ export function createApiClient(options: ApiClientOptions) {
       }),
     /** Invite friends: the account's link (made the first time), what a friend gets, and how it's gone. */
     myInvite: () => json<ReferralInvite>("/v1/referrals/me"),
+    /** What the account was given lately (credits, a plan, an approval…), newest first, with the unread count. */
+    notices: () => json<AccountNotices>("/v1/notices"),
+    /** Marks these notices read (or all of them, with no ids). */
+    readNotices: (ids?: string[]) =>
+      json<AccountNotices>("/v1/notices/read", { method: "POST", body: body(ids ? { ids } : {}) }),
     /** A code entered at checkout, before the first payment: its discount comes off the next order. */
     redeemCode: (code: string) => json<ReferralOffer>("/v1/referrals/redeem", { method: "POST", body: body({ code }) }),
     /** Public: what a link's code gives, for the sign-up page (404 when it can't be used). */

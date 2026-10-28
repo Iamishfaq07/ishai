@@ -72,6 +72,7 @@ from orbit_api.models import (
     UserTwoFactor,
     Workspace,
 )
+from orbit_api.notices import credits_given
 from orbit_api.providers.email import OutgoingEmail, can_deliver, send_safely
 from orbit_api.transactions import lock_account
 
@@ -485,7 +486,7 @@ class BulkCreditsOut(BaseModel):
 
 
 @router.post("/users/bulk-credits", response_model=BulkCreditsOut)
-async def bulk_credits(body: BulkCreditsIn, admin: Annotated[User, Depends(require_admin)],
+async def bulk_credits(body: BulkCreditsIn, background: BackgroundTasks, admin: Annotated[User, Depends(require_admin)],
                        db: Annotated[AsyncSession, Depends(get_db)]) -> BulkCreditsOut:
     """The same resume credits and/or interview minutes for each of up to 100 accounts (the admin account, which
     never needs them, is skipped). One ledger entry and one audit entry per account."""
@@ -495,6 +496,7 @@ async def bulk_credits(body: BulkCreditsIn, admin: Annotated[User, Depends(requi
     wanted = list(dict.fromkeys(body.user_ids))
     found = {u.id: u for u in (await db.scalars(select(User).where(User.id.in_(wanted)))).all()}
     skipped: list[Skipped] = []
+    mails: list[OutgoingEmail] = []
     given = 0
     for uid in wanted:
         u = found.get(uid)
@@ -510,8 +512,11 @@ async def bulk_credits(body: BulkCreditsIn, admin: Annotated[User, Depends(requi
             credits.add(db, u.id, "interview_seconds", body.interview_minutes * 60, GIVEN).note = note
         db.add(AuditLog(user_id=admin.id, action="admin.credits",
                         target=f"{u.id} resume+{body.resume} interview+{body.interview_minutes}m (bulk)"))
+        mails.append(credits_given(db, u, body.resume, body.interview_minutes, note))
         given += 1
     await db.commit()
+    for mail in mails:
+        background.add_task(send_safely, mail)
     return BulkCreditsOut(given=given, skipped=skipped)
 
 

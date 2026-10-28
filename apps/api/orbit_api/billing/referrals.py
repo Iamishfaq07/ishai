@@ -42,6 +42,8 @@ from orbit_api import credits
 from orbit_api.billing import pricing
 from orbit_api.config import get_settings
 from orbit_api.models import AuditLog, CreditEntry, Payment, Referral, ReferralCode, User
+from orbit_api.notices import credits_line, notify, send_after_commit
+from orbit_api.providers.email import OutgoingEmail
 from orbit_api.transactions import lock_account
 
 log = logging.getLogger(__name__)
@@ -297,6 +299,15 @@ async def on_paid(db: AsyncSession, user: User, p: Payment) -> None:
     seconds = s.referral_reward_minutes * 60
     entry = credits.add(db, inviter.id, "interview_seconds", seconds, REWARD)
     entry.note = "A friend you invited made their first payment"
+    minutes = s.referral_reward_minutes
+    notify(db, inviter.id, "referral", f"You've got {credits_line(0, minutes)}",
+           "A friend you invited made their first payment. Thank you for sharing Orbit.", "/billing")
+    web = get_settings().web_url.rstrip("/")
+    send_after_commit(db, OutgoingEmail(
+        to=inviter.email, subject=f"You've got {credits_line(0, minutes)} on Orbit",
+        text=(f"Hi {inviter.name or 'there'},\n\nA friend you invited to Orbit made their first payment, so we added "
+              f"{credits_line(0, minutes)} to your account. They never expire. Thank you for sharing Orbit."
+              f"\n\nSee your balance: {web}/billing")))
     await db.execute(update(Referral).where(Referral.id == ref.id).values(status=REWARDED, reward_seconds=seconds))
     db.add(AuditLog(user_id=inviter.id, action="referral.reward",
                     target=f"{inviter.id} +{s.referral_reward_minutes} min for {ref.id} (payment {p.id})"))

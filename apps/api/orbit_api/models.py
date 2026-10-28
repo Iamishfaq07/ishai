@@ -1590,6 +1590,21 @@ class BizTemplate(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
+class AccountNotice(TimestampMixin, Base):
+    """Something given to an account, told in the app (the bell, and Today): credits, a plan, an approval, a referral
+    reward, a purchase. The email, where there is one, says the same (orbit_api/notices.py)."""
+
+    __tablename__ = "account_notices"
+    __table_args__ = (Index("ix_account_notices_user_created", "user_id", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(24))
+    title: Mapped[str] = mapped_column(String(160))
+    body: Mapped[str] = mapped_column(String(600), default="")
+    link: Mapped[str | None] = mapped_column(String(300))
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class BizNotification(TimestampMixin, Base):
     __tablename__ = "biz_notifications"
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
