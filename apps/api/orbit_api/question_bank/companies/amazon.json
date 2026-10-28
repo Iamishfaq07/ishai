@@ -1,7 +1,12 @@
 {
   "slug": "amazon",
   "name": "Amazon",
-  "aliases": ["aws", "amazon web services", "amazon india", "amazon development centre"],
+  "aliases": [
+    "aws",
+    "amazon web services",
+    "amazon india",
+    "amazon development centre"
+  ],
   "group": "global-tech",
   "market": "global",
   "summary": "Amazon's interviews are built around its 16 Leadership Principles, which it publishes on amazon.jobs. Candidates commonly report that each interview in the loop pairs questions about their work with two or three behavioral questions on those principles, and that interviewers dig into every story with several follow-ups.",
@@ -157,8 +162,9 @@
     }
   ],
   "tips": [
+    "Amazon's interview guide says technical roles such as software engineers spend about half the process on technical assessments; product and programme roles lean on behavioral interviews, usually with a case or exercise.",
     "Prepare two stories per Leadership Principle; one story can't cover the whole loop.",
-    "Expect several follow-ups on one story: your exact part, the data, what you'd do differently.",
+    "Expect several follow-ups on one story: your exact part, the data, what you'd do differently. Amazon's guide asks for STAR stories with measurable results and what you learned.",
     "Say \"I\", give numbers, and end each story on the result.",
     "Don't name the principle you think is being tested; let the story show it."
   ],
@@ -170,7 +176,11 @@
     {
       "title": "Amazon's interview loop (amazon.jobs)",
       "url": "https://www.amazon.jobs/content/en/how-we-hire/interview-loop"
+    },
+    {
+      "title": "Amazon interview guide (About Amazon)",
+      "url": "https://www.aboutamazon.com/news/workplace/amazon-interview-guide"
     }
   ],
-  "reviewed": "2026-10-18"
+  "reviewed": "2026-10-28"
 }

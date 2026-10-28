@@ -97,6 +97,11 @@ export function PublicFooter({ className }: { className?: string }) {
           </Column>
           <Column title="Interview guides">
             <li>
+              <Link to={SITE_LINKS.atlas} className={link}>
+                Interview Atlas: search any company
+              </Link>
+            </li>
+            <li>
               <Link to={SITE_LINKS.companies} className={link}>
                 Company interview guides
               </Link>

@@ -15,6 +15,7 @@ import { useCountry } from "../../lib/country";
 import { JOBS_MATCHES } from "./paths";
 import { OnThisPage, type PageSection } from "../../components/OnThisPage";
 import { AlertsSection } from "./AlertsSection";
+import { HiddenSection } from "./HiddenSection";
 import { adjacentTitles } from "./adjacentTitles";
 
 /** Jobs → Profile: what the feed looks for, filled in by the AI from the resume, every part of it the user's. */
@@ -330,6 +331,7 @@ function ProfileForm({ profile, suggesting, onSaved }: { profile: JobProfile; su
           </div>
         </Section>
         <AlertsSection onProfileSaved={() => !profile.saved && loaded.reload()} />
+        <HiddenSection />
         {error && <ErrorNote>{error}</ErrorNote>}
 
         {/* Phones and tablets: once there's something to save, saving stays in reach, above the tab bar. Solid, so the

@@ -8,5 +8,6 @@ export const COPILOT_FAQ: ReadonlyArray<Faq>;
 export const PRACTICE_FAQ: ReadonlyArray<Faq>;
 export const BUSINESS_FAQ: ReadonlyArray<Faq>;
 export const WARMUP_FAQ: ReadonlyArray<Faq>;
+export const ATLAS_FAQ: ReadonlyArray<Faq>;
 export const PAGE_FAQS: Record<string, ReadonlyArray<Faq>>;
 export function faqsFor(path: string): ReadonlyArray<Faq>;

@@ -24,9 +24,14 @@ export const PAGE_META = {
       "An ATS score out of 100, what's missing for the job you want, and AI rewrites that keep your own numbers. Editing, the score and downloads are free.",
   },
   "/jobs": {
-    title: "Orbit Jobs: jobs that fit your resume, from careers pages",
+    title: "Jobs matched to your resume, from careers pages | Orbit",
     description:
-      "Find fresh jobs from company careers pages, compare them with your resume, track applications and review your options before applying.",
+      "Fresh jobs from companies' own careers pages, matched to your resume, with free daily AI fit checks. Track every application; apply on the original post.",
+  },
+  "/interview-questions": {
+    title: "Interview questions and processes by company | Orbit",
+    description:
+      "Search any company or role: the interview rounds, what interviewers listen for, practice questions with what a good answer covers, and open jobs. Free.",
   },
   "/warmup": {
     title: "Free Google Interview Warmup alternative | Orbit",
@@ -80,6 +85,7 @@ export const PAGE_IMAGES = {
   "/resume-ai": "/og/resume-ai.jpg",
   "/jobs": "/og/jobs.jpg",
   "/warmup": "/og/warmup.jpg",
+  "/interview-questions": "/og/companies.jpg",
   "/contact": "/og/contact.jpg",
   "/technical": "/og/technical.jpg",
   "/interview-copilot": "/og/interview-copilot.jpg",

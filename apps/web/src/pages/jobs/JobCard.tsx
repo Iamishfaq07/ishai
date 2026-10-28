@@ -12,6 +12,7 @@ import {
   CircleCheck,
   Clock,
   Ellipsis,
+  EyeOff,
   FileText,
   MapPin,
   MenuButton,
@@ -50,13 +51,15 @@ interface Props {
   onTracked: (jobId: string, tracked: JobListing["tracked"]) => void;
   /** There's something to match against (model.ts `matchBasis`): without it, no match % or skills, only a nudge. */
   showMatch?: boolean;
+  /** "Not interested": this job, or every job from its company, out of the feed (the list offers Undo). */
+  onHide?: (job: JobListing, company: boolean) => void;
 }
 
 /**
  * One job in the feed: what it is, how well it matches, where it's from, and what Orbit can do with it. The title
  * opens the job's own page (everything about it, and the same actions).
  */
-export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
+export function JobCard({ job, resumeId, onTracked, showMatch = true, onHide }: Props) {
   const actions = useJobActions(job, resumeId, onTracked);
   return (
     <article className="glass-panel rounded-2xl p-4 sm:p-5" aria-labelledby={`job-${job.id}`}>
@@ -92,7 +95,7 @@ export function JobCard({ job, resumeId, onTracked, showMatch = true }: Props) {
           <Sparkles className="h-4 w-4" aria-hidden /> {actions.fit.result && actions.fit.open ? "Hide fit check" : "Check my fit"}
         </Button>
         <FullPrepButton actions={actions} compact />
-        <MoreJobActions job={job} actions={actions} />
+        <MoreJobActions job={job} actions={actions} onHide={onHide} />
       </div>
       <BusyNote actions={actions} />
 
@@ -314,7 +317,9 @@ export function FullPrepButton({ actions, compact = false }: { actions: JobActio
  * The rest, one tap further: a plain copy of the resume for this job (free; the AI tailoring is Tailor & prepare),
  * the post kept for practice, the people behind it, and the job's own page.
  */
-export function MoreJobActions({ job, actions, page = false }: { job: JobListing; actions: JobActions; page?: boolean }) {
+export function MoreJobActions({ job, actions, page = false, onHide }: {
+  job: JobListing; actions: JobActions; page?: boolean; onHide?: (job: JobListing, company: boolean) => void;
+}) {
   const navigate = useNavigate();
   const busy = actions.busy !== null;
   return (
@@ -323,6 +328,10 @@ export function MoreJobActions({ job, actions, page = false }: { job: JobListing
       { label: "Keep the post for practice", icon: Target, disabled: busy, onSelect: actions.prepare },
       { label: "Find contacts", icon: UsersRound, onSelect: () => navigate(job.tracked ? `${missionPath(job.tracked.id)}?contacts=1` : `${jobPath(job.id)}#people`) },
       ...(page ? [] : [{ label: "Open the job's page", icon: ArrowUpRight, onSelect: () => navigate(jobPath(job.id)) }]),
+      ...(onHide ? [
+        { label: "Not interested", icon: EyeOff, onSelect: () => onHide(job, false) },
+        { label: `Hide jobs from ${job.company}`, icon: EyeOff, onSelect: () => onHide(job, true) },
+      ] : []),
     ]} />
   );
 }

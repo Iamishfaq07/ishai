@@ -39,7 +39,7 @@ from orbit_api.config import get_settings
 from orbit_api.db import get_db
 from orbit_api.entitlements import is_admin
 from orbit_api.job_portal import fit as fitcheck
-from orbit_api.job_portal import manual, ranking, refresh, signals
+from orbit_api.job_portal import hidden, manual, ranking, refresh, signals
 from orbit_api.job_portal.geo import WORLD_CITIES
 from orbit_api.job_portal.portals import portal_links, portals_for
 from orbit_api.job_portal.postings import CITIES, EmploymentType, Level, Workplace
@@ -497,15 +497,21 @@ async def _matches(db: AsyncSession, user: User, search: ranking.Search, data: R
                    sort: Sort) -> list[ranking.Match]:
     rhash = resume_hash(data) if data is not None else "-"
     key = f"{user.id}|{search.key()}|{rhash}|{refresh.version()}|{sort}"
+    # "Not interested": the jobs and companies hidden are left out, after the cache (hiding one is instant).
+    jobs, companies = await hidden.hidden_sets(db, user.id)
+
+    def shown(found: list[ranking.Match]) -> list[ranking.Match]:
+        return [m for m in found if m.id not in jobs and m.company_key not in companies] if jobs or companies else found
+
     hit = ranking.cached(key)
     if hit is not None:
-        return hit
+        return shown(hit)
     rows = await _rows(db, search.days, search.country)
     matcher = resume_matcher(data.visible() if data is not None else None, search.skills)
     # Scoring a few thousand cached posts is CPU work: off the event loop.
     out = await asyncio.to_thread(ranking.rank, rows, search, matcher, sort=sort)
     ranking.remember(key, out)
-    return out
+    return shown(out)
 
 
 def _portals(prefs: JobPrefs, search: ranking.Search) -> list[PortalOut]:

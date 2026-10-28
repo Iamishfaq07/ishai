@@ -80,4 +80,5 @@ export const SITE_LINKS = {
   /** The question bank's guides (pages/bank): how companies interview, and what interviews for a job test. */
   companies: "/companies",
   roles: "/roles",
+  atlas: "/interview-questions",
 };

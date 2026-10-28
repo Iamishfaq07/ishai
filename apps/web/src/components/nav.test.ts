@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { allNavItems, exploreItems, navGroups, phoneTabs, sidebarCollapsed } from "./nav";
 
 describe("app navigation", () => {
-  it("has four task destinations with specialist tools behind More", () => {
-    expect(navGroups(true)[0]!.items.map((i) => i.label)).toEqual(["Today", "Job Search", "Interview Prep", "My Career"]);
+  it("has the task destinations and Interview Atlas, with specialist tools behind More", () => {
+    expect(navGroups(true)[0]!.items.map((i) => i.label)).toEqual(["Today", "Job Search", "Interview Prep", "Interview Atlas", "My Career"]);
     // The main AI tools by name, right under the tasks.
     expect(navGroups(true)[1]!.items.map((i) => i.id)).toEqual(expect.arrayContaining(["auto-apply", "resume", "all-tools"]));
     const ids = allNavItems(true).map((i) => i.id);
@@ -32,6 +32,8 @@ describe("app navigation", () => {
     expect(current("/interview")).toEqual(["prepare"]);
     expect(current("/resume-ai/example")).toEqual(["resume"]);
     expect(current("/offers/example")).toEqual(["offer"]);
+    expect(current("/interview-questions")).toEqual(["atlas"]);
+    expect(current("/companies/netflix")).toEqual(["atlas"]);
   });
   it("remembers the sidebar choice, otherwise collapses on narrower screens", () => {
     expect(sidebarCollapsed(null, 1024)).toBe(true);

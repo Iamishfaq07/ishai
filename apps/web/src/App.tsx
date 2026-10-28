@@ -98,6 +98,7 @@ import {
   CopilotPublicPage,
   PracticePublicPage,
   LinkedInPublicPage,
+  AtlasPage,
   CompaniesPage,
   CompanyPage,
   RolesPage,
@@ -283,6 +284,7 @@ export function App() {
       <Route path="/linkedin-ai" element={<Prerendered><LinkedInPublicPage /></Prerendered>} />
       {/* Public: the question bank, how companies interview and what interviews for a job test (pages/bank). Built
           as HTML too (src/prerender), like the pages above, so it reads without JavaScript. */}
+      <Route path="/interview-questions" element={<Prerendered><AtlasPage /></Prerendered>} />
       <Route path="/companies" element={<Prerendered><CompaniesPage /></Prerendered>} />
       <Route path="/companies/:slug" element={<Prerendered><CompanyPage /></Prerendered>} />
       <Route path="/roles" element={<Prerendered><RolesPage /></Prerendered>} />
