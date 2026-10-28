@@ -476,6 +476,12 @@ class MockLLMProvider(LLMProvider):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
             return classify(data["message"]).model_dump_json()
+        if request.request_type == "business_knowledge_answer":
+            body = request.messages[-1].content
+            data = json.loads(body[body.find("{"):body.rfind("}") + 1])
+            return json.dumps({"status": "answered", "points": [{"passage_id": p["id"],
+                "quote": p["text"][:300], "text": "[mock] Review this source passage before applying the policy."}
+                for p in data["passages"][:3]]})
         if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader",
                                    "career_next_step_plan", "opportunity_coach", "business_requisition_review"):
             body = request.messages[-1].content

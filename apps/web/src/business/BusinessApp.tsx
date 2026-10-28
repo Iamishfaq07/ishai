@@ -42,6 +42,7 @@ const Pipeline = lazy(async () => ({ default: (await import("./Pipeline")).Pipel
 const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Candidate }));
 const HiringDesk = lazy(async () => ({ default: (await import("./HiringDesk")).HiringDeskPage }));
 const AutomationCenter = lazy(async () => ({ default: (await import("./AutomationCenter")).AutomationCenter }));
+const KnowledgeStudio = lazy(async () => ({ default: (await import("./KnowledgeStudio")).KnowledgeStudio }));
 const RequisitionDesk = lazy(async () => ({ default: (await import("./RequisitionDesk")).RequisitionDesk }));
 const ControlRoom = lazy(async () => ({ default: (await import("./ControlRoom")).ControlRoom }));
 const HiringPlan = lazy(async () => ({ default: (await import("./HiringPlan")).HiringPlanPage }));
@@ -116,6 +117,7 @@ const NAV = [
   { to: "control-room", label: "Control room", icon: Gauge },
   { to: "jobs", label: "Jobs", icon: Briefcase },
   { to: "requisitions", label: "Hiring requests", icon: ScrollText },
+  { to: "knowledge", label: "Knowledge studio", icon: ScrollText },
   { to: "hiring-desk", label: "Hiring desk", icon: Users },
   { to: "automations", label: "Automations", icon: Gauge },
   { to: "team", label: "Team", icon: Users },
@@ -248,6 +250,7 @@ function CompanyLayout() {
             <Route path="automations" element={<AutomationCenter />} />
             <Route path="control-room" element={<ControlRoom />} />
             <Route path="requisitions" element={<RequisitionDesk />} />
+            <Route path="knowledge" element={<KnowledgeStudio />} />
             <Route path="jobs/:jid/interview-plan" element={<HiringPlan />} />
             <Route path="jobs/:jid/compare" element={<CandidateCompare />} />
             <Route path="applications/:aid" element={<Candidate />} />
@@ -271,7 +274,7 @@ function CompanyLayout() {
 function CompaniesHome() {
   const [search] = useSearchParams();
   const wanted = search.get("tool") ?? "";
-  const tool = ["jobs", "jobs/new", "hiring-desk", "control-room", "requisitions", "automations", "team"].includes(wanted) ? wanted : "";
+  const tool = ["jobs", "jobs/new", "hiring-desk", "control-room", "requisitions", "knowledge", "automations", "team"].includes(wanted) ? wanted : "";
   const [me, setMe] = useState<BizMe | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [n, setN] = useState(0);

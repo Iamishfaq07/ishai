@@ -7,3 +7,4 @@ export * from "./businessHiring";
 export * from "./businessAutomation";
 export * from "./businessScheduling";
 export * from "./businessRequisitions";
+export * from "./businessKnowledge";

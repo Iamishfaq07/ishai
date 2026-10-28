@@ -1774,3 +1774,40 @@ class BizRequisitionEvent(TimestampMixin, Base):
     revision: Mapped[int] = mapped_column(Integer)
     note: Mapped[str] = mapped_column(Text, default="")
     snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+
+
+class BizKnowledgeDocument(TimestampMixin, Base):
+    """Business-owned text with a private draft and an independently published snapshot."""
+    __tablename__ = "biz_knowledge_documents"
+    __table_args__ = (Index("ix_biz_knowledge_company_updated", "company_id", "updated_at", "id"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"))
+    created_by: Mapped[str] = mapped_column(String(36))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    draft: Mapped[dict[str, Any]] = mapped_column(JSON)
+    published: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    published_revision: Mapped[int | None] = mapped_column(Integer)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class BizKnowledgePublication(TimestampMixin, Base):
+    __tablename__ = "biz_knowledge_publications"
+    __table_args__ = (UniqueConstraint("document_id", "revision", name="uq_biz_knowledge_publication_revision"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    document_id: Mapped[str] = mapped_column(ForeignKey("biz_knowledge_documents.id", ondelete="CASCADE"), index=True)
+    revision: Mapped[int] = mapped_column(Integer)
+    content: Mapped[dict[str, Any]] = mapped_column(JSON)
+    actor_name: Mapped[str] = mapped_column(String(200))
+
+
+class BizKnowledgeEvent(TimestampMixin, Base):
+    __tablename__ = "biz_knowledge_events"
+    __table_args__ = (Index("ix_biz_knowledge_events_document_revision", "document_id", "revision"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    document_id: Mapped[str] = mapped_column(ForeignKey("biz_knowledge_documents.id", ondelete="CASCADE"))
+    revision: Mapped[int] = mapped_column(Integer)
+    actor_name: Mapped[str] = mapped_column(String(200))
+    action: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str] = mapped_column(Text, default="")
