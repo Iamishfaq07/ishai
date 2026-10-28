@@ -10,6 +10,7 @@ import { useAuth } from "../lib/auth";
 import { useAsync } from "../lib/useAsync";
 import { missionPath } from "./jobs/paths";
 import { summaryLine } from "./home/dashboard";
+import { QuickAddJob } from "./home/QuickAdd";
 import { SetupChecklist } from "./home/SetupChecklist";
 import { activeJobs, dayLabel, pickNextStop, weekStops, type Queue } from "./home/today";
 const SecurityNotice = lazy(() => import("./SecurityActivity").then((m) => ({ default: m.SecurityNotice })));
@@ -98,6 +99,8 @@ export function HomePage() {
     </section>
 
     {Boolean(tracker.data?.length) && <SetupChecklist jobsSaved={tracker.data!.length} />}
+
+    <QuickAddJob />
 
     {!fresh && <section aria-labelledby="this-week">
       <div className="flex items-baseline justify-between gap-3">

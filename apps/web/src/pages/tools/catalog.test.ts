@@ -20,3 +20,13 @@ describe("tool discovery", () => {
     expect(TOOLS.filter((t) => t.audience === "business").every((t) => t.href.startsWith("/business/app?tool="))).toBe(true);
   });
 });
+
+describe("workspaces", () => {
+  it("put every personal tool in exactly one workspace, and nothing else", async () => {
+    const { WORKSPACES } = await import("./catalog");
+    const grouped = WORKSPACES.flatMap((w) => w.tools);
+    const personal = TOOLS.filter((t) => t.audience === "personal").map((t) => t.id);
+    expect(new Set(grouped).size).toBe(grouped.length);
+    expect([...grouped].sort()).toEqual([...personal].sort());
+  });
+});
