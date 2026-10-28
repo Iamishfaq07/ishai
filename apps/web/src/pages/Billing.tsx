@@ -13,6 +13,7 @@ import { InternationalPaymentError, payWithRazorpay } from "../lib/razorpay";
 import { InternationalCheckout } from "../components/InternationalCheckout";
 import { CreditPackGrid, PlanComparison, PricingTiers } from "../components/PricingTiers";
 import { Cart } from "../components/Cart";
+import { FirstOrderBanner, useFirstOrderPromotion } from "../components/FirstOrderBanner";
 import { trackAction } from "../lib/activity";
 import { CodeEntry, InviteFriends } from "../components/Referrals";
 import { useAuth } from "../lib/auth";
@@ -100,6 +101,7 @@ export function BillingPage() {
   // Referrals (when the server has them on): this account's first-purchase discount or a code box, and its invite link.
   const { user } = useAuth();
   const invite = useAsync(() => (user?.referrals ? api.myInvite() : Promise.resolve(null)), [user?.referrals], "referral-invite");
+  const promotion = useFirstOrderPromotion();
   const [codeFromLink] = useState(() => params.get("code")); // /r/<code> followed while signed in
   const paidBefore = (orders.data ?? []).some((o) => o.status === "approved");
   // The first payment just landed: the discount is spent, so the prices go back to what they are.
@@ -121,7 +123,7 @@ export function BillingPage() {
     trackAction("Opened cart", p.id);
   };
 
-  const pay = async (p: CreditPack | MonthlyPlan, domestic = false) => {
+  const pay = async (p: CreditPack | MonthlyPlan, domestic = false, code?: string) => {
     const isPack = !("days" in p);
     if (!domestic && isPack && country !== "IN" && !p.international) { setInternationalPack(p); return; }
     trackAction("Started payment", `${p.id} ${p.checkout ?? ""}`.trim());
@@ -134,14 +136,14 @@ export function BillingPage() {
       if (p.checkout === "paypal") {
         // PayPal (outside India): its own page takes the payment and sends the buyer back here (?paypal=return),
         // where the server captures it. The page is left now, so the button stays busy.
-        const checkout = await api.createPaypalOrder(p.id);
+        const checkout = await api.createPaypalOrder(p.id, code);
         leaving = true;
         window.location.assign(checkout.approve_url);
         return;
       }
       if (p.checkout === "razorpay") {
         // Razorpay: its window takes the payment; its signed answer is checked on the server, which adds the pack.
-        const checkout = await api.createRazorpayOrder(p.id);
+        const checkout = await api.createRazorpayOrder(p.id, code);
         setCart(null); // Razorpay's window takes over; the cart's focus trap mustn't pull focus out of it
         const paid = await payWithRazorpay(checkout);
         if (paid) {
@@ -155,7 +157,7 @@ export function BillingPage() {
           ent.reload();
         }
       } else {
-        setOrder(await api.createUpiOrder(p.id));
+        setOrder(await api.createUpiOrder(p.id, code));
         setCart(null);
       }
     } catch (err) {
@@ -246,8 +248,9 @@ export function BillingPage() {
       <PageHeader eyebrow="Account" icon={CreditCard} title="Plan & billing" subtitle="Unlimited for a week, a month or a year, or credits that never expire. Nothing renews automatically." art={<SpotArt kind="plan" />} />
       {internationalPack && <InternationalCheckout pack={internationalPack} country={country} onClose={() => setInternationalPack(null)}
         onDomestic={() => { const p = internationalPack; setInternationalPack(null); void pay(p, true); }} />}
+      <FirstOrderBanner />
       {cart && <Cart pack={cart} busy={starting} error={buyError} onClose={() => { if (!starting) setCart(null); }}
-        onPay={() => void pay(cart)} onCodeApplied={() => { invite.reload(); packs.reload(); monthly.reload(); }} />}
+        onPay={(code, checkout) => void pay({ ...cart, checkout }, false, code)} />}
       {!shown ? (
         // One placeholder about the page's height until the plans, packs, balance and orders are in: drawn as each
         // arrived, the sections pushed each other down by hundreds of pixels (CLS 0.4 on a desktop, 0.8 on a phone).
@@ -260,7 +263,7 @@ export function BillingPage() {
           <span><span className="font-semibold">{firstOffer}% off your first purchase.</span> The prices below include it.</span>
         </p>
       )}
-      {invite.data && orders.data && (
+      {invite.data && orders.data && promotion.data?.enabled === false && (
         <div className="mb-8">
           <CodeEntry offer={invite.data.offer} canEnter={!paidBefore} prefill={codeFromLink}
                      onApplied={() => { invite.reload(); packs.reload(); monthly.reload(); }} />

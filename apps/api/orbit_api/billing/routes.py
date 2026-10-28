@@ -169,23 +169,31 @@ class QuoteOut(BaseModel):
 
 def _reason(offer: referrals.Offer) -> str:
     if offer.kind == referrals.FIRST:
-        return "First purchase offer"
+        return "Code FIRST10 · first purchase"
     if offer.kind == referrals.INVITE:
         return "A friend's invite"
     return f"Code {offer.code}" + (f" ({offer.label})" if offer.label else "")
 
 
+@router.get("/billing/promotion")
+async def promotion() -> dict[str, Any]:
+    return {"enabled": get_settings().first_purchase_percent > 0, "code": "FIRST10", "percent": 10}
+
+
 @router.get("/billing/quote", response_model=QuoteOut)
 async def quote(pack: Annotated[str, Query(min_length=1, max_length=32)], request: Request,
                 user: Annotated[User, Depends(current_user)],
-                db: Annotated[AsyncSession, Depends(get_db)]) -> QuoteOut:
-    """What the cart shows before paying: the list price, the first-purchase discount (the offer everyone gets, or a
-    code's), the total and the checkout. Orders charge the same (`_offered`), worked out again when they're made."""
+                db: Annotated[AsyncSession, Depends(get_db)],
+                code: Annotated[str | None, Query(max_length=32)] = None) -> QuoteOut:
+    """Server-priced cart totals, explicit promotion validation and available payment method.
+
+    Order creation revalidates eligibility and price under the account lock.
+    """
     pid, label, item, days, resume_credits, minutes = _product(pack)
     listed = [x for x in (public_packs() if not days else public_monthly()) if x["id"] == pid]
     if not listed:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That pack can't be bought.")
-    offer = await referrals.offer_for(db, user)
+    offer = await _cart_offer(db, user, code, keep=(pid, "quote"))
     shown = _priced(listed, pricing.currency_for(request, user), offer)[0]
     cost = pricing.price_of(item, shown["currency"])
     percent = offer.percent if offer is not None else 0
@@ -203,7 +211,7 @@ async def quote(pack: Annotated[str, Query(min_length=1, max_length=32)], reques
                     discount_reason=_reason(offer) if offer is not None and off else "",
                     total=total.major, total_text=total.text(),
                     checkout=shown.get("checkout") if shown.get("buyable") else None,
-                    coupons=referrals.enabled() and not paid)
+                    coupons=(get_settings().first_purchase_percent > 0 or referrals.enabled()) and not paid)
 
 
 @router.get("/entitlements")
@@ -274,6 +282,7 @@ def _order_out(p: Payment) -> UpiOrderOut:
 
 class OrderIn(BaseModel):
     pack: str = Field(min_length=1, max_length=32)  # a credit pack's id, or a monthly plan's
+    code: str | None = Field(None, min_length=1, max_length=32)
 
 
 def _product(product_id: str) -> tuple[str, str, pricing.Priced, int, int, int]:
@@ -305,18 +314,60 @@ def priced_by_the_edge(request: Request) -> None:
 SUPERSEDED_NOTE = "Replaced by a newer order: the first-purchase discount moved to that one."
 
 
+async def _resume_offer(db: AsyncSession, user: User, code: str | None,
+                        product: str, method: str, currency: str) -> Payment | None:
+    from orbit_api.transactions import lock_account
+
+    await lock_account(db, user.id)
+    if code is None:
+        return None
+    offer = await _cart_offer(db, user, code, keep=(product, method))
+    if offer is None or offer.kind != referrals.FIRST:
+        return None
+    existing: Payment | None = await db.scalar(select(Payment).where(
+        Payment.user_id == user.id, Payment.plan == product,
+        Payment.method == method, Payment.currency == currency,
+        Payment.status.in_(("awaiting_payment", "rejected") if method == "upi" else ("awaiting_payment",)),
+        Payment.referral_code_id == "FIRST10").limit(1))
+    return existing
+
+
+async def _cart_offer(db: AsyncSession, user: User, code: str | None,
+                      keep: tuple[str, str] | None = None) -> referrals.Offer | None:
+    try:
+        offer = await referrals.offer_for(db, user, code)
+    except referrals.CodeRefused as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if offer is not None and offer.kind == referrals.FIRST:
+        reserved = await db.scalar(select(Payment).where(Payment.user_id == user.id,
+            Payment.discount_minor > 0).order_by(Payment.created_at).limit(1))
+        if reserved is not None and not (keep is not None and keep[0] == reserved.plan
+                                        and keep[1] in {reserved.method or "upi", "quote"}
+                                        and (reserved.status == "awaiting_payment"
+                                             or (reserved.status == "rejected" and reserved.method == "upi"))):
+            raise HTTPException(409, "Your first-purchase offer is already reserved on an order. "
+                                "Finish that payment; a second discounted order cannot be created.")
+    return offer
+
+
 async def _offered(db: AsyncSession, user: User, cost: pricing.Price,
-                   keep: tuple[str, str] | None = None) -> tuple[pricing.Price, dict[str, Any]]:
+                   keep: tuple[str, str] | None = None,
+                   code: str | None = None) -> tuple[pricing.Price, dict[str, Any]]:
     """`cost` less the account's first-purchase discount, if it has one (billing/referrals.py), and what the order
     keeps of it: the code and how much came off.
 
+    FIRST10 reservations are checked by _cart_offer and never move between payable orders.
+    The following replacement behavior applies only to legacy referral discounts with the campaign off.
     One open order carries the discount at a time (red team): opening several discounted orders and paying them all
     would make a first-purchase discount a discount on everything. A payment already on its way (a UTR waiting for
     the admin, a gateway capture pending) keeps it, so a new order meanwhile is full price. Unpaid orders that still
     have it lose it to the new one (they're marked expired, the way the reconciler retires an abandoned checkout;
     one paid after all is still credited, never lost). `keep`: (plan, method) of an open order this one may be handed
     back as (UPI reuses a day-old order for the same pack), which is left alone."""
-    offer = await referrals.offer_for(db, user)
+    from orbit_api.transactions import lock_account
+
+    await lock_account(db, user.id)
+    offer = await _cart_offer(db, user, code, keep=keep)
     if offer is None or offer.percent <= 0:
         return cost, {}
     discounted = (Payment.user_id == user.id, Payment.discount_minor > 0)
@@ -344,12 +395,17 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
         raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
     if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
-    cost, discount = await _offered(db, user, pricing.price(price, pricing.INR), keep=(pid, "upi"))
+    existing = await _resume_offer(db, user, body.code, pid, "upi", pricing.INR)
+    if existing is not None:
+        return _order_out(existing)
+    cost, discount = await _offered(db, user, pricing.price(price, pricing.INR), keep=(pid, "upi"), code=body.code)
     price = cost.inr
     since = datetime.now(UTC) - upi.OPEN_ORDER_REUSE
     open_order = await db.scalar(
         select(Payment).where(Payment.user_id == user.id, Payment.plan == pid,
                               Payment.status == "awaiting_payment", Payment.amount_inr == price,
+                              func.coalesce(Payment.method, "upi") == "upi",
+                              func.coalesce(Payment.currency, "INR") == "INR",
                               Payment.created_at >= since)
         .order_by(Payment.created_at.desc()).limit(1))
     if open_order is not None:
@@ -459,7 +515,12 @@ async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, 
         # The pages show dollar prices with Buy off until then (_priced); a direct call mustn't open a checkout
         # Razorpay would refuse.
         raise HTTPException(status.HTTP_409_CONFLICT, "Card payments from outside India aren't switched on yet.")
-    cost, discount = await _offered(db, user, cost)
+    existing = await _resume_offer(db, user, body.code, pid, "razorpay", cost.currency)
+    if existing is not None:
+        return CheckoutOut(payment_id=existing.id, order_id=str(existing.gateway_order_id), key_id=key_id,
+            amount_paise=pricing.payment_minor(existing), currency=pricing.payment_currency(existing),
+            label=label, email=user.email, name=user.name)
+    cost, discount = await _offered(db, user, cost, code=body.code)
     reference = upi.new_reference()
     try:
         order_id = await razorpay.create_order(cost.minor, reference, {"pack": pid, "orbit_ref": reference},
@@ -651,7 +712,17 @@ async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, De
     if cost.currency == pricing.INR:
         raise HTTPException(status.HTTP_409_CONFLICT,
                             "PayPal is for payments from outside India. Pay by UPI or card instead.")
-    cost, discount = await _offered(db, user, cost)
+    existing = await _resume_offer(db, user, body.code, pid, "paypal", cost.currency)
+    if existing is not None:
+        try:
+            previous = await paypal.get_order(str(existing.gateway_order_id))
+            approve = paypal.approval_url(previous)
+        except paypal.PayPalError as exc:
+            raise HTTPException(503, "PayPal could not reopen the existing order. Try again shortly.") from exc
+        if approve is None:
+            raise HTTPException(409, "The existing PayPal order cannot be reopened. Check its payment status.")
+        return PaypalCheckoutOut(payment_id=existing.id, order_id=str(existing.gateway_order_id), approve_url=approve)
+    cost, discount = await _offered(db, user, cost, code=body.code)
     reference = upi.new_reference()
     try:
         order_id, approve = await paypal.create_order(cost.minor, cost.currency, reference, label,

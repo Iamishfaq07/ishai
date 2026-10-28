@@ -881,18 +881,18 @@ export function createApiClient(options: ApiClientOptions) {
      *  for packs. */
     listMonthly: (currency?: "INR" | "USD") => json<MonthlyPlan[]>(`/v1/billing/monthly${queryString({ currency })}`),
     /** Start paying for a credit pack over UPI (an open order for the same pack is handed back). */
-    createUpiOrder: (pack: string) =>
-      json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ pack }) }),
+    createUpiOrder: (pack: string, code?: string) =>
+      json<UpiOrder>("/v1/billing/upi/orders", { method: "POST", body: body({ pack, code }) }),
     listUpiOrders: () => json<UpiOrder[]>("/v1/billing/upi/orders"),
     /** Razorpay: an order for the pack, to open the checkout with; then the checkout's answer, checked. */
-    createRazorpayOrder: (pack: string) =>
-      json<RazorpayCheckout>("/v1/billing/razorpay/orders", { method: "POST", body: body({ pack }) }),
+    createRazorpayOrder: (pack: string, code?: string) =>
+      json<RazorpayCheckout>("/v1/billing/razorpay/orders", { method: "POST", body: body({ pack, code }) }),
     verifyRazorpay: (paid: RazorpayPaid) =>
       json<UpiOrder>("/v1/billing/razorpay/verify", { method: "POST", body: body(paid) }),
     /** PayPal (outside India): an order whose approval page the buyer is sent to; then, back from PayPal, its
      *  capture (credited only on PayPal's word that the money was taken). */
-    createPaypalOrder: (pack: string) =>
-      json<PaypalCheckout>("/v1/billing/paypal/orders", { method: "POST", body: body({ pack }) }),
+    createPaypalOrder: (pack: string, code?: string) =>
+      json<PaypalCheckout>("/v1/billing/paypal/orders", { method: "POST", body: body({ pack, code }) }),
     capturePaypal: (orderId: string) =>
       json<UpiOrder>("/v1/billing/paypal/capture", { method: "POST", body: body({ order_id: orderId }) }),
     /** "I've paid": the 12-digit UTR from the UPI app, for the admin to check. */
@@ -904,7 +904,7 @@ export function createApiClient(options: ApiClientOptions) {
     /** Invite friends: the account's link (made the first time), what a friend gets, and how it's gone. */
     myInvite: () => json<ReferralInvite>("/v1/referrals/me"),
     /** The cart: one pack or plan priced for this account (its first-purchase discount), and how it's paid. */
-    billingQuote: (pack: string) => json<BillingQuote>(`/v1/billing/quote${queryString({ pack })}`),
+    billingQuote: (pack: string, code?: string) => json<BillingQuote>(`/v1/billing/quote${queryString({ pack, code })}`),
     /** What the account was given lately (credits, a plan, an approval…), newest first, with the unread count. */
     notices: () => json<AccountNotices>("/v1/notices"),
     /** Marks these notices read (or all of them, with no ids). */

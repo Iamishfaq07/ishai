@@ -17,6 +17,7 @@ import { useSiteScope } from "../marketing/useSiteScope";
 import { kashsecUrl } from "./learn/links";
 import { CONTACT_PAGE, PRIVACY_PAGE, REFUND_PAGE, TERMS_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
 import { storedRef } from "../lib/referral";
+import { FirstOrderBanner } from "../components/FirstOrderBanner";
 import { InviteNote } from "../components/InviteNote";
 import { acknowledgeSecurityChanges } from "../lib/securityNotice";
 
@@ -84,6 +85,7 @@ function AuthShell({ title, subtitle, children, features = false }: { title: str
             <BrandLogo height={26} decorative />
           </Link>
         </header>
+        <FirstOrderBanner />
         <main className="flex flex-1 items-start justify-center px-5 pb-12 pt-6 sm:px-8 sm:pt-12 lg:items-center lg:pt-0">
           <div className="w-full max-w-[24rem] animate-fade-up">
             <div className="mb-8">

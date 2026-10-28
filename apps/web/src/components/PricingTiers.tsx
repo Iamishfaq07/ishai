@@ -186,7 +186,7 @@ export function PricingTiers({ monthly, welcome, current, onBuy, busy = false }:
         const mine = current?.plan === m.plan && Boolean(current?.until);
         const span = allowanceSpan(m.days);
         const cta: Cta = signedIn
-          ? { label: mine ? `Extend · ${priceOf(m)}` : `Get ${m.label}`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
+          ? { label: `Add ${m.label} to cart`, onClick: () => onBuy?.(m), disabled: busy || !m.buyable, primary: m.id === popular || mine }
           : { label: `Get ${m.label}`, to: "/register", from: `/billing?pack=${m.id}`, primary: m.id === popular };
         return (
           <Tier
@@ -317,7 +317,7 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
           const perHour = money(cur === "USD" ? Math.round(perHourValue * 100) / 100 : Math.round(perHourValue), cur);
           const highlight = p.badge === "Most popular";
           const cta: Cta = onBuy
-            ? { label: `Buy · ${priceOf(p)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable, primary: highlight }
+            ? { label: `Add to cart · ${priceOf(p)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable, primary: highlight }
             : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}`, primary: highlight };
           return (
             <li key={p.id} className={cx("relative flex flex-col rounded-2xl bg-white p-6 ring-1 dark:bg-zinc-900/60", highlight ? "ring-2 ring-indigo-500 dark:ring-indigo-400" : "ring-zinc-900/10 dark:ring-white/10")}>
@@ -362,7 +362,7 @@ export function CreditPackGrid({ packs, onBuy, busy = false }: { packs: CreditPa
             </p>
           </div>
           <div className="sm:w-48 [&>*]:mt-0">
-            <CtaButton cta={onBuy ? { label: `Buy · ${priceOf(p)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable } : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}` }} />
+            <CtaButton cta={onBuy ? { label: `Add to cart · ${priceOf(p)}`, onClick: () => onBuy(p), disabled: busy || !p.buyable } : { label: "Get started", to: "/register", from: `/billing?pack=${p.id}` }} />
           </div>
         </div>
       ))}

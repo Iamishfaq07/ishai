@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { ArrowRight, ChevronDown, Menu, X, buttonClass, cx, floatingClass, focusRing, lockScroll, useDismiss, useFocusTrap } from "@orbit/ui";
 import { useAuth } from "../lib/auth";
+import { FirstOrderBanner } from "../components/FirstOrderBanner";
 import { WorkspaceSwitch } from "../components/WorkspaceSwitch";
 import { useIndia } from "../lib/country";
 import { BrandLogo } from "./BrandLogo";
@@ -50,6 +51,7 @@ export function PublicHeader({ authState, context, actions }: { authState?: { fr
         scrolled ? "mk-line" : "border-transparent",
       )}
     >
+      <FirstOrderBanner />
       <Container className="relative flex h-16 items-center gap-2">
         <Link to="/" className={cx("-ml-1 w-9 shrink-0 overflow-hidden rounded-lg p-1 sm:w-auto sm:overflow-visible", focusRing)} aria-label="Orbit home">
           <BrandLogo height={26} decorative />

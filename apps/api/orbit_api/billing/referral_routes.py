@@ -99,6 +99,8 @@ async def redeem(body: RedeemIn, request: Request, user: Annotated[User, Depends
                  db: Annotated[AsyncSession, Depends(get_db)]) -> OfferOut:
     """A code entered at checkout (a creator's, a campus's or a friend's invite), before the account's first payment:
     it becomes the account's code, and its discount comes off the next order. 422 says why one can't be used."""
+    if get_settings().first_purchase_percent > 0:
+        raise HTTPException(422, "Enter FIRST10 in your cart. Other promotional codes are not available.")
     _on()
     uid = user.id
     try:

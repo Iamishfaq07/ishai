@@ -1,7 +1,4 @@
-"""The first-purchase offer (ORBIT_FIRST_PURCHASE_PERCENT): every account's first purchase is that much off, with or
-without a code; a code that gives more wins, and discounts never add up. The cart (GET /v1/billing/quote) says what
-an order will charge, and the order charges it."""
-
+"""FIRST10 is explicit, server-priced, never stacked, and redeemable on only one first order."""
 import uuid
 from typing import Any
 
@@ -9,10 +6,16 @@ import pytest
 from fastapi.testclient import TestClient
 
 from orbit_api.config import get_settings
-from tests.test_credits import enforce  # noqa: F401  (the fixture)
-from tests.test_payment_settlement import Gateway, _payment, gw  # noqa: F401  (gw: the fixture)
-from tests.test_paypal import _abroad, _start, pp  # noqa: F401  (pp: the fixture)
-from tests.test_referrals import _admin, _join, _pay, refs  # noqa: F401  (refs: the fixture)
+from tests.test_credits import enforce  # noqa: F401
+from tests.test_payment_settlement import (  # noqa: F401
+    Gateway,
+    _captured,
+    _payment,
+    _post,
+    gw,
+)
+from tests.test_paypal import _abroad, pp  # noqa: F401
+from tests.test_referrals import _admin, _join, _pay, refs  # noqa: F401
 
 
 @pytest.fixture
@@ -21,69 +24,119 @@ def offer(refs: Gateway, monkeypatch: pytest.MonkeyPatch) -> Gateway:  # noqa: F
     return refs
 
 
-def _quote(client: TestClient, h: dict[str, str], pack: str = "mini") -> dict[str, Any]:
-    r = client.get(f"/v1/billing/quote?pack={pack}", headers=h)
-    assert r.status_code == 200, r.text
-    return dict(r.json())
+def quote(client: TestClient, headers: dict[str, str], pack: str = "mini", code: str | None = None):
+    return client.get("/v1/billing/quote", headers=headers, params={"pack": pack, **({"code": code} if code else {})})
 
 
-def test_every_first_purchase_is_ten_percent_off_then_list_price(client: TestClient, offer: Gateway) -> None:
-    h, _ = _join(client, None)
-    q = _quote(client, h)
-    assert (q["price_text"], q["discount_percent"], q["discount_text"], q["discount_reason"], q["total_text"]) == (
-        "₹499", 10, "-₹50", "First purchase offer", "₹449")
-    assert q["includes"] == ["25 AI credits", "Never expire"] and q["checkout"] == "razorpay" and q["coupons"]
-    mini = next(p for p in client.get("/v1/billing/packs", headers=h).json() if p["id"] == "mini")
-    assert (mini["offer_price_text"], mini["offer_percent"]) == ("₹449", 10)
-    order = _pay(client, offer, h)
-    assert (_payment(client, order).amount_inr, _payment(client, order).discount_minor) == (449, 5000)
-    # Paid once: list price from now on, and no codes.
-    again = _quote(client, h)
-    assert (again["discount_percent"], again["total_text"], again["coupons"]) == (0, "₹499", False)
-    assert _payment(client, _pay(client, offer, h)).amount_inr == 499
+def order(client: TestClient, headers: dict[str, str], code: str | None = "FIRST10", pack: str = "mini"):
+    return client.post("/v1/billing/razorpay/orders", headers=headers,
+                       json={"pack": pack, **({"code": code} if code else {})})
 
 
-def test_a_bigger_code_wins_and_a_smaller_one_never_adds(client: TestClient, offer: Gateway) -> None:
-    admin = _admin(client)
-    tag = uuid.uuid4().hex[:5].upper()
-    for name, percent in ((f"BIG{tag}", 25), (f"SMALL{tag}", 5)):
-        r = client.post("/v1/admin/referrals/codes", headers=admin, json={
-            "code": name, "label": "Campus", "kind": "campus", "discount_percent": percent})
-        assert r.status_code == 201, r.text
-    big, _ = _join(client, None)
-    got = client.post("/v1/referrals/redeem", headers=big, json={"code": f"BIG{tag}"}).json()
-    assert (got["kind"], got["percent"]) == ("campus", 25)
-    q = _quote(client, big, "starter")
-    assert (q["discount_percent"], q["discount_reason"]) == (25, f"Code BIG{tag} (Campus)")
-    small, _ = _join(client, None)
-    got = client.post("/v1/referrals/redeem", headers=small, json={"code": f"SMALL{tag}"}).json()
-    assert (got["kind"], got["percent"], got["code"]) == ("first", 10, None)
-    assert _quote(client, small)["discount_reason"] == "First purchase offer"
+def test_only_explicit_first10_discounts_and_payment_consumes_it(client: TestClient, offer: Gateway) -> None:
+    headers, _ = _join(client, None)
+    assert quote(client, headers).json()["total_text"] == "₹499"
+    priced = quote(client, headers, code=" first10 ").json()
+    assert (priced["discount_percent"], priced["total_text"], priced["coupons"]) == (10, "₹449", True)
+    started = order(client, headers)
+    assert started.status_code == 201, started.text
+    identity = started.json()["order_id"]
+    # Reopening the same checkout never issues another discounted gateway order.
+    assert order(client, headers).json()["order_id"] == identity
+    assert order(client, headers, pack="starter").status_code == 409
+    assert quote(client, headers, code="FIRST10").json()["total_text"] == "₹449"
+    assert _post(client, _captured(offer, identity, offer.pay(identity))).status_code == 200
+    assert _payment(client, identity).discount_minor == 5000
+    assert quote(client, headers, code="FIRST10").status_code == 422
+    assert order(client, headers).status_code == 422
+    assert quote(client, headers).json()["coupons"] is False
+    assert _payment(client, _pay(client, offer, headers)).amount_inr == 499
 
 
-def test_with_the_offer_off_only_codes_discount(client: TestClient, refs: Gateway) -> None:  # noqa: F811
-    h, _ = _join(client, None)
-    q = _quote(client, h)
-    assert (q["discount_percent"], q["discount_text"], q["total_text"]) == (0, "", "₹499")
-    assert client.get("/v1/billing/quote?pack=nope", headers=h).status_code == 422
-    assert client.get("/v1/billing/quote?pack=mini").status_code == 401
+def test_unknown_and_referral_codes_cannot_replace_or_stack(client: TestClient, offer: Gateway) -> None:
+    headers, _ = _join(client, None)
+    code = "BIG" + uuid.uuid4().hex[:6].upper()
+    created = client.post("/v1/admin/referrals/codes", headers=_admin(client), json={
+        "code": code, "label": "Campus", "kind": "campus", "discount_percent": 25})
+    assert created.status_code == 201
+    for invalid in (code, "FIRST20", "FIRST 10", ""):
+        assert order(client, headers, code=invalid or " ").status_code == 422
+        assert quote(client, headers, code=invalid or " ").status_code == 422
+    assert client.post("/v1/referrals/redeem", headers=headers, json={"code": code}).status_code == 422
+    assert quote(client, headers).json()["discount_percent"] == 0
 
 
-def test_a_plan_in_the_cart(client: TestClient, offer: Gateway) -> None:
-    h, _ = _join(client, None)
-    plans = client.get("/v1/billing/monthly", headers=h).json()
-    q = _quote(client, h, plans[0]["id"])
-    assert q["kind"] == "plan" and q["includes"][0].startswith(f"{plans[0]['days']} days of ")
-    assert q["discount_percent"] == 10 and q["total_text"] == plans[0]["offer_price_text"]
+def test_offer_works_without_referrals_and_for_monthly_plans(client: TestClient, offer: Gateway,
+                                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(get_settings(), "referrals", False)
+    headers, _ = _join(client, None)
+    plans = client.get("/v1/billing/monthly", headers=headers).json()
+    response = quote(client, headers, pack=plans[0]["id"], code="FIRST10")
+    assert response.status_code == 200, response.text
+    assert response.json()["discount_percent"] == 10 and response.json()["kind"] == "plan"
+    assert client.get("/v1/billing/promotion").json() == {"enabled": True, "code": "FIRST10", "percent": 10}
 
 
-def test_abroad_the_offer_comes_off_the_dollar_price_and_paypal_charges_it(
-        client: TestClient, pp: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+def test_paid_without_discount_is_ineligible(client: TestClient, offer: Gateway) -> None:
+    headers, _ = _join(client, None)
+    _pay(client, offer, headers)
+    assert quote(client, headers, code="FIRST10").status_code == 422
+    assert order(client, headers).status_code == 422
+
+
+def test_paypal_uses_explicit_code_on_the_dollar_price(client: TestClient, pp: dict[str, Any],  # noqa: F811
+                                                      monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "first_purchase_percent", 10)
-    h = _abroad(client)
-    q = _quote(client, h, "starter")
-    assert (q["currency"], q["price_text"], q["discount_text"], q["total_text"], q["checkout"]) == (
-        "USD", "$53.99", "-$5.40", "$48.59", "paypal")
-    order = _start(client, h)
-    sent = pp["orders"][order["order_id"]]
-    assert sent["unit"]["amount"] == {"currency_code": "USD", "value": "48.59"}
+    headers = _abroad(client)
+    priced = quote(client, headers, pack="starter", code="FIRST10").json()
+    assert (priced["currency"], priced["total_text"]) == ("USD", "$48.59")
+    result = client.post("/v1/billing/paypal/orders", headers=headers, json={"pack": "starter", "code": "FIRST10"})
+    assert result.status_code == 201, result.text
+    assert pp["orders"][result.json()["order_id"]]["unit"]["amount"] == {"currency_code": "USD", "value": "48.59"}
+    assert client.post("/v1/billing/paypal/orders", headers=headers,
+                       json={"pack": "mini", "code": "FIRST10"}).status_code == 409
+
+
+def test_concurrent_first10_requests_reuse_one_order(client: TestClient, offer: Gateway) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    headers, _ = _join(client, None)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: order(client, headers), range(2)))
+    assert [r.status_code for r in results] == [201, 201]
+    assert results[0].json()["order_id"] == results[1].json()["order_id"]
+
+
+def test_upi_reuses_only_the_same_upi_order(client: TestClient, offer: Gateway,
+                                           monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(get_settings(), "upi_id", "orbit@upi")
+    headers, _ = _join(client, None)
+    first = client.post("/v1/billing/upi/orders", headers=headers, json={"pack": "mini", "code": "FIRST10"})
+    assert first.status_code == 201, first.text
+    second = client.post("/v1/billing/upi/orders", headers=headers, json={"pack": "mini", "code": "FIRST10"})
+    assert second.json()["id"] == first.json()["id"]
+    assert first.json()["amount_inr"] == 449
+    assert order(client, headers).status_code == 409
+
+
+def test_old_and_rejected_upi_orders_do_not_issue_another_discount(client: TestClient, offer: Gateway,
+                                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import update
+
+    from orbit_api.models import Payment
+    from tests.business_helpers import db_call
+
+    monkeypatch.setattr(get_settings(), "upi_id", "orbit@upi")
+    headers, _ = _join(client, None)
+    first = client.post("/v1/billing/upi/orders", headers=headers, json={"pack": "mini", "code": "FIRST10"})
+    identity = first.json()["id"]
+
+    async def reject(db):
+        await db.execute(update(Payment).where(Payment.id == identity).values(status="rejected",
+            created_at=datetime.now(UTC) - timedelta(days=3)))
+    db_call(client, reject)
+    retry = client.post("/v1/billing/upi/orders", headers=headers, json={"pack": "mini", "code": "FIRST10"})
+    assert retry.status_code == 201 and retry.json()["id"] == identity
+    assert order(client, headers, pack="starter").status_code == 409

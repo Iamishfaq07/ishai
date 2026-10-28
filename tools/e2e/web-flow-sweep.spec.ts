@@ -37,6 +37,10 @@ async function stubRazorpay(page: Page) {
     const packs = (await res.json()) as Record<string, unknown>[];
     await route.fulfill({ response: res, json: packs.map((p) => ({ ...p, checkout: "razorpay", buyable: true })) });
   });
+  await page.route(`${API}/v1/billing/quote**`, async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({ response, json: { ...(await response.json()), checkout: "razorpay" } });
+  });
   await page.route(`${API}/v1/billing/razorpay/orders`, (route) => route.fulfill({
     json: { key_id: "rzp_test_x", order_id: "order_test", amount_paise: 359900, currency: "INR", label: "3 interview credits", email: "a@example.com" },
   }));
@@ -56,7 +60,7 @@ test("billing on a phone: a purchase's result is brought into view", async ({ pa
   await page.setViewportSize({ width: 390, height: 844 });
   await stubRazorpay(page);
   await page.goto("/billing");
-  await page.getByRole("button", { name: /^Buy · / }).nth(1).click();
+  await page.getByRole("button", { name: /^Add to cart · / }).nth(1).click();
   // Buy opens the cart (the item, any discount, the total); Pay there goes on to Razorpay.
   const cart = page.getByRole("dialog", { name: "Your cart" });
   await cart.getByRole("button", { name: /^Pay .* securely$/ }).click();

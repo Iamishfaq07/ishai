@@ -139,14 +139,27 @@ Every 30 days the `premium` plan includes:
 
 ## First-purchase offer and the cart
 
-Every account's first purchase is `ORBIT_FIRST_PURCHASE_PERCENT` (default 10) off, on any pack or plan, in rupees
-or dollars, with or without a code. Set it to 0 to switch the offer off. When the account also has a code (a friend's
-invite, a creator's or a campus code), the bigger discount applies; discounts never add up. It ends with the account's
-first approved payment, and only one open order carries it at a time (`billing/routes.py` `_offered`).
+The welcome campaign requires candidates to enter `FIRST10` in their cart. It gives 10% off one
+first purchase, on a pack or monthly plan, in INR or USD. Accounts with any approved purchase
+(including a later refunded payment) are ineligible. Other codes, automatic referral discounts
+and stacking are disabled during this campaign. `ORBIT_FIRST_PURCHASE_PERCENT > 0` enables it
+(the discount is fixed at 10%); 0 disables this campaign and restores legacy referral behavior.
 
-Buy opens a cart (`GET /v1/billing/quote`): the item, what it includes, the discount and why, the total, a coupon box
-(while referrals are on and nothing has been paid) and the pay button for the checkout that applies (Razorpay, UPI or
-PayPal). The order is priced again on the server when it's made, so the cart never decides what's charged.
+Buy buttons open the cart first. `GET /v1/billing/quote?pack=…&code=FIRST10` validates the code,
+prices the item on the server, and selects the payment method. Every order endpoint revalidates
+`code` and eligibility under the account lock before creating a gateway order. Without a code,
+list prices apply. No client-supplied amount or discount is accepted.
+
+Only one discounted order may exist for the account: reopening an awaiting checkout for the
+same item/payment method reuses it. Switching items, providers or creating another discounted
+order while one is pending is blocked, including after an old order was marked expired locally
+(it may still be payable at the gateway). Completed payments consume the offer permanently.
+A rejected UPI reference can be resubmitted using that same order; abandoned gateway orders require support review if they can
+no longer be reopened. Discounts do not silently disappear or move between payable orders.
+
+The website header, sign-in screen and Billing page show the campaign's code and eligibility
+terms. `GET /v1/billing/promotion` controls campaign visibility. Cart totals, coupon errors, code
+removal and disabled payment buttons provide review before Razorpay, UPI or PayPal opens.
 
 ## Referrals: invite links, creator and campus codes
 `apps/api/orbit_api/billing/referrals.py` (the rules), `billing/referral_routes.py` (HTTP), DECISIONS D61.

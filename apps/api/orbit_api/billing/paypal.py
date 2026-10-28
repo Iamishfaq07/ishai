@@ -148,8 +148,7 @@ async def create_order(amount_minor: int, currency: str, reference: str, label: 
             "return_url": f"{web}/billing?paypal=return", "cancel_url": f"{web}/billing?paypal=cancel"}}},
     })
     order_id = order.get("id")
-    approve = next((str(x.get("href")) for x in _list(order, "links") if isinstance(x, dict)
-                    and x.get("rel") in ("payer-action", "approve") and _paypal_page(str(x.get("href", "")))), None)
+    approve = approval_url(order)
     if not isinstance(order_id, str) or not order_id or approve is None:
         raise PayPalError("PayPal sent no order id or approval link")
     return order_id, approve
@@ -224,3 +223,8 @@ async def webhook_ok(headers: Any, raw: bytes) -> bool:
     except PayPalError:
         return False
     return result.get("verification_status") == "SUCCESS"
+
+
+def approval_url(order: dict[str, Any]) -> str | None:
+    return next((str(x.get("href")) for x in _list(order, "links") if isinstance(x, dict)
+                    and x.get("rel") in ("payer-action", "approve") and _paypal_page(str(x.get("href", "")))), None)
