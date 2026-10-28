@@ -23,7 +23,14 @@ function read(key: string): string | null {
  * `after`: the element whose leaving the screen brings the bar in (the hero's buttons). `before`: the element whose
  * arrival sends it away (the closing call to action).
  */
-export function StickyCta({ after, before, line }: { after: RefObject<HTMLElement | null>; before: RefObject<HTMLElement | null>; line: string }) {
+export function StickyCta({ after, before, line, to = "/register", state }: {
+  after: RefObject<HTMLElement | null>;
+  before: RefObject<HTMLElement | null>;
+  line: string;
+  /** Where Start free goes, and the router state it carries (a guide's sign-up comes back to its mock interview). */
+  to?: string;
+  state?: unknown;
+}) {
   const [dismissed, setDismissed] = useState(() => read(DISMISSED) === "1");
   const [pastHero, setPastHero] = useState(false);
   const [nearEnd, setNearEnd] = useState(false);
@@ -64,7 +71,7 @@ export function StickyCta({ after, before, line }: { after: RefObject<HTMLElemen
       )}
     >
       <p className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-zinc-800 dark:text-zinc-100">{line}</p>
-      <Link to="/register" className={buttonClass("primary", "sm", "min-h-9 shrink-0 px-3 text-[0.8125rem]")}>
+      <Link to={to} state={state} className={buttonClass("primary", "sm", "min-h-9 shrink-0 px-3 text-[0.8125rem]")}>
         Start free
       </Link>
       <button
