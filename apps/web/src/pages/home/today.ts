@@ -52,6 +52,12 @@ export function pickNextStop(queue: Queue | null, entries: JobTrackerEntry[] | n
       reason: `Saved for ${dayLabel(dated.next_at!, now).toLowerCase()}.`, action: interview ? "Prepare for interview" : "Open this job",
       to: `${missionPath(dated.id)}${interview ? "?tab=plan" : ""}` };
   }
+  // No date anywhere: the furthest job, with the step its stage needs.
+  const furthest = jobs.find((j) => j.status === "offer") ?? jobs.find((j) => j.status === "interviewing");
+  if (furthest?.status === "offer") return { title: `${furthest.title} · ${furthest.company}`, when: null, detail: "You have an offer here. See what it pays each month, how it compares and what to ask for, then decide.",
+    reason: null, action: "Review the offer", to: `${missionPath(furthest.id)}?tab=offer` };
+  if (furthest) return { title: `${furthest.title} · ${furthest.company}`, when: null, detail: "You're interviewing here. Add the interview date so your prep plan counts down to it, then practise for the round.",
+    reason: null, action: "Add the date and prepare", to: `${missionPath(furthest.id)}?tab=interview` };
   const saved = jobs.find((j) => j.status === "saved");
   if (saved) return { title: `${saved.title} · ${saved.company}`, when: null, detail: "Saved and not applied to yet. Check the fit, tailor your resume, then apply on the employer's site.",
     reason: null, action: "Get ready to apply", to: missionPath(saved.id) };
@@ -60,6 +66,9 @@ export function pickNextStop(queue: Queue | null, entries: JobTrackerEntry[] | n
   const hired = entries.find((e) => e.status === "hired");
   if (hired) return { title: `You're starting at ${hired.company}`, when: null, detail: `Congratulations. Plan your first 90 days as ${hired.title}: what to learn first, who to meet and what to ask your manager.`,
     reason: null, action: "Plan my first 90 days", to: `${missionPath(hired.id)}?tab=offer` };
+  // Every route closed (a rejection, a withdrawal): the next search, not a first one.
+  if (entries.length) return { title: "Find your next one", when: null, detail: "Your closed routes keep what you learned. Save the next job you'd like and start its route.",
+    reason: null, action: "Find jobs", to: "/jobs/matches", first: true };
   return { title: "Save the first job you'd like", when: null, detail: "Every job you save gets its own route: resume, practice, interviews and offer, kept together.",
     reason: null, action: "Find jobs", to: "/jobs/matches", first: true };
 }

@@ -12,7 +12,9 @@ export function opportunityStep(tool: MissionTool) {
   return tool === "company" ? 1 : ["plan", "practice"].includes(tool) ? 3 : OPPORTUNITY_STEPS.findIndex((step) => step.tool === tool);
 }
 export function opportunityStart(status: string, mission: JobMission | null): MissionTool {
-  if (["offer", "hired", "rejected", "withdrawn"].includes(status)) return "offer";
+  // A closed route opens where its "note what you learned" step is; an offer or a hire on the offer.
+  if (status === "rejected" || status === "withdrawn") return "timeline";
+  if (status === "offer" || status === "hired") return "offer";
   if (status === "interviewing") return "interview";
   if (status === "applied") return mission?.resume && !mission.snapshots.length ? "resume" : "interview";
   return mission?.resume ? "fit" : "resume";

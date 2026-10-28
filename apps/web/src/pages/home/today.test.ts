@@ -29,3 +29,12 @@ it("after a hire with nothing else open, the next stop is the first 90 days, not
   expect(stop?.to).toBe("/jobs/mission/H?tab=offer");
   expect(stop?.first).toBeUndefined();
 });
+
+it("names the step a job's stage needs when nothing is dated, and the next search after every route closed", () => {
+  const job = (id: string, status: string) => ({ id, status, title: "SDE 2", company: id, next_at: null }) as unknown as JobTrackerEntry;
+  const now = Date.parse("2026-10-28T12:00:00Z");
+  expect(pickNextStop({ items: [] }, [job("S", "saved"), job("Swiggy", "interviewing")], now)?.to).toBe("/jobs/mission/Swiggy?tab=interview");
+  expect(pickNextStop({ items: [] }, [job("A", "applied"), job("F", "offer")], now)?.to).toBe("/jobs/mission/F?tab=offer");
+  const closed = pickNextStop({ items: [] }, [job("X", "rejected")], now);
+  expect(closed?.title).toBe("Find your next one"); expect(closed?.to).toBe("/jobs/matches");
+});
