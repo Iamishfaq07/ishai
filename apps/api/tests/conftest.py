@@ -21,6 +21,9 @@ os.environ.update(
     ORBIT_DEV_OUTBOX=str(_tmp / "outbox.txt"),
     # Prices in the suites are list prices; tests/test_first_purchase.py switches the first-purchase offer on.
     ORBIT_FIRST_PURCHASE_PERCENT="0",
+    # The suites still exercise paying a UPI ID by hand (orders already open that way are finished and approved);
+    # tests/test_razorpay_only.py checks it's off by default.
+    ORBIT_MANUAL_UPI="true",
 )
 if os.environ.get("RUN_PROVIDER_SMOKE", "").lower() != "true":  # tests/smoke needs the real keys
     for key in ("DEEPSEEK_API_KEY", "DEEPGRAM_API_KEY"):

@@ -75,3 +75,33 @@ export function filterTools(audience: Audience, query: string, stage: Stage | "a
     && (kind !== "ai" || tool.ai) && (kind !== "automation" || tool.automation)
     && words.every((word) => `${tool.name} ${tool.line} ${tool.detail} ${(tool.keywords ?? []).join(" ")}`.toLowerCase().includes(word)));
 }
+
+/** The personal tools in six workspaces (and the live Copilot): All tools shows one card each, its tools as one-tap
+ *  links, instead of 40-odd separate cards. A search still lists the tools themselves. Every personal tool is in
+ *  exactly one (catalog.test.ts). `perJob`: its tools open on one job's page (Toolkit.tsx picks the job). */
+export interface Workspace {
+  id: string;
+  name: string;
+  line: string;
+  href: string;
+  label: string;
+  tools: string[];
+  perJob?: boolean;
+}
+
+export const WORKSPACES: Workspace[] = [
+  { id: "jobs", name: "Job search", line: "Find roles, rank them, reach the people behind them.", href: "/jobs/matches", label: "Open Job Search",
+    tools: ["matches", "priority", "network", "outreach", "employer-updates", "review", "skill-gaps", "whats-working"] },
+  { id: "automation", name: "Automations", line: "Let Orbit prepare, remind and follow up for you.", href: "/jobs/journey", label: "Open Auto Apply",
+    tools: ["agent", "auto-tailor", "playbook", "actions", "weekly", "wrap-up"] },
+  { id: "resume", name: "Resume studio", line: "Your resume, profile and the stories behind them.", href: "/resume-ai", label: "Open Resume Builder",
+    tools: ["resume", "bullet-builder", "career-gap", "github-projects", "linkedin"] },
+  { id: "practice", name: "Interview practice", line: "Rehearse out loud, on camera and on paper.", href: "/prepare", label: "Open Interview Prep",
+    tools: ["saba", "video", "warmup", "code", "aptitude", "group-discussion", "star-check", "stories", "readiness", "campus", "learn"] },
+  { id: "job", name: "Inside each job", line: "Tools that work on one job, from first look to first 90 days.", href: "/jobs/tracker", label: "Open your applications",
+    tools: ["first-look", "scam-check", "pitch", "references", "promises", "red-flags", "interview-checklist", "debrief", "first-90"], perJob: true },
+  { id: "offers", name: "Offer & salary", line: "Read the offer, compare, negotiate and resign well.", href: "/offers", label: "Open Offer & Salary",
+    tools: ["offers", "offer-letter", "salary-scripts", "decision-matrix", "resign"] },
+  { id: "live", name: "Interview Copilot", line: "Live help on real calls, where it's allowed.", href: "/sessions", label: "Open Copilot",
+    tools: ["copilot"] },
+];

@@ -428,7 +428,7 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/auth/logout"), ("POST", "/v1/auth/verify-email/confirm"),
     ("POST", "/v1/auth/password-reset/request"), ("POST", "/v1/auth/password-reset/confirm"),
     ("POST", "/v1/auth/email-change/confirm"),
-    ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"),
+    ("GET", "/v1/plans"), ("GET", "/v1/billing/packs"), ("GET", "/v1/billing/promotion"),
     ("GET", "/v1/billing/monthly"), ("GET", "/v1/jobs/stats"), ("GET", "/v1/announcement"),
     # The visitor's country from the web app's edge, for signed-out wording (nothing stored, no cookie).
     ("GET", "/v1/region"),
@@ -572,6 +572,9 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/v1/admin/users/{target}/activity", {}),
     ("GET", "/v1/admin/users/{target}/journey", {}),
     ("GET", "/v1/admin/insights?days=7", {}),
+    ("GET", "/v1/admin/workflows", {}),
+    ("POST", "/v1/admin/workflows/{target}/retry", {"json": {"reason": "idor check: admin wall",
+                                                              "updated_at": "2026-10-28T00:00:00Z"}}),
     ("POST", "/v1/admin/users/{target}/access", {"json": {"action": "grant", "plan": "unlimited", "hours": 2}}),
     ("POST", "/v1/admin/users/{target}/access", {"json": {"action": "approve"}}),
     ("POST", "/v1/admin/users/{target}/credits", {"json": {"resume": 5, "interview_minutes": 30}}),
@@ -633,7 +636,8 @@ def test_admin_route_inventory_is_complete() -> None:
     admin = {p for _, p in ROUTES if p.startswith("/v1/admin/")} - {"/v1/admin/status"}
     covered = {p.split("?", 1)[0].replace("{target}", "{user_id}").replace("{target_order}", "{payment_id}")
                .replace("{target_message}", "{message_id}").replace("{target_thread}", "{thread_id}")
-               .replace("{target_code}", "{code_id}").replace("/apply/sites/lever", "/apply/sites/{site}")
+               .replace("{target_code}", "{code_id}").replace("workflows/{user_id}", "workflows/{job_id}")
+               .replace("/apply/sites/lever", "/apply/sites/{site}")
                for _, p, _ in ADMIN_ROUTES}
     assert admin <= covered, f"admin routes missing from the matrix: {sorted(admin - covered)}"
 
@@ -694,6 +698,10 @@ def test_admin_routes_work_for_the_admin(world: World, method: str, path: str, k
         _turn_on(c, h)  # confirms with the shared test password (PW)
     c.cookies.clear()
     r = c.request(method, _fill(path, ids), headers=world.admin, **_fill(kw, ids))
+    # Past the wall to the handler: no such job (tests/test_admin_workflows.py retries a real one).
+    if "/v1/admin/workflows/" in path:
+        assert r.status_code == 404 and "Workflow not found" in r.text, r.text
+        return
     # 201: a code made · 202: an email on its way · 204: deleted
     assert r.status_code in (200, 201, 202, 204), r.text
 

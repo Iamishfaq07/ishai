@@ -339,8 +339,13 @@ async def _cart_offer(db: AsyncSession, user: User, code: str | None,
     except referrals.CodeRefused as exc:
         raise HTTPException(422, str(exc)) from exc
     if offer is not None and offer.kind == referrals.FIRST:
-        reserved = await db.scalar(select(Payment).where(Payment.user_id == user.id,
-            Payment.discount_minor > 0).order_by(Payment.created_at).limit(1))
+        # Only an order still on its way holds the offer: one expired (a checkout closed unpaid) or rejected by a
+        # gateway gives it back, or FIRST10 would be lost for good to an abandoned checkout.
+        reserved = await db.scalar(select(Payment).where(
+            Payment.user_id == user.id, Payment.discount_minor > 0,
+            Payment.status.in_(("awaiting_payment", "submitted", "processing"))
+            | ((Payment.status == "rejected") & (func.coalesce(Payment.method, "upi") == "upi")))
+            .order_by(Payment.created_at).limit(1))
         if reserved is not None and not (keep is not None and keep[0] == reserved.plan
                                         and keep[1] in {reserved.method or "upi", "quote"}
                                         and (reserved.status == "awaiting_payment"
@@ -393,6 +398,9 @@ async def create_order(body: OrderIn, request: Request, user: Annotated[User, De
     price = item.price_inr
     if pricing.currency_for(request, user) != pricing.INR:
         raise HTTPException(status.HTTP_409_CONFLICT, "UPI is for payments from India. Pay by card instead.")
+    if not get_settings().manual_upi:
+        raise HTTPException(status.HTTP_410_GONE, "Paying a UPI ID by hand has ended. Buy on Plan & billing: "
+                                                  "Razorpay takes UPI apps, cards and netbanking.")
     if not get_settings().upi_id:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "UPI payments aren't set up yet.")
     existing = await _resume_offer(db, user, body.code, pid, "upi", pricing.INR)

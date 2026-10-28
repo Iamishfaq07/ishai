@@ -276,8 +276,10 @@ async def offer_for(db: AsyncSession, user: User | None, promo_code: str | None 
     """
     campaign = get_settings().first_purchase_percent > 0
     if promo_code is not None:
-        if not campaign or promo_code.strip().upper() != "FIRST10":
-            raise CodeRefused("Only FIRST10 is available for this offer.")
+        if not campaign:
+            raise CodeRefused("There's no coupon running right now, so the price stays as it is.")
+        if promo_code.strip().upper() != "FIRST10":
+            raise CodeRefused("We couldn't find that code. Check the spelling, or use FIRST10 on a first purchase.")
         if user is None or await has_paid(db, user.id):
             raise CodeRefused("FIRST10 is only for accounts that have never made a purchase.")
         return Offer("FIRST10", "FIRST10", FIRST, "First purchase", 10)

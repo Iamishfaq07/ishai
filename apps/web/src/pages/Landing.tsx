@@ -477,9 +477,9 @@ function Faq({ welcome, stats, cards = false, abroad = false, paypal = false, lo
         </p>
       ) : india ? (
         <p>
-          There's no subscription. When you want more interview minutes or AI credits, you buy a pack with any UPI app
-          (Google Pay, PhonePe, Paytm or your bank's app). Each payment is checked against its UTR, the 12-digit number
-          your UPI app shows, and then the credits are added. Nothing renews, and what you buy never expires.
+          There's no subscription. When you want more interview minutes or AI credits, you buy a pack through Razorpay
+          with a UPI app, a card or netbanking, and the credits are added as soon as the payment goes through. Nothing
+          renews, and what you buy never expires.
         </p>
       ) : !loaded ? (
         <p>
@@ -489,7 +489,7 @@ function Faq({ welcome, stats, cards = false, abroad = false, paypal = false, lo
       ) : (
         <p>
           There's no subscription, nothing renews, and what you buy never expires. Today packs are priced in Indian
-          rupees and paid with UPI; card payments for other countries are coming soon. Everything free works the same
+          rupees and paid through Razorpay; card payments for other countries are coming soon. Everything free works the same
           wherever you are.
         </p>
       ),

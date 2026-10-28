@@ -90,12 +90,15 @@ def pack_label(p: CreditPack) -> str:
 
 
 def checkout() -> str | None:
-    """How packs are bought right now: Razorpay's checkout when it's set up, else UPI with a UTR, else not at all."""
+    """How packs are bought right now: Razorpay's checkout when it's set up (PayPal abroad is decided per buyer in
+    billing/routes.py). Paying the UPI ID by hand is only offered while ORBIT_MANUAL_UPI is on, which it isn't by
+    default; UPI orders already open can still be finished and checked by the admin either way."""
     from orbit_api.billing import razorpay
 
     if razorpay.configured():
         return "razorpay"
-    return "upi" if get_settings().upi_id else None
+    s = get_settings()
+    return "upi" if s.manual_upi and s.upi_id else None
 
 
 def abroad_payable(how: str | None) -> bool:

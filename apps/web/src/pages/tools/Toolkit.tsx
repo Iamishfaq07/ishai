@@ -5,7 +5,7 @@ import { Button, Input, PageHeader } from "../../components/ui";
 import { api } from "../../lib/api";
 import { useAsync } from "../../lib/useAsync";
 import { missionPath } from "../jobs/paths";
-import { STAGES, TOOLS, type Tool } from "./catalog";
+import { TOOLS, WORKSPACES, type Tool, type Workspace } from "./catalog";
 import { toolIcon } from "./homes";
 
 /** Tools that work on one job, and the tab of that job's page they live on. They open on your most recent active job
@@ -36,40 +36,33 @@ export function ToolkitPage() {
     && words.every((w) => `${t.name} ${t.line} ${t.detail} ${(t.keywords ?? []).join(" ")}`.toLowerCase().includes(w)));
   const count = TOOLS.filter((t) => t.audience === "personal" && (MOCK_INTERVIEW_ENABLED || !["saba", "video"].includes(t.id))).length;
   return <div className="workspace-page">
-    <PageHeader icon={LayoutGrid} title="All tools" subtitle={`Everything Orbit can do for your search, ${count} tools in all, from your first resume to your first 90 days.`} />
+    <PageHeader icon={LayoutGrid} title="All tools" subtitle="Everything Orbit can do for your search, grouped by what you're working on. Search to find one tool." />
     <div className="relative max-w-xl">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" aria-hidden />
       <Input type="search" aria-label="Search tools" placeholder="Search tools: salary, GitHub, scam, aptitude…" value={query} onChange={(e) => setQuery(e.target.value)} className="!pl-9" />
     </div>
-    <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">{tools.length} of {count} tools{query ? ` matching “${query}”` : " available"}</p>
+    <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">{query ? `${tools.length} of ${count} tools matching “${query}”` : `${count} tools in ${WORKSPACES.length} workspaces`}</p>
       {query && <Button variant="ghost" onClick={() => setQuery("")}>Clear tool search</Button>}</div>
-    {/* Four stages, 40-odd tools: on a phone the page is long, so each stage is one tap away. */}
-    {!words.length && <nav aria-label="Jump to a stage" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
-      {STAGES.map((stage) => {
-        const n = tools.filter((t) => t.stage === stage.id).length;
-        return n ? <a key={stage.id} href={`#stage-${stage.id}`} className={cx("inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3.5 text-sm font-medium hover:border-indigo-300 dark:border-white/10 dark:bg-zinc-900", focusRing)}>
-          {stage.label === "Next chapter" ? "Offers & next chapter" : stage.label}<span className="text-zinc-500 dark:text-zinc-400">{n}</span></a> : null;
-      })}
-    </nav>}
-    {tools.length === 0 && <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">No tool matches “{query}”. Try a shorter word.</p>}
-    {STAGES.map((stage) => {
-      const list = tools.filter((t) => t.stage === stage.id);
-      if (!list.length) return null;
-      return <section key={stage.id} aria-labelledby={`stage-${stage.id}`} className="space-y-3">
-        <div><h2 id={`stage-${stage.id}`} className="scroll-mt-24 font-title text-xl font-semibold">{stage.label === "Next chapter" ? "Offers & next chapter" : stage.label}</h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{stage.personal}</p></div>
-        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{list.map((t, i) => <li key={t.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 8) + 1 }}>
+    {words.length ? (
+      tools.length === 0
+        ? <p role="status" className="text-sm text-zinc-600 dark:text-zinc-400">No tool matches “{query}”. Try a shorter word.</p>
+        : <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{tools.map((t, i) => <li key={t.id} className="route-rise" style={{ ["--i" as string]: Math.min(i, 8) + 1 }}>
           <ToolTile tool={t} job={job} />
         </li>)}</ul>
-      </section>;
-    })}
+    ) : (
+      // Six workspaces and the Copilot, each one card with its tools as one-tap links: 40-odd tools without 40 cards.
+      <ul className="grid gap-4 lg:grid-cols-2">{WORKSPACES.map((w, i) => {
+        const list = w.tools.map((id) => tools.find((t) => t.id === id)).filter((t): t is Tool => Boolean(t));
+        return list.length ? <li key={w.id} className="route-rise" style={{ ["--i" as string]: i + 1 }}><WorkspaceCard workspace={w} tools={list} job={job} /></li> : null;
+      })}</ul>
+    )}
   </div>;
 }
 
 function ToolTile({ tool, job }: { tool: Tool; job: JobTrackerEntry | undefined }) {
   const Icon = toolIcon(tool);
   const tab = JOB_TAB[tool.id];
-  const to = tab && job ? `${missionPath(job.id)}?tab=${tab}` : tool.href;
+  const to = jobLink(tool, job);
   return <Link to={to} className={cx("workspace-panel route-card group flex h-full flex-col gap-2 p-4", focusRing)}>
     <span className="flex items-center gap-2.5">
       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"><Icon className="h-4 w-4" aria-hidden /></span>
@@ -82,4 +75,35 @@ function ToolTile({ tool, job }: { tool: Tool; job: JobTrackerEntry | undefined 
       <ArrowRight className="h-3.5 w-3.5 motion-safe:transition-transform group-hover:translate-x-0.5" aria-hidden />
     </span>
   </Link>;
+}
+
+function jobLink(tool: Tool, job: JobTrackerEntry | undefined): string {
+  const tab = JOB_TAB[tool.id];
+  return tab && job ? `${missionPath(job.id)}?tab=${tab}` : tool.href;
+}
+
+/** One workspace: what it's for, a way in, and each of its tools one tap away. */
+function WorkspaceCard({ workspace: w, tools, job }: { workspace: Workspace; tools: Tool[]; job: JobTrackerEntry | undefined }) {
+  const Icon = toolIcon(tools[0]!);
+  const href = w.perJob && job ? missionPath(job.id) : w.href;
+  return <section aria-labelledby={`ws-${w.id}`} className="workspace-panel flex h-full flex-col gap-3 p-4 sm:p-5">
+    <div className="flex items-start gap-3">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"><Icon className="h-5 w-5" aria-hidden /></span>
+      <div className="min-w-0 flex-1">
+        <h2 id={`ws-${w.id}`} className="font-semibold">{w.name} <span className="font-normal text-zinc-500 dark:text-zinc-400">· {tools.length}</span></h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">{w.line}</p>
+      </div>
+    </div>
+    {w.perJob && <p className="text-xs text-zinc-500 dark:text-zinc-400">{job ? `These open on ${job.title} at ${job.company}, your most recent job.` : "Save or add a job, then these open on its page."}</p>}
+    <ul className="flex flex-wrap gap-2">{tools.map((t) => {
+      const TIcon = toolIcon(t);
+      return <li key={t.id}><Link to={w.perJob && !job ? w.href : jobLink(t, job)} title={t.line}
+        className={cx("inline-flex min-h-10 items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 text-sm hover:border-indigo-300 hover:text-indigo-800 dark:border-white/10 dark:bg-zinc-900 dark:hover:text-indigo-200", focusRing)}>
+        <TIcon className="h-3.5 w-3.5 text-zinc-500" aria-hidden />{t.name}{t.ai && <span className="sr-only"> (uses AI)</span>}
+      </Link></li>;
+    })}</ul>
+    <Link to={href} className={cx("mt-auto inline-flex items-center gap-1 pt-1 text-sm font-medium text-indigo-700 dark:text-indigo-300", focusRing)}>
+      {w.perJob && job ? `Open ${job.company}` : w.label} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+    </Link>
+  </section>;
 }

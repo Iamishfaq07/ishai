@@ -28,16 +28,18 @@ test("website and sign-in show FIRST10; cart validates and passes the code to ch
   const cart = page.getByRole("dialog", { name: "Your cart" });
   await expect(cart).toBeVisible();
   await expect(cart).toContainText("₹499");
-  await cart.getByLabel("Promotion code").fill("WRONG10");
+  await cart.getByLabel("Coupon code").fill("WRONG10");
   await cart.getByRole("button", { name: "Apply", exact: true }).click();
-  await expect(cart.getByRole("alert")).toContainText("Only FIRST10");
-  await cart.getByLabel("Promotion code").fill("first10");
+  await expect(cart.getByRole("alert")).toContainText("couldn't find that code");
+  await expect(cart.getByLabel("Coupon code")).toHaveValue("WRONG10"); // kept, to fix the typo
+  await cart.getByLabel("Coupon code").fill("first10");
   await cart.getByRole("button", { name: "Apply", exact: true }).click();
   await expect(cart.getByRole("status")).toContainText("FIRST10 applied");
   await expect(cart.getByRole("button", { name: "Pay ₹449 securely" })).toBeEnabled();
-  await cart.getByRole("button", { name: "Remove code" }).click();
+  await cart.getByRole("button", { name: "Remove FIRST10" }).click();
   await expect(cart.getByRole("button", { name: "Pay ₹499 securely" })).toBeEnabled();
-  await cart.getByRole("button", { name: "Apply", exact: true }).click();
+  // The one-tap suggestion applies it again.
+  await cart.getByRole("button", { name: /Use FIRST10 for 10% off/ }).click();
   await expect(cart.getByRole("button", { name: "Pay ₹449 securely" })).toBeEnabled();
   let sent: unknown;
   await page.route("**/v1/billing/razorpay/orders", async (route) => {
