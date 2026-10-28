@@ -109,8 +109,29 @@ class Transition(Contract):
         return self
 
 
+class StarDraft(Contract):
+    question: Annotated[str, Field(max_length=400)]
+    answer: Annotated[str, Field(max_length=20000)]
+
+
+class BulletDraft(Contract):
+    did: Annotated[str, Field(max_length=2000)]
+    result: Annotated[str, Field(max_length=2000)]
+    measure: Annotated[str, Field(max_length=1000)]
+    pasted: Annotated[str, Field(max_length=4000)] = ""
+
+
+class GapDraft(Contract):
+    reason: Literal["study", "exam", "health", "family", "parent", "layoff", "relocation", "venture", "personal"]
+    from_: Annotated[str, Field(alias="from", max_length=100)]
+    to: Annotated[str, Field(max_length=100)]
+    during: Annotated[str, Field(max_length=2000)]
+    role: Annotated[str, Field(max_length=200)]
+
+
 CONTRACTS: dict[str, TypeAdapter[Any]] = {
     "readiness": TypeAdapter(Annotated[list[SkillRecord], Field(max_length=300)]),
     "campus": TypeAdapter(Campus), "priority": TypeAdapter(Priority), "projects": TypeAdapter(Projects),
     "transition": TypeAdapter(Transition),
+    "tool_star": TypeAdapter(StarDraft), "tool_bullets": TypeAdapter(BulletDraft), "tool_gap": TypeAdapter(GapDraft),
 }

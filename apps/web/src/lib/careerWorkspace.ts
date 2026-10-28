@@ -1,6 +1,6 @@
 import { safeLocal } from "@orbit/ui";
 
-export type WorkspaceKind = "readiness" | "campus" | "priority" | "projects" | "transition";
+export type WorkspaceKind = "readiness" | "campus" | "priority" | "projects" | "transition" | "tool_star" | "tool_bullets" | "tool_gap";
 export interface WorkspaceDraft<T> { revision: number; data: T }
 export const workspaceKey = (account: string, kind: WorkspaceKind) => `orbit.workspace.${account}.${kind}`;
 export function readWorkspaceDraft<T>(account: string, kind: WorkspaceKind, valid: (value: unknown) => value is T): WorkspaceDraft<T> | null {

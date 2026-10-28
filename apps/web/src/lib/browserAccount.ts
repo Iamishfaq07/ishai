@@ -11,6 +11,8 @@ const LEGACY_KEYS = [
   "orbit.practiceGoal",
   "orbit.warmupLog",
   "orbit.workspaceId",
+  "orbit.bullet-builder", "orbit.gap-explainer", "orbit.star-check.draft",
+  "orbit.github-projects.user", "orbit.gd.history", "orbit.aptitude.history",
 ];
 
 // This tab only. A warm-up in progress has the person's answers; the next account in the tab must not see them.
@@ -22,6 +24,7 @@ function drop(storage: Pick<Storage, "removeItem">, keys: readonly string[]): vo
 
 export function clearLegacyBrowserAccount(): void {
   clearCandidateDrafts();
+  for (const key of safeLocal.keys()) if (key.startsWith("orbit.tool-local.")) safeLocal.removeItem(key);
   try {
     drop(safeLocal, LEGACY_KEYS);
   } catch {

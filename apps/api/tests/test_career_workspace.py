@@ -64,3 +64,27 @@ def test_transition_plan_requires_evidence_and_preserves_account_boundaries(clie
     assert client.get(path, headers=h).json()["data"]["targetRole"] == "Analyst"
     row["due"] = "2026-99-99"
     assert client.put(path, headers=h, json={"revision": 1, "data": plan}).status_code == 422
+
+
+def test_writing_tools_save_private_validated_drafts(client: TestClient) -> None:
+    first, other = account(client), account(client)
+    drafts = {
+        "tool_star": {"question": "A difficult decision", "answer": "My private answer"},
+        "tool_bullets": {"did": "Built reports", "result": "Faster review", "measure": "2 hours", "pasted": "Original"},
+        "tool_gap": {"reason": "health", "from": "2024", "to": "2025", "during": "", "role": "Analyst"},
+    }
+    for kind, data in drafts.items():
+        path = f"/v1/career/workspace/{kind}"
+        saved = client.put(path, headers=first, json={"revision": 0, "data": data})
+        assert saved.status_code == 200, saved.text
+        assert client.get(path, headers=first).json()["data"] == data
+        assert client.get(path, headers=other).json()["data"] is None
+        assert client.put(path, headers=first, json={"revision": 0, "data": data}).status_code == 409
+        assert client.put(path, headers=first, json={"revision": 1, "data": {**data, "unknown": 1}}).status_code == 422
+    for kind, bad in [("tool_star", {"question": "Q", "answer": "x" * 20001}),
+                      ("tool_gap", {**drafts["tool_gap"], "reason": "unknown"}),
+                      ("tool_bullets", {**drafts["tool_bullets"], "did": None})]:
+        assert client.put(f"/v1/career/workspace/{kind}", headers=first,
+                          json={"revision": 1, "data": bad}).status_code == 422
+    exported = client.get("/v1/auth/me/export", headers=first).json()["career_workspace_states"]
+    assert {row["kind"] for row in exported} == set(drafts)

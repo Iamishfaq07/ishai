@@ -1,15 +1,11 @@
+import { useToolLocal } from "../../lib/useToolLocal";
+import { secondsLeft } from "../../lib/practiceClock";
+import { NO_APTITUDE_HISTORY, validAptitudeHistory } from "../kit/practiceHistory";
 import { SpotArt } from "../../components/SpotArt";
-import { useEffect, useMemo, useState } from "react";
-import { Brain, Check, Clock, Reveal, RotateCcw, X, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Brain, Check, Clock, Reveal, RotateCcw, X, cx, focusRing } from "@orbit/ui";
 import { Button, Card, PageHeader } from "../../components/ui";
 import { SECTIONS, buildTest, type Question, type Section } from "./questions";
-
-const HISTORY_KEY = "orbit.aptitude.history";
-interface Attempt { at: string; score: number; total: number; sections: Section[] }
-
-const isAttempts = (v: unknown): v is Attempt[] => Array.isArray(v);
-function loadHistory(): Attempt[] { return readJSON(safeLocal, HISTORY_KEY, [], isAttempts).slice(0, 10); }
-function saveHistory(list: Attempt[]) { safeLocal.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 10))); }
 
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
@@ -27,26 +23,37 @@ export function AptitudePage() {
   const [index, setIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [left, setLeft] = useState(0);
-  const [history, setHistory] = useState<Attempt[]>(loadHistory);
+  const [history, setHistory] = useToolLocal("aptitude", NO_APTITUDE_HISTORY, validAptitudeHistory);
+  const deadline = useRef(0);
+  const finished = useRef(false);
 
   const start = () => {
+    finished.current = false;
     const q = buildTest(sections, count, Date.now() % 2_147_483_647);
+    deadline.current = Date.now() + q.length * 60_000;
     setTest(q); setAnswers({}); setIndex(0); setDone(false); setLeft(q.length * 60);
   };
   const finish = () => {
-    if (!test) return;
+    if (!test || finished.current) return;
+    finished.current = true;
     setDone(true);
     const score = test.filter((q) => answers[q.id] === q.answer).length;
     const next = [{ at: new Date().toISOString(), score, total: test.length, sections }, ...history];
-    setHistory(next); saveHistory(next);
+    setHistory(next.slice(0, 10));
   };
   useEffect(() => {
     if (!test || done || !timed) return;
-    if (left <= 0) { finish(); return; }
-    const t = setTimeout(() => setLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-    // finish reads the latest answers through closure on each tick
-  }, [test, done, timed, left]); // eslint-disable-line react-hooks/exhaustive-deps
+    const tick = () => {
+      const next = secondsLeft(deadline.current);
+      setLeft(next);
+      if (next === 0) finish();
+    };
+    const timer = window.setInterval(tick, 250);
+    window.addEventListener("focus", tick); document.addEventListener("visibilitychange", tick);
+    tick();
+    return () => { clearInterval(timer); window.removeEventListener("focus", tick); document.removeEventListener("visibilitychange", tick); };
+  }, [test, done, timed, answers]); // eslint-disable-line react-hooks/exhaustive-deps -- tick must score the latest answers
+
 
   const score = useMemo(() => test ? test.filter((q) => answers[q.id] === q.answer).length : 0, [test, answers]);
 
@@ -75,7 +82,7 @@ export function AptitudePage() {
         {history.length ? <ul className="mt-3 space-y-2 text-sm">{history.map((h) => <li key={h.at} className="flex items-center justify-between gap-2">
           <span className="text-zinc-600 dark:text-zinc-400">{new Date(h.at).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · {h.sections.map((s) => SECTIONS.find((x) => x.id === s)?.label.split(" ")[0]).join(", ")}</span>
           <span className="font-semibold tabular-nums">{h.score}/{h.total}</span></li>)}</ul>
-          : <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Your scores appear here, on this device only.</p>}
+          : <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Your scores appear here for this account on this device, cleared when you sign out.</p>}
       </Card>
     </div>
   </div>;

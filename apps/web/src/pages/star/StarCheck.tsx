@@ -1,6 +1,9 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useCareerWorkspace } from "../../lib/useCareerWorkspace";
+import { WorkspaceSync } from "../../components/WorkspaceSync";
+import { validStarDraft } from "../kit/toolDrafts";
+import { useDeferredValue, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Check, CircleAlert, ListChecks, Mic, Reveal, cx, focusRing, safeLocal } from "@orbit/ui";
+import { Check, CircleAlert, ListChecks, Mic, Reveal, cx, focusRing } from "@orbit/ui";
 import { Card, PageHeader, Select, Textarea } from "../../components/ui";
 import { QUESTIONS, band, checkAnswer } from "./starCheck";
 
@@ -10,19 +13,17 @@ const TONE = {
 } as const;
 const RING = { good: "stroke-emerald-500", ok: "stroke-amber-500", weak: "stroke-rose-500" } as const;
 
-function readDraft(): { question: string; answer: string } {
-  try { const v = JSON.parse(safeLocal.getItem(DRAFT) ?? "null") as unknown; if (v && typeof v === "object" && "answer" in v) return v as { question: string; answer: string }; } catch { /* no draft */ }
-  return { question: QUESTIONS[0], answer: "" };
-}
+const EMPTY = { question: QUESTIONS[0], answer: "" };
 
 /**
  * Prepare → STAR answer check (pages/star/starCheck.ts): write or paste a behavioural answer and see, sentence by
  * sentence, which parts of STAR+R it covers, with numbers, ownership, length and filler words. Runs in the browser;
- * the draft stays on this device.
+ * drafts can be saved to the signed-in account.
  */
 export function StarCheckPage() {
-  const [draft, setDraft] = useState(readDraft);
-  const save = (next: typeof draft) => { setDraft(next); safeLocal.setItem(DRAFT, JSON.stringify(next)); };
+  const sync = useCareerWorkspace("tool_star", EMPTY, validStarDraft, DRAFT);
+  const draft = sync.value;
+  const save = (next: typeof draft) => sync.change(next);
   const text = useDeferredValue(draft.answer);
   const report = useMemo(() => checkAnswer(text), [text]);
   const b = band(report.score);
@@ -32,6 +33,8 @@ export function StarCheckPage() {
   return <div>
     <PageHeader eyebrow="Interview preparation" icon={ListChecks} title="STAR answer check"
       subtitle="Write a “Tell me about a time…” answer and see which parts of Situation, Task, Action, Result and Reflection it covers, before you say it out loud." />
+    <WorkspaceSync {...sync} />
+    <fieldset disabled={!sync.loaded || sync.saving || sync.conflict} className="min-w-0">
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <Card className="space-y-4">
         <div>
@@ -41,9 +44,9 @@ export function StarCheckPage() {
         </div>
         <div>
           <label htmlFor="star-a" className="text-sm font-semibold">Your answer</label>
-          <Textarea id="star-a" rows={14} className="mt-2" value={draft.answer} onChange={(e) => save({ ...draft, answer: e.target.value })}
+          <Textarea id="star-a" maxLength={20000} rows={14} className="mt-2" value={draft.answer} onChange={(e) => save({ ...draft, answer: e.target.value })}
             placeholder="In my final-year project, our team had three weeks to… My job was to… I first… then I… As a result… I learnt…" />
-          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{report.words} words · about {report.seconds < 60 ? `${report.seconds} seconds` : `${Math.round(report.seconds / 6) / 10} minutes`} spoken · saved on this device</p>
+          <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{report.words} words · about {report.seconds < 60 ? `${report.seconds} seconds` : `${Math.round(report.seconds / 6) / 10} minutes`} spoken · save changes to sync this account draft</p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
           <Link to="/documents/stories" className={cx("rounded-lg px-3 py-2 font-medium ring-1 ring-zinc-200 hover:bg-zinc-50 dark:ring-white/10 dark:hover:bg-white/5", focusRing)}>Save it as a story</Link>
@@ -79,5 +82,6 @@ export function StarCheckPage() {
         <p className="px-1 text-xs text-zinc-600 dark:text-zinc-400">This checks structure, not whether the story is good or true. Use real examples only.</p>
       </aside>
     </div>
+    </fieldset>
   </div>;
 }

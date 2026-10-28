@@ -1,14 +1,14 @@
+import { useToolLocal } from "../../lib/useToolLocal";
+import { discussionPhase, secondsLeft } from "../../lib/practiceClock";
+import { NO_DISCUSSION_HISTORY, validDiscussionHistory } from "./practiceHistory";
 import { SpotArt } from "../../components/SpotArt";
-import { useEffect, useState } from "react";
-import { Check, Clock, RotateCcw, UsersRound, cx, focusRing, readJSON, safeLocal } from "@orbit/ui";
+import { useEffect, useRef, useState } from "react";
+import { Check, Clock, RotateCcw, UsersRound, cx, focusRing } from "@orbit/ui";
 import { Button, Card, PageHeader, Textarea } from "../../components/ui";
 import { PREP_SECONDS, REVIEW, STRUCTURE, TALK_SECONDS, TOPICS, pickTopic, type Topic } from "./groupDiscussion";
 
 type Phase = "pick" | "prep" | "talk" | "review";
 const KINDS = [{ id: "any", label: "Any" }, { id: "current", label: "Current affairs" }, { id: "business", label: "Business & work" }, { id: "abstract", label: "Abstract" }] as const;
-const HISTORY = "orbit.gd.history";
-interface Done { at: string; topic: string; ticks: number }
-const isDone = (v: unknown): v is Done[] => Array.isArray(v);
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
 /**
@@ -22,20 +22,31 @@ export function GroupDiscussionPage() {
   const [left, setLeft] = useState(0);
   const [notes, setNotes] = useState("");
   const [ticks, setTicks] = useState<string[]>([]);
-  const [history, setHistory] = useState<Done[]>(() => readJSON(safeLocal, HISTORY, [], isDone).slice(0, 8));
+  const [history, setHistory] = useToolLocal("discussion", NO_DISCUSSION_HISTORY, validDiscussionHistory);
+  const deadline = useRef(0);
+  const phaseNow = useRef(phase); phaseNow.current = phase;
 
   useEffect(() => {
     if (phase !== "prep" && phase !== "talk") return;
-    if (left <= 0) { if (phase === "prep") { setPhase("talk"); setLeft(TALK_SECONDS); } else setPhase("review"); return; }
-    const t = setTimeout(() => setLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, left]);
+    const tick = () => {
+      if (phaseNow.current === "prep") {
+        const next = discussionPhase(deadline.current, Date.now(), TALK_SECONDS);
+        deadline.current = next.deadline; phaseNow.current = next.phase; setLeft(next.left); setPhase(next.phase);
+      } else if (phaseNow.current === "talk") {
+        const next = secondsLeft(deadline.current); setLeft(next); if (!next) { phaseNow.current = "review"; setPhase("review"); }
+      }
+    };
+    const timer = window.setInterval(tick, 250);
+    window.addEventListener("focus", tick); document.addEventListener("visibilitychange", tick);
+    tick();
+    return () => { clearInterval(timer); window.removeEventListener("focus", tick); document.removeEventListener("visibilitychange", tick); };
+  }, [phase]);
 
-  const start = () => { setNotes(""); setTicks([]); setPhase("prep"); setLeft(PREP_SECONDS); };
-  const another = () => { setTopic(pickTopic(kind, topic.id)); setPhase("pick"); };
+  const start = () => { deadline.current = Date.now() + PREP_SECONDS * 1000; setNotes(""); setTicks([]); phaseNow.current = "prep"; setPhase("prep"); setLeft(PREP_SECONDS); };
+  const another = () => { setTopic(pickTopic(kind, topic.id)); phaseNow.current = "pick"; setPhase("pick"); };
   const finish = () => {
     const next = [{ at: new Date().toISOString(), topic: topic.title, ticks: ticks.length }, ...history].slice(0, 8);
-    setHistory(next); safeLocal.setItem(HISTORY, JSON.stringify(next)); another();
+    setHistory(next); another();
   };
 
   return <div>
@@ -60,7 +71,7 @@ export function GroupDiscussionPage() {
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10" aria-hidden><div className={cx("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-moment motion-safe:ease-linear", phase === "prep" ? "bg-indigo-500" : "bg-emerald-500")} style={{ width: `${(left / (phase === "prep" ? PREP_SECONDS : TALK_SECONDS)) * 100}%` }} /></div>
             <Textarea aria-label="Your notes" rows={6} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={"Opening line…\nPoint 1 + example…\nPoint 2 + example…\nThe other side…"} />
-            <Button variant="secondary" onClick={() => { if (phase === "prep") { setPhase("talk"); setLeft(TALK_SECONDS); } else setPhase("review"); }}>{phase === "prep" ? "I'm ready to speak" : "Done speaking"}</Button>
+            <Button variant="secondary" onClick={() => { if (phase === "prep") { deadline.current = Date.now() + TALK_SECONDS * 1000; phaseNow.current = "talk"; setPhase("talk"); setLeft(TALK_SECONDS); } else { phaseNow.current = "review"; setPhase("review"); } }}>{phase === "prep" ? "I'm ready to speak" : "Done speaking"}</Button>
           </>}
           {phase === "review" && <div className="space-y-4">
             <fieldset><legend className="text-sm font-semibold">How did it go?</legend>
@@ -84,7 +95,7 @@ export function GroupDiscussionPage() {
         <Card>
           <h2 className="font-semibold">Recent practice</h2>
           {history.length ? <ul className="mt-2 space-y-1.5 text-sm">{history.map((h) => <li key={h.at} className="flex justify-between gap-2"><span className="min-w-0 truncate">{h.topic}</span><span className="shrink-0 tabular-nums text-zinc-500">{h.ticks}/{REVIEW.length}</span></li>)}</ul>
-            : <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{TOPICS.length} topics to practise. Your sessions appear here, on this device only.</p>}
+            : <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{TOPICS.length} topics to practise. Your sessions appear here for this account on this device, cleared when you sign out.</p>}
         </Card>
       </aside>
     </div>

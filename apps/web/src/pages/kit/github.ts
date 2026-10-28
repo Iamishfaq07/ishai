@@ -14,24 +14,39 @@ export const USERNAME = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
 
 /** "https://github.com/octocat/" or "@octocat" → "octocat"; null when it can't be a GitHub username. */
 export function parseUsername(input: string): string | null {
-  const t = input.trim().replace(/^@/, "").replace(/^https?:\/\/(?:www\.)?github\.com\//i, "").split(/[/?#]/)[0] ?? "";
-  return USERNAME.test(t) ? t : null;
+  let value = input.trim();
+  if (/^(?:www\.)?github\.com\//i.test(value)) value = `https://${value}`;
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const url = new URL(value);
+      if (!["github.com", "www.github.com"].includes(url.hostname) || url.username || url.password || url.port) return null;
+      const parts = url.pathname.split("/").filter(Boolean);
+      if (parts.length !== 1) return null;
+      value = decodeURIComponent(parts[0]!);
+    } catch { return null; }
+  } else value = value.replace(/^@/, "").replace(/\/$/, "");
+  return USERNAME.test(value) ? value : null;
 }
 
 const str = (v: unknown) => (typeof v === "string" ? v : null);
-const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0);
 
 export function toRepo(j: unknown): Repo | null {
   if (!j || typeof j !== "object") return null;
   const o = j as Record<string, unknown>;
   const name = str(o.name), url = str(o.html_url);
-  if (!name || !url || !url.startsWith("https://github.com/")) return null;
+  if (!name || name.length > 100 || !url || o.private === true) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" || parsed.hostname !== "github.com" || parsed.username || parsed.password
+        || parsed.port || parsed.pathname.split("/").filter(Boolean).length !== 2) return null;
+  } catch { return null; }
   const home = str(o.homepage);
   return {
     name, url, description: str(o.description), language: str(o.language),
     topics: Array.isArray(o.topics) ? o.topics.filter((t): t is string => typeof t === "string").slice(0, 10) : [],
     stars: num(o.stargazers_count), forks: num(o.forks_count), fork: o.fork === true, archived: o.archived === true,
-    homepage: home && /^https?:\/\//.test(home) ? home : null, pushedAt: str(o.pushed_at) ?? "",
+    homepage: home && /^https?:\/\//.test(home) ? home : null, pushedAt: typeof o.pushed_at === "string" && Number.isFinite(Date.parse(o.pushed_at)) ? o.pushed_at : "",
   };
 }
 
@@ -57,10 +72,9 @@ export function projectEntry(r: Repo): { title: string; bullet: string } {
   const stack = [...new Set([r.language, ...r.topics.map((t) => TOPIC_SKILL[t]).filter(Boolean)].filter(Boolean))].slice(0, 4) as string[];
   const title = `${pretty(r.name)}${stack.length ? ` · ${stack.join(", ")}` : ""}`;
   const what = r.description ? r.description.trim().replace(/\.$/, "") : `a ${r.language ?? "software"} project`;
-  // Lower-case the first letter unless it starts an acronym or a name written in capitals ("API", "LLM").
-  const lead = `Built ${/^[A-Z]{2}/.test(what) ? what : what.charAt(0).toLowerCase() + what.slice(1)}`;
+  const lead = `Project description: ${what}`;
   const extras = [r.homepage && `live at ${r.homepage}`, r.stars >= 5 && `${r.stars} stars on GitHub`].filter(Boolean);
-  return { title, bullet: `${lead}${extras.length ? `; ${extras.join(", ")}` : ""}. [Add the result: users, speed, accuracy or grade]` };
+  return { title, bullet: `${lead}${extras.length ? `; ${extras.join(", ")}` : ""}. [Describe your own contribution and a result you can verify]` };
 }
 
 /** Languages and recognised topics across the chosen repositories, most used first. */
@@ -76,8 +90,8 @@ export function skillsFrom(repos: Repo[]): { skill: string; repos: number }[] {
 /** STAR prompts for telling a project's story in an interview; the answers are the candidate's. */
 export function storyPrompts(r: Repo): string[] {
   return [
-    `Situation: why did you build ${pretty(r.name)}? Who was it for?`,
-    `Task: what did it have to do, and what made it hard?`,
+    `Situation: what problem does ${pretty(r.name)} address? Who is it for?`,
+    `Task: what was your own responsibility, and what made it hard?`,
     `Action: what did you build yourself${r.language ? ` in ${r.language}` : ""}, and what did you decide along the way?`,
     "Result: who used it, what changed, and what would you do differently now?",
   ];

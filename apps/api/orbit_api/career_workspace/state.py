@@ -17,7 +17,7 @@ from orbit_api.ratelimit import limit_user
 
 router = APIRouter(prefix="/v1/career/workspace", tags=["career workspace"],
                    dependencies=[Depends(limit_user("career-state", rate_per_s=3, burst=30))])
-Kind = Literal["readiness", "campus", "priority", "projects", "transition"]
+Kind = Literal["readiness", "campus", "priority", "projects", "transition", "tool_star", "tool_bullets", "tool_gap"]
 
 
 class StateIn(BaseModel):

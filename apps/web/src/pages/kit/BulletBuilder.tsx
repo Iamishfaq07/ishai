@@ -1,14 +1,16 @@
+import { useCareerWorkspace } from "../../lib/useCareerWorkspace";
+import { WorkspaceSync } from "../../components/WorkspaceSync";
 import { SpotArt } from "../../components/SpotArt";
-import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, CircleAlert, Wand2, cx, readJSON, safeLocal } from "@orbit/ui";
+import { Check, CircleAlert, Wand2, cx } from "@orbit/ui";
 import { Card, Field, Input, PageHeader, Textarea } from "../../components/ui";
 import { CopyBlock } from "./CopyBlock";
+import { validBulletDraft } from "./toolDrafts";
 import { STRONG_VERBS, buildBullets, checkBullet, type BulletParts } from "./bullets";
 
 const KEY = "orbit.bullet-builder";
-const EMPTY: BulletParts = { did: "", result: "", measure: "" };
-const isParts = (v: unknown): v is BulletParts => typeof v === "object" && v !== null && "did" in v;
+const EMPTY = { did: "", result: "", measure: "", pasted: "" };
+
 
 function Checks({ text }: { text: string }) {
   const { checks, swaps } = checkBullet(text);
@@ -24,30 +26,34 @@ function Checks({ text }: { text: string }) {
  * three ways and checked; plus a check for any bullet they paste. Runs in the browser.
  */
 export function BulletBuilderPage() {
-  const [parts, setParts] = useState<BulletParts>(() => readJSON(safeLocal, KEY, EMPTY, isParts));
-  const [pasted, setPasted] = useState("");
-  const set = (k: keyof BulletParts, v: string) => { const next = { ...parts, [k]: v }; setParts(next); safeLocal.setItem(KEY, JSON.stringify(next)); };
+  const sync = useCareerWorkspace("tool_bullets", EMPTY, validBulletDraft, KEY);
+  const parts = sync.value;
+  const pasted = parts.pasted ?? "";
+  const setPasted = (value: string) => sync.change({ ...parts, pasted: value });
+  const set = (k: keyof BulletParts, v: string) => sync.change({ ...parts, [k]: v });
   const built = buildBullets(parts);
 
   return <div>
     <PageHeader art={<SpotArt kind="resume" />} eyebrow="Resume Studio" icon={Wand2} title="Bullet builder"
       subtitle="Turn what you did into a resume line recruiters read in seconds: the result, how much, and how you did it." />
+    <WorkspaceSync {...sync} />
+    <fieldset disabled={!sync.loaded || sync.saving || sync.conflict} className="min-w-0">
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="space-y-6">
         <Card className="space-y-4">
           <h2 className="font-semibold">Build from three facts</h2>
           <Field label="What did you do?" htmlFor="b-did" hint="Past tense, starting with a verb: “rewrote the checkout API in Go”">
-            <Input id="b-did" value={parts.did} onChange={(e) => set("did", e.target.value)} placeholder="organised a 3-day coding workshop for juniors" /></Field>
+            <Input id="b-did" maxLength={2000} value={parts.did} onChange={(e) => set("did", e.target.value)} placeholder="organised a 3-day coding workshop for juniors" /></Field>
           <Field label="What changed because of it?" htmlFor="b-result" hint="Past tense: “cut page load time”, “increased sign-ups”">
-            <Input id="b-result" value={parts.result} onChange={(e) => set("result", e.target.value)} placeholder="raised club membership" /></Field>
+            <Input id="b-result" maxLength={2000} value={parts.result} onChange={(e) => set("result", e.target.value)} placeholder="raised club membership" /></Field>
           <Field label="By how much?" htmlFor="b-measure" hint="Only a number you can back up in an interview">
-            <Input id="b-measure" value={parts.measure} onChange={(e) => set("measure", e.target.value)} placeholder="from 40 to 120 students in one semester" /></Field>
+            <Input id="b-measure" maxLength={1000} value={parts.measure} onChange={(e) => set("measure", e.target.value)} placeholder="from 40 to 120 students in one semester" /></Field>
           {built.length > 0 && <div className="space-y-3">{built.map((b) => <div key={b.label}>
             <CopyBlock label={b.label} text={b.text} /><Checks text={b.text} /></div>)}</div>}
         </Card>
         <Card>
           <h2 className="font-semibold">Check a bullet you already have</h2>
-          <Textarea aria-label="A resume bullet" rows={3} className="mt-3" value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="Responsible for handling customer queries" />
+          <Textarea aria-label="A resume bullet" maxLength={4000} rows={3} className="mt-3" value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="Responsible for handling customer queries" />
           {pasted.trim() && <Checks text={pasted} />}
         </Card>
       </div>
@@ -60,5 +66,6 @@ export function BulletBuilderPage() {
         <p className="px-1 text-xs text-zinc-600 dark:text-zinc-400">The formula is the one Google's recruiters describe: accomplished X, as measured by Y, by doing Z. Copy a line into your resume in <Link className="font-medium text-indigo-600 hover:underline dark:text-indigo-400" to="/resume-ai">Resume Studio</Link>.</p>
       </aside>
     </div>
+    </fieldset>
   </div>;
 }
