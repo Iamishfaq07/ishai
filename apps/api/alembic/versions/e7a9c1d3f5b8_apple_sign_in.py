@@ -1,13 +1,13 @@
 """Sign in with Apple (the iOS app): Apple's stable account id.
 
-Revision ID: c3e5a7b9d1f2
+Revision ID: e7a9c1d3f5b8
 Revises: b8d2f4a6c1e3
 """
 import sqlalchemy as sa
 
 from alembic import op
 
-revision = "c3e5a7b9d1f2"
+revision = "e7a9c1d3f5b8"
 down_revision = "b8d2f4a6c1e3"
 branch_labels = None
 depends_on = None
