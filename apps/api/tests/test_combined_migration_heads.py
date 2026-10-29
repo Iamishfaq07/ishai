@@ -8,7 +8,9 @@ from pathlib import Path
 import pytest
 
 
-@pytest.mark.parametrize("previous", ["eb13c5d7f9a1", "ec24d6e8f0b2", "ef93a6c7d041", "a7c9e1b3d5f2", "c3e5a7b9d1f4"])
+@pytest.mark.parametrize(
+    "previous", ["eb13c5d7f9a1", "ec24d6e8f0b2", "ef93a6c7d041", "a7c9e1b3d5f2", "c3e5a7b9d1f4", "c9e3f5a7b2d4"]
+)
 def test_combined_upgrade_from_either_branch(tmp_path: Path, previous: str) -> None:
     code = """
 import os
@@ -25,7 +27,8 @@ command.upgrade(cfg, 'head')
 engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''))
 assert 'gmail_artifacts' in inspect(engine).get_table_names()
 tables = set(inspect(engine).get_table_names())
-assert {'job_hidden', 'biz_knowledge_receipts', 'mentor_shares', 'biz_experience_responses'} <= tables
+assert {'job_hidden', 'biz_knowledge_receipts', 'mentor_shares',
+        'biz_experience_responses', 'biz_talent_suggestions'} <= tables
 columns = {c['name'] for c in inspect(engine).get_columns('jobs')}
 assert {'lease_token', 'lease_until', 'rerun_requested'} <= columns
 with engine.connect() as db:

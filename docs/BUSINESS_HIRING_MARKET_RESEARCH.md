@@ -102,3 +102,7 @@ Greenhouse implementation references were pinned to repository revision
 `271cd888061d3428575eba2f626fe3e1996485c3`; the catalog supplies each file's hash. Other source hashes identify
 the retrieved bytes on moving branches. Failed guessed SDK URLs were resolved where possible using the
 official organization repositories; they do not establish the absence of an API or a product capability.
+
+The subsequent [talent community research](BUSINESS_TALENT_RESEARCH.md) delivers explicit consent,
+expiry and withdrawal, recruiter discovery and reviewed portal role suggestions. Named ownership, saved
+searches, identity merging and external nurture delivery remain separate follow-up work.

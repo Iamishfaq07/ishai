@@ -1,0 +1,86 @@
+[
+  {
+    "name": "greenhouse_pools",
+    "url": "https://raw.githubusercontent.com/grnhse/greenhouse-api-docs/master/source/includes/harvest/_prospect_pools.md",
+    "sha256": "86f48399d6c3d99bd9f37af9354518cc202d61932c882a64aad2e1b235cbc17f",
+    "bytes": 3450,
+    "retrieved_at": "2026-10-29T21:02:14.756779+00:00"
+  },
+  {
+    "name": "lever_consent",
+    "url": "https://raw.githubusercontent.com/lever/postings-api/master/README.md",
+    "sha256": "504ed95b1dc39c5a4c0865d05805a6cdff57a973bdb6d7c3fe376ff177b15764",
+    "bytes": 25813,
+    "retrieved_at": "2026-10-29T21:02:15.000590+00:00"
+  },
+  {
+    "name": "odoo_talent",
+    "url": "https://raw.githubusercontent.com/odoo/odoo/19.0/addons/hr_recruitment/models/hr_applicant.py",
+    "sha256": "be3a96aecc05190e3b1e63e55dab6361399b30a68f133da50c2b550a571a851f",
+    "bytes": 54273,
+    "retrieved_at": "2026-10-29T21:02:15.327587+00:00"
+  },
+  {
+    "name": "frappe_applicant",
+    "url": "https://raw.githubusercontent.com/frappe/hrms/develop/hrms/hr/doctype/job_applicant/job_applicant.json",
+    "sha256": "95e6f069fc6ec363c04bb2b394ab2ddbab975ad7669937f2e9114cff26fd7898",
+    "bytes": 5336,
+    "retrieved_at": "2026-10-29T21:02:15.550832+00:00"
+  },
+  {
+    "name": "formbricks",
+    "url": "https://raw.githubusercontent.com/formbricks/formbricks/main/README.md",
+    "sha256": "048c85541d709d334e5c4a67def86a9c89932576c30fcb99bceaf85f5be036c9",
+    "bytes": 10160,
+    "retrieved_at": "2026-10-29T21:02:15.868207+00:00"
+  },
+  {
+    "name": "odoo_talent_pool",
+    "url": "https://raw.githubusercontent.com/odoo/odoo/19.0/addons/hr_recruitment/models/hr_talent_pool.py",
+    "sha256": "c02cf391040a0e6987d68ec44d37056c7d1f8e834cac6ccfb2c740b6f30c01d1",
+    "bytes": 2190,
+    "retrieved_at": "2026-10-29T21:09:38.993394+00:00"
+  },
+  {
+    "name": "greenhouse_candidate_ingestion_pools",
+    "url": "https://raw.githubusercontent.com/grnhse/greenhouse-api-docs/master/source/includes/candidate-ingestion/_prospect_pools.md",
+    "sha256": "f190122806a097b2b3a79c78d6fbb083687d3604b25ba578c4c1cee5aca14add",
+    "bytes": 2404,
+    "retrieved_at": "2026-10-29T21:09:39.363616+00:00"
+  },
+  {
+    "name": "greenhouse_candidate_controls",
+    "url": "https://raw.githubusercontent.com/grnhse/greenhouse-api-docs/master/source/includes/harvest/_candidates.md",
+    "sha256": "7dd9d07fb0dc22585d28909cd0e2680af5b2d41d6dccce5e4d827171efe11e7c",
+    "bytes": 80639,
+    "retrieved_at": "2026-10-29T21:09:39.682536+00:00"
+  },
+  {
+    "name": "documenso",
+    "url": "https://raw.githubusercontent.com/documenso/documenso/main/README.md",
+    "sha256": "e4c101ce290f8819a4414964da83caad5be887e70be9d45a4b288b848adb41f2",
+    "bytes": 12519,
+    "retrieved_at": "2026-10-29T21:09:39.949290+00:00"
+  },
+  {
+    "name": "temporal_typescript",
+    "url": "https://raw.githubusercontent.com/temporalio/sdk-typescript/main/README.md",
+    "sha256": "dfe0d283353ffd64017377c4c41970c0108277974866a97e28c7d10ede628b23",
+    "bytes": 16598,
+    "retrieved_at": "2026-10-29T21:09:40.290871+00:00"
+  },
+  {
+    "name": "unleash",
+    "url": "https://raw.githubusercontent.com/Unleash/unleash/main/README.md",
+    "sha256": "a5b05da9b75b61cf31ec40cca5bfd91ba8cd629711121d002492d0d1dc97aa80",
+    "bytes": 14985,
+    "retrieved_at": "2026-10-29T21:09:40.670896+00:00"
+  },
+  {
+    "name": "openfeature",
+    "url": "https://raw.githubusercontent.com/open-feature/spec/main/README.md",
+    "sha256": "3e56b759c693171dac5e295c4be08e1c2f9a92fa2c03a3d7a14035c3976066e8",
+    "bytes": 3868,
+    "retrieved_at": "2026-10-29T21:09:41.002489+00:00"
+  }
+]

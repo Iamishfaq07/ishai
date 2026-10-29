@@ -71,6 +71,8 @@ from orbit_api.business.requisitions import router as business_requisitions_rout
 from orbit_api.business.retention import running_sweeper as running_business_sweeper
 from orbit_api.business.screening import public_router as business_screening_public_router
 from orbit_api.business.screening import router as business_screening_router
+from orbit_api.business.talent import public_router as business_talent_public_router
+from orbit_api.business.talent import router as business_talent_router
 from orbit_api.business.withdrawal import public_router as business_withdrawal_public_router
 from orbit_api.business.withdrawal import router as business_withdrawal_router
 from orbit_api.career.routes import router as career_router
@@ -489,6 +491,8 @@ def create_app() -> FastAPI:
     app.include_router(career_progress_router)
     app.include_router(job_playbook_router)
     app.include_router(business_control_router)
+    app.include_router(business_talent_router)
+    app.include_router(business_talent_public_router)
     app.include_router(business_capacity_router)
     app.include_router(business_experience_router)
     app.include_router(business_experience_public_router)

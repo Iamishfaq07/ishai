@@ -1944,3 +1944,41 @@ class BizKnowledgeEvent(TimestampMixin, Base):
     actor_name: Mapped[str] = mapped_column(String(200))
     action: Mapped[str] = mapped_column(String(16))
     note: Mapped[str] = mapped_column(Text, default="")
+
+
+class BizTalentPool(TimestampMixin, Base):
+    __tablename__ = "biz_talent_pools"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    purpose: Mapped[str] = mapped_column(String(1200))
+    retention_days: Mapped[int] = mapped_column(Integer, default=180)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    terms_revision: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class BizTalentMember(TimestampMixin, Base):
+    __tablename__ = "biz_talent_members"
+    __table_args__ = (UniqueConstraint("pool_id", "application_id", name="uq_biz_talent_pool_application"),
+                      Index("ix_biz_talent_members_expires_at", "expires_at"))
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    pool_id: Mapped[str] = mapped_column(ForeignKey("biz_talent_pools.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"), index=True)
+    terms_revision: Mapped[int] = mapped_column(Integer)
+    request_id: Mapped[str] = mapped_column(String(36))
+    notice_sha256: Mapped[str] = mapped_column(String(64))
+    notice_version: Mapped[str] = mapped_column(String(40))
+    skills: Mapped[list[str]] = mapped_column(JSON, default=list)
+    interests: Mapped[str] = mapped_column(String(600))
+    search_text: Mapped[str] = mapped_column(Text)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    consented_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class BizTalentSuggestion(TimestampMixin, Base):
+    __tablename__ = "biz_talent_suggestions"
+    __table_args__ = (UniqueConstraint("member_id", "job_id", name="uq_biz_talent_member_job"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    member_id: Mapped[str] = mapped_column(ForeignKey("biz_talent_members.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), index=True)

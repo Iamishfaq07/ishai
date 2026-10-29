@@ -274,11 +274,13 @@ async def running_sweeper() -> AsyncIterator[None]:
         from orbit_api.business.capacity import sweep as capacity_sweep
         from orbit_api.business.experience import sweep as experience_sweep
         from orbit_api.business.knowledge_reviews import sweep as knowledge_review_sweep
+        from orbit_api.business.talent import sweep as talent_sweep
 
         await asyncio.sleep(30)
         while True:
             for name, operation in (("hiring", sweep), ("knowledge reviews", knowledge_review_sweep),
-                                    ("capacity", capacity_sweep), ("candidate experience", experience_sweep)):
+                                    ("capacity", capacity_sweep), ("candidate experience", experience_sweep),
+                                    ("talent consent expiry", talent_sweep)):
                 try:
                     await operation()
                 except asyncio.CancelledError:

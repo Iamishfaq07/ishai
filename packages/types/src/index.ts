@@ -10,3 +10,4 @@ export * from "./businessRequisitions";
 export * from "./businessKnowledge";
 
 export * from "./businessExperience";
+export * from "./businessTalent";
