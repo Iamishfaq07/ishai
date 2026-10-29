@@ -1,0 +1,215 @@
+{
+  "retrieved_on": "2026-10-29",
+  "scope": "Primary GitHub documentation/source; not a complete live SaaS feature or pricing audit",
+  "sources": [
+    {
+      "key": "greenhouse",
+      "url": "https://raw.githubusercontent.com/grnhse/harvest_api/master/README.md",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "key": "lever",
+      "url": "https://raw.githubusercontent.com/lever/postings-api/master/README.md",
+      "bytes": 25813,
+      "sha256": "504ed95b1dc39c5a4c0865d05805a6cdff57a973bdb6d7c3fe376ff177b15764"
+    },
+    {
+      "key": "workable",
+      "url": "https://raw.githubusercontent.com/Workable/node-workable/master/README.md",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "key": "smartrecruiters",
+      "url": "https://raw.githubusercontent.com/smartrecruiters/smartrecruiters-python/master/README.md",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "key": "teamtailor",
+      "url": "https://raw.githubusercontent.com/teamtailor/teamtailor-api/master/README.md",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "key": "frappe-recruitment",
+      "url": "https://raw.githubusercontent.com/frappe/hrms/develop/hrms/hr/doctype/job_applicant/job_applicant.json",
+      "bytes": 5336,
+      "sha256": "95e6f069fc6ec363c04bb2b394ab2ddbab975ad7669937f2e9114cff26fd7898"
+    },
+    {
+      "key": "frappe-feedback",
+      "url": "https://raw.githubusercontent.com/frappe/hrms/develop/hrms/hr/doctype/interview_feedback/interview_feedback.json",
+      "bytes": 3500,
+      "sha256": "88a1ce7757ea350619616ccde8dca4f427df371a81eeca2c5e1e4508b5038ddb"
+    },
+    {
+      "key": "opensourceats",
+      "url": "https://raw.githubusercontent.com/recruitcrm/recruitcrm-python/master/README.md",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "key": "opensourcerecruiter",
+      "url": "https://raw.githubusercontent.com/opencats/OpenCATS/master/README.md",
+      "bytes": 1442,
+      "sha256": "66d357e29a38a1afbc243e05e858e3245efc0b1c3a731c49caea43fab05c9373"
+    },
+    {
+      "key": "formbricks",
+      "url": "https://raw.githubusercontent.com/formbricks/formbricks/main/README.md",
+      "bytes": 10160,
+      "sha256": "048c85541d709d334e5c4a67def86a9c89932576c30fcb99bceaf85f5be036c9"
+    },
+    {
+      "key": "heyform",
+      "url": "https://raw.githubusercontent.com/heyform/heyform/main/README.md",
+      "bytes": 5457,
+      "sha256": "937964600ebce81dea0becb31683f5587fb1f312c54e36c4f5b65abb64f64830"
+    },
+    {
+      "key": "calcom",
+      "url": "https://raw.githubusercontent.com/calcom/cal.com/main/README.md",
+      "bytes": 36824,
+      "sha256": "a9a6121c41b37242a4aac18704037dcff14f23d41dbf74b8a18c9e3d393b01e7"
+    },
+    {
+      "key": "activepieces",
+      "url": "https://raw.githubusercontent.com/activepieces/activepieces/main/README.md",
+      "bytes": 92212,
+      "sha256": "b159d84d19ea2505143a1d369416b8f5ef63540e9530bd2f20f8bd0e3e0c70bf"
+    },
+    {
+      "key": "n8n",
+      "url": "https://raw.githubusercontent.com/n8n-io/n8n/master/README.md",
+      "bytes": 3998,
+      "sha256": "1b2642bc182969047627fc3568c785bad291fb9a2c7d655b19813608bf69ce27"
+    },
+    {
+      "key": "novu",
+      "url": "https://raw.githubusercontent.com/novuhq/novu/next/README.md",
+      "bytes": 18452,
+      "sha256": "1e3f2e1690ac106e44b24f4adb74968e27ddba73c083003f1ae97c610448fe3d"
+    },
+    {
+      "key": "metabase",
+      "url": "https://raw.githubusercontent.com/metabase/metabase/master/README.md",
+      "bytes": 5927,
+      "sha256": "5bd7a1f76e8abe34a862686250b172b24d80c6797b0b2c997ddb0bd93351a921"
+    },
+    {
+      "key": "langfuse",
+      "url": "https://raw.githubusercontent.com/langfuse/langfuse/main/README.md",
+      "bytes": 53476,
+      "sha256": "d5a07630afeeaa4c11eda7c0d133941950805cb29ce84b13fa272eeb9a3794f5"
+    },
+    {
+      "key": "promptfoo",
+      "url": "https://raw.githubusercontent.com/promptfoo/promptfoo/main/README.md",
+      "bytes": 4599,
+      "sha256": "7fd57809624e22da73bf6b6feb027c9e09aec74e0099bdea711fe2e276e87c4a"
+    },
+    {
+      "key": "greenhouse-docs",
+      "url": "https://raw.githubusercontent.com/grnhse/greenhouse-api-docs/master/README.md",
+      "bytes": 694,
+      "sha256": "6742f006ce119c0aa8dff400eaa70fde0c05c0538fd0e70fc28599e4b6ba5326"
+    },
+    {
+      "key": "greenhouse-ruby",
+      "url": "https://raw.githubusercontent.com/grnhse/greenhouse_io/master/README.md",
+      "bytes": 5913,
+      "sha256": "4a8c07d86329d4c690e3efbb874e316a7f168e90b31dea05dd5be4d44f7afe47"
+    },
+    {
+      "key": "teamtailor-ruby",
+      "url": "https://raw.githubusercontent.com/teamtailor/teamtailor-rb/master/README.md",
+      "bytes": 3490,
+      "sha256": "77fe4d28bb6ce9a4960fa89c945d62506f8651e23d2b0eed142c4357f5684fac"
+    },
+    {
+      "key": "teamtailor-partners",
+      "url": "https://raw.githubusercontent.com/teamtailor/tt-partner-docs/master/README.md",
+      "bytes": 1711,
+      "sha256": "15d8345e77c1e9c114730127ef5d84746097494a1334f46239cb5bbeff8d1132"
+    },
+    {
+      "key": "workable-ai",
+      "url": "https://raw.githubusercontent.com/Workable/workable-jobs-grok-plugin/main/README.md",
+      "bytes": 1095,
+      "sha256": "e4b582bdd6c6e8ad8cad17ca01f4900074aa3f9879fcb6dcf5dea19151ffe7c1"
+    },
+    {
+      "key": "smartrecruiters-webhooks",
+      "url": "https://raw.githubusercontent.com/smartrecruiters/sr-webhooks-client/master/README.md",
+      "bytes": 4663,
+      "sha256": "ae14524ef139b58c67c3c86da8b3eb01cfe785c89e6a08dd2221b2be54b8eb9b"
+    },
+    {
+      "key": "greenhouse-skills",
+      "url": "https://raw.githubusercontent.com/grnhse/greenhouse-skills/main/README.md",
+      "bytes": 3397,
+      "sha256": "2cf16628244dff8c85b0dda38a6828601ee1744b323799e8bd2f04d68c657907"
+    },
+    {
+      "key": "ats-papra",
+      "url": "https://raw.githubusercontent.com/mxco86/hipeople/main/README.md",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "key": "odoo-recruitment",
+      "url": "https://raw.githubusercontent.com/odoo/odoo/19.0/addons/hr_recruitment/models/hr_applicant.py",
+      "bytes": 54273,
+      "sha256": "be3a96aecc05190e3b1e63e55dab6361399b30a68f133da50c2b550a571a851f"
+    },
+    {
+      "key": "horilla",
+      "url": "https://raw.githubusercontent.com/horilla-opensource/horilla/master/README.md",
+      "bytes": 10628,
+      "sha256": "e59f3841b77364f07cb8ff45aaa0c890667729ae3dec45c66757981698135df4"
+    },
+    {
+      "key": "twenty-crm",
+      "url": "https://raw.githubusercontent.com/twentyhq/twenty/main/README.md",
+      "bytes": 12082,
+      "sha256": "e2b6ecb64f6c281896eb062601db3cc794311baa826bb6f9505cec839725d04b"
+    },
+    {
+      "key": "presidio",
+      "url": "https://raw.githubusercontent.com/microsoft/presidio/main/README.md",
+      "error": "HTTP Error 404: Not Found"
+    },
+    {
+      "key": "horilla-models",
+      "url": "https://raw.githubusercontent.com/horilla-opensource/horilla/master/recruitment/models.py",
+      "bytes": 35020,
+      "sha256": "ccd98351719c552fde29ba813f0515e0261a4ff0ff69613a3854cd0488e0900f"
+    },
+    {
+      "key": "greenhouse-_prospect_pools",
+      "url": "https://github.com/grnhse/greenhouse-api-docs/blob/271cd888061d3428575eba2f626fe3e1996485c3/source/includes/harvest/_prospect_pools.md",
+      "bytes": 3450,
+      "sha256": "86f48399d6c3d99bd9f37af9354518cc202d61932c882a64aad2e1b235cbc17f"
+    },
+    {
+      "key": "greenhouse-_scorecards",
+      "url": "https://github.com/grnhse/greenhouse-api-docs/blob/271cd888061d3428575eba2f626fe3e1996485c3/source/includes/harvest/_scorecards.md",
+      "bytes": 18749,
+      "sha256": "b8eee3f95e6845f67f1a690dd44a763435e1bce572c291bf2fee534581a628b7"
+    },
+    {
+      "key": "greenhouse-_introduction",
+      "url": "https://github.com/grnhse/greenhouse-api-docs/blob/271cd888061d3428575eba2f626fe3e1996485c3/source/includes/harvest/_introduction.md",
+      "bytes": 44605,
+      "sha256": "9567304c6500747b028435c4bdf99ee7445431b45a99342f4db98020f4514701"
+    },
+    {
+      "key": "greenhouse-_introduction",
+      "url": "https://github.com/grnhse/greenhouse-api-docs/blob/271cd888061d3428575eba2f626fe3e1996485c3/source/includes/webhooks/_introduction.md",
+      "bytes": 12448,
+      "sha256": "c597548f0a110015440083f1a7d1e74d2c1cd79c1f9e08e4c4e11b8e15b4d511"
+    },
+    {
+      "key": "presidio-resolved",
+      "url": "https://raw.githubusercontent.com/microsoft/presidio/main/README.MD",
+      "bytes": 6722,
+      "sha256": "b553970feb389eaa4cb4a09362ee1a5825e4844a63ea2a2d729c6fca18a140e0"
+    }
+  ]
+}

@@ -40,6 +40,7 @@ from orbit_api.job_portal.interview import resume_document_text
 from orbit_api.models import (
     BizApplication,
     BizCompany,
+    BizExperienceInvite,
     BizInterview,
     BizJob,
     BizMember,
@@ -629,6 +630,7 @@ class StatusOut(BaseModel):
     email_confirmed: bool
     interview: StatusInterview | None
     deletion_requested: bool
+    experience_invited: bool = False
 
 
 async def _by_token(db: AsyncSession, token: str, request: Request) -> tuple[BizApplication, BizJob, BizCompany]:
@@ -665,6 +667,7 @@ async def _status(db: AsyncSession, app: BizApplication, job: BizJob, company: B
                      company=StatusCompany(name=company.name, logo_url=logo_url(company), slug=company.slug),
                      job_title=job.title, job_url=public_url(company, job), stage_label=label, stage_detail=detail,
                      applied_at=_aware(app.created_at) or now(), email_confirmed=app.email_confirmed_at is not None,
+                     experience_invited=await db.get(BizExperienceInvite, app.id) is not None,
                      interview=interview, deletion_requested=app.deletion_requested_at is not None)
 
 

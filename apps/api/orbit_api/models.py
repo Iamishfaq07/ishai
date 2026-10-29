@@ -1819,6 +1819,47 @@ class BizCapacityWatch(Base):
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class BizExperienceCampaign(Base):
+    __tablename__ = "biz_experience_campaigns"
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    stage_kinds: Mapped[list[str]] = mapped_column(JSON, default=list)
+    expiry_days: Mapped[int] = mapped_column(Integer, default=14)
+    plan: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class BizExperienceInvite(TimestampMixin, Base):
+    __tablename__ = "biz_experience_invites"
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), index=True)
+    survey_version: Mapped[str] = mapped_column(String(40))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    response_request_id: Mapped[str | None] = mapped_column(String(36))
+
+
+class BizExperienceBatch(TimestampMixin, Base):
+    __tablename__ = "biz_experience_batches"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), index=True)
+
+
+class BizExperienceResponse(TimestampMixin, Base):
+    __tablename__ = "biz_experience_responses"
+    __table_args__ = (Index("ix_biz_experience_responses_created_at", "created_at"),)
+    application_id: Mapped[str] = mapped_column(ForeignKey("biz_experience_invites.application_id", ondelete="CASCADE"),
+                                               primary_key=True)
+    batch_id: Mapped[str | None] = mapped_column(
+        ForeignKey("biz_experience_batches.id", ondelete="CASCADE"), index=True)
+    ratings: Mapped[dict[str, int]] = mapped_column(JSON)
+    improvement: Mapped[str] = mapped_column(String(24))
+    notice_sha256: Mapped[str] = mapped_column(String(64))
+
+
 class BizKnowledgeDocument(TimestampMixin, Base):
     """Business-owned text with a private draft and an independently published snapshot."""
     __tablename__ = "biz_knowledge_documents"

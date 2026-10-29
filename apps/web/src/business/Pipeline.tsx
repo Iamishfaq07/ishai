@@ -409,6 +409,7 @@ export function Pipeline() {
         actions={
           <>
             <Link to={planPath(company.id, jid)} className={buttonClass("secondary")}>Interview plan</Link>
+            {company.permissions.move_applicants && <Link to={`/business/app/${company.id}/experience?job=${encodeURIComponent(jid)}`} className={buttonClass("secondary")}>Candidate experience</Link>}
             <Link to={jobPath(company.id, jid, "edit")} className={buttonClass("secondary")}>
               <PenLine className="h-4 w-4" aria-hidden /> {company.permissions.manage_jobs ? "Edit job" : "Job details"}
             </Link>

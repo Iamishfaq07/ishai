@@ -36,6 +36,7 @@ import { hiringApi } from "./hiringApi";
 import { EMAIL_RE, EMPLOYMENT_LABEL, EXPERIENCE_LABEL, careersPath, dayTime, publicJobPath, resumeFileProblem, salaryLine } from "./model";
 import { errorText } from "./ui";
 
+const CandidateExperience = lazy(async () => ({ default: (await import("./CandidateExperience")).CandidateExperience }));
 const CandidateWithdrawal = lazy(async () => ({ default: (await import("./CandidateWithdrawal")).CandidateWithdrawal }));
 const CandidateScheduling = lazy(async () => ({ default: (await import("./CandidateScheduling")).CandidateScheduling }));
 
@@ -724,6 +725,7 @@ export function ApplicationStatusPage() {
       )}
 
       <Suspense fallback={<p role="status">Loading scheduling controls…</p>}><CandidateScheduling key={`${token}/${data.application_state}/${data.interview?.chosen ?? "unbooked"}`} token={token} refreshStatus={async () => { setData(await biz.status(token)); }} /></Suspense>
+      {data.experience_invited && <Suspense fallback={<p role="status">Loading optional process feedback…</p>}><CandidateExperience key={token} token={token} confirmed={data.email_confirmed} deletionRequested={data.deletion_requested} /></Suspense>}
       <CandidateChallenge key={`${token}/${data.application_state}`} token={token} confirmed={data.email_confirmed} deletionRequested={data.deletion_requested} />
       <Suspense fallback={<p role="status">Loading application controls…</p>}><CandidateWithdrawal key={token} token={token} data={data} onSaved={setData} /></Suspense>
       <section aria-labelledby="data-title" className="mt-6 text-sm text-zinc-600 dark:text-zinc-400">

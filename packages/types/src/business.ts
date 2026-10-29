@@ -721,6 +721,7 @@ export interface BizApplicationStatus {
   email_confirmed: boolean;
   interview: { slots: string[]; duration_min: number; location: string; chosen: string | null } | null;
   deletion_requested: boolean;
+  experience_invited?: boolean;
 }
 
 // ─── Orbit admin ─────────────────────────────────────────────────────────────
