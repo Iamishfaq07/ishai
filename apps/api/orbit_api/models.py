@@ -1729,6 +1729,37 @@ class CareerEvidenceShare(TimestampMixin, Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
+class MentorShare(TimestampMixin, Base):
+    """A mock interview's report shared with a mentor for feedback (mentor.py): a frozen snapshot behind a hashed,
+    expiring, revocable link. Deleting the session deletes it."""
+
+    __tablename__ = "mentor_shares"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    session_id: Mapped[str] = mapped_column(ForeignKey("sessions.id", ondelete="CASCADE"), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    # Who it's for, in the candidate's words ("Priya, my old manager"): only the candidate sees it.
+    label: Mapped[str] = mapped_column(String(80), default="")
+    snapshot: Mapped[dict[str, Any]] = mapped_column(JSON)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    views: Mapped[int] = mapped_column(Integer, default=0)
+    last_viewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class MentorComment(TimestampMixin, Base):
+    """A mentor's note on a shared report: on one answer (`item`) or on the whole interview (None)."""
+
+    __tablename__ = "mentor_comments"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    share_id: Mapped[str] = mapped_column(ForeignKey("mentor_shares.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    item: Mapped[int | None] = mapped_column(Integer)
+    author: Mapped[str] = mapped_column(String(80))
+    body: Mapped[str] = mapped_column(Text)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class JobPostingVersion(Base):
     """Bounded public-source observations for tracked listings; survives cache eviction."""
     __tablename__ = "job_posting_versions"

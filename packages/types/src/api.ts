@@ -1057,7 +1057,7 @@ export interface BillingQuote {
 /** Something the account was given (credits, a plan, an approval, a referral reward, a purchase): the app's bell. */
 export interface AccountNotice {
   id: string;
-  kind: "credits" | "plan" | "approved" | "referral" | "purchase";
+  kind: "credits" | "plan" | "approved" | "referral" | "purchase" | "mentor";
   title: string;
   body: string;
   link: string | null;
@@ -3288,4 +3288,57 @@ export interface CandidateInterviewRounds {
   editable?: boolean;
   preparation_round_id?: string | null;
   rounds: CandidateInterviewRound[];
+}
+
+/** Ask a mentor (mentor.py): a mock interview's report shared by link, and the mentor's comments. */
+export interface MentorComment {
+  id: string;
+  /** The answer it's about (its place in the report), or null for the whole interview. */
+  item: number | null;
+  author: string;
+  body: string;
+  created_at: string;
+  read: boolean;
+}
+
+export interface MentorShare {
+  id: string;
+  label: string;
+  expires_at: string;
+  active: boolean;
+  views: number;
+  last_viewed_at: string | null;
+  answers_included: boolean;
+  comments: MentorComment[];
+  /** Only right after the link is made: the address to send (only its hash is kept). */
+  url: string | null;
+}
+
+export interface MentorReportItem {
+  question: string;
+  score: number | null;
+  feedback: string;
+  you_said?: string;
+  better?: string;
+}
+
+/** What the mentor sees: the snapshot taken when the link was made. */
+export interface MentorReport {
+  first_name: string;
+  role: string;
+  company: string;
+  title: string;
+  date: string;
+  overall_score: number | null;
+  strengths: string[];
+  improvements: string[];
+  items: MentorReportItem[];
+  answers_included: boolean;
+  delivery: { words_per_minute: number | null; fillers_per_minute: number | null; average_answer_words: number | null } | null;
+}
+
+export interface MentorReview {
+  report: MentorReport;
+  expires_at: string;
+  comments: Array<{ item: number | null; author: string; body: string; created_at: string }>;
 }

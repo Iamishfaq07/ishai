@@ -11,7 +11,7 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 ### Interview copilot (live help)
 
 - During a live interview or call, Orbit hears the interviewer's question and suggests an answer drawn from the user's own resume, story bank and documents. The user reads the suggestion and answers in their own words.
-- Works in the browser on a laptop (Chrome and Edge can listen to a meeting tab) and in the Orbit app for Windows (beta), which can listen to any call app.
+- Works in the browser on a laptop (Chrome and Edge can listen to a meeting tab) and in the Orbit app for Windows, free on the Microsoft Store ("Orbit AI Career Assistant", https://apps.microsoft.com/detail/9NJ1ZXGTCZKL), which can listen to any call app.
 - Coding help from a screenshot of a coding problem.
 - A story bank for "Tell me about a time..." questions, and saved answers.
 - Live sessions use interview minutes. How fast answers arrive, measured from real sessions, is published at https://orbitanswer.com/technical.

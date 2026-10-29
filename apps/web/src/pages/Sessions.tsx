@@ -11,7 +11,7 @@ import { api } from "../lib/api";
 import { errorText, formatDate, formatDuration, sessionKindLine } from "../lib/format";
 import { SESSION_TYPE_ICON } from "../lib/sessionIcons";
 import { useAsync } from "../lib/useAsync";
-import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { WINDOWS_APP_BETA, WINDOWS_APP_URL } from "../lib/desktop";
 import { linkButton } from "./jobs/links";
 import { Stat, Tool, type ToolCard } from "./prepare/parts";
 
@@ -25,7 +25,7 @@ const TOOLS: ToolCard[] = [
   { title: "Answer library", detail: "Answers you saved from past sessions, ready to reuse.", icon: MessageSquareQuote, to: "/documents/answers" },
   { title: "Story bank", detail: "Your STAR stories, so answers use real examples.", icon: BookOpen, to: "/documents/stories" },
   { title: "Rehearse first", detail: "A mock round with Saba before the real call.", icon: Target, to: "/prepare", ai: true },
-  { title: "Windows desktop app", detail: "Runs beside your call window with a privacy shield and taskbar controls.", icon: Laptop, to: DESKTOP_DOWNLOAD_URL, beta: DESKTOP_BETA },
+  { title: "Windows desktop app", detail: "Runs beside your call window with a privacy shield and taskbar controls.", icon: Laptop, to: WINDOWS_APP_URL, beta: WINDOWS_APP_BETA },
 ];
 
 export function SessionsPage() {

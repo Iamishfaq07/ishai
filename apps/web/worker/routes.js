@@ -38,6 +38,7 @@ export const APP_ROUTES = [
   /^\/jobs\/alerts\/off$/,
   /^\/jobs\/digest\/off$/,
   /^\/newsletter\/off$/, // the weekly tips email's stop link (one-time token)
+  /^\/review\/[^/]+$/, // a mentor's view of a shared mock interview report (the token is the access)
   /^\/code\/[^/]+$/,
   /^\/offers\/[^/]+$/,
   /^\/extension\/connect$/,
@@ -101,7 +102,7 @@ export const ROBOTS_ALLOW_API = [
   "/api/v1/public/",
 ];
 /** Whole subtrees robots.txt keeps crawlers out of (the public page at "/jobs" and "/resume-ai" itself stays open). */
-export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/_prerender/", "/live/", "/sessions/", "/documents/", "/resume-ai/", "/jobs/", "/code/", "/offers/", "/extension/", "/admin/", "/business/app/", "/business/invite/", "/application/", "/embed/", "/newsletter/"];
+export const ROBOTS_DISALLOW_PREFIX = ["/api/", "/_prerender/", "/live/", "/sessions/", "/documents/", "/resume-ai/", "/jobs/", "/code/", "/offers/", "/extension/", "/admin/", "/business/app/", "/business/invite/", "/application/", "/embed/", "/newsletter/", "/review/"];
 
 /**
  * An address that moved, and where it is now (a 301, so search engines move their record too), or null. Mirrors the

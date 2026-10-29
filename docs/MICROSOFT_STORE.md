@@ -264,8 +264,10 @@ Microsoft's web installer for free packaged apps
 **Alternative:** the NSIS installer, as "Or download the installer". It's still unsigned, so it keeps its Beta note.
 
 **How it's built.**
-- `apps/web/src/components/StoreBadge.tsx` is behind the flag `VITE_MS_STORE_LIVE`, which is **off**. Until it's
-  `true` the component renders nothing and the site is unchanged.
+- `apps/web/src/components/StoreBadge.tsx` is behind the flag `VITE_MS_STORE_LIVE`, which is **on** since the listing
+  went public (29 October 2026; `apps/web/.env.production`). Off, the component renders nothing.
+- "Get the Windows app" in the account menu, the front page and Sessions goes to the listing too (`WINDOWS_APP_URL`,
+  no Beta label: Microsoft signs the Store copy); the structured data's `downloadUrl` and `sameAs` name the listing.
 - It's wired into the signed-in Home's "Get Orbit for Windows" card and the interview assistant page
   (`CopilotPublic`).
 - The artwork is Microsoft's own badge, unmodified, from its generator: <https://apps.microsoft.com/badge>, static

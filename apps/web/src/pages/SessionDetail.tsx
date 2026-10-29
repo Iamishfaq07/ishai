@@ -36,6 +36,7 @@ import type { LiveLaunchState } from "./SessionSetup";
 import { JOBS_MATCHES } from "./jobs/paths";
 import { RESUME_AI_HOME } from "./resume/paths";
 import { CounterOfferEmail } from "../components/CounterOfferEmail";
+import { MentorCard } from "../components/MentorCard";
 import { JobWrapUp } from "./jobs/interview/WrapUp";
 
 type Tab = "review" | "summary" | "transcript" | "questions";
@@ -226,6 +227,9 @@ export function SessionDetailPage() {
           }}
         />
         {detail.data.summary?.counter_offer_email && <CounterOfferEmail email={detail.data.summary.counter_offer_email} />}
+        {session.type === "mock" && session.status === "ended" && detail.data.summary?.review && (
+          <MentorCard sessionId={session.id} questions={detail.data.summary.review.items.map((i) => i.question)} />
+        )}
         <DeliveryCard delivery={detail.data.summary?.delivery} />
         <CameraCard camera={detail.data.camera} />
         {session.status === "ended" && <DebriefStudio api={api} sessionId={session.id} refreshOn={detail.data.summary?.review} />}

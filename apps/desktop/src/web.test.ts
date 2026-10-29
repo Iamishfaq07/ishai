@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { WEB_TOOLS, kashsecLink, pickPromo, reportLink, toolLink, webLink } from "./web";
+import { WEB_TOOLS, kashsecLink, mentorLink, pickPromo, reportLink, toolLink, webLink } from "./web";
 
 describe("links to Orbit on the web", () => {
   it("tag where in the app they were clicked", () => {
@@ -47,5 +47,14 @@ describe("Home's one promo", () => {
     const hidden = new Set(["practice"]);
     for (let seen = 0; seen < 20; seen++) expect(pickPromo(seen, hidden)?.id).not.toBe("practice");
     expect(pickPromo(3, new Set(WEB_TOOLS.map((t) => t.id)))).toBeNull();
+  });
+});
+
+describe("Ask a mentor", () => {
+  it("opens the report's sharing card on the web, tagged as the history placement", () => {
+    const url = new URL(mentorLink("https://orbitanswer.com", "abc-123"));
+    expect(url.pathname).toBe("/sessions/abc-123");
+    expect(url.hash).toBe("#mentor");
+    expect(url.searchParams.get("utm_campaign")).toBe("history");
   });
 });
