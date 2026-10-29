@@ -498,6 +498,10 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/public/business/applications/{token}/saba/stop-country-sharing"),
     ("GET", "/v1/public/business/applications/{token}/offer"),
     ("POST", "/v1/public/business/applications/{token}/offer/respond"),
+    # The candidate's experience survey: the same emailed application token, no Orbit session.
+    ("GET", "/v1/public/business/applications/{token}/experience"),
+    ("POST", "/v1/public/business/applications/{token}/experience"),
+    ("DELETE", "/v1/public/business/applications/{token}/experience"),
     ("POST", "/v1/public/business/applications/{token}/withdraw"),
     ("GET", "/v1/public/business/applications/{token}/offer/history"),
     ("GET", "/v1/public/business/applications/{token}/handoff"),
