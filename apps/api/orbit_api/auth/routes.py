@@ -200,6 +200,7 @@ class AuthConfigOut(BaseModel):
     captcha: dict[str, str] | None
     email_verification: Literal["required", "off"]
     google: bool = False
+    apple: bool = False
 
 
 @router.get("/config", response_model=AuthConfigOut)
@@ -207,7 +208,7 @@ async def auth_config() -> AuthConfigOut:
     s = get_settings()
     return AuthConfigOut(captcha=captcha_config(),
                          email_verification="required" if s.verification_required else "off",
-                         google=s.google_enabled)
+                         google=s.google_enabled, apple=s.apple_enabled)
 
 
 class RegisterPendingOut(BaseModel):
@@ -682,6 +683,7 @@ async def confirm_email_change(body: TokenIn, request: Request, response: Respon
     user.email = row.new_email
     user.email_verified = True  # opening the link proves control of the new inbox
     user.google_sub = None  # that Google account is the old inbox; it must not keep opening this one
+    user.apple_sub = None  # likewise the Apple account
     await _sign_out_everywhere(db, user)  # every session signs in again, with the new address
     db.add(AuditLog(user_id=user.id, action="auth.email_changed", target=old, ip=_ip(request)))
     await db.commit()
@@ -745,6 +747,9 @@ async def export_my_data(user: Annotated[User, Depends(current_user)],
 from orbit_api.auth.google import mount as _mount_google  # noqa: E402
 
 _mount_google(router)
+from orbit_api.auth.native_sign_in import mount as _mount_native_sign_in  # noqa: E402
+
+_mount_native_sign_in(router)
 from orbit_api.auth.desktop_sign_in import mount as _mount_desktop_sign_in  # noqa: E402
 
 _mount_desktop_sign_in(router)

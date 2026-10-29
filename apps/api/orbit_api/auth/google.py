@@ -161,14 +161,22 @@ async def fetch_identity(code: str, verifier: str, uri: str) -> dict[str, Any]:
     id_token = token.json().get("id_token")
     if not isinstance(id_token, str):
         raise GoogleDenied("google")
+    return await verify_id_token(id_token, [s.google_client_id or ""])
+
+
+async def verify_id_token(id_token: str, audiences: list[str], nonce: str | None = None) -> dict[str, Any]:
+    """Check a Google id token's signature, issuer and audience (and its nonce, when one was asked for), and that
+    its email is verified. Shared by the web redirect and the iOS app's native sign-in."""
     try:
         # PyJWKClient fetches keys synchronously. A thread keeps that off the event loop, with a bounded timeout.
         key = await to_thread(_jwks.get_signing_key_from_jwt, id_token)
         claims: dict[str, Any] = jwt.decode(
-            id_token, key.key, algorithms=["RS256"], audience=s.google_client_id, issuer=_ISSUERS,
+            id_token, key.key, algorithms=["RS256"], audience=audiences, issuer=_ISSUERS,
         )
     except (jwt.PyJWTError, httpx.HTTPError, TimeoutError, OSError) as err:
         raise GoogleDenied("google") from err
+    if nonce is not None and not nonce_matches(claims.get("nonce"), nonce):
+        raise GoogleDenied("google")
     email = str(claims.get("email") or "").strip().lower()
     sub = str(claims.get("sub") or "")
     verified = claims.get("email_verified") is True or claims.get("email_verified") == "true"
@@ -178,15 +186,26 @@ async def fetch_identity(code: str, verifier: str, uri: str) -> dict[str, Any]:
     return {"sub": sub[:255], "email": email, "name": name}
 
 
+def nonce_matches(claimed: object, raw: str) -> bool:
+    """The app sends the token's nonce as the raw random string, and gives the provider its SHA-256 (hex), so a token
+    minted for another sign-in cannot be replayed here. A provider that echoes the raw value is accepted too."""
+    if not isinstance(claimed, str) or not raw:
+        return False
+    digest = hashlib.sha256(raw.encode()).hexdigest()
+    return secrets.compare_digest(claimed, digest) or secrets.compare_digest(claimed, raw)
+
+
 async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, Any],
-                          ref: str | None = None) -> tuple[User, bool, bool]:
-    """(user, created, claimed). `claimed` is an existing password account whose email was never confirmed:
+                          ref: str | None = None, column: str = "google_sub",
+                          audit: str = "auth.google") -> tuple[User, bool, bool]:
+    """(user, created, claimed). `column` is the provider's account-id column on User ("google_sub", "apple_sub"),
+    `audit` its audit-log action prefix. `claimed` is an existing password account whose email was never confirmed:
     Google just proved the inbox, so the old password and every session of it stop working. `ref`: a new account's
     invite or creator code (billing/referrals.py)."""
     s = get_settings()
     if not s.email_allowed(ident["email"]):
         raise GoogleDenied("private")
-    by_sub = await db.scalar(select(User).where(User.google_sub == ident["sub"]))
+    by_sub = await db.scalar(select(User).where(getattr(User, column) == ident["sub"]))
     user = by_sub or await db.scalar(select(User).where(User.email == ident["email"]))
     created = False
     if user is None:
@@ -198,7 +217,7 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
             name=ident["name"],
             password_hash=await hash_password(secrets.token_urlsafe(48)),
             has_password=False,
-            google_sub=ident["sub"],
+            **{column: ident["sub"]},
             email_verified=True,
             approved=approved,
             # Google doesn't say where they apply, so it's where they signed up from (the web app's edge says,
@@ -216,7 +235,7 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
                 raise GoogleDenied("google") from None
         else:
             created = True
-            db.add(AuditLog(user_id=user.id, action="auth.google_register", ip=_ip(request)))
+            db.add(AuditLog(user_id=user.id, action=f"{audit}_register", ip=_ip(request)))
             if not s.is_admin_email(ident["email"]):
                 await credits.grant_welcome(db, user, client_ip(request))
                 from orbit_api.billing import referrals
@@ -227,8 +246,9 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
         await db.commit()
         raise GoogleDenied("suspended")
     # Someone else's Google account must not be attached here.
-    already = user.google_sub == ident["sub"]
-    if user.google_sub and not already:
+    current = getattr(user, column)
+    already = current == ident["sub"]
+    if current and not already:
         raise GoogleDenied("google")
     # The inbox was never confirmed, so whoever set the password never proved they own it. Google just did:
     # the old password stops working and every session of it ends. A confirmed account keeps its password.
@@ -236,7 +256,7 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
     if claimed:
         user.password_hash = await hash_password(secrets.token_urlsafe(48))
         user.has_password = False
-    user.google_sub = ident["sub"]
+    setattr(user, column, ident["sub"])
     user.email_verified = True
     if ident["name"] and not user.name:
         user.name = ident["name"]
@@ -246,10 +266,10 @@ async def _find_or_create(db: AsyncSession, request: Request, ident: dict[str, A
         # Passkeys and an authenticator set up before the inbox was proven belong to whoever registered the
         # address: one would still sign in without the password, the other would lock the owner out.
         await forget_unproven_sign_ins(db, user.id)
-        db.add(AuditLog(user_id=user.id, action="auth.google_claim", ip=_ip(request)))
+        db.add(AuditLog(user_id=user.id, action=f"{audit}_claim", ip=_ip(request)))
         await sign_out_everywhere(db, user)
     elif not created:
-        db.add(AuditLog(user_id=user.id, action="auth.google", ip=_ip(request)))
+        db.add(AuditLog(user_id=user.id, action=audit, ip=_ip(request)))
     await db.commit()
     return user, created, claimed
 
