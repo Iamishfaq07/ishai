@@ -2,10 +2,14 @@ import AxeBuilder from "@axe-core/playwright";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext } from "@playwright/test";
 const API = process.env.ORBIT_TEST_API_URL ?? "http://127.0.0.1:8000";
 const OUTBOX = process.env.ORBIT_TEST_OUTBOX ?? "apps/api/e2e-outbox.txt";
 const ADMIN = process.env.ORBIT_TEST_ADMIN_EMAIL ?? "qa-admin@example.com";
+// The company's owner: a new address at the company's own domain each run. The run's one admin (ADMIN) can own
+// only three companies, so it only grants the plan, from a context of its own.
+const DOMAIN = "orbit-capacity-e2e.com";
+const OWNER = `owner-${crypto.randomUUID().slice(0, 8)}@${DOMAIN}`;
 async function token(email: string, pattern: RegExp) {
   let result = "";
   await expect.poll(async () => {
@@ -27,15 +31,21 @@ async function register(context: BrowserContext, email: string, name: string) {
   expect((await context.request.post(`${API}/v1/auth/verify-email/confirm`, { data: { token: verification } })).ok()).toBe(true);
   return (await response.json()).user.id as string;
 }
+/** The run's admin, signed in from a context of its own, for the admin-only calls. */
+async function asAdmin(browser: Browser) {
+  const admin = await browser.newContext();
+  await register(admin, ADMIN, "Orbit Admin");
+  return admin.request;
+}
 test("Business capacity: approved handoff, recorded hire, AI brief, opt-in alerts and reopened vacancy", async ({ page, context, browser }, info) => {
   await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
-  const ownerId = await register(context, ADMIN, "Alex Capacity Owner");
-  const domain = ADMIN.split("@")[1]!;
+  const ownerId = await register(context, OWNER, "Alex Capacity Owner");
+  const domain = DOMAIN;
   const made = await context.request.post(`${API}/v1/business/companies`, { data: { name: "Capacity Studio", website: `https://${domain}`, size: "11-50", country: "IN" } });
   expect(made.status(), await made.text()).toBe(201);
   const cid = (await made.json()).id as string;
   expect((await context.request.post(`${API}/v1/business/companies/${cid}/verification/account`)).ok()).toBe(true);
-  expect((await context.request.post(`${API}/v1/admin/business/companies/${cid}/plan`, { data: { plan: "starter" } })).ok()).toBe(true);
+  expect((await (await asAdmin(browser)).post(`${API}/v1/admin/business/companies/${cid}/plan`, { data: { plan: "starter" } })).ok()).toBe(true);
   const manager = await browser.newContext();
   const managerEmail = `manager-${crypto.randomUUID().slice(0, 8)}@${domain}`;
   await register(manager, managerEmail, "Morgan Hiring Manager");

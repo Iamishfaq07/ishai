@@ -1,9 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { readFile } from "node:fs/promises";
-import { expect, test, type BrowserContext } from "@playwright/test";
+import { expect, test, type Browser, type BrowserContext } from "@playwright/test";
 const API = process.env.ORBIT_TEST_API_URL ?? "http://127.0.0.1:8000";
 const OUTBOX = process.env.ORBIT_TEST_OUTBOX ?? "apps/api/e2e-outbox.txt";
 const ADMIN = process.env.ORBIT_TEST_ADMIN_EMAIL ?? "qa-admin@example.com";
+// The company's owner: a new address at the company's own domain each run. The run's one admin (ADMIN) can own
+// only three companies, so it only grants the plan, from a context of its own.
+const DOMAIN = "orbit-knowledge-e2e.com";
+const OWNER = `owner-${crypto.randomUUID().slice(0, 8)}@${DOMAIN}`;
 async function token(email: string, pattern: RegExp) {
   let result = "";
   await expect.poll(async () => {
@@ -24,15 +28,21 @@ async function register(context: BrowserContext, email: string, name: string) {
   const verification = await token(email, /verify-email\?token=([\w-]+)/);
   expect((await context.request.post(`${API}/v1/auth/verify-email/confirm`, { data: { token: verification } })).ok()).toBe(true);
 }
+/** The run's admin, signed in from a context of its own, for the admin-only calls. */
+async function asAdmin(browser: Browser) {
+  const admin = await browser.newContext();
+  await register(admin, ADMIN, "Orbit Admin");
+  return admin.request;
+}
 const policy = "Interview feedback policy: submit your independent scorecard before reading peer feedback. Record observed evidence and discuss disagreements in the debrief.";
 
 test("Business knowledge: private drafts, cited answers, versioned publishing and access withdrawal", async ({ page, context, browser }, info) => {
   await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
-  await register(context, ADMIN, "Jordan Policy Owner");
-  const created = await context.request.post(`${API}/v1/business/companies`, { data: { name: "Knowledge Studio", website: "https://orbit-knowledge-e2e.com", size: "11-50", country: "IN" } });
+  await register(context, OWNER, "Jordan Policy Owner");
+  const created = await context.request.post(`${API}/v1/business/companies`, { data: { name: "Knowledge Studio", website: `https://${DOMAIN}`, size: "11-50", country: "IN" } });
   expect(created.status(), await created.text()).toBe(201);
   const cid = (await created.json()).id as string;
-  expect((await context.request.post(`${API}/v1/admin/business/companies/${cid}/plan`, { data: { plan: "starter" } })).ok()).toBe(true);
+  expect((await (await asAdmin(browser)).post(`${API}/v1/admin/business/companies/${cid}/plan`, { data: { plan: "starter" } })).ok()).toBe(true);
   const reader = await browser.newContext(); await reader.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
   const email = `reader-${crypto.randomUUID().slice(0, 8)}@orbit-knowledge-e2e.com`;
   await register(reader, email, "Casey Interviewer");
