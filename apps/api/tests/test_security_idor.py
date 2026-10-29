@@ -595,6 +595,8 @@ ADMIN_ROUTES: list[tuple[str, str, dict[str, Any]]] = [
     ("GET", "/v1/admin/audit", {}),
     ("GET", "/v1/admin/audit?scope=all&user_id={target}", {}),
     ("GET", "/v1/admin/stats", {}),
+    ("GET", "/v1/admin/newsletter", {}),
+    ("POST", "/v1/admin/newsletter/preview", {}),
     ("GET", "/v1/admin/payments", {}),
     ("GET", "/v1/admin/payments?only=all", {}),
     ("POST", "/v1/admin/payments/{target_order}", {"json": {"action": "approve"}}),

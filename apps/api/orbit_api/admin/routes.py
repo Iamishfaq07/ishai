@@ -59,6 +59,7 @@ from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.runtime_config import (
     ANNOUNCEMENT_MAX,
     EDITABLE_KEYS,
+    NEWSLETTER_NOTE_MAX,
     ConfigSecretMissing,
     encrypt_secret,
     get_effective_config,
@@ -92,6 +93,9 @@ class ConfigOut(BaseModel):
     # The site-wide announcement banner ("" = none) and its tone.
     announcement: str = ""
     announcement_tone: str = "info"
+    # The admin's note at the top of the weekly tips and offers email ("" = none) and its link.
+    newsletter_note: str = ""
+    newsletter_link: str = ""
 
 
 class ConfigIn(BaseModel):
@@ -107,6 +111,8 @@ class ConfigIn(BaseModel):
     deepgram_api_key: str | None = None
     announcement: str | None = Field(None, max_length=ANNOUNCEMENT_MAX)  # "" takes it down
     announcement_tone: Literal["info", "warning"] | None = None
+    newsletter_note: str | None = Field(None, max_length=NEWSLETTER_NOTE_MAX)  # "" removes it
+    newsletter_link: str | None = Field(None, max_length=300)
 
 
 def _snapshot() -> ConfigOut:
@@ -123,6 +129,8 @@ def _snapshot() -> ConfigOut:
         deepgram_api_key_set=bool(cfg.deepgram_api_key),
         announcement=cfg.announcement,
         announcement_tone=cfg.announcement_tone,
+        newsletter_note=cfg.newsletter_note,
+        newsletter_link=cfg.newsletter_link,
     )
 
 

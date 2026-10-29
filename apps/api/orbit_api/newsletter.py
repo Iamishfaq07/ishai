@@ -3,11 +3,14 @@
 - `GET  /v1/newsletter`: the account's choice: true, false, or null when it was never asked (Today asks once).
 - `PUT  /v1/newsletter`: change it ({subscribed, source}). Sign-up can choose it too (auth/routes.py).
 - `POST /v1/newsletter/off`: the email's stop link ({token}), without signing in.
+- `GET  /v1/admin/newsletter`: how many chose it, said no, or were never asked, and how many got it this week.
+- `POST /v1/admin/newsletter/preview`: this week's email for the admin's own account, sent to the admin.
 
 The email is built from what's true that week, never invented: two of Orbit's tools (the same ones the site
 describes), interview guides added or re-checked in the last seven days, the FIRST10 offer only while it runs and
 only for accounts that haven't bought anything, and, when the account has an interview coming up, its prep. Sent at
-most once a week by the sweeper (sessions/cleanup.py). Nobody who didn't choose it gets it.
+most once a week by the sweeper (sessions/cleanup.py). Nobody who didn't choose it gets it. The admin can put a
+note at the top (an offer, news), with a link (runtime_config.py `newsletter_note`, `newsletter_link`).
 """
 
 from __future__ import annotations
@@ -19,15 +22,17 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from orbit_api.admin.routes import require_admin
 from orbit_api.auth.security import current_user
 from orbit_api.config import get_settings
 from orbit_api.db import get_db, sessionmaker
 from orbit_api.models import JobApplication, NewsletterChoice, User
 from orbit_api.providers.email import OutgoingEmail, can_deliver, get_email_sender
 from orbit_api.ratelimit import limit, limit_user
+from orbit_api.runtime_config import get_effective_config
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/v1/newsletter", tags=["account"])
@@ -109,6 +114,10 @@ async def compose(db: AsyncSession, user: User, token: str, now: datetime) -> Ou
     interview = await _next_interview(db, user, now)
 
     lines = [f"Hi {(user.name or '').split(' ')[0] or 'there'},", ""]
+    cfg = get_effective_config()
+    if cfg.newsletter_note:
+        link = cfg.newsletter_link
+        lines += [cfg.newsletter_note] + ([f"{web}{link}" if link.startswith("/") else link] if link else []) + [""]
     if interview:
         company, when = interview
         when = when if when.tzinfo else when.replace(tzinfo=UTC)
@@ -171,6 +180,43 @@ async def send_due(now: datetime | None = None) -> int:
     if sent:
         log.info("sent %d weekly tips email(s)", sent)
     return sent
+
+
+admin_router = APIRouter(prefix="/v1/admin/newsletter", tags=["admin"])
+
+
+class StatsOut(BaseModel):
+    subscribed: int
+    declined: int  # said no, or stopped it
+    never_asked: int  # verified accounts with no choice yet (Today asks them once)
+    sent_last_week: int
+
+
+class PreviewOut(BaseModel):
+    to: str
+
+
+@admin_router.get("", response_model=StatsOut)
+async def stats(_: Annotated[User, Depends(require_admin)], db: Annotated[AsyncSession, Depends(get_db)]) -> StatsOut:
+    by: dict[bool, int] = {bool(k): int(n) for k, n in (await db.execute(
+        select(NewsletterChoice.subscribed, func.count()).group_by(NewsletterChoice.subscribed))).all()}
+    users = int(await db.scalar(select(func.count()).select_from(User).where(User.email_verified.is_(True))) or 0)
+    chose = int(await db.scalar(select(func.count()).select_from(NewsletterChoice).join(
+        User, User.id == NewsletterChoice.user_id).where(User.email_verified.is_(True))) or 0)
+    week = int(await db.scalar(select(func.count()).select_from(NewsletterChoice).where(
+        NewsletterChoice.sent_at >= datetime.now(UTC) - WEEK)) or 0)
+    return StatsOut(subscribed=int(by.get(True, 0)), declined=int(by.get(False, 0)),
+                    never_asked=max(0, users - chose), sent_last_week=week)
+
+
+@admin_router.post("/preview", response_model=PreviewOut, dependencies=[_limit])
+async def preview(admin: Annotated[User, Depends(require_admin)],
+                  db: Annotated[AsyncSession, Depends(get_db)]) -> PreviewOut:
+    """This week's email as the admin's own account would get it (its stop link is a dummy), to the admin."""
+    mail = await compose(db, admin, "preview", datetime.now(UTC))
+    await get_email_sender().send(OutgoingEmail(to=mail.to, subject=f"[Preview] {mail.subject}", text=mail.text,
+                                                footer=mail.footer, unsubscribe=mail.unsubscribe))
+    return PreviewOut(to=admin.email)
 
 
 class ChoiceOut(BaseModel):
