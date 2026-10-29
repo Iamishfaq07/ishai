@@ -467,6 +467,9 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/v1/public/business/companies/{slug}"), ("GET", "/v1/public/business/companies/{slug}/jobs/{job_slug}"),
     ("GET", "/v1/public/business/companies/{slug}/logo"), ("GET", "/v1/public/business/sitemap"),
     ("GET", "/v1/public/companies/{slug}/jobs"),  # a company guide's open jobs: public posts only
+    # Ask a mentor: the link's 192-bit token (only its hash is stored) is the credential, for the shared snapshot only;
+    # it expires and the owner can turn it off (tests/test_mentor.py).
+    ("GET", "/v1/public/mentor-review/{token}"), ("POST", "/v1/public/mentor-review/{token}/comments"),
     ("POST", "/v1/public/business/jobs/{job_id}/apply"), ("POST", "/v1/public/business/jobs/{job_id}/report"),
     ("GET", "/v1/public/business/invites/{token}"),
     ("GET", "/v1/public/business/applications/{token}"),

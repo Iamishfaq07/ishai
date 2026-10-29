@@ -110,6 +110,7 @@ import {
   publicPageFor,
 } from "./routes";
 
+const MentorReviewPage = lazy(() => import("./pages/MentorReviewPage").then((module) => ({ default: module.MentorReviewPage })));
 const SupportChat = lazy(() => import("./components/SupportChat").then((module) => ({ default: module.SupportChat })));
 
 /** While a page's code downloads (first visit only; later visits are instant). */
@@ -269,6 +270,7 @@ export function App() {
       <Route path="/jobs/alerts/off" element={<StopJobAlertsPage />} />
       <Route path="/jobs/digest/off" element={<StopWeeklyDigestPage />} />
       <Route path="/newsletter/off" element={<StopNewsletterPage />} />
+      <Route path="/review/:token" element={<Suspense fallback={null}><MentorReviewPage /></Suspense>} />
       {/* Public: the scanned code is the credential, so the phone needn't sign in. */}
       <Route path="/companion" element={<CompanionPage />} />
       {/* Public: one practice question with instant feedback, no account needed (Workstream C's page). */}

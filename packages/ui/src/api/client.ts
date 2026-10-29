@@ -34,6 +34,8 @@ import type {
   AdminConfig,
   AdminConfigUpdate,
   AdminNewsletterStats,
+  MentorReview,
+  MentorShare,
   AdminPayment,
   AdminPayments,
   AdminReferralCode,
@@ -1144,6 +1146,15 @@ export function createApiClient(options: ApiClientOptions) {
     getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),
     getFeedbackReport: (days = 30) => json<FeedbackReport>(`/v1/admin/feedback?days=${days}`),
     getAdminConfig: () => json<AdminConfig>("/v1/admin/config"),
+    /** Ask a mentor: a mock report shared by an expiring, revocable link, and what mentors said. */
+    mentorShares: (sessionId: string) => json<MentorShare[]>(`/v1/sessions/${encodeURIComponent(sessionId)}/mentor-shares`),
+    createMentorShare: (sessionId: string, req: { label?: string; days?: number; answers?: boolean }) =>
+      json<MentorShare>(`/v1/sessions/${encodeURIComponent(sessionId)}/mentor-shares`, { method: "POST", body: body(req) }),
+    revokeMentorShare: (shareId: string) => json<void>(`/v1/mentor-shares/${encodeURIComponent(shareId)}`, { method: "DELETE" }),
+    markMentorRead: (sessionId: string) => json<void>("/v1/mentor-shares/read", { method: "POST", body: body({ session_id: sessionId }) }),
+    mentorReview: (token: string) => json<MentorReview>(`/v1/public/mentor-review/${encodeURIComponent(token)}`),
+    mentorComment: (token: string, req: { author: string; body: string; item: number | null }) =>
+      json<MentorReview>(`/v1/public/mentor-review/${encodeURIComponent(token)}/comments`, { method: "POST", body: body(req) }),
     /** The weekly tips and offers email: who chose it, and a preview of this week's to the admin. */
     adminNewsletter: () => json<AdminNewsletterStats>("/v1/admin/newsletter"),
     previewNewsletter: () => json<{ to: string }>("/v1/admin/newsletter/preview", { method: "POST" }),
