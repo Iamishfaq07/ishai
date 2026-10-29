@@ -61,7 +61,7 @@ only while Continue with Google is in progress. It does not set an advertising o
 device (theme, this notice, a support-chat token) stay in the browser's own storage. Razorpay loads only when
 someone buys a pack. Deepgram transcribes audio. DeepSeek (and a backup model, only if DeepSeek is down) writes
 answers. Cloudflare serves the site. Sentry stays off unless `ORBIT_SENTRY_DSN` is set, and then it sends no
-bodies or PII (`observability.py`). Account email is transactional only. There is no newsletter.
+bodies or PII (`observability.py`). Account email is transactional. The weekly tips and offers email (`newsletter.py`) is opt-in only (sign-up box, unticked by default; Today's one-time question; Settings), carries a one-click stop link and a List-Unsubscribe header, and the choice is in the account export.
 
 ## Age
 Orbit is for students and job seekers, including people under 18. Sign-up does not ask for an age or a date of

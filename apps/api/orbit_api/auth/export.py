@@ -52,6 +52,7 @@ from orbit_api.models import (
     LaunchAccessClaim,
     LinkedInProfileRow,
     LiveSessionRow,
+    NewsletterChoice,
     Question,
     Resume,
     ResumeSnapshot,
@@ -137,6 +138,7 @@ async def build_export(db: AsyncSession, user_id: str) -> dict[str, Any]:
             AccountNotice.user_id == user_id).order_by(AccountNotice.created_at))).all()],
         "activity": [_row(e) for e in (await db.scalars(select(ActivityEvent).where(
             ActivityEvent.user_id == user_id).order_by(ActivityEvent.created_at))).all()],
+        "newsletter": _row(nl) if (nl := await db.get(NewsletterChoice, user_id)) else None,
         "hidden_jobs": [_row(r) for r in (await db.scalars(select(HiddenJob).where(
             HiddenJob.user_id == user_id).order_by(HiddenJob.created_at))).all()],
         "answer_ratings": [_row(f) for f in (await db.scalars(

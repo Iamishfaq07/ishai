@@ -1,0 +1,92 @@
+"""The weekly tips and offers email: opt-in only, at most once a week, true to the week, stoppable without sign-in."""
+import uuid
+from datetime import UTC, datetime
+
+import pytest
+from fastapi.testclient import TestClient
+
+from orbit_api import newsletter
+from orbit_api.config import get_settings
+from orbit_api.providers.email import OutgoingEmail
+from tests.test_email_flows import _outbox
+from tests.test_job_alerts import _me, _verify
+from tests.test_jobs import jobs, run  # noqa: F401  (the fixture)
+
+
+def _mine(email: str) -> list[OutgoingEmail]:
+    return [m for m in _outbox().sent if m.to == email and m.unsubscribe and "newsletter/off" in m.unsubscribe]
+
+
+def _send(client: TestClient) -> int:
+    out: list[int] = []
+
+    async def go() -> None:
+        out.append(await newsletter.send_due())
+    run(client, go)
+    return out[0]
+
+
+def _signup(client: TestClient, **extra: object) -> dict[str, str]:
+    r = client.post("/v1/auth/register", json={"email": f"n-{uuid.uuid4().hex[:8]}@example.com",
+                                               "password": "correct horse battery", **extra})
+    assert r.status_code == 201, r.text
+    client.cookies.clear()
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+def test_nobody_gets_it_without_choosing_it(jobs: TestClient) -> None:  # noqa: F811
+    h = _signup(jobs)
+    me = _me(jobs, h)
+    _verify(jobs, me["id"])
+    assert jobs.get("/v1/newsletter", headers=h).json() == {"subscribed": None}  # never asked
+    _send(jobs)
+    assert not _mine(me["email"])
+    # An unticked sign-up box is a no (Today doesn't ask again).
+    h2 = _signup(jobs, newsletter=False)
+    assert jobs.get("/v1/newsletter", headers=h2).json() == {"subscribed": False}
+    # Saying no is remembered (Today stops asking), and still sends nothing.
+    assert jobs.put("/v1/newsletter", headers=h, json={"subscribed": False, "source": "today"}).json() == {
+        "subscribed": False}
+    _send(jobs)
+    assert not _mine(me["email"])
+
+
+def test_no_offer_line_when_no_offer_runs(jobs: TestClient) -> None:  # noqa: F811
+    h = _signup(jobs, newsletter=True)
+    me = _me(jobs, h)
+    _verify(jobs, me["id"])
+    _send(jobs)
+    (m,) = _mine(me["email"])
+    assert "FIRST10" not in m.text and "off your first pack" not in m.subject
+
+
+def test_chosen_at_sign_up_sent_once_a_week_with_the_offer_and_stopped_by_link(
+        jobs: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    monkeypatch.setattr(get_settings(), "first_purchase_percent", 10)
+    h = _signup(jobs, newsletter=True)
+    me = _me(jobs, h)
+    assert jobs.get("/v1/newsletter", headers=h).json() == {"subscribed": True}
+    _send(jobs)
+    assert not _mine(me["email"])  # not until the address is verified
+    _verify(jobs, me["id"])
+    _send(jobs)
+    mail = _mine(me["email"])
+    assert len(mail) == 1
+    m = mail[0]
+    assert "FIRST10" in m.text and "First purchase only" in m.text  # the account hasn't bought anything
+    assert m.subject.startswith("10% off your first pack")
+    assert "This week's tools:" in m.text and "chose Orbit's weekly tips" in (m.footer or "")
+    _send(jobs)
+    assert len(_mine(me["email"])) == 1  # not again this week
+
+    token = (m.unsubscribe or "").split("token=")[1]
+    assert jobs.post("/v1/newsletter/off", json={"token": "x" * 32}).status_code == 404
+    assert jobs.post("/v1/newsletter/off", json={"token": token}).status_code == 204
+    assert jobs.get("/v1/newsletter", headers=h).json() == {"subscribed": False}
+
+
+def test_settings_turns_it_on_and_the_week_decides_the_tools() -> None:
+    a, b = newsletter.tools_for(datetime(2026, 11, 2, tzinfo=UTC).date()), newsletter.tools_for(
+        datetime(2026, 11, 9, tzinfo=UTC).date())
+    assert len(a) == 2 and a != b and a[0] != a[1]
+    assert all(path.startswith("/") for _, _, path in newsletter.TOOLS)

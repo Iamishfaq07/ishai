@@ -112,6 +112,9 @@ class RegisterIn(BaseModel):
     country: str | None = Field(None, max_length=8)
     # The invite or creator code of the link they came from (billing/referrals.py); one that can't be used is ignored.
     ref: str | None = Field(None, max_length=64)
+    # The sign-up form's "Send me Orbit's weekly tips and offers" box (newsletter.py), unticked by default. None (an
+    # older client, the desktop app): not asked here, so Today asks once.
+    newsletter: bool | None = None
 
 
 class LoginIn(BaseModel):
@@ -275,6 +278,10 @@ async def _create_user(db: AsyncSession, request: Request, email: str, body: Reg
     db.add(user)
     await db.flush()
     db.add(AuditLog(user_id=user.id, action="auth.register", ip=_ip(request)))
+    if body.newsletter is not None:
+        from orbit_api.newsletter import set_choice
+
+        await set_choice(db, user.id, body.newsletter, "signup")
     # The welcome credits (1 resume-AI credit, 20 interview minutes): one account per network, capped a day.
     if not s.is_admin_email(email):
         await credits.grant_welcome(db, user, client_ip(request))

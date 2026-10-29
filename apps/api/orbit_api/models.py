@@ -843,6 +843,21 @@ class HiddenJob(TimestampMixin, Base):
     label: Mapped[str] = mapped_column(String(300), default="")
 
 
+class NewsletterChoice(TimestampMixin, Base):
+    """Whether the account wants Orbit's weekly tips and offers email (newsletter.py). Opt-in only: no row means
+    they were never asked (Today asks once), `subscribed` false means they said no or stopped it. `token` is the
+    email's stop link, which works without signing in."""
+
+    __tablename__ = "newsletter_choices"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    subscribed: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Where they chose: "signup", "settings", "today" or "email" (the stop link).
+    source: Mapped[str] = mapped_column(String(16), default="settings")
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    token: Mapped[str | None] = mapped_column(String(64), unique=True, index=True)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class JobSearchProfile(TimestampMixin, Base):
     """What the user's job feed looks for: filled in from a resume by the AI (`suggested`, cached per resume content
     hash), then theirs to edit (`prefs`, job_portal/profile.py)."""
