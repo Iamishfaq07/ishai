@@ -11,6 +11,13 @@ from orbit_api.documents import parsing
 from orbit_api.documents.parsing import ParseError, extract_text_isolated, inspect_docx_archive
 
 
+@pytest.fixture(autouse=True)
+def _isolation_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Every app started earlier in the run (lifespan) self-tests isolation in a background thread; one that failed
+    # under load leaves the module in degraded, in-process mode. These tests are about the child process itself.
+    monkeypatch.setattr(parsing, "ISOLATION_BROKEN", False)
+
+
 def _docx(text: str = "Security Engineer at Acme. Led the AppSec program.") -> bytes:
     import docx
 
