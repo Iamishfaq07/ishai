@@ -25,8 +25,12 @@ export const SAME_AS = [
   // "https://x.com/<orbit-handle>",
   // "https://www.youtube.com/@<orbit-channel>",
   // "https://www.producthunt.com/products/<orbit>",
-  // "https://apps.microsoft.com/detail/<store-id>",
+  // Orbit AI Career Assistant on the Microsoft Store (public since certification, D78).
+  "https://apps.microsoft.com/detail/9NJ1ZXGTCZKL",
 ];
+
+/** The Windows app's Microsoft Store listing: Microsoft signs and updates that copy. */
+export const MS_STORE_LISTING = "https://apps.microsoft.com/detail/9NJ1ZXGTCZKL";
 
 /** The Windows app's installer (the same address the site's download buttons use: apps/web/src/lib/desktop.ts). */
 export const DESKTOP_DOWNLOAD_URL = "https://orbit-downloads.ishfaq.workers.dev/Orbit-Setup.exe";
@@ -76,7 +80,8 @@ export function desktopApp() {
     applicationCategory: "BusinessApplication",
     applicationSubCategory: "Interview assistant",
     operatingSystem: "Windows 10, Windows 11",
-    downloadUrl: DESKTOP_DOWNLOAD_URL,
+    downloadUrl: MS_STORE_LISTING,
+    installUrl: MS_STORE_LISTING,
     url: siteUrl("/"),
     publisher: { "@id": ORGANIZATION_ID },
   };

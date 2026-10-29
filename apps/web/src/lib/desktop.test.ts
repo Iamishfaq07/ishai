@@ -20,4 +20,16 @@ describe("the Microsoft Store badge", () => {
     expect(MS_STORE_LIVE).toBe(true);
     expect(MS_STORE_URL).toBe("https://apps.microsoft.com/detail/9NJ1ZXGTCZKL?mode=direct");
   });
+
+  it("sends Windows downloads to the listing (no Beta label) once live, else the direct installer", async () => {
+    vi.stubEnv("VITE_MS_STORE_LIVE", "true");
+    let m = await import("./desktop");
+    expect(m.WINDOWS_APP_URL).toBe(m.MS_STORE_URL);
+    expect(m.WINDOWS_APP_BETA).toBe(false);
+    vi.resetModules();
+    vi.stubEnv("VITE_MS_STORE_LIVE", "");
+    m = await import("./desktop");
+    expect(m.WINDOWS_APP_URL).toBe(m.DESKTOP_DOWNLOAD_URL);
+    expect(m.WINDOWS_APP_BETA).toBe(m.DESKTOP_BETA);
+  });
 });

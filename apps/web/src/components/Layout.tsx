@@ -48,7 +48,7 @@ import { useAuth } from "../lib/auth";
 import { trackAs, trackPage } from "../lib/activity";
 import { useCountry } from "../lib/country";
 import { resetNotices } from "../lib/notices";
-import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { WINDOWS_APP_BETA, WINDOWS_APP_URL } from "../lib/desktop";
 import { CONTACT_PAGE, POLICY_LINKS } from "../lib/contact";
 import { SHELL_EVENTS, isTypingTarget, openSupport } from "../lib/shell";
 import { asksForShortcuts } from "./shortcutKeys";
@@ -707,8 +707,8 @@ function ExploreMenu({
         </li>
         {isWindows() && (
           <li>
-            <a href={DESKTOP_DOWNLOAD_URL} className={row}>
-              <Download className={icon} aria-hidden /> Get the Windows app{DESKTOP_BETA && " (beta)"}
+            <a href={WINDOWS_APP_URL} className={row}>
+              <Download className={icon} aria-hidden /> Get the Windows app{WINDOWS_APP_BETA && " (beta)"}
             </a>
           </li>
         )}
@@ -820,9 +820,9 @@ function AccountMenu({
             Support
           </button>
           {isWindows() && (
-            <a role="menuitem" href={DESKTOP_DOWNLOAD_URL} className={item} onClick={() => setOpen(false)}>
+            <a role="menuitem" href={WINDOWS_APP_URL} className={item} onClick={() => setOpen(false)}>
               <Download className="h-4 w-4 text-zinc-500" aria-hidden />
-              Get the Windows app{DESKTOP_BETA && " (beta)"}
+              Get the Windows app{WINDOWS_APP_BETA && " (beta)"}
             </a>
           )}
           <div className="my-1 h-px bg-zinc-200 dark:bg-white/10" />
