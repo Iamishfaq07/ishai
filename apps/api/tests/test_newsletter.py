@@ -80,6 +80,7 @@ def test_chosen_at_sign_up_sent_once_a_week_with_the_offer_and_stopped_by_link(
     assert len(_mine(me["email"])) == 1  # not again this week
 
     token = (m.unsubscribe or "").split("token=")[1]
+    assert (m.one_click or "").endswith(f"/api/v1/newsletter/one-click?token={token}")
     assert jobs.post("/v1/newsletter/off", json={"token": "x" * 32}).status_code == 404
     assert jobs.post("/v1/newsletter/off", json={"token": token}).status_code == 204
     assert jobs.get("/v1/newsletter", headers=h).json() == {"subscribed": False}
@@ -129,3 +130,39 @@ def test_admin_note_link_stats_and_preview() -> None:
             c.put("/v1/admin/config", headers=admin, json={"newsletter_note": "", "newsletter_link": ""})
         finally:
             next(gen, None)
+
+
+class _FakeSmtp:
+    def __init__(self, *args: object, **kwargs: object) -> None: ...
+
+    def __enter__(self) -> "_FakeSmtp":
+        return self
+
+    def __exit__(self, *args: object) -> None: ...
+
+
+def test_one_click_unsubscribe_and_its_headers(jobs: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
+    from email.message import EmailMessage
+
+    from orbit_api.providers import email as email_mod
+
+    h = _signup(jobs, newsletter=True)
+    me = _me(jobs, h)
+    _verify(jobs, me["id"])
+    _send(jobs)
+    (m,) = _mine(me["email"])
+    token = (m.unsubscribe or "").split("token=")[1]
+    # The SMTP sender lists the one-click address first and says it takes a POST.
+    seen: list[EmailMessage] = []
+    monkeypatch.setattr("orbit_api.providers.email.smtplib.SMTP", _FakeSmtp)
+    sender = email_mod.SmtpSender("localhost", 25, None, None, False, "Orbit <hello@example.com>")
+    monkeypatch.setattr(sender, "_login_and_send", lambda smtp, msg: seen.append(msg))
+    sender._send_sync(m)
+    assert seen[0]["List-Unsubscribe"] == f"<{m.one_click}>, <{m.unsubscribe}>"
+    assert seen[0]["List-Unsubscribe-Post"] == "List-Unsubscribe=One-Click"
+
+    assert jobs.post("/v1/newsletter/one-click", params={"token": "x" * 32},
+                     data={"List-Unsubscribe": "One-Click"}).status_code == 404
+    r = jobs.post("/v1/newsletter/one-click", params={"token": token}, data={"List-Unsubscribe": "One-Click"})
+    assert r.status_code == 200, r.text
+    assert jobs.get("/v1/newsletter", headers=h).json() == {"subscribed": False}

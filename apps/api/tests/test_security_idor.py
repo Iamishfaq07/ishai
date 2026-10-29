@@ -447,6 +447,7 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("POST", "/v1/jobs/alerts/off"),
     ("POST", "/v1/jobs/playbook/digest/off"),
     ("POST", "/v1/newsletter/off"),  # the weekly tips email's stop link: the token says whose
+    ("POST", "/v1/newsletter/one-click"),  # its RFC 8058 one-click unsubscribe (mail apps POST it): the token, too
     # Google sign-in: the redirect out and back, before anyone is signed in (the state cookie guards the return).
     ("GET", "/v1/auth/google/start"), ("GET", "/v1/auth/google/callback"),
     # The desktop app's Google sign-in (D81): the loopback code and its PKCE verifier are the credential.
