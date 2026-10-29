@@ -16,6 +16,12 @@ async function mailToken(email: string, pattern: RegExp) {
 }
 async function register(context: BrowserContext, email: string) {
   const response = await context.request.post(`${API}/v1/auth/register`, { data: { email, name: "Alex Experience Owner", password: "correct horse battery" } });
+  // Every Business spec shares the one admin of the run (playwright.config.ts): later specs sign in.
+  if (response.status() === 409) {
+    const login = await context.request.post(`${API}/v1/auth/login`, { data: { email, password: "correct horse battery" } });
+    expect(login.ok(), await login.text()).toBe(true);
+    return (await login.json()).user.id as string;
+  }
   expect(response.status(), await response.text()).toBe(201);
   const token = await mailToken(email, /verify-email\?token=([\w-]+)/);
   expect((await context.request.post(`${API}/v1/auth/verify-email/confirm`, { data: { token } })).ok()).toBe(true);

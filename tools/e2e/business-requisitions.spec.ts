@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test, type BrowserContext } from "@playwright/test";
 const API = process.env.ORBIT_TEST_API_URL ?? "http://127.0.0.1:8000";
 const OUTBOX = process.env.ORBIT_TEST_OUTBOX ?? "apps/api/e2e-outbox.txt";
-const ADMIN = process.env.ORBIT_TEST_ADMIN_EMAIL ?? "qa-admin@orbit-business-e2e.com";
+const ADMIN = process.env.ORBIT_TEST_ADMIN_EMAIL ?? "qa-admin@example.com";
 const password = "correct horse battery";
 async function token(email: string, pattern: RegExp) {
   let value = "";
@@ -16,6 +16,12 @@ async function token(email: string, pattern: RegExp) {
 }
 async function register(context: BrowserContext, email: string, name: string) {
   const created = await context.request.post(`${API}/v1/auth/register`, { data: { email, name, password } });
+  // Every Business spec shares the one admin of the run (playwright.config.ts): later specs sign in.
+  if (created.status() === 409) {
+    const login = await context.request.post(`${API}/v1/auth/login`, { data: { email, password: password } });
+    expect(login.ok(), await login.text()).toBe(true);
+    return (await login.json()).user.id as string;
+  }
   expect(created.status(), await created.text()).toBe(201);
   const verification = await token(email, /verify-email\?token=([\w-]+)/);
   const verified = await context.request.post(`${API}/v1/auth/verify-email/confirm`, { data: { token: verification } });
