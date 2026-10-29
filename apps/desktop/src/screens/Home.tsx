@@ -49,6 +49,7 @@ const QUICK_START: Array<{ type: SessionType; title: string; body: string; spot:
 const PROMO_SPOT: Record<Exclude<WebTool["id"], "kashsec">, SpotKind> = {
   practice: "intro",
   video: "video",
+  atlas: "questions",
   resume: "ats",
   jobs: "briefcase",
   linkedin: "contact",
