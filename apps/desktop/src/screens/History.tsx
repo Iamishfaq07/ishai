@@ -27,11 +27,12 @@ import {
   useReportPolling, confirmDialog, ChevronRight, Clock, MessageCircle, reportLanguageNote, scriptLang,
   sessionLanguageLabel } from "@orbit/ui";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { api } from "../api";
+import { WEB_URL, api } from "../api";
 import { ScorePip, TypeMark } from "../bits";
 import { downloadText, errText, formatClock, formatDate, formatDuration, SESSION_TYPE_LABEL, sessionKindLine } from "../format";
 import { SESSION_TYPE_ICON, sessionLine } from "../sessionIcons";
 import { TitleBar } from "../TitleBar";
+import { mentorLink } from "../web";
 import type { Chrome } from "./Home";
 
 /** How a question reached Orbit, as the History list says it. */
@@ -345,6 +346,19 @@ function SessionDetailView({ id, onDeleted, onDrill }: {
             await api.saveAnswer({ question, answer, session_id: session.id });
           }}
         />
+        {session.type === "mock" && session.status === "ended" && detail.summary?.review && (
+          <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold">Ask a mentor</h2>
+              <p className="mt-0.5 text-xs text-zinc-600 dark:text-zinc-400">
+                Share this report by a private link with someone you trust; they comment on each answer, no account needed.
+              </p>
+            </div>
+            <Button variant="secondary" size="sm" onClick={() => void openUrl(mentorLink(WEB_URL, session.id))}>
+              Share for feedback <span className="sr-only">(opens in your browser)</span>
+            </Button>
+          </Card>
+        )}
         <DeliveryCard delivery={detail.summary?.delivery} />
         {session.status === "ended" && <DebriefStudio api={api} sessionId={session.id} refreshOn={detail.summary?.review} />}
         {session.status === "ended" && session.type !== "mock" && (detail.turns.length > 0 || detail.questions.length > 0) && (

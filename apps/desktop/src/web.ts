@@ -42,7 +42,7 @@ export function kashsecLink(placement: WebPlacement): string {
 
 /** One of Orbit's tools on the web, as the desktop app shows it: what it does, in the site's own words. */
 export interface WebTool {
-  id: "practice" | "video" | "resume" | "jobs" | "linkedin" | "code" | "offer" | "learning" | "kashsec";
+  id: "practice" | "video" | "atlas" | "resume" | "jobs" | "linkedin" | "code" | "offer" | "learning" | "kashsec";
   name: string;
   /** One line: what it does for you (the public site's line, D66: true and checkable, no outcome promises). */
   line: string;
@@ -55,6 +55,7 @@ export interface WebTool {
 export const WEB_TOOLS: readonly WebTool[] = [
   { id: "practice", name: "Practice", line: "Mock interviews with an AI interviewer who follows up, then a scorecard and the questions to redo.", path: "/mock", action: "Start a practice round" },
   { id: "video", name: "Video interview with Saba", line: "A video round with Saba, Orbit's AI interviewer: she asks out loud, you answer on camera, then a review.", path: "/interview", action: "Meet Saba" },
+  { id: "atlas", name: "Interview Atlas", line: "Search any company or role: its interview process, practice questions, a day-by-day prep plan and its open jobs.", path: "/interview-questions", action: "Search a company" },
   { id: "resume", name: "Resume AI", line: "An ATS score out of 100 and a tailored resume for every job.", path: "/resume-ai", action: "Score my resume" },
   { id: "jobs", name: "Jobs AI", line: "New jobs that fit you, a tracker and messages for referrals.", path: "/jobs", action: "Find jobs" },
   { id: "linkedin", name: "LinkedIn AI", line: "How your profile reads to a recruiter, and what to fix first.", path: "/linkedin", action: "Check my profile" },
@@ -104,4 +105,9 @@ export function hidePromo(id: string): void {
   const { hidden } = loadPromoState();
   hidden.add(id);
   safeLocal.setItem(HIDDEN_KEY, JSON.stringify([...hidden]));
+}
+
+/** A finished mock interview's report on the web, opened at its "Ask a mentor" card (the share link is made there). */
+export function mentorLink(base: string, sessionId: string): string {
+  return `${webLink(base, `/sessions/${encodeURIComponent(sessionId)}`, "history")}#mentor`;
 }

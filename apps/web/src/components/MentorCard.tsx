@@ -19,6 +19,12 @@ export function MentorCard({ sessionId, questions }: { sessionId: string; questi
   const [busy, setBusy] = useState(false);
   const [made, setMade] = useState<string | null>(null);
 
+  // A notice or the desktop app links here as /sessions/<id>#mentor; the card renders after the report loads, so the
+  // browser's own jump to the anchor has already missed it.
+  useEffect(() => {
+    if (window.location.hash === "#mentor") document.getElementById("mentor")?.scrollIntoView({ block: "start" });
+  }, []);
+
   useEffect(() => {
     api.mentorShares(sessionId).then((all) => {
       setShares(all);
