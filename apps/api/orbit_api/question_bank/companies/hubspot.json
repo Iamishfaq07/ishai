@@ -1,0 +1,166 @@
+{
+  "slug": "hubspot",
+  "name": "HubSpot",
+  "aliases": [
+    "hubspot inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "HubSpot hires against its public Culture Code and the HEART traits: Humble, Empathetic, Adaptable, Remarkable and Transparent. It says it hires for culture add rather than culture fit, and uses behavioural questions tied to those traits. For engineers, HubSpot's own prep page says there are no brainteasers: interviewers care about writing and understanding code, working with people and solving real problems, and candidates can look things up during the interview. Candidates commonly report a recruiter screen, a skills assessment and a final round with the team.",
+  "rounds": [
+    "Recruiter screen, often 15 to 30 minutes with some behavioural questions",
+    "Skills assessment for some roles, such as a coding exercise or a written task",
+    "Hiring manager interview",
+    "Final round with the team: for engineers, practical coding and a back-end or front-end session; for other roles, a case or presentation",
+    "Decision and offer"
+  ],
+  "looks_for": [
+    "Humble",
+    "Empathetic",
+    "Adaptable",
+    "Remarkable",
+    "Transparent",
+    "Culture add: a new perspective you bring",
+    "Writing and understanding code (engineering)",
+    "Solving real problems with other people"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you made someone else look brilliant.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who it was and what they were working on",
+        "What you did to help them shine",
+        "What happened for them and the team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you changed your mind after hearing a customer or colleague out.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Your first view",
+        "What you heard that changed it",
+        "What you did differently"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to adapt quickly when priorities changed.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed and why",
+        "How you re-planned",
+        "What you delivered"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake you made and how you told people about it.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake and its impact",
+        "How and when you shared it",
+        "What you fixed and learned"
+      ]
+    },
+    {
+      "text": "How would you build a feature that suggests the best time to send a marketing email to each contact?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: past opens and clicks, time zones",
+        "A simple first version before a model",
+        "How you'd test that it helps"
+      ]
+    },
+    {
+      "text": "A small business customer says the product is too complicated. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Finding out what they're trying to do",
+        "Quick help now and a product fix later",
+        "How you'd tell if it worked"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd model contacts, companies and deals in a CRM database.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Entities and their relationships",
+        "Handling duplicates and merges",
+        "Queries that must stay fast as data grows"
+      ]
+    },
+    {
+      "text": "How would you grow sign-ups for a free product without hurting how many people stay?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where people drop off today",
+        "Experiments on onboarding and value moments",
+        "Measuring retention, not just sign-ups"
+      ]
+    },
+    {
+      "text": "How do you use documentation and search when you're stuck on a coding problem?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Where you look first and why",
+        "How you judge what you find",
+        "Explaining what you used and why it works"
+      ]
+    },
+    {
+      "text": "Which HEART trait is strongest in you, and which are you working on?",
+      "type": "role",
+      "kind": "reflection",
+      "covers": [
+        "An honest pick for each",
+        "An example of each",
+        "What you're doing to grow"
+      ]
+    },
+    {
+      "text": "Why do you want to work at HubSpot?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about HubSpot's customers or culture",
+        "How your skills fit the role",
+        "What you'd add to the team"
+      ]
+    },
+    {
+      "text": "What perspective would you add to the team that it might not have now?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Your background or experience that's different",
+        "How it would help the work",
+        "An example of it helping before"
+      ]
+    }
+  ],
+  "tips": [
+    "Read HubSpot's Culture Code and prepare a story for each HEART trait.",
+    "HubSpot says it hires for culture add: be ready to say what new perspective you bring.",
+    "For engineering, HubSpot says there are no brainteasers and you can look things up; practise realistic coding with documentation open.",
+    "Know HubSpot's product: try the free CRM before your interview."
+  ],
+  "sources": [
+    {
+      "title": "HubSpot Engineering: Interview prep",
+      "url": "https://product.hubspot.com/hubspot-engineering-interview-prep"
+    },
+    {
+      "title": "HubSpot: How we fixed a critical bug in our Culture Code",
+      "url": "https://www.hubspot.com/careers-blog/how-we-fixed-a-critical-bug-in-hubspots-culture-code"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

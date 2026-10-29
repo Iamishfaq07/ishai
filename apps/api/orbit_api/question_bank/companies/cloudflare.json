@@ -1,0 +1,164 @@
+{
+  "slug": "cloudflare",
+  "name": "Cloudflare",
+  "aliases": [
+    "cloudflare inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Cloudflare's careers page describes a recruiter conversation about your background and the role, a panel with your prospective manager and peers focused on how you think and solve problems, and calls with leaders about vision and values that include what it calls the Orange Cloud Interview. Cloudflare has written that final-stage candidates meet an executive leader, and engineering hires commonly report several interviews plus a pair programming exercise.",
+  "rounds": [
+    "Recruiter conversation about your background and the role",
+    "Team panel with your prospective manager and peers: problem-solving and how you think",
+    "Technical interviews and often a pair programming exercise (engineering)",
+    "Calls with leaders about vision and values, including the Orange Cloud Interview",
+    "Offer"
+  ],
+  "looks_for": [
+    "How you think through problems",
+    "Curiosity",
+    "Clear explanations of technical topics",
+    "Collaboration across teams",
+    "Ownership",
+    "Care for building a better Internet"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a hard technical problem you solved. How did you approach it?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why it was hard",
+        "How you broke it down and what you tried",
+        "The solution and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you learned something new quickly to get a job done.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you needed to learn and why",
+        "How you learned it fast",
+        "What you delivered"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with another team to fix a problem neither owned alone.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and who was involved",
+        "How you coordinated",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Tell me about an incident or outage you were part of. What did you do?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened and your role",
+        "How you helped resolve it",
+        "What changed afterwards"
+      ]
+    },
+    {
+      "text": "What happens, step by step, when someone types a website address into a browser?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "DNS lookup and caching",
+        "Connecting with TCP and TLS",
+        "The request, the response and where a CDN fits in"
+      ]
+    },
+    {
+      "text": "How would you protect a website from a sudden flood of traffic meant to take it down?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Telling real users from attack traffic",
+        "Rate limits, challenges and spreading load",
+        "Keeping legitimate users served"
+      ]
+    },
+    {
+      "text": "How would you design a cache that serves content from data centres around the world?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What to cache and for how long",
+        "Purging stale content quickly everywhere",
+        "Measuring hit rates and latency"
+      ]
+    },
+    {
+      "text": "How would you explain how encryption keeps web traffic private to a non-technical friend?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A simple analogy",
+        "What's protected and what isn't",
+        "Why it matters to them"
+      ]
+    },
+    {
+      "text": "Let's pair: write a small rate limiter that allows a set number of requests per minute per user.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Choosing an approach: fixed window, sliding window or token bucket",
+        "Writing and testing it together",
+        "How it would work across many servers"
+      ]
+    },
+    {
+      "text": "How would you decide what to log and monitor for a new service?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals that show users are affected",
+        "Alerts that are worth waking someone for",
+        "Costs and privacy of logging"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Cloudflare?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to Cloudflare's mission or products",
+        "How your skills fit the role",
+        "What you'd like to build"
+      ]
+    },
+    {
+      "text": "What would you want to ask Cloudflare's leaders about the company's direction?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A question about where the product is going",
+        "A question about the team's challenges",
+        "Something you read from Cloudflare's blog"
+      ]
+    }
+  ],
+  "tips": [
+    "Read a few recent posts on Cloudflare's blog: they show how the company thinks and explains technology.",
+    "In the panel, think out loud; Cloudflare says it focuses on how you think and solve problems.",
+    "Be ready to talk about values and vision with a leader in the final calls.",
+    "Revise networking basics such as DNS, TLS and HTTP if you're applying for a technical role."
+  ],
+  "sources": [
+    {
+      "title": "Cloudflare Careers",
+      "url": "https://www.cloudflare.com/careers/"
+    },
+    {
+      "title": "Cloudflare blog: Helping to build Cloudflare, part 5 (people and hiring)",
+      "url": "https://blog.cloudflare.com/helping-to-build-cloudflare-part-5/"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

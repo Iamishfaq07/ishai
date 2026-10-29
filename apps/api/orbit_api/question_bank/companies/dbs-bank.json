@@ -1,0 +1,168 @@
+{
+  "slug": "dbs-bank",
+  "name": "DBS Bank",
+  "aliases": [
+    "dbs",
+    "development bank of singapore",
+    "dbs group"
+  ],
+  "group": "finance",
+  "market": "global",
+  "summary": "DBS says on its careers site that you may be asked scenario-based questions so it can learn about your values and working style, and that the number of interviews depends on the role. Candidates commonly report online or game-based assessments for graduate roles, then interviews with the hiring team, and for some technology roles DBS has hired through hackathons. DBS's PRIDE! values (Purpose-driven, Relationship-led, Innovative, Decisive and Everything Fun) are a good guide to what interviewers listen for.",
+  "rounds": [
+    "Online application and CV screen",
+    "Online assessments for some roles, such as problem-solving games or a coding test",
+    "Interview with a hiring team member about your experience, with scenario-based questions",
+    "Further interviews, sometimes a panel, a presentation or a case for some roles",
+    "Offer and background checks"
+  ],
+  "looks_for": [
+    "Purpose-driven",
+    "Relationship-led",
+    "Innovative",
+    "Decisive",
+    "Everything fun",
+    "A digital mindset",
+    "Resilience and integrity",
+    "Clear communication with diverse teams"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you made a decision quickly without all the information you wanted.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was at stake and the time pressure",
+        "What you knew, what you assumed, and how you decided",
+        "The outcome and what you'd do again"
+      ]
+    },
+    {
+      "text": "Tell me about a relationship with a client or colleague that you turned around.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What had gone wrong",
+        "What you did to rebuild trust",
+        "Where the relationship ended up"
+      ]
+    },
+    {
+      "text": "Tell me about a time you used technology or data to improve how something was done.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The old way and its cost",
+        "The tool or data you used and how",
+        "The measurable improvement"
+      ]
+    },
+    {
+      "text": "Tell me about a setback and how you bounced back.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened and how it felt",
+        "What you did next",
+        "What you learned"
+      ]
+    },
+    {
+      "text": "A customer is angry that a payment didn't reach a supplier on time. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Listening and acknowledging the impact",
+        "Finding out what happened and what can be done now",
+        "Following up and preventing a repeat"
+      ]
+    },
+    {
+      "text": "How would you make a branch or call-centre process digital without leaving older customers behind?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who uses it today and why",
+        "A digital path plus support for those who need it",
+        "How you'd measure adoption and satisfaction"
+      ]
+    },
+    {
+      "text": "You spot a transaction pattern that looks like money laundering. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Not tipping off the customer",
+        "Escalating through the right compliance channel",
+        "Recording what you saw clearly"
+      ]
+    },
+    {
+      "text": "How would you explain a fixed deposit versus a mutual fund to a first-time investor?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Risk and return in plain words",
+        "Liquidity and time horizon",
+        "Asking about their goals before recommending"
+      ]
+    },
+    {
+      "text": "How would you prioritise three urgent requests from different stakeholders on the same day?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Clarifying impact and deadlines",
+        "Agreeing order with the people involved",
+        "Communicating what will slip and when"
+      ]
+    },
+    {
+      "text": "Which of DBS's PRIDE! values fits you best, and when did you show it?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The value and why you chose it",
+        "A specific example",
+        "What it achieved"
+      ]
+    },
+    {
+      "text": "Why do you want to join DBS?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about DBS's direction or customers",
+        "How your experience fits the role",
+        "What you hope to build there"
+      ]
+    },
+    {
+      "text": "Where do you see yourself growing in banking or technology over the next few years?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A direction grounded in the role",
+        "Skills you'll build",
+        "How DBS fits that path"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare a short story for each PRIDE! value: purpose-driven, relationship-led, innovative, decisive and everything fun.",
+    "Expect scenario questions ('what would you do if…'); answer with what you'd actually do first, second and third.",
+    "Ask your Talent Advisor what to bring and how many interviews to expect; DBS says it varies by role.",
+    "For technology roles, practise coding tests; DBS has also used hackathons to hire developers."
+  ],
+  "sources": [
+    {
+      "title": "DBS: How we hire",
+      "url": "https://www.dbs.com/careers/how-we-hire/default.page"
+    },
+    {
+      "title": "DBS: Hack2Hire, hiring developers through a hackathon",
+      "url": "https://www.dbs.com/innovation/dbs-innovates/dbs-hack2hire-can-developers-really-be-hired-through-a-hackathon.html"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

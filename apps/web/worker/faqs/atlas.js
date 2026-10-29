@@ -22,7 +22,7 @@ export const ATLAS_FAQ = [
   ],
   [
     "How does Orbit help beyond the questions?",
-    "Each guide links to the rest of Orbit for that interview: a resume check against the job post, jobs matched to your resume, a LinkedIn score, mock interviews with an AI interviewer that scores every answer, and help weighing the offer. The resume score, job matches and the warm-up are free; AI work and interview minutes use credits.",
+    "On every guide, Orbit's AI can read your resume and write the questions you're most likely to get there, each with an answer outline from your own experience, then practise them with you out loud. Each guide also links to a resume check against the job post, jobs matched to your resume, a LinkedIn score and help weighing the offer. The resume score, job matches and the warm-up are free; AI work and interview minutes use credits.",
   ],
   [
     "What if my company isn't in the Atlas?",
