@@ -750,6 +750,11 @@ export function createApiClient(options: ApiClientOptions) {
     setJobAlert: (frequency: JobAlertFrequency) => json<JobAlert>("/v1/jobs/alerts", { method: "PUT", body: body({ frequency }) }),
     /** The alert email's "stop these emails" link: no sign-in, the token says whose. */
     stopJobAlerts: (token: string) => json<void>("/v1/jobs/alerts/off", { method: "POST", body: body({ token }) }),
+    /** The weekly tips and offers email (opt-in): true, false, or null when the account was never asked. */
+    newsletter: () => json<{ subscribed: boolean | null }>("/v1/newsletter"),
+    setNewsletter: (subscribed: boolean, source: "signup" | "settings" | "today" = "settings") =>
+      json<{ subscribed: boolean | null }>("/v1/newsletter", { method: "PUT", body: body({ subscribed, source }) }),
+    stopNewsletter: (token: string) => json<void>("/v1/newsletter/off", { method: "POST", body: body({ token }) }),
     /** Fill the profile from a resume (AI, free, a few a day; else worked out from the resume as written). */
     suggestJobProfile: (resumeId?: string | null) =>
       json<JobProfile>("/v1/jobs/profile/suggest", { method: "POST", body: body({ resume_id: resumeId ?? null }) }),

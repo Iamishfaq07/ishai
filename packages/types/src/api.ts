@@ -67,6 +67,8 @@ export interface RegisterRequest {
   country?: string;
   /** The invite or creator code of the link they came from (one that can't be used is ignored). */
   ref?: string;
+  /** Ticked "Send me Orbit's weekly tips and offers" (unticked by default). */
+  newsletter?: boolean;
 }
 
 /**

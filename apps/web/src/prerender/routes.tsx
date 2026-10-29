@@ -67,7 +67,7 @@ export const workerFile = (path: string): string => `_prerender/${path === "/" ?
  * ".html" one), with the "Last updated" date each one shows (prerender.test.ts checks the two agree).
  */
 export const POLICIES: ReadonlyArray<{ path: string; file: string; lastmod: string }> = [
-  { path: "/privacy", file: "privacy.html", lastmod: "2026-10-28" },
+  { path: "/privacy", file: "privacy.html", lastmod: "2026-10-29" },
   { path: "/terms", file: "terms.html", lastmod: "2026-10-17" },
   { path: "/cookies", file: "cookies.html", lastmod: "2026-10-28" },
   { path: "/refund", file: "refund.html", lastmod: "2026-10-17" },

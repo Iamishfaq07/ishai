@@ -30,6 +30,7 @@ import {
   useFlash,
 } from "@orbit/ui";
 import { CountryField } from "../components/CountryField";
+import { NewsletterToggle } from "../components/NewsletterChoice";
 import { Button, Card, ErrorNote, Field, Input, PageHeader, Select, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -94,6 +95,12 @@ export function SettingsPage() {
         <PasskeysCard />
         <DevicesCard />
         <SecurityActivityCard />
+        <Card id="emails" className="scroll-mt-24">
+          <SectionTitle spot="contact" className="mb-4">
+            Emails from Orbit
+          </SectionTitle>
+          <NewsletterToggle />
+        </Card>
         <PrivacyCard />
         <AdvancedSettingsCard />
       </div>
@@ -121,6 +128,7 @@ const SECTIONS: PageSection[] = [
   { id: "passkeys", label: "Passkeys" },
   { id: "devices", label: "Devices" },
   { id: "security-activity", label: "Security activity" },
+  { id: "emails", label: "Emails" },
   { id: "privacy", label: "Privacy" },
 ];
 

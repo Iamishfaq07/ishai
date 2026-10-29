@@ -404,6 +404,7 @@ export function RegisterPage() {
   const captcha = useCaptchaConfig();
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [agreed, setAgreed] = useState(false);
+  const [tips, setTips] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
 
   if (user) {
@@ -434,6 +435,7 @@ export function RegisterPage() {
         password,
         ...(name.trim() ? { name: name.trim() } : {}),
         ...(captchaToken ? { captcha_token: captchaToken } : {}),
+        newsletter: tips,
       });
       // Signed in: this page re-renders with the account and goes to the welcome questions (above).
       if (outcome === "verify_email") setSentTo(email.trim().toLowerCase());
@@ -495,6 +497,10 @@ export function RegisterPage() {
             )}
             .
           </span>
+        </label>
+        <label className="flex items-start gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+          <input type="checkbox" checked={tips} onChange={(e) => setTips(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600" />
+          <span>Send me Orbit's weekly tips and offers (optional, stop any time).</span>
         </label>
         <Button type="submit" disabled={busy || captcha === undefined || (!!captcha && !captchaToken)} className="w-full">
           {busy ? "Creating account…" : "Create account"}
@@ -730,6 +736,12 @@ export function StopWeeklyDigestPage() {
   return <StopEmailsPage stop={(token) => api.call<void>("/v1/jobs/playbook/digest/off", { method: "POST", body: JSON.stringify({ token }) })}
     what="weekly progress emails" stopped="Weekly emails stopped" detail="Orbit will stop sending your weekly progress summary."
     again="Turn it back on any time in Today, Your workflow rules." home="/#follow-up-rules" homeLabel="Go to Today" />;
+}
+
+/** The weekly tips and offers email's stop link (newsletter.py), the same one-click shape. */
+export function StopNewsletterPage() {
+  return <StopEmailsPage stop={(token) => api.stopNewsletter(token)} what="weekly tips and offers emails" stopped="Weekly tips stopped"
+    detail="Orbit will stop sending you its weekly tips and offers." again="Turn them back on any time in Settings." home="/settings" homeLabel="Go to Settings" />;
 }
 
 function StopEmailsPage({ stop: request, what, stopped, detail, again, home, homeLabel }: {
