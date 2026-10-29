@@ -21,6 +21,10 @@ export const ATLAS_FAQ = [
     "From Orbit's job search: companies' own careers pages and the job boards that allow it, posted in the last 45 days. Each one opens the original post, and you apply there.",
   ],
   [
+    "How does Orbit help beyond the questions?",
+    "Each guide links to the rest of Orbit for that interview: a resume check against the job post, jobs matched to your resume, a LinkedIn score, mock interviews with an AI interviewer that scores every answer, and help weighing the offer. The resume score, job matches and the warm-up are free; AI work and interview minutes use credits.",
+  ],
+  [
     "What if my company isn't in the Atlas?",
     "Search for the role instead, from software engineer and data analyst to nurse and sales, or practise in a mock interview, which asks the usual questions for any company from your resume and the job post.",
   ],

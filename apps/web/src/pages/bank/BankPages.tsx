@@ -1,4 +1,4 @@
-import { use, useState, type ReactNode } from "react";
+import { use, useRef, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { companies as companyCards, roles as roleCards } from "virtual:question-bank/cards";
 import {
@@ -21,6 +21,7 @@ import { isSecurityRole } from "../../lib/security";
 import { inkButton } from "../../marketing/ProductPage";
 import { PublicLayout } from "../../marketing/PublicLayout";
 import { Container, Eyebrow, IconTile } from "../../marketing/primitives";
+import { StickyCta } from "../../marketing/StickyCta";
 import { useAuth } from "../../lib/auth";
 import { NotFoundPage } from "../NotFound";
 import {
@@ -43,6 +44,7 @@ import {
   type BankKind,
 } from "./content";
 import { CompanyJobs } from "./CompanyJobs";
+import { PrepKit } from "./PrepKit";
 import { loadCompany, loadRole } from "./docs";
 import type { BankCard, BankCompany, BankQuestion, BankRole } from "./types";
 
@@ -313,6 +315,8 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
   const year = entry.reviewed.slice(0, 4);
   const title = company ? `${name} interview process and questions (${year})` : `${name} interview questions and what to expect (${year})`;
   const note = company ? (entry as BankCompany).note : undefined;
+  const heroCtas = useRef<HTMLDivElement>(null);
+  const practise = useRef<HTMLElement>(null);
 
   const actions = (dark: boolean) => (
     <div className="flex flex-wrap gap-3">
@@ -361,7 +365,7 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
             {company ? "As candidates commonly report it; it varies by team, level and year." : "What candidates commonly report; it varies by employer, level and country."}{" "}
             Last reviewed {reviewedOn(entry.reviewed)}.
           </p>
-          <div className="mt-8">{actions(false)}</div>
+          <div ref={heroCtas} className="mt-8">{actions(false)}</div>
         </header>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -410,7 +414,7 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
         {company && <div className="mt-8"><CompanyJobs slug={entry.slug} name={name} /></div>}
 
         {questionSections(kind, name).map(([type, heading]) => (
-          <QuestionSection key={type} id={`q-${type}`} heading={heading} questions={entry.questions.filter((q) => q.type === type)} />
+          <QuestionSection key={type} id={`q-${type}`} heading={heading} questions={entry.questions.filter((q) => q.type === type)} practise={warmupLink(kind, entry.slug)} />
         ))}
 
         <section aria-labelledby="tips-title" className="pt-10">
@@ -426,7 +430,7 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
 
         {isSecurityRole(name, ...entry.aliases) && <KashSecContext placement="role-guide" className="mt-10 max-w-3xl" />}
 
-        <section aria-labelledby="practise-title" className="mt-14 rounded-3xl bg-zinc-950 p-6 text-white sm:p-10 dark:border dark:border-[rgb(var(--site-line))] dark:bg-[rgb(var(--site-surface))]">
+        <section ref={practise} aria-labelledby="practise-title" className="mt-14 rounded-3xl bg-zinc-950 p-6 text-white sm:p-10 dark:border dark:border-[rgb(var(--site-line))] dark:bg-[rgb(var(--site-surface))]">
           <h2 id="practise-title" className="mk-h2 text-white">
             Practise it out loud
           </h2>
@@ -465,6 +469,8 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
         </section>
       </article>
 
+      <PrepKit subject={{ kind, card: entry }} />
+
       {across.length > 0 && (
         <nav aria-labelledby="across-title" className="mt-14 border-t mk-line pt-10">
           <h2 id="across-title" className="mk-h3 text-zinc-950 dark:text-white">
@@ -493,11 +499,15 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
           </p>
         </nav>
       )}
+      {!user && (
+        <StickyCta after={heroCtas} before={practise} to="/register" state={{ from: mock }}
+          line={company ? `Mock interview in ${name}'s style.` : `A ${name.toLowerCase()} mock interview.`} />
+      )}
     </BankShell>
   );
 }
 
-function QuestionSection({ id, heading, questions }: { id: string; heading: string; questions: BankQuestion[] }) {
+function QuestionSection({ id, heading, questions, practise }: { id: string; heading: string; questions: BankQuestion[]; practise: string }) {
   if (!questions.length) return null;
   return (
     <section aria-labelledby={id} className="pt-10">
@@ -517,6 +527,11 @@ function QuestionSection({ id, heading, questions }: { id: string; heading: stri
           </li>
         ))}
       </ol>
+      <p className="mt-4 text-sm">
+        <Link to={practise} className={cx("inline-flex items-center gap-1.5 rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+          <Target className="h-4 w-4" aria-hidden /> Practise these out loud, free, no account <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </Link>
+      </p>
     </section>
   );
 }

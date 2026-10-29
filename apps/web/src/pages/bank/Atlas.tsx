@@ -1,13 +1,15 @@
 import { useId, useMemo, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { companies as companyCards, roles as roleCards } from "virtual:question-bank/cards";
-import { ArrowRight, Building2, GraduationCap, Search, Target, cx, focusRing } from "@orbit/ui";
+import { ArrowRight, AudioLines, Building2, GraduationCap, Search, Target, cx, focusRing } from "@orbit/ui";
 import { ATLAS_FAQ } from "../../../worker/faqs/atlas.js";
 import { Input } from "../../components/ui";
+import { useAuth } from "../../lib/auth";
 import { FaqBlock } from "../../marketing/kit/FaqBlock";
 import { Eyebrow } from "../../marketing/primitives";
 import { BankShell, Breadcrumbs } from "./BankPages";
 import { CompanyJobs } from "./CompanyJobs";
+import { PrepKit } from "./PrepKit";
 import { COMPANIES_PATH, COMPANY_GROUPS, ROLES_PATH, ROLE_GROUPS, companyMockLink, entryPath, firstSentence, inGroup, searchCards, warmupLink, type BankKind } from "./content";
 import type { BankCard } from "./types";
 
@@ -165,7 +167,9 @@ export function AtlasPage() {
         </section>
       )}
 
-      <section aria-labelledby="atlas-companies" className="border-t mk-line py-10">
+      <PrepKit id="atlas-kit" subject={top ?? null} />
+
+      <section aria-labelledby="atlas-companies" className="mt-14 border-t mk-line py-10">
         <h2 id="atlas-companies" className="mk-h3 text-zinc-950 dark:text-white">Every company in the Atlas</h2>
         {COMPANY_GROUPS.map(([group, label]) => {
           const cards = inGroup(companyCards, group);
@@ -212,8 +216,10 @@ export function AtlasPage() {
 
 /** The best match, with everything for it in one place: its guide, its open jobs and a free warm-up. */
 function TopResult({ hit }: { hit: Hit }) {
+  const { user } = useAuth();
   const { kind, card } = hit;
   const company = kind === "company";
+  const mock = company ? companyMockLink(card) : `/mock?${new URLSearchParams({ role: card.name })}`;
   return (
     <article aria-labelledby="atlas-top" className="mt-5 rounded-2xl border mk-line mk-surface p-6">
       <p className="text-xs font-medium text-zinc-600 dark:text-zinc-400">{company ? "Company" : "Role"} · best match</p>
@@ -225,6 +231,9 @@ function TopResult({ hit }: { hit: Hit }) {
         </Link>
         <Link to={warmupLink(kind, card.slug)} className={cx("inline-flex min-h-11 items-center gap-2 rounded-xl border mk-line px-4 text-sm font-semibold text-zinc-900 dark:text-white", focusRing)}>
           <Target className="h-4 w-4" aria-hidden /> Warm up free on them
+        </Link>
+        <Link to={user ? mock : "/register"} state={user ? undefined : { from: mock }} className={cx("inline-flex min-h-11 items-center gap-2 rounded-xl border mk-line px-4 text-sm font-semibold text-zinc-900 dark:text-white", focusRing)}>
+          <AudioLines className="h-4 w-4" aria-hidden /> {company ? `Mock interview in ${card.name}'s style` : "Mock interview for it"}
         </Link>
       </div>
       {company && <div className="mt-6 border-t mk-line pt-4"><CompanyJobs slug={card.slug} name={card.name} compact /></div>}
