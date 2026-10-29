@@ -1,0 +1,167 @@
+{
+  "slug": "loreal",
+  "name": "L'Oréal",
+  "aliases": [
+    "loreal",
+    "l'oreal",
+    "loreal groupe",
+    "loreal india"
+  ],
+  "group": "industry",
+  "market": "global",
+  "summary": "L'Oréal's careers site describes a CV screen, sometimes three short questions answered online to gauge cultural fit, a first call with a recruiter about your motivation and which division or role suits you, and a longer interview with your potential manager, typically 45 to 60 minutes. It suggests answering with the STARE method and giving examples where you took initiative or owned a project end to end. For junior roles it says the process usually takes about a month.",
+  "rounds": [
+    "Online application and CV screen",
+    "For some roles, three short online questions on cultural fit",
+    "First interview with a recruiter on motivation and fit, often about 30 minutes",
+    "Interview with your potential manager, often 45 to 60 minutes",
+    "Further interviews or a case for some roles, then an offer"
+  ],
+  "looks_for": [
+    "Initiative and ownership of projects end to end",
+    "Answers structured with STARE",
+    "Passion for beauty and consumers",
+    "Entrepreneurial spirit",
+    "Open-mindedness",
+    "Curiosity about the brands and markets"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project you owned from start to finish.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and your goal",
+        "What you did at each stage",
+        "The result and what you learned from it"
+      ]
+    },
+    {
+      "text": "Tell me about a time you took the initiative without being asked.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you noticed",
+        "What you did",
+        "The impact"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to convince people with different opinions.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who disagreed and why",
+        "How you built support",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a failure and what you'd do differently.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What happened",
+        "Your part in it",
+        "What you'd change now"
+      ]
+    },
+    {
+      "text": "How would you launch a skincare product for a younger audience in a new market?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who they are and what they want",
+        "Channels, influencers and price",
+        "Measuring success after launch"
+      ]
+    },
+    {
+      "text": "Sales of a well-known brand are falling in one country. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting by channel, product and customer",
+        "Competition and trends",
+        "A hypothesis and a test"
+      ]
+    },
+    {
+      "text": "How would you use social media data to choose which product to promote next month?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: searches, mentions, reviews",
+        "Separating noise from real demand",
+        "Deciding and measuring"
+      ]
+    },
+    {
+      "text": "How would you make a product's packaging more sustainable without losing its appeal?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What the packaging must do",
+        "Options and their trade-offs",
+        "Testing with consumers"
+      ]
+    },
+    {
+      "text": "Which L'Oréal brand would you like to work on, and what would you change about it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The brand and why",
+        "One idea, grounded in what you've seen",
+        "How you'd test it"
+      ]
+    },
+    {
+      "text": "Pick a beauty trend you've noticed. What should a big company do about it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The trend and who's driving it",
+        "What it means for brands",
+        "A practical response"
+      ]
+    },
+    {
+      "text": "Why do you want to work at L'Oréal?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about L'Oréal or its brands",
+        "How your skills fit the role",
+        "What you hope to learn"
+      ]
+    },
+    {
+      "text": "Which division or role suits you best, and why?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Your strengths and interests",
+        "How they match the division",
+        "Where you'd like to grow"
+      ]
+    }
+  ],
+  "tips": [
+    "L'Oréal suggests the STARE method for answers: situation, task, action, result and evaluation.",
+    "Prepare examples where you took initiative or owned a project end to end, as L'Oréal's careers site asks.",
+    "Know a few L'Oréal brands well, including how they're sold in your country.",
+    "L'Oréal says it never asks for sensitive personal information during recruitment; ignore suspicious messages."
+  ],
+  "sources": [
+    {
+      "title": "L'Oréal Careers: Interview at L'Oréal",
+      "url": "https://careers.loreal.com/en/get-ready-to-interview"
+    },
+    {
+      "title": "L'Oréal Careers: Apply to L'Oréal Groupe",
+      "url": "https://careers.loreal.com/en/get-ready-to-apply"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

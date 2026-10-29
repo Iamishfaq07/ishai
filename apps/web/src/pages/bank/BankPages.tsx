@@ -45,6 +45,7 @@ import {
 } from "./content";
 import { CompanyJobs } from "./CompanyJobs";
 import { MyQuestions } from "./MyQuestions";
+import { PrepPlan } from "./PrepPlan";
 import { PrepKit } from "./PrepKit";
 import { loadCompany, loadRole } from "./docs";
 import type { BankCard, BankCompany, BankQuestion, BankRole } from "./types";
@@ -411,6 +412,8 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
         </div>
 
         <QuickAnswers kind={kind} entry={entry} />
+
+        <PrepPlan kind={kind} entry={entry} />
 
         {company && <div className="mt-8"><CompanyJobs slug={entry.slug} name={name} /></div>}
 

@@ -1,0 +1,164 @@
+{
+  "slug": "etsy",
+  "name": "Etsy",
+  "aliases": [
+    "etsy inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Etsy's careers site describes video candidate screens to learn about Etsy and the role, then behavioural interviews on your skills, experience and how you solve problems and work with others. Some roles have a take-home assignment you then walk through with the team, including any AI tools you used, and Etsy asks candidates not to use AI tools in live interviews. Engineering candidates commonly report coding and system design interviews as well.",
+  "rounds": [
+    "Candidate screen by video: learn about Etsy and the role, with some first questions",
+    "Behavioural interview on your experience, problem-solving and teamwork",
+    "Take-home assignment for some roles, then a walkthrough with the team",
+    "Technical interviews for engineering roles, such as coding and system design",
+    "Decision and offer"
+  ],
+  "looks_for": [
+    "Problem-solving and teamwork",
+    "Keeping commerce human",
+    "Care for buyers and sellers",
+    "Clear explanation of your approach and tools",
+    "Craft in what you build",
+    "Honesty about how you used AI on a take-home"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you solved a hard problem with a team.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and the team",
+        "Your part in solving it",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made something better for a small business or independent creator.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they needed",
+        "What you did",
+        "The difference it made"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with a teammate and how you resolved it.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The disagreement",
+        "How you listened and decided",
+        "What happened next"
+      ]
+    },
+    {
+      "text": "Tell me about something you built that you're proud of the craft in.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you built",
+        "Details you cared about",
+        "How people used it"
+      ]
+    },
+    {
+      "text": "How would you design search that helps buyers find unique handmade items?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding queries and listings",
+        "Ranking: relevance, quality and fairness to sellers",
+        "Measuring buyer and seller success"
+      ]
+    },
+    {
+      "text": "How would you help new sellers get their first sale?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Why new shops struggle",
+        "Ideas: listing help, visibility, guidance",
+        "How you'd test them"
+      ]
+    },
+    {
+      "text": "Walk me through your take-home: your approach, the tools you used and what you'd change.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Your approach and why",
+        "Tools used, including any AI, and how",
+        "Improvements with more time"
+      ]
+    },
+    {
+      "text": "How would you detect counterfeit or prohibited listings at scale?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals and reports",
+        "Automated checks plus human review",
+        "Fairness to honest sellers"
+      ]
+    },
+    {
+      "text": "How would you design a system that sends sellers a notification when they make a sale?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Events from orders to notifications",
+        "Retries and avoiding duplicates",
+        "Preferences and quiet hours"
+      ]
+    },
+    {
+      "text": "How do you decide whether a feature is worth building?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The problem and who has it",
+        "Evidence and a small test",
+        "What success looks like"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Etsy?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to Etsy's marketplace and mission",
+        "How your skills fit",
+        "What you'd like to work on"
+      ]
+    },
+    {
+      "text": "What questions do you have for us?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "How the team works",
+        "What success looks like",
+        "Something you noticed using Etsy"
+      ]
+    }
+  ],
+  "tips": [
+    "Don't use AI tools during live interviews; Etsy asks candidates not to.",
+    "If you get a take-home, be ready to explain your approach and any tools you used, including AI.",
+    "Use Etsy as a buyer, and look at it from a seller's side, before your interviews.",
+    "Prepare behavioural stories about teamwork and problem-solving; Etsy's behavioural round focuses on them."
+  ],
+  "sources": [
+    {
+      "title": "Etsy Careers: AI guidance for candidates",
+      "url": "https://careers.etsy.com/ai-guidance"
+    },
+    {
+      "title": "Etsy Code as Craft: Engineering blog",
+      "url": "https://www.etsy.com/codeascraft/why-diversity-is-important-to-etsy"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

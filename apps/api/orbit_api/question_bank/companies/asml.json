@@ -1,0 +1,164 @@
+{
+  "slug": "asml",
+  "name": "ASML",
+  "aliases": [
+    "asml holding"
+  ],
+  "group": "industry",
+  "market": "global",
+  "summary": "ASML says you apply through its career portal, and that a recruiter contacts you within two weeks if it has questions or wants to interview you. It describes two or more interviews: first with the hiring manager and a team member about your background, skills and fit, then often an on-site round that may include an online assessment and a meeting with a project leader or architect, and sometimes an HR interview before the offer. Internships in the Netherlands may start with a pre-recorded video interview. ASML says feedback usually comes within about five working days.",
+  "rounds": [
+    "Application through ASML's career portal (not by email)",
+    "Recruiter contact, often within two weeks",
+    "First interview with the hiring manager and a team member",
+    "Second interview, often on site: an online assessment for some roles and a meeting with a project leader or architect",
+    "Possible HR interview, then an offer and, in some countries, pre-employment screening"
+  ],
+  "looks_for": [
+    "Challenge: curiosity and pushing for better solutions",
+    "Collaborate: working across disciplines",
+    "Care: for people, quality and safety",
+    "Deep technical skills for the role",
+    "Structured problem-solving",
+    "Clear explanations of complex work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a complex technical problem you solved with people from other disciplines.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and who was involved",
+        "Your part and how you worked together",
+        "The result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you challenged an accepted way of doing things.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you challenged and why",
+        "How you made the case",
+        "What changed"
+      ]
+    },
+    {
+      "text": "Tell me about a time quality or safety mattered more than a deadline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The pressure and the risk",
+        "What you decided and how you explained it",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a mistake in your work and how you found it.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The mistake",
+        "How it was caught",
+        "What you changed in how you work"
+      ]
+    },
+    {
+      "text": "How would you find the root cause of an intermittent failure in a complex machine?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Gathering data and reproducing it",
+        "Narrowing down causes systematically",
+        "Confirming the fix and preventing a repeat"
+      ]
+    },
+    {
+      "text": "Explain a technical concept from your field to someone outside it.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "A simple analogy",
+        "Why it matters",
+        "Checking they understood"
+      ]
+    },
+    {
+      "text": "How do you make sure software that controls hardware is reliable?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Testing at several levels, including with hardware",
+        "Handling errors and safe states",
+        "Reviews and monitoring"
+      ]
+    },
+    {
+      "text": "How would you plan the installation of a large system at a customer's site?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Preparing the site and parts",
+        "Steps, risks and who's involved",
+        "Communicating with the customer"
+      ]
+    },
+    {
+      "text": "You need to improve a process's accuracy, but every change costs machine time. How do you decide what to try?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Ranking ideas by expected gain and cost",
+        "Small experiments and data",
+        "When to stop"
+      ]
+    },
+    {
+      "text": "Walk me through the most technically demanding project on your CV.",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The goal and constraints",
+        "Your decisions and why",
+        "The result and what you learned"
+      ]
+    },
+    {
+      "text": "Why do you want to work at ASML?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to ASML's technology and role in the chip industry",
+        "How your skills fit the team",
+        "What you want to learn"
+      ]
+    },
+    {
+      "text": "How do you feel about working in a large, international, technical company?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Your experience with such teams",
+        "What you like about it",
+        "How you handle its challenges"
+      ]
+    }
+  ],
+  "tips": [
+    "Apply through ASML's career portal; ASML says it doesn't accept applications by email.",
+    "Prepare to explain your most technical project in depth, and in simple words, for different interviewers.",
+    "If your second interview is on site, use it to see the work environment and ask about the team.",
+    "ASML says it never asks candidates for payment and only emails from @asml.com addresses."
+  ],
+  "sources": [
+    {
+      "title": "ASML: Interviewing at ASML, tips and tricks",
+      "url": "https://www.asml.com/en/careers/interview-tips"
+    },
+    {
+      "title": "ASML: Recruitment fraud notice",
+      "url": "https://www.asml.com/en/careers/recruitment-fraud-notice"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}
