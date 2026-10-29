@@ -35,8 +35,12 @@ EDITABLE_KEYS: dict[str, bool] = {
     # A site-wide announcement the admin sets (shown above every signed-in page by GET /v1/announcement).
     "announcement": False,
     "announcement_tone": False,
+    # The admin's note at the top of the weekly tips and offers email (newsletter.py), and where it links.
+    "newsletter_note": False,
+    "newsletter_link": False,
 }
 ANNOUNCEMENT_MAX = 300
+NEWSLETTER_NOTE_MAX = 600
 ANNOUNCEMENT_TONES = ("info", "warning")
 
 _PROVIDER_CHOICES: dict[str, set[str]] = {
@@ -65,6 +69,8 @@ class EffectiveConfig:
     deepgram_model: str
     announcement: str = ""
     announcement_tone: str = "info"
+    newsletter_note: str = ""
+    newsletter_link: str = ""
 
 
 def _fernet() -> Fernet | None:
@@ -116,6 +122,16 @@ def validate_value(key: str, value: str) -> str:
         value = " ".join(value.split())  # one line: it's a banner
         if len(value) > ANNOUNCEMENT_MAX:
             raise ValueError(f"The announcement can be at most {ANNOUNCEMENT_MAX} characters")
+    if key == "newsletter_note":
+        value = " ".join(value.split())  # one paragraph in a plain-text email
+        if len(value) > NEWSLETTER_NOTE_MAX:
+            raise ValueError(f"The weekly email's note can be at most {NEWSLETTER_NOTE_MAX} characters")
+    if key == "newsletter_link":
+        value = value.strip()
+        parts = urlsplit(value)
+        if len(value) > 300 or not ((value.startswith("/") and not value.startswith("//"))
+                                    or (parts.scheme == "https" and parts.hostname)):
+            raise ValueError("The link must be a page on Orbit (/billing) or an https:// address")
     production = get_settings().env == "production"
     if production and key in _PROVIDER_CHOICES and value == "mock":
         raise ValueError("Demo (mock) providers can't be turned on in production")
@@ -173,6 +189,8 @@ def get_effective_config() -> EffectiveConfig:
         deepgram_model=val("deepgram_model", s.deepgram_model),
         announcement=val("announcement", ""),
         announcement_tone=val("announcement_tone", "info"),
+        newsletter_note=val("newsletter_note", ""),
+        newsletter_link=val("newsletter_link", ""),
     )
 
 

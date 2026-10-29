@@ -33,6 +33,7 @@ import type {
   AdminAuditQuery,
   AdminConfig,
   AdminConfigUpdate,
+  AdminNewsletterStats,
   AdminPayment,
   AdminPayments,
   AdminReferralCode,
@@ -1143,6 +1144,9 @@ export function createApiClient(options: ApiClientOptions) {
     getCosts: (days = 30) => json<CostReport>(`/v1/admin/costs?days=${days}`),
     getFeedbackReport: (days = 30) => json<FeedbackReport>(`/v1/admin/feedback?days=${days}`),
     getAdminConfig: () => json<AdminConfig>("/v1/admin/config"),
+    /** The weekly tips and offers email: who chose it, and a preview of this week's to the admin. */
+    adminNewsletter: () => json<AdminNewsletterStats>("/v1/admin/newsletter"),
+    previewNewsletter: () => json<{ to: string }>("/v1/admin/newsletter/preview", { method: "POST" }),
     updateAdminConfig: (req: AdminConfigUpdate) =>
       json<AdminConfig>("/v1/admin/config", { method: "PUT", body: body(req) }),
   };

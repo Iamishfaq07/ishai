@@ -90,3 +90,42 @@ def test_settings_turns_it_on_and_the_week_decides_the_tools() -> None:
         datetime(2026, 11, 9, tzinfo=UTC).date())
     assert len(a) == 2 and a != b and a[0] != a[1]
     assert all(path.startswith("/") for _, _, path in newsletter.TOOLS)
+
+
+
+def test_admin_note_link_stats_and_preview() -> None:
+    from tests.test_signup_approval import _client
+
+    email = f"nl-admin-{uuid.uuid4().hex[:6]}@example.com"
+    with pytest.MonkeyPatch.context() as mp:
+        gen = _client(mp, ORBIT_ADMIN_EMAIL=email)
+        c = next(gen)
+        try:
+            r = c.post("/v1/auth/register", json={"email": email, "password": "correct horse battery"})
+            admin = {"Authorization": f"Bearer {r.json()['access_token']}"}
+            c.cookies.clear()
+            r = c.put("/v1/admin/config", headers=admin, json={
+                "newsletter_note": "  New: Plan my prep\non every guide.  ", "newsletter_link": "/interview-questions"})
+            assert r.status_code == 200, r.text
+            assert r.json()["newsletter_note"] == "New: Plan my prep on every guide."
+            for bad in ("javascript:alert(1)", "//evil.example", "http://plain.example"):
+                assert c.put("/v1/admin/config", headers=admin, json={"newsletter_link": bad}).status_code == 422
+
+            h = _signup(c, newsletter=True)
+            me = _me(c, h)
+            _verify(c, me["id"])
+            _send(c)
+            (m,) = _mine(me["email"])
+            assert m.text.index("New: Plan my prep on every guide.") < m.text.index("This week's tools:")
+            assert "/interview-questions" in m.text
+
+            stats = c.get("/v1/admin/newsletter", headers=admin).json()
+            assert stats["subscribed"] >= 1 and stats["sent_last_week"] >= 1
+            r = c.post("/v1/admin/newsletter/preview", headers=admin)
+            assert r.status_code == 200 and r.json()["to"] == email, r.text
+            sent = [x for x in _outbox().sent if x.to == email and x.subject.startswith("[Preview]")]
+            assert sent and "New: Plan my prep" in sent[-1].text
+            assert c.get("/v1/admin/newsletter", headers=h).status_code == 403
+            c.put("/v1/admin/config", headers=admin, json={"newsletter_note": "", "newsletter_link": ""})
+        finally:
+            next(gen, None)
