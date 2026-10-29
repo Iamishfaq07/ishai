@@ -1,8 +1,8 @@
 import { BadgeIndianRupee, Banknote, BookOpen, GraduationCap, Headphones, House, INDIA, IdCard, LayoutGrid, MOCK_INTERVIEW_ENABLED, Rocket, UserRound, Video, Search, isIndia, type LucideIcon } from "@orbit/ui";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME } from "../pages/learn/links";
-import { LINKEDIN_HOME } from "../pages/linkedin/model";
-import { OFFERS_HOME } from "../pages/offers/model";
+import { LINKEDIN_HOME } from "../pages/linkedin/paths";
+import { OFFERS_HOME } from "../pages/offers/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { PRODUCTS, type ProductId } from "./products";
 

@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { isAppleMobile, isMac, isMobileDevice } from "./platform";
+
+export { isAppleMobile, isMac, isMobileDevice, isWindows } from "./platform";
 
 export interface PcmFrame {
   pcm: Int16Array;
@@ -174,31 +177,6 @@ export async function openDisplayAudio(): Promise<MediaStream> {
 }
 
 const SHARE_TIMEOUT_MS = 60_000;
-
-/** A phone or tablet. Mobile browsers may expose getDisplayMedia (Android Chrome does) but can't share a tab's audio. */
-export function isMobileDevice(): boolean {
-  if (typeof navigator === "undefined") return false;
-  const uaData = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData;
-  if (uaData?.mobile) return true;
-  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || isIpadOs();
-}
-
-/** iPadOS reports itself as a Mac; touch points give it away. */
-function isIpadOs(): boolean {
-  return /Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1;
-}
-
-export function isAppleMobile(): boolean {
-  return typeof navigator !== "undefined" && (/iPhone|iPad|iPod/.test(navigator.userAgent) || isIpadOs());
-}
-
-export function isMac(): boolean {
-  return typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent) && !isIpadOs();
-}
-
-export function isWindows(): boolean {
-  return typeof navigator !== "undefined" && /Windows/.test(navigator.userAgent);
-}
 
 /**
  * Whether this browser can capture a meeting's audio by sharing a tab. Only Chromium browsers on a computer can:

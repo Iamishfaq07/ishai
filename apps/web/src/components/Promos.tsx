@@ -2,8 +2,8 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BadgeIndianRupee, Banknote, MessagesSquare, GraduationCap, IdCard, cx, focusRing, type LucideIcon } from "@orbit/ui";
 import { useIndia } from "../lib/country";
 import { LEARN_HOME } from "../pages/learn/links";
-import { LINKEDIN_HOME } from "../pages/linkedin/model";
-import { OFFERS_HOME } from "../pages/offers/model";
+import { LINKEDIN_HOME } from "../pages/linkedin/paths";
+import { OFFERS_HOME } from "../pages/offers/paths";
 
 type Tool = { to: string; name: string; icon: LucideIcon; line: string };
 
