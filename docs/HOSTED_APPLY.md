@@ -71,9 +71,7 @@ updates the worker; `bash setup.sh status`, `logs` and `stop` do what they say. 
    `ORBIT_APPLY_WORKER_SECRET`. No JWT secret, database credentials or candidate sessions belong on the worker.
    `ORBIT_APPLY_OUTBOX=/data/receipts` is the default; mount persistent storage at `/data` writable by image user
    `orbitapply` (UID 10001). Use a Linux host that permits Chromium user-namespace sandboxing; it is explicitly
-   enabled and never silently disabled. Ubuntu 23.10 and later restrict it by default (Chromium then stops with
-   `Check failed: sys_chroot("/proc/self/fdinfo/")`): set `kernel.apparmor_restrict_unprivileged_userns=0` on the
-   host, as CI does, or give the container an AppArmor profile that allows `userns`. The supplied `deploy/hosted-apply.compose.yaml` sets the unprivileged user,
+   enabled and never silently disabled. The supplied `deploy/hosted-apply.compose.yaml` sets the unprivileged user,
    shared memory, limits, persistent receipt volume and Playwright's reviewed seccomp profile. Set
    `ORBIT_APPLY_SECCOMP_PROFILE` to the absolute path of `apps/apply-worker/seccomp_profile.json`, then run
    `docker compose -f deploy/hosted-apply.compose.yaml up -d --build`. No public worker port is needed. A managed

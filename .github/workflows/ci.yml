@@ -196,11 +196,6 @@ jobs:
           tags: orbit-personal-apply:ci
           cache-from: type=gha,scope=personal-apply
           cache-to: type=gha,scope=personal-apply,mode=max
-      # Ubuntu 23.10+ (the ubuntu-latest runner) lets unprivileged processes create a user namespace but gives it no
-      # capabilities, so Chromium's sandbox fails at its chroot. Allow it on this runner, as a worker host must
-      # (docs/HOSTED_APPLY.md); the sandbox itself stays on.
-      - name: Allow user namespaces for Chromium's sandbox (runner host)
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Sandboxed Chromium starts inside the worker image (local document only)
         run: >-
           docker run --rm --init --shm-size=1g --cap-drop=ALL
