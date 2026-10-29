@@ -127,6 +127,8 @@ from orbit_api.job_portal.semantic_preview import router as semantic_preview_rou
 from orbit_api.job_portal.skill_gaps import router as skill_gaps_router
 from orbit_api.job_portal.weekly import router as job_weekly_router
 from orbit_api.linkedin.routes import router as linkedin_router
+from orbit_api.mentor import public_router as mentor_public_router
+from orbit_api.mentor import router as mentor_router
 from orbit_api.newsletter import admin_router as newsletter_admin_router
 from orbit_api.newsletter import router as newsletter_router
 from orbit_api.notices import router as notices_router
@@ -445,6 +447,8 @@ def create_app() -> FastAPI:
     app.include_router(weekly_digest_router)
     app.include_router(newsletter_router)
     app.include_router(newsletter_admin_router)
+    app.include_router(mentor_router)
+    app.include_router(mentor_public_router)
     app.include_router(career_week_router)
     app.include_router(interview_debrief_router)
     app.include_router(skill_gaps_router)

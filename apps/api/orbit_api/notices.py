@@ -20,7 +20,7 @@ from orbit_api.models import AccountNotice, User
 from orbit_api.providers.email import OutgoingEmail, send_safely
 from orbit_api.ratelimit import limit_user
 
-Kind = Literal["credits", "plan", "approved", "referral", "purchase"]
+Kind = Literal["credits", "plan", "approved", "referral", "purchase", "mentor"]
 SHOWN = 30
 
 router = APIRouter(prefix="/v1/notices", tags=["notices"],
