@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "c9e3f5a7b2d4"
-down_revision = "b8d2f4a6c1e3"
+down_revision = "c3e5a7b9d1f4"
 branch_labels = None
 depends_on = None
 
@@ -22,6 +22,7 @@ def upgrade() -> None:
         sa.Column("plan", sa.JSON(), nullable=False),
     )
     op.create_index("ix_biz_experience_campaigns_company_id", "biz_experience_campaigns", ["company_id"])
+    op.create_index("ix_biz_experience_campaigns_enabled_job", "biz_experience_campaigns", ["enabled", "job_id"])
     op.create_table(
         "biz_experience_invites",
         sa.Column(

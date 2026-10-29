@@ -131,7 +131,7 @@ individual candidate feedback submission/withdrawal is not added to hiring timel
 
 ## Rollout and verification
 
-Migration `c9e3f5a7b2d4`, parent `b8d2f4a6c1e3`, creates the four tables and indexes. It does not enable campaigns,
+Migration `c9e3f5a7b2d4`, parent `c3e5a7b9d1f4` (the current upstream schema), creates the four tables and indexes. It does not enable campaigns,
 prepare invitations or alter existing applications. Apply migration before deploying the API: application
 status now checks invitation existence. Response foreign keys cascade with invitation/application/job deletion;
 the retention timestamp is indexed. Upgrade/downgrade tests preserve existing jobs/applications. No production
@@ -147,3 +147,11 @@ AI source/permission freshness, quotas, reviewed plans and migration roundtrips.
 application flows, the fifth response releasing aggregates, AI-to-plan review, self/aggregate downloads,
 withdrawal suppression, unchanged application states, mobile overflow and automated accessibility checks.
 AI uses mocks; live-provider usefulness and high-volume deployment behavior were not certified.
+
+Validation evidence: 17 feature API checks; the broader Business coordination/automation/capacity and migration
+regression suite passed, with upgrades subsequently rechecked from the new upstream migration as well.
+The final integrated experience/migration suite passed 23 checks. The 46 Business unit tests, Chromium workflow,
+automated accessibility/overflow checks, API mypy (339 source files), Ruff, web lint/type checks and production
+build/prerender (335 files) passed. Postgres CI includes the new API tests but was not run locally. Web lint
+retains three existing warnings outside Business. Bundle budgets still fail 21 limits; the same 21 failures
+were reproduced in an untouched merged-main checkout at `2f22fb03`. No budget was raised to hide them.

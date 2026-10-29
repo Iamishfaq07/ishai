@@ -1852,6 +1852,7 @@ class BizCapacityWatch(Base):
 
 class BizExperienceCampaign(Base):
     __tablename__ = "biz_experience_campaigns"
+    __table_args__ = (Index("ix_biz_experience_campaigns_enabled_job", "enabled", "job_id"),)
     job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), primary_key=True)
     company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
     revision: Mapped[int] = mapped_column(Integer, default=1)
