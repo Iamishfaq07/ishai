@@ -201,6 +201,10 @@ class Settings(BaseSettings):
     # {ORBIT_WEB_URL}/api/v1/auth/google/callback in production, where the site proxies /api.
     google_client_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_ID"))
     google_client_secret: SecretStr | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_CLIENT_SECRET"))
+    # The iOS app (native sign-in, auth/native_sign_in.py): the Google OAuth client id of the iOS app, and the app's
+    # bundle id, which Apple puts in a Sign in with Apple token as its audience. Unset: that sign-in stays off.
+    google_ios_client_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_IOS_CLIENT_ID"))
+    apple_bundle_id: str | None = Field(None, validation_alias=AliasChoices("ORBIT_APPLE_BUNDLE_ID"))
     gmail_redirect_uri: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GMAIL_REDIRECT_URI"))
     google_redirect_uri: str | None = Field(None, validation_alias=AliasChoices("ORBIT_GOOGLE_REDIRECT_URI"))
     # The API's own public base URL (https://api.orbitanswer.com in production). When known, links the API hands out
@@ -512,6 +516,16 @@ class Settings(BaseSettings):
     def google_enabled(self) -> bool:
         secret = self.google_client_secret.get_secret_value().strip() if self.google_client_secret else ""
         return bool((self.google_client_id or "").strip() and secret)
+
+    @property
+    def google_native_audiences(self) -> list[str]:
+        """Client ids a Google id token from the iOS app may be minted for (the iOS client; the web client too, as the
+        app can be given the web client as its server client id)."""
+        return [c.strip() for c in (self.google_ios_client_id, self.google_client_id) if c and c.strip()]
+
+    @property
+    def apple_enabled(self) -> bool:
+        return bool((self.apple_bundle_id or "").strip())
 
     @property
     def is_sqlite(self) -> bool:

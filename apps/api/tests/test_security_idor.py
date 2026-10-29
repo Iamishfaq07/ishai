@@ -452,6 +452,8 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/v1/auth/google/start"), ("GET", "/v1/auth/google/callback"),
     # The desktop app's Google sign-in (D81): the loopback code and its PKCE verifier are the credential.
     ("POST", "/v1/auth/desktop/exchange"),
+    # The iOS app's sign-in: the provider's signed token is the credential.
+    ("POST", "/v1/auth/apple"), ("POST", "/v1/auth/google/native"),
     # What an invite link's code gives, for the sign-up page (a creator's or campus's label at most, never an
     # inviter's name).
     ("GET", "/v1/referrals/codes/{code}"),
