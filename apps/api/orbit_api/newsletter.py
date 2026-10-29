@@ -3,6 +3,8 @@
 - `GET  /v1/newsletter`: the account's choice: true, false, or null when it was never asked (Today asks once).
 - `PUT  /v1/newsletter`: change it ({subscribed, source}). Sign-up can choose it too (auth/routes.py).
 - `POST /v1/newsletter/off`: the email's stop link ({token}), without signing in.
+- `POST /v1/newsletter/one-click?token=`: RFC 8058 one-click unsubscribe, which mail apps POST to (through the web
+  Worker's /api proxy, so the address is on the site's own domain).
 - `GET  /v1/admin/newsletter`: how many chose it, said no, or were never asked, and how many got it this week.
 - `POST /v1/admin/newsletter/preview`: this week's email for the admin's own account, sent to the admin.
 
@@ -20,7 +22,7 @@ import secrets
 from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -142,7 +144,7 @@ async def compose(db: AsyncSession, user: User, token: str, now: datetime) -> Ou
     footer = ("You're getting this because you chose Orbit's weekly tips and offers. "
               f"Stop them in one click: {stop} (or in Settings).")
     return OutgoingEmail(to=user.email, subject=subject[:150], text="\n".join(lines), footer=footer,
-                         unsubscribe=stop)
+                         unsubscribe=stop, one_click=f"{web}/api/v1/newsletter/one-click?token={token}")
 
 
 async def set_choice(db: AsyncSession, user_id: str, subscribed: bool, source: str) -> NewsletterChoice:
@@ -215,7 +217,8 @@ async def preview(admin: Annotated[User, Depends(require_admin)],
     """This week's email as the admin's own account would get it (its stop link is a dummy), to the admin."""
     mail = await compose(db, admin, "preview", datetime.now(UTC))
     await get_email_sender().send(OutgoingEmail(to=mail.to, subject=f"[Preview] {mail.subject}", text=mail.text,
-                                                footer=mail.footer, unsubscribe=mail.unsubscribe))
+                                                footer=mail.footer, unsubscribe=mail.unsubscribe,
+                                                one_click=mail.one_click))
     return PreviewOut(to=admin.email)
 
 
@@ -255,3 +258,12 @@ async def turn_off(body: OffIn, db: Annotated[AsyncSession, Depends(get_db)]) ->
         raise HTTPException(status.HTTP_404_NOT_FOUND, "That link has expired. Turn the weekly email off in Settings.")
     row.subscribed, row.source, row.changed_at = False, "email", datetime.now(UTC)
     await db.commit()
+
+
+@router.post("/one-click", status_code=status.HTTP_200_OK, dependencies=[_off_limit])
+async def one_click(token: Annotated[str, Query(min_length=16, max_length=64)],
+                    db: Annotated[AsyncSession, Depends(get_db)]) -> dict[str, bool]:
+    """RFC 8058: the mail app's "Unsubscribe" button POSTs here (`List-Unsubscribe=One-Click` in the body, which this
+    doesn't need). Only a POST changes anything, so a link scanner fetching the address does nothing."""
+    await turn_off(OffIn(token=token), db)
+    return {"unsubscribed": True}
