@@ -1,0 +1,167 @@
+{
+  "slug": "gitlab",
+  "name": "GitLab",
+  "aliases": [
+    "gitlab inc"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "GitLab publishes its hiring process in its public handbook: an application, a screening call with a recruiter, an assessment and a technical interview for some roles, team interviews (behavioural, panel or technical), then references and an offer. GitLab is all-remote, so interviews are by video, and its six CREDIT values (Collaboration, Results for Customers, Efficiency, Diversity Inclusion and Belonging, Iteration and Transparency) shape the behavioural questions. Technical interviews for engineers are commonly reported as working through a merge request.",
+  "rounds": [
+    "Application and, for some roles, a short questionnaire",
+    "Screening call with a recruiter",
+    "Assessment or take-home (for some roles)",
+    "Technical interview, often about 90 minutes over video (for technical roles)",
+    "Team interviews: hiring manager, peers and sometimes a panel, focused on behaviour and values",
+    "Senior leader interview for some roles, then references and offer"
+  ],
+  "looks_for": [
+    "Collaboration",
+    "Results for customers",
+    "Efficiency",
+    "Diversity, inclusion and belonging",
+    "Iteration: small steps shipped often",
+    "Transparency",
+    "Clear written communication for remote work",
+    "Managing your own time without supervision"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you shipped something small to learn quickly instead of waiting for the full version.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you shipped first and why that slice",
+        "What you learned from users or data",
+        "How it shaped the next iteration"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made your work visible to others so they could help or give feedback early.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you shared and where",
+        "Feedback you got and what changed",
+        "Why being open helped the outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a disagreement with a colleague you worked through in writing.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What the disagreement was about",
+        "How you set out your view and theirs clearly",
+        "How it was resolved and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put a customer's needs ahead of an internal preference.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The customer need and the internal pull the other way",
+        "How you made the case",
+        "What the customer got"
+      ]
+    },
+    {
+      "text": "Here is a merge request with a few problems. Walk me through how you'd review it.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Reading for correctness first, then readability and tests",
+        "Specific, kind comments with suggested changes",
+        "What you'd block on and what's a nit"
+      ]
+    },
+    {
+      "text": "How do you plan and track your own work when nobody is checking in on you each day?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How you set priorities each week",
+        "How you make progress visible to the team",
+        "What you do when you're blocked"
+      ]
+    },
+    {
+      "text": "How would you document a decision so someone in another time zone can act on it tomorrow?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Context, options and the decision in one place",
+        "Who needs to know and how they'll find it",
+        "What they can do without waiting for you"
+      ]
+    },
+    {
+      "text": "Tell me how you'd break a large feature into the smallest useful changes.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Finding a first slice that delivers value",
+        "Ordering the rest by risk and learning",
+        "Keeping each change easy to review"
+      ]
+    },
+    {
+      "text": "Describe a time a process slowed your team down. What did you change?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The process and its cost",
+        "The change you proposed and how you got buy-in",
+        "What improved, measured if possible"
+      ]
+    },
+    {
+      "text": "What does a good asynchronous working day look like for you?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "How you handle overlap hours and handovers",
+        "Written updates you'd post",
+        "How you stay connected to the team"
+      ]
+    },
+    {
+      "text": "Which GitLab value do you find hardest to live by, and why?",
+      "type": "fit",
+      "kind": "reflection",
+      "covers": [
+        "An honest choice, not the easiest one",
+        "An example where it was hard",
+        "What you do about it"
+      ]
+    },
+    {
+      "text": "Why do you want to work at an all-remote company like GitLab?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What you've learned about remote work, from experience if you have it",
+        "Why GitLab's product or openness appeals to you",
+        "How you'd stay effective and connected"
+      ]
+    }
+  ],
+  "tips": [
+    "Read GitLab's values page in the handbook and prepare a story for each CREDIT value.",
+    "Your written messages are part of the impression; keep emails and scheduling notes clear and short.",
+    "For a merge request review, practise giving specific, kind and actionable feedback.",
+    "Test your video setup and pick a quiet place: every interview is remote."
+  ],
+  "sources": [
+    {
+      "title": "GitLab Handbook: Candidate FAQ (interview stages)",
+      "url": "https://handbook.gitlab.com/handbook/hiring/candidate-faq/"
+    },
+    {
+      "title": "GitLab Handbook: Values",
+      "url": "https://handbook.gitlab.com/handbook/values/"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

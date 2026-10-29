@@ -1,0 +1,166 @@
+{
+  "slug": "grab",
+  "name": "Grab",
+  "aliases": [
+    "grab holdings",
+    "grabtaxi"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Grab's careers site says its process runs up to four rounds tailored to the role, takes about a month on average, and that each interview usually lasts 30 minutes to an hour. For engineers it describes a recruiter or HR call, live coding on data structures and algorithms, a system design discussion where you justify your decisions, and a conversation about Grab's values, the 4Hs: Heart, Hunger, Honour and Humility. Analyst and business roles commonly report a case study instead of coding.",
+  "rounds": [
+    "Recruiter or HR call about your background and past work",
+    "Live coding: one or two problems on an online platform (engineering)",
+    "System design: a whiteboarding discussion on scalable systems, security and monitoring (experienced engineers)",
+    "Culture and hiring manager conversation about Grab's 4Hs",
+    "Offer, often about a month after the first call"
+  ],
+  "looks_for": [
+    "Heart: caring for customers, partners and each other",
+    "Hunger: drive to do better",
+    "Honour: integrity",
+    "Humility",
+    "Problem-solving with data structures and algorithms",
+    "Justified design decisions",
+    "Understanding of Southeast Asian users"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you went out of your way for a customer or partner.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they needed",
+        "What you did beyond the usual",
+        "The result for them"
+      ]
+    },
+    {
+      "text": "Tell me about a time you were wrong and how you handled it.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What you got wrong",
+        "How you owned it and fixed it",
+        "What you do differently now"
+      ]
+    },
+    {
+      "text": "Tell me about a goal you set yourself that was hard to reach.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and why it mattered",
+        "Obstacles and how you pushed through",
+        "The result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to choose between doing something fast and doing it right.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The pressure and the risk",
+        "How you decided",
+        "What happened and what you learned"
+      ]
+    },
+    {
+      "text": "How would you design the system that matches a ride request to a nearby driver?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Driver locations, spatial indexing and how often they update",
+        "Matching logic and handling no driver nearby",
+        "Scaling for peak hours and monitoring"
+      ]
+    },
+    {
+      "text": "How would you design food delivery time estimates that customers can trust?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: restaurant prep time, distance, traffic, rider availability",
+        "Updating the estimate as things change",
+        "Measuring accuracy and fixing bias"
+      ]
+    },
+    {
+      "text": "Given a list of trips with start and end times, how would you find the maximum number happening at once?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Sorting start and end events",
+        "A sweep with a running count",
+        "Time and space complexity, and edge cases"
+      ]
+    },
+    {
+      "text": "How would you keep a payments wallet secure from account takeover?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Device checks, step-up verification and limits",
+        "Spotting unusual behaviour",
+        "Recovery that doesn't lock out real users"
+      ]
+    },
+    {
+      "text": "A city's ride cancellations jumped this week. How would you find out why?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Splitting by rider, driver, area and time",
+        "Checking for releases, weather or events",
+        "A hypothesis, a test and a fix"
+      ]
+    },
+    {
+      "text": "How would you adapt a product for markets with different payment habits and phone types?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Local payment methods, including cash",
+        "Low-end phones and patchy networks",
+        "How you'd learn from each market"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Grab?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Grab's mission in Southeast Asia",
+        "How your skills fit the team",
+        "The impact you'd like to have"
+      ]
+    },
+    {
+      "text": "Which of Grab's 4Hs comes most naturally to you, and which do you work on?",
+      "type": "fit",
+      "kind": "reflection",
+      "covers": [
+        "An honest pick for each",
+        "An example of each",
+        "What you're doing to grow"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare a story for each of the 4Hs: Heart, Hunger, Honour and Humility.",
+    "In system design, say why you made each decision; Grab describes the round as a discussion where you justify your choices.",
+    "Practise coding on an online editor without autocomplete, talking through your approach.",
+    "Think about Southeast Asian users: cash payments, low-end phones, many languages and patchy networks."
+  ],
+  "sources": [
+    {
+      "title": "Grab Careers: How we hire",
+      "url": "https://www.grab.careers/en/how-we-hire/"
+    },
+    {
+      "title": "Grab Careers: How we hire engineers",
+      "url": "https://www.grab.careers/en/how-we-hire/engineering/"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

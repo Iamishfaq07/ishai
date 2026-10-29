@@ -1,0 +1,167 @@
+{
+  "slug": "nestle",
+  "name": "Nestlé",
+  "aliases": [
+    "nestle",
+    "nestle sa",
+    "nestle india"
+  ],
+  "group": "industry",
+  "market": "global",
+  "summary": "Nestlé's jobs pages describe a recruitment journey of a CV screen, a first interview with a recruiter about your interests, experience and motivation, an interview with the hiring manager, and for some roles evaluations such as cognitive tests, a case study or a practical test, which Nestlé says it explains beforehand. A final interview may include meeting the team. Graduate programmes in some countries add online assessments, a video interview and an assessment centre.",
+  "rounds": [
+    "Application and CV screen",
+    "First interview with a recruiter, often by phone or video, on motivation and experience",
+    "Interview with the hiring manager, online or in person",
+    "Evaluations for some roles: cognitive tests, a case study or a practical test",
+    "Final interview, sometimes meeting the team; for graduate programmes an assessment centre",
+    "Offer, often by phone first and then in writing"
+  ],
+  "looks_for": [
+    "Motivation for the role and for Nestlé",
+    "Achievements you can show with examples",
+    "Teamwork",
+    "Adaptability",
+    "Consumer focus",
+    "Respect for people, cultures and the environment"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about an achievement you're proud of and how you got there.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you achieved and why it mattered",
+        "The steps you took",
+        "The result, with numbers if you have them"
+      ]
+    },
+    {
+      "text": "Tell me about a time you worked with people from a different background or culture.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The situation and the differences",
+        "How you adapted and built trust",
+        "What you achieved together"
+      ]
+    },
+    {
+      "text": "Tell me about a time a plan changed at the last minute.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What changed",
+        "How you responded",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a time you improved a process to save time or waste.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The process and the waste",
+        "What you changed",
+        "What it saved"
+      ]
+    },
+    {
+      "text": "How would you launch a new healthier version of a popular snack in a market that loves the original?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who it's for and why they'd switch",
+        "Taste tests, pricing and messaging",
+        "Measuring success without hurting the original"
+      ]
+    },
+    {
+      "text": "A key supplier can't deliver an ingredient for two weeks. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Assessing stock and impact on production",
+        "Options: other suppliers, recipes, priorities",
+        "Communicating with sales and customers"
+      ]
+    },
+    {
+      "text": "How would you reduce packaging waste for a product without raising its price much?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where the packaging is and what it does",
+        "Options and their cost and safety",
+        "Testing with consumers and retailers"
+      ]
+    },
+    {
+      "text": "How would you decide which products to put on promotion in a supermarket this month?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Goals: volume, new buyers or margin",
+        "Data on past promotions",
+        "Agreeing it with the retailer"
+      ]
+    },
+    {
+      "text": "How do you make sure food quality and safety stay high when you're under pressure to deliver?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Never skipping checks",
+        "Escalating issues early",
+        "An example if you have one"
+      ]
+    },
+    {
+      "text": "What do you know about Nestlé's brands and what it stands for?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Brands relevant to the role",
+        "Something about Nestlé's purpose or commitments",
+        "Why that matters to you"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Nestlé?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Nestlé that draws you",
+        "How your experience fits the role",
+        "What you hope to grow into"
+      ]
+    },
+    {
+      "text": "Where do you see your career going in the next few years?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A direction that fits the role",
+        "Skills you want to build",
+        "How Nestlé fits that path"
+      ]
+    }
+  ],
+  "tips": [
+    "Tailor your CV to the role: Nestlé's recruiters screen CVs against the job.",
+    "Prepare examples of teamwork, adaptability and achievements, using a clear structure such as STAR.",
+    "Nestlé says it explains any tests or case studies beforehand; ask your recruiter what to expect.",
+    "Nestlé says it only contacts candidates from official email addresses and never asks for payment."
+  ],
+  "sources": [
+    {
+      "title": "Nestlé: Start your Nestlé journey (recruitment process)",
+      "url": "https://www.nestle.com/jobs/recruitment-journey"
+    },
+    {
+      "title": "Nestlé Jobs: FAQs",
+      "url": "https://jobs.nestle.com/en/faqs"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

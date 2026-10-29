@@ -1,0 +1,164 @@
+{
+  "slug": "canva",
+  "name": "Canva",
+  "aliases": [
+    "canva pty ltd"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Canva describes four parts to its hiring on its careers site: a recruiter Zoom call, a first interview with your potential coach (Canva's word for a manager) or a close collaborator, a take-home challenge you present back, and a final interview with close colleagues. Engineers usually skip the take-home and have a longer final interview mixing technical problem-solving with questions about their experience. Canva says the process usually takes four to five weeks and suggests answering with the STARR method.",
+  "rounds": [
+    "Recruiter Zoom call about your experience and the role (engineers often get some technical questions here)",
+    "First interview with your potential coach or a close collaborator",
+    "Take-home challenge to complete in your own time and present back (most non-engineering roles)",
+    "Final interview: walk close colleagues through your challenge and answer behavioural questions; for engineers, a longer technical and experience interview",
+    "Decision, often within four to five weeks of the first call"
+  ],
+  "looks_for": [
+    "Skills from Canva's hiring framework for the role",
+    "Clear stories told with situation, task, action, result and reflection (STARR)",
+    "Being a good human",
+    "Craft and care in the work you show",
+    "How you explain your thinking to colleagues",
+    "Relevant skills, including ones from outside work"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project you're proud of. What did you do yourself, and what would you change now?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The project and why it mattered",
+        "Your own decisions, separate from the team's",
+        "The result and a real reflection on what you'd change"
+      ]
+    },
+    {
+      "text": "Tell me about a time you got feedback that changed how you work.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback and who gave it",
+        "What you changed, specifically",
+        "How you know the change worked"
+      ]
+    },
+    {
+      "text": "Tell me about a time you helped a teammate succeed when it wasn't your job.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they needed and why you stepped in",
+        "What you did without taking over",
+        "What happened for them and the team"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to simplify something complicated for people who weren't experts.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who the audience was and what confused them",
+        "How you simplified it without losing what mattered",
+        "How you checked they understood"
+      ]
+    },
+    {
+      "text": "Walk me through the take-home you did: what you chose to focus on, what you left out, and why.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The goal you set from the brief",
+        "Trade-offs you made and the reasoning",
+        "What you'd do with more time"
+      ]
+    },
+    {
+      "text": "How would you make a feature like a design template search feel fast for millions of people?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "What makes search feel fast: results, previews, caching",
+        "How you'd measure it and spot slow cases",
+        "Trade-offs between relevance and speed"
+      ]
+    },
+    {
+      "text": "How would you decide whether a new editing feature is worth building for non-designers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Who it's for and the problem it solves",
+        "Signals and a small test before a full build",
+        "What success looks like and how you'd measure it"
+      ]
+    },
+    {
+      "text": "Describe how you'd handle two teams wanting conflicting changes to a shared component.",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Understanding what each team actually needs",
+        "Options and their costs, written down",
+        "How you'd reach a decision and tell everyone"
+      ]
+    },
+    {
+      "text": "Tell me about a piece of work where quality really mattered. How did you make sure it was right?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "Why quality mattered there",
+        "Checks, reviews or tests you used",
+        "What you caught and what slipped through"
+      ]
+    },
+    {
+      "text": "How would you explain the impact of your last role to someone outside your field?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The problem you worked on in plain words",
+        "One or two results with numbers if you have them",
+        "Why it mattered to the people it served"
+      ]
+    },
+    {
+      "text": "Why Canva, and why this team?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Canva's product or mission that matters to you",
+        "How your skills fit this team's work",
+        "What you hope to learn"
+      ]
+    },
+    {
+      "text": "What questions do you have for me about the team or the role?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "A question about how the team measures success",
+        "A question about the first few months",
+        "A question that shows you read about Canva"
+      ]
+    }
+  ],
+  "tips": [
+    "Canva suggests the STARR method: situation, task, action, result and reflection. Prepare the reflection part; it's the one people skip.",
+    "For a take-home, present your reasoning and trade-offs, not just the final result.",
+    "Canva calls managers coaches; ask your first interviewer how the team works day to day.",
+    "Canva says its recruiters usually email from @canva.com addresses. Be wary of anyone using a personal email who claims to represent Canva."
+  ],
+  "sources": [
+    {
+      "title": "Canva: How we hire",
+      "url": "https://www.lifeatcanva.com/en/how-we-hire/"
+    },
+    {
+      "title": "Canva: Early careers",
+      "url": "https://www.lifeatcanva.com/en/early-careers/"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

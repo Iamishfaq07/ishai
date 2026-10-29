@@ -1,0 +1,169 @@
+{
+  "slug": "zalando",
+  "name": "Zalando",
+  "aliases": [
+    "zalando se"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Zalando's 'How we hire' page describes a first call with a Talent Acquisition Partner (about 15 to 45 minutes, on motivation, salary expectations and next steps), a call with the hiring manager, a case study or challenge for some roles, and final interviews of three to five sessions of 45 to 60 minutes. For software engineers it lists a coding interview, a system design interview and a general technical interview, over roughly two to three weeks. Zalando suggests the STAR method for experience questions and the REACTO approach for coding.",
+  "rounds": [
+    "Call with a Talent Acquisition Partner: motivation, salary expectations and next steps",
+    "Interview with the hiring manager about your experience and the role",
+    "Case study or challenge for some roles (marketing, product, design)",
+    "Final interviews: three to five sessions, each about 45 to 60 minutes",
+    "For engineers: coding, system design and a general technical interview"
+  ],
+  "looks_for": [
+    "Customer focus",
+    "Clear structure in answers (STAR)",
+    "Structured problem-solving in coding (REACTO)",
+    "System design trade-offs at scale",
+    "Stakeholder management (product roles)",
+    "Analytical thinking",
+    "Commercial sense"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you had to win over a stakeholder who didn't agree with you.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What they wanted and why",
+        "How you understood their view and made your case",
+        "Where you ended up"
+      ]
+    },
+    {
+      "text": "Tell me about a decision you made using data that surprised you.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you expected",
+        "What the data showed",
+        "What you decided and the result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you delivered under a tight deadline.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The deadline and why it was tight",
+        "What you cut or simplified",
+        "What you delivered"
+      ]
+    },
+    {
+      "text": "Tell me about something you'd do differently in a past project.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The project and the decision",
+        "Why it wasn't the best choice",
+        "What you'd do now"
+      ]
+    },
+    {
+      "text": "How would you design a system that shows customers whether an item in their size is in stock, across warehouses and partner shops?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Stock sources and how often they update",
+        "Avoiding overselling with reservations",
+        "Caching for speed and staying correct"
+      ]
+    },
+    {
+      "text": "How would you reduce the number of returns for shoes bought online?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Why people return: size, fit, look",
+        "Size advice, better photos and reviews",
+        "Measuring the effect on returns and sales"
+      ]
+    },
+    {
+      "text": "Walk me through solving a coding problem: repeat it, give examples, set an approach, code, test and optimise.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying the problem with examples",
+        "Your approach before coding",
+        "Testing and improving the solution"
+      ]
+    },
+    {
+      "text": "How would you measure whether a new recommendation carousel is working?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Primary metric and guardrails",
+        "An A/B test and how long to run it",
+        "What you'd do if results are mixed"
+      ]
+    },
+    {
+      "text": "How would you plan a seasonal sale campaign across several countries?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Goals per market and audience",
+        "Channels, timing and local differences",
+        "Measuring results and learning for next time"
+      ]
+    },
+    {
+      "text": "Explain a technical trade-off you made recently to a non-technical colleague.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "The choice and its options",
+        "Plain-language costs and benefits",
+        "Why you chose it"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Zalando?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Zalando's customers, fashion or technology",
+        "How your skills fit the role",
+        "What you'd like to build"
+      ]
+    },
+    {
+      "text": "What questions do you have about the team and how it works?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "How the team plans its work",
+        "What success looks like in the first months",
+        "Something you read about Zalando"
+      ]
+    }
+  ],
+  "tips": [
+    "Zalando suggests the STAR method for experience questions: situation, task, action, result.",
+    "For coding, practise the REACTO approach Zalando describes: repeat, examples, approach, code, test, optimise.",
+    "Apply through Zalando's online form; it says recruiters write from official addresses and never ask for payment.",
+    "Zalando's jobs blog has a prep guide for many roles; read the one for yours."
+  ],
+  "sources": [
+    {
+      "title": "Zalando: How we hire",
+      "url": "https://jobs.zalando.com/en/how-we-hire"
+    },
+    {
+      "title": "Zalando: Technical interview for software engineers",
+      "url": "https://jobs.zalando.com/en/blog/technical-interview-for-software-engineers"
+    },
+    {
+      "title": "Zalando: Interview tips for product management",
+      "url": "https://jobs.zalando.com/en/blog/interview-tips-product-management"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}
