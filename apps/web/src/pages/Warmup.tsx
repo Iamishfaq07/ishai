@@ -34,6 +34,8 @@ import { useCountry } from "../lib/country";
 import { MIN_WORDS, checkAnswer, spokenTime, summarise, words, type Check, type Verdict } from "../lib/warmup/checks";
 import { logWarmupAnswer } from "../lib/weeklyGoal";
 import { WARMUP_FAQ } from "../../worker/faqs/warmup.js";
+import { useWelcomeGrant } from "../lib/welcome";
+import { ATLAS_PATH, companyMockLink, entryPath, parseTrack } from "./bank/content";
 
 /**
  * The Interview Warm-up (`/warmup`, public: no sign-in, no AI, no minutes). Pick a track, answer five questions by
@@ -478,6 +480,13 @@ function Summary({
   );
   const s = summarise(results);
   const name = (id: string) => (s.labels[id as keyof typeof s.labels] ?? id).toLowerCase();
+  const minutes = useWelcomeGrant()?.interview_minutes ?? 0;
+  // A guide's warm-up (`company:netflix`, `role:data-analyst`) leads on to a mock interview for that company or role.
+  const guide = parseTrack(track.id);
+  const company = guide?.kind === "company";
+  const mock = !guide ? "/mock?preset=hr5" : company ? companyMockLink(track) : `/mock?${new URLSearchParams({ role: track.name })}`;
+  const mockLabel = company ? `Mock interview in ${track.name}'s style` : `A ${track.name.toLowerCase()} mock interview`;
+  const guideStyle = company ? `the way ${track.name}'s interviewers are known to` : `what ${track.name.toLowerCase()} interviews usually test`;
   return (
     <section aria-labelledby="summary-title" className="pt-4 sm:pt-8">
       <p className="text-sm text-zinc-500 dark:text-zinc-400">{track.name}</p>
@@ -522,10 +531,12 @@ function Summary({
         {signedIn ? (
           <>
             <h2 className="font-display text-lg font-semibold">Now say it out loud to an interviewer</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">A 5-minute {screen} with Orbit's AI interviewer, then a report with a score.</p>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+              {guide ? `A mock interview that asks ${guideStyle}, then a report with a score on every answer.` : `A 5-minute ${screen} with Orbit's AI interviewer, then a report with a score.`}
+            </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/mock?preset=hr5" className={navButton("primary")}>
-                Do a 5-minute {screen}
+              <Link to={mock} className={navButton("primary")}>
+                {guide ? mockLabel : `Do a 5-minute ${screen}`}
               </Link>
               <Link to="/mock" className={navButton("secondary")}>
                 Back to Practice
@@ -534,20 +545,34 @@ function Summary({
           </>
         ) : (
           <>
-            <h2 className="font-display text-lg font-semibold">Get an AI score and a mock interview: free account</h2>
+            <h2 className="font-display text-lg font-semibold">
+              {guide ? (company ? `Next: a mock interview in ${track.name}'s style` : `Next: a ${track.name.toLowerCase()} mock interview`) : "Get an AI score and a mock interview: free account"}
+            </h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-              An AI interviewer that asks, listens and follows up, a report on every answer, and the same account has Resume and Jobs.
-              Nothing auto-renews.
+              {guide ? `Saba, Orbit's AI interviewer, asks ${guideStyle}, follows up on what you say and scores every answer. ` : "An AI interviewer that asks, listens and follows up, a report on every answer. "}
+              {minutes ? `A free account comes with ${minutes} interview minutes, ` : "A free account "}
+              {minutes ? "and the same account has Resume and Jobs." : "has Resume and Jobs too."} Nothing auto-renews.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/register" state={{ from: "/mock" }} className={navButton("primary")}>
+              <Link to="/register" state={{ from: mock }} className={navButton("primary")}>
                 Create a free account
               </Link>
-              <Link to="/login" state={{ from: "/mock" }} className={navButton("secondary")}>
+              <Link to="/login" state={{ from: mock }} className={navButton("secondary")}>
                 I have an account
               </Link>
             </div>
           </>
+        )}
+        {guide && (
+          <p className="mt-4 text-sm">
+            <Link to={entryPath(guide.kind, guide.slug)} className={cx("rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+              Back to the {track.name} guide
+            </Link>
+            <span className="text-zinc-400" aria-hidden="true">{" · "}</span>
+            <Link to={ATLAS_PATH} className={cx("rounded font-medium text-indigo-700 hover:underline dark:text-indigo-300", focusRing)}>
+              Search another company
+            </Link>
+          </p>
         )}
       </Card>
     </section>
