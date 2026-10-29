@@ -1,0 +1,169 @@
+{
+  "slug": "klarna",
+  "name": "Klarna",
+  "aliases": [
+    "klarna bank"
+  ],
+  "group": "finance",
+  "market": "global",
+  "summary": "Klarna's careers pages describe applying to a pipeline for a competence rather than one job, then an online abstract reasoning test that it says every applicant takes, a recruiter screen, a first round on your skills and examples of Klarna's values (often a coding test for engineers), a second round that goes deeper once a likely team is found, and a final stage meeting future colleagues. Klarna says the process takes roughly four to six weeks from the first chat, and advises reading up on Klarna even if you know the brand.",
+  "rounds": [
+    "Apply to a pipeline for your competence (engineering, design, data and so on)",
+    "Online abstract reasoning test",
+    "Recruiter screen on your experience and career interests",
+    "First round: role skills and examples of how you've worked; a coding test for many engineering roles",
+    "Second round: a deeper look at your skills once a likely team is identified",
+    "Final stage: meet future colleagues and discuss terms"
+  ],
+  "looks_for": [
+    "Reasoning: spotting patterns and solving problems",
+    "Examples that show Klarna's values",
+    "Customer obsession",
+    "Ownership and speed",
+    "Depth in your competence",
+    "Knowledge of Klarna's products"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you moved fast on something and it paid off, or didn't.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why speed mattered",
+        "How you decided what to skip",
+        "The result and what you learned"
+      ]
+    },
+    {
+      "text": "Tell me about a time you owned a problem from start to finish.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and your role",
+        "Decisions you made yourself",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Tell me about a time you used customer feedback to change what you built.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What customers said",
+        "What you changed",
+        "How you measured the effect"
+      ]
+    },
+    {
+      "text": "Tell me about a decision you had to reverse.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The original decision and why",
+        "What made you change course",
+        "How you handled it with others"
+      ]
+    },
+    {
+      "text": "How would you design a checkout option that lets shoppers pay in instalments?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The flow for the shopper and the shop",
+        "Credit and risk checks in real time",
+        "Reminders, payments and what happens when one is missed"
+      ]
+    },
+    {
+      "text": "How would you decide in seconds whether to approve a shopper for pay later?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals you'd use and which you wouldn't",
+        "Rules versus models, and fairness",
+        "Measuring losses and approval rates"
+      ]
+    },
+    {
+      "text": "How would you improve the shopping app's home screen for people who rarely open it?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Why they don't come back",
+        "Ideas and a test for each",
+        "The metric that tells you it worked"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd approach a coding problem you haven't seen before.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Clarifying the problem with examples",
+        "Starting simple and improving",
+        "Testing as you go"
+      ]
+    },
+    {
+      "text": "How would you explain buy now, pay later responsibly to a first-time user?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What it is in plain words",
+        "Costs and what happens if you miss a payment",
+        "Helping them borrow only what they can repay"
+      ]
+    },
+    {
+      "text": "Which competence pipeline are you applying to, and how do your skills fit it?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Your core skills",
+        "Evidence from past work",
+        "Where you'd like to grow"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Klarna?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Klarna's products or ambition",
+        "How your experience fits",
+        "What you'd like to build"
+      ]
+    },
+    {
+      "text": "What do you know about Klarna beyond the brand?",
+      "type": "fit",
+      "kind": "knowledge",
+      "covers": [
+        "Its products for shoppers and shops",
+        "Something recent you read about",
+        "What interests you about it"
+      ]
+    }
+  ],
+  "tips": [
+    "Practise abstract reasoning tests before you apply; Klarna says everyone who applies takes one.",
+    "Klarna hires into competence pipelines: be clear about your core skill rather than one job title.",
+    "Read up on Klarna's products for shoppers and businesses, even if you already use it.",
+    "Klarna says replies can be slow because of how many people apply; a referral from an employee can help."
+  ],
+  "sources": [
+    {
+      "title": "Klarna: Application process",
+      "url": "https://www.klarna.com/careers/tips-and-tricks/application-process/"
+    },
+    {
+      "title": "Klarna: How to nail your Klarna interview",
+      "url": "https://www.klarna.com/careers/life-at-klarna/how-to-nail-your-klarna-interview/"
+    },
+    {
+      "title": "Klarna: Nail your engineering interview",
+      "url": "https://www.klarna.com/careers/life-at-klarna/nail-your-engineering-interview/"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}
