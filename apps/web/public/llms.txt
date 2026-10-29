@@ -1,13 +1,13 @@
 # Orbit AI
 
-> Orbit AI (orbitanswer.com) is a career suite for job seekers: interview practice and live interview help grounded in your own resume, a resume checker with an ATS score (Resume AI), and new jobs from companies' own careers pages matched to your resume (Jobs AI). One free account, no subscription. Web app in any modern browser, plus an app for Windows.
+> Orbit AI (orbitanswer.com) is a career suite for job seekers: interview practice and live interview help grounded in your own resume, a resume checker with an ATS score (Resume AI), and new jobs from companies' own careers pages matched to your resume (Jobs AI). One free account, no subscription. Web app in any modern browser, plus an app for Windows on the Microsoft Store ("Orbit AI Career Assistant": https://apps.microsoft.com/detail/9NJ1ZXGTCZKL).
 
 Orbit is used mostly by job seekers in India (freshers, campus placements, IT services roles) and by English-speaking job seekers worldwide. Prices are in Indian rupees (INR) in India and US dollars (USD) elsewhere, shown at https://orbitanswer.com/pricing. Nothing renews: plans run for a fixed time and are paid once, and credits never expire. A new account starts with free interview minutes and an AI credit.
 
 Orbit is built for practice, and for interviews and calls where notes or AI help are allowed. Users should check the rules first.
 
 Key facts:
-- Interview copilot: during a live interview or call, Orbit hears the question and suggests an answer from the user's own resume, stories and notes. In the browser (Chrome and Edge can listen to a meeting tab) or in the Orbit app for Windows (beta), which can listen to any call app.
+- Interview copilot: during a live interview or call, Orbit hears the question and suggests an answer from the user's own resume, stories and notes. In the browser (Chrome and Edge can listen to a meeting tab) or in the Orbit app for Windows (on the Microsoft Store), which can listen to any call app.
 - Practice: mock interviews with an AI interviewer that asks out loud and scores the answers, an AI video interview, and a free interview warm-up that needs no account (orbitanswer.com/warmup).
 - Resume AI: an ATS score out of 100, what's missing for the job you want, tailored copies per job, Word and PDF downloads. Editing, the score and downloads are free; AI rewrites use AI credits. It keeps the user's own numbers and never invents one.
 - Jobs AI: new openings from companies' careers pages and job boards that allow it, matched to the resume, with a tracker and a few free AI fit checks a day. Apply always opens the original post. A job found anywhere else can be added from its link, and its fit check runs on the description the user pastes.

@@ -32,7 +32,7 @@ import {
 import { api } from "../lib/api";
 import { useCountry } from "../lib/country";
 import { CONTACT_PAGE, COOKIE_PAGE, PRIVACY_PAGE, REFUND_PAGE, USE_WHERE_ALLOWED } from "../lib/contact";
-import { DESKTOP_BETA, DESKTOP_DOWNLOAD_URL } from "../lib/desktop";
+import { WINDOWS_APP_BETA, WINDOWS_APP_URL } from "../lib/desktop";
 import { WELCOME_LIKE, useWelcomeGrant, type WelcomeGrant } from "../lib/welcome";
 import { kashsecUrl } from "./learn/links";
 import { KASHSEC_TAGLINE, KashSecChips } from "../components/KashSec";
@@ -641,10 +641,10 @@ export function LandingPage() {
           <>
             <ArrowLink to="/technical">How the live answer works</ArrowLink>
             <a
-              href={DESKTOP_DOWNLOAD_URL}
+              href={WINDOWS_APP_URL}
               className={cx("group inline-flex min-h-10 items-center gap-1.5 rounded-lg text-sm font-medium text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white", focusRing)}
             >
-              <Download className="h-4 w-4" aria-hidden="true" /> Windows app{DESKTOP_BETA ? " (beta)" : ""}
+              <Download className="h-4 w-4" aria-hidden="true" /> Windows app{WINDOWS_APP_BETA ? " (beta)" : ""}
             </a>
           </>
         }

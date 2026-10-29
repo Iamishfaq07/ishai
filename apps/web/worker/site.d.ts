@@ -5,6 +5,7 @@ export const SITE_NAME: string;
 export const ALTERNATE_NAMES: string[];
 export const SAME_AS: string[];
 export const DESKTOP_DOWNLOAD_URL: string;
+export const MS_STORE_LISTING: string;
 export const ORGANIZATION_ID: string;
 export const WEBSITE_ID: string;
 export function siteUrl(path?: string): string;

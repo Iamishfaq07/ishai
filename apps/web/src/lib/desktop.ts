@@ -15,5 +15,11 @@ export const MS_STORE_URL = `https://apps.microsoft.com/detail/${MS_STORE_ID}?mo
 /** Off until certification passes and the listing is public (docs/MICROSOFT_STORE.md): set VITE_MS_STORE_LIVE=true. */
 export const MS_STORE_LIVE: boolean = import.meta.env.VITE_MS_STORE_LIVE === "true";
 
+/** Where "Get the Windows app" goes: the Store listing once it's public (Microsoft signs that copy and keeps it
+ * updated), else the direct installer. */
+export const WINDOWS_APP_URL: string = MS_STORE_LIVE ? MS_STORE_URL : DESKTOP_DOWNLOAD_URL;
+/** The Store copy is signed by Microsoft, so only the direct installer wears the Beta label. */
+export const WINDOWS_APP_BETA: boolean = !MS_STORE_LIVE && DESKTOP_BETA;
+
 export const DESKTOP_BETA_NOTE =
   "Beta: the installer isn't code-signed yet, so Windows may show \"Windows protected your PC\". Choose More info → Run anyway, or keep using the web app.";
