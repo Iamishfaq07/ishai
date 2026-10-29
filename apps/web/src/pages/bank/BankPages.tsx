@@ -44,6 +44,8 @@ import {
   type BankKind,
 } from "./content";
 import { CompanyJobs } from "./CompanyJobs";
+import { MyQuestions } from "./MyQuestions";
+import { PrepPlan } from "./PrepPlan";
 import { PrepKit } from "./PrepKit";
 import { loadCompany, loadRole } from "./docs";
 import type { BankCard, BankCompany, BankQuestion, BankRole } from "./types";
@@ -411,11 +413,15 @@ export function GuideView({ kind, entry }: { kind: BankKind; entry: BankCompany 
 
         <QuickAnswers kind={kind} entry={entry} />
 
+        <PrepPlan kind={kind} entry={entry} />
+
         {company && <div className="mt-8"><CompanyJobs slug={entry.slug} name={name} /></div>}
 
         {questionSections(kind, name).map(([type, heading]) => (
           <QuestionSection key={type} id={`q-${type}`} heading={heading} questions={entry.questions.filter((q) => q.type === type)} practise={warmupLink(kind, entry.slug)} />
         ))}
+
+        <MyQuestions kind={kind} entry={entry} />
 
         <section aria-labelledby="tips-title" className="pt-10">
           <h2 id="tips-title" className={cx(sectionTitle, "flex items-center gap-2")}>

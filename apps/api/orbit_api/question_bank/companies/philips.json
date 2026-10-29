@@ -1,0 +1,170 @@
+{
+  "slug": "philips",
+  "name": "Philips",
+  "aliases": [
+    "royal philips",
+    "koninklijke philips",
+    "philips india"
+  ],
+  "group": "industry",
+  "market": "global",
+  "summary": "Philips describes three phases on its careers site: application and first assessment, interviews, and decisions. A recruiter contacts you if your profile fits, usually for a screening call about your background and career interests, and later rounds are with the hiring manager and team members, in person or by video; the number varies by role, location and manager. Philips recruiters advise preparing specific examples of your impact and saying 'I did this' rather than 'we did this'.",
+  "rounds": [
+    "Application and first assessment of your profile",
+    "Screening call with Talent Acquisition about your background and career interests",
+    "Interviews with the hiring manager and team members, in person or by video",
+    "Further interviews or assessments for some roles",
+    "Decision and offer"
+  ],
+  "looks_for": [
+    "Specific examples of your impact",
+    "Clarity about your own contribution",
+    "Care for patients and consumers",
+    "Quality and safety",
+    "Genuine interest in Philips and the role",
+    "Honest explanations of career moves"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project you're proud of. What exactly did you do?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The project and its goal",
+        "Your own actions, with 'I' not 'we'",
+        "The measurable result"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put the end user or patient first.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who they were and what they needed",
+        "What you did for them",
+        "The difference it made"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to work across teams or countries.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Who was involved and the challenge",
+        "How you coordinated",
+        "The outcome"
+      ]
+    },
+    {
+      "text": "Why did you move on from your last role?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "An honest, brief reason",
+        "What you learned there",
+        "Why this role is the right next step"
+      ]
+    },
+    {
+      "text": "How would you make sure a new medical device feature is safe before it launches?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Risk assessment and requirements",
+        "Testing, verification and validation",
+        "Regulatory steps and documenting decisions"
+      ]
+    },
+    {
+      "text": "A hospital customer reports that a device keeps showing an error. What do you do?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Gathering details and checking for safety risk",
+        "Working with service and engineering",
+        "Keeping the customer informed"
+      ]
+    },
+    {
+      "text": "How would you improve a home health product for older users?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Understanding their needs and limits",
+        "Design changes and testing with them",
+        "Measuring adoption and satisfaction"
+      ]
+    },
+    {
+      "text": "How do you balance speed and quality in your work?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Where you never compromise",
+        "Where you can move faster",
+        "An example"
+      ]
+    },
+    {
+      "text": "How would you use data to show the value of a product to hospital buyers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Outcomes they care about: time, cost, patient results",
+        "Evidence you'd gather",
+        "Presenting it clearly"
+      ]
+    },
+    {
+      "text": "Walk me through how you'd learn a regulated field you're new to.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Key rules and standards to learn first",
+        "People and resources to use",
+        "How you'd apply it safely"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Philips?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to Philips's focus on health",
+        "How your experience fits the role",
+        "What you hope to contribute"
+      ]
+    },
+    {
+      "text": "What questions do you have about the role or team?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "How success is measured",
+        "What the first months look like",
+        "Next steps in the process"
+      ]
+    }
+  ],
+  "tips": [
+    "Philips recruiters suggest saying 'I did this' rather than 'we did this' when describing past work.",
+    "Study the job description and match your examples to its key skills.",
+    "For video interviews, join five minutes early, keep your camera on and treat it like an in-person meeting, as Philips advises.",
+    "Philips warns about people falsely recruiting in its name; apply only through its official careers site."
+  ],
+  "sources": [
+    {
+      "title": "Philips Careers: How we hire",
+      "url": "https://www.careers.philips.com/global/en/how-we-hire"
+    },
+    {
+      "title": "Philips Careers: Ace your next interview, tips from Philips recruiters",
+      "url": "https://www.careers.philips.com/na/en/blogarticle/ace-your-next-interview-tips-from-philips-recruiters"
+    },
+    {
+      "title": "Philips Careers: FAQs",
+      "url": "https://www.careers.philips.com/na/en/faqs"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

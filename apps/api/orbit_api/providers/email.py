@@ -35,6 +35,12 @@ class OutgoingEmail:
     # The line under the message, when it isn't about the recipient's Orbit account (an applicant's email from a
     # company on Orbit for Business). None: the account footer.
     footer: str | None = None
+    # The stop link of an email someone chose to get (the weekly tips email): the List-Unsubscribe header points
+    # there. None: account mail, whose header points to the contact page.
+    unsubscribe: str | None = None
+    # RFC 8058 one-click unsubscribe: an https address the mail app POSTs `List-Unsubscribe=One-Click` to (no page,
+    # no sign-in), listed first in List-Unsubscribe with List-Unsubscribe-Post. Gmail and Yahoo expect it on bulk mail.
+    one_click: str | None = None
 
 
 class EmailSender(ABC):
@@ -81,10 +87,13 @@ class SmtpSender(EmailSender):
         msg["From"], msg["To"], msg["Subject"] = self._from, email.to, email.subject
         if email.reply_to:
             msg["Reply-To"] = email.reply_to
-        # Account mail only. There is no newsletter, so this is how to reach us, not a marketing opt-out.
-        msg["List-Unsubscribe"] = "<https://orbitanswer.com/contact>"
+        # The weekly tips email (opt-in) carries its stop link; account mail, the contact page.
+        links = [u for u in (email.one_click, email.unsubscribe) if u] or ["https://orbitanswer.com/contact"]
+        msg["List-Unsubscribe"] = ", ".join(f"<{u}>" for u in links)
+        if email.one_click:
+            msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
         footer = email.footer if email.footer is not None else (
-            "This email is about your Orbit account. Orbit does not send a newsletter. "
+            "This email is about your Orbit account. Orbit sends its weekly tips email only to people who choose it. "
             "To download or delete your data, use Settings, or the contact page on the site.")
         msg.set_content(email.text.rstrip() + f"\n\n--\n{footer}\n")
         for filename, mime, data in email.attachments:

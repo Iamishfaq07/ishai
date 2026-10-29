@@ -261,7 +261,9 @@ function QuestionList({ resume, result, state, setState }: {
   );
 }
 
-function QuestionCard({ q, startOpen, picked, canPick, onPick }: { q: ResumeInterviewQuestion; startOpen: boolean; picked: boolean; canPick: boolean; onPick: () => void }) {
+/** One likely question: its outline from the resume, what only the candidate can add and where they'll be pushed.
+ *  Without `onPick` there's no box to choose it for practice (the guides' "from your resume" list). */
+export function QuestionCard({ q, startOpen, picked = false, canPick = false, onPick }: { q: ResumeInterviewQuestion; startOpen: boolean; picked?: boolean; canPick?: boolean; onPick?: () => void }) {
   const [open, setOpen] = useState<boolean | null>(null);
   const expanded = open ?? startOpen;
   const story = storyFromQuestion(q);
@@ -277,7 +279,7 @@ function QuestionCard({ q, startOpen, picked, canPick, onPick }: { q: ResumeInte
   return (
     <li className="rounded-xl border border-zinc-200 transition-colors hover:border-indigo-400/50 dark:border-white/10">
       <div className="flex items-start gap-3 p-3">
-        <input
+        {onPick && <input
           type="checkbox"
           checked={picked}
           disabled={!canPick}
@@ -285,7 +287,7 @@ function QuestionCard({ q, startOpen, picked, canPick, onPick }: { q: ResumeInte
           aria-label={`Practise: ${q.question}`}
           title={canPick ? "Practise this one in the mock interview" : `Up to ${MAX_PRACTICE} at a time`}
           className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
-        />
+        />}
         <button type="button" onClick={() => setOpen(!expanded)} aria-expanded={expanded} className={cx("min-w-0 flex-1 text-left", focusRing)}>
           <span className={cx("rounded-full px-2 py-0.5 text-xs font-medium", TYPE[q.type].tone)}>{TYPE[q.type].label}</span>
           <span className="mt-1 block text-sm font-medium">{q.question}</span>

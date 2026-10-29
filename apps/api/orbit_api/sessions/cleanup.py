@@ -74,6 +74,7 @@ async def sweeper(interval_s: float) -> None:
     from orbit_api.job_portal.alerts import send_due
     from orbit_api.job_portal.digest import send_due as send_digests
     from orbit_api.job_portal.interview_eve import send_due as send_interview_eves
+    from orbit_api.newsletter import send_due as send_newsletters
     from orbit_api.support.routes import purge_idle_threads_now
 
     while True:
@@ -126,6 +127,13 @@ async def sweeper(interval_s: float) -> None:
             raise
         except Exception:
             log.exception("interview-eve sweep failed")
+        # The weekly tips and offers email, for the accounts that chose it (newsletter.py).
+        try:
+            await send_newsletters()
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            log.exception("weekly tips sweep failed")
         # Orbit Apply (auto_apply/planner.py): leases that ran out go back, and the setups due are planned.
         try:
             await plan_apply_due()

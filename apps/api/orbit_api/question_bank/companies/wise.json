@@ -1,0 +1,169 @@
+{
+  "slug": "wise",
+  "name": "Wise",
+  "aliases": [
+    "transferwise",
+    "wise plc"
+  ],
+  "group": "finance",
+  "market": "global",
+  "summary": "Wise describes three steps on its jobs site: apply, interview and offer. The interview stage starts with a recruiter call of about 30 minutes on your experience, motivation and what you know about Wise. Engineers then have pair programming, system design, and a product and culture round; product managers have four to five interviews of about an hour, including product, stakeholder and leadership interviews. Wise says interviews are competency-based, recommends the STAR method, and says AI tools shouldn't be used in live coding or design rounds.",
+  "rounds": [
+    "Recruiter call, about 30 minutes: your experience, motivation and what you know about Wise",
+    "Pair programming interview (engineering) or a role interview with the team",
+    "System design interview (engineering) or a stakeholder collaboration interview (product)",
+    "Product and culture interview",
+    "Final interview with leads, then an offer"
+  ],
+  "looks_for": [
+    "Customer focus: making money move cheaply, fast and simply",
+    "Ownership",
+    "Values fit throughout",
+    "Collaborative problem-solving in pair programming",
+    "Clear trade-offs in system design",
+    "Competencies shown with STAR examples"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a time you took ownership of a problem nobody else was handling.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The problem and why it was falling through the gaps",
+        "What you did",
+        "The result and what changed after"
+      ]
+    },
+    {
+      "text": "Tell me about a time you made something simpler for customers.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was hard for them",
+        "What you changed",
+        "How you knew it helped"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to work with a team whose priorities differed from yours.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What each side needed",
+        "How you found common ground",
+        "What you achieved"
+      ]
+    },
+    {
+      "text": "Tell me about feedback you disagreed with at first.",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "The feedback",
+        "How you thought it through",
+        "What you did and learned"
+      ]
+    },
+    {
+      "text": "How would you design a service that shows customers a live exchange rate and fee before they send money?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Rate sources and refresh frequency",
+        "Locking a quote for a short time",
+        "Showing fees clearly and handling rate changes"
+      ]
+    },
+    {
+      "text": "How would you make an international transfer arrive faster for customers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where time goes today: checks, banking networks, cut-offs",
+        "Options: local accounts, better routing, earlier checks",
+        "Measuring speed and keeping it safe"
+      ]
+    },
+    {
+      "text": "Let's pair: write a function that converts an amount between currencies given a table of rates, then improve it together.",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Clarifying inputs, rounding and missing rates",
+        "Writing it step by step and talking through it",
+        "Tests and edge cases"
+      ]
+    },
+    {
+      "text": "How would you decide which new country or currency to launch next?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Customer demand and transfer corridors",
+        "Regulation and partner banks",
+        "A small launch to learn fast"
+      ]
+    },
+    {
+      "text": "A customer's money is stuck mid-transfer. How would you investigate?",
+      "type": "role",
+      "kind": "situational",
+      "covers": [
+        "Checking each step the transfer went through",
+        "Talking to the partner bank if needed",
+        "Keeping the customer updated"
+      ]
+    },
+    {
+      "text": "What do you know about how Wise works and makes money?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Wise's mission in your own words",
+        "How fees are shown and why that matters",
+        "Something you noticed using the product"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Wise?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to Wise's mission",
+        "How your skills fit the role",
+        "What you'd like to improve for customers"
+      ]
+    },
+    {
+      "text": "What questions do you have about the team or the product?",
+      "type": "fit",
+      "kind": "closing",
+      "covers": [
+        "How the team decides what to build",
+        "What success looks like",
+        "Something specific about Wise"
+      ]
+    }
+  ],
+  "tips": [
+    "Read Wise's values and mission before the recruiter call; Wise says it expects you to know what it does.",
+    "Use the STAR method: Wise says its interviews are competency-based.",
+    "Don't use AI tools in live coding or design rounds; Wise says they shouldn't be used there.",
+    "Try sending a small transfer with Wise so you can talk about the product from experience."
+  ],
+  "sources": [
+    {
+      "title": "Wise: Hiring process",
+      "url": "https://wise.jobs/interviews-and-application-process"
+    },
+    {
+      "title": "Wise: Engineering interviews",
+      "url": "https://wise.jobs/engineering-interviews"
+    },
+    {
+      "title": "Wise: Product management interviews",
+      "url": "https://wise.jobs/product-management-interviews"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

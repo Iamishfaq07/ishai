@@ -7,6 +7,7 @@ import { RouteLine, nextStop, routeIndex } from "../components/RouteLine";
 import { RouteMapArt } from "../components/RouteMapArt";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { NewsletterAsk } from "../components/NewsletterChoice";
 import { useAsync } from "../lib/useAsync";
 import { missionPath } from "./jobs/paths";
 import { summaryLine } from "./home/dashboard";
@@ -82,6 +83,7 @@ export function HomePage() {
 
     <Suspense fallback={null}><SecurityNotice /></Suspense>
     <div className="empty:hidden max-sm:order-[-1]"><NewNoticeCard /></div>
+    {!fresh && <NewsletterAsk />}
     {!fresh && <Suspense fallback={<Skeleton variant="card" count={1} label="Loading career overview" />}><Overview /></Suspense>}
 
     {/* A new account's few setup steps, until they're all done: first while nothing is tracked, after the next stop

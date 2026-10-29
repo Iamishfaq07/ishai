@@ -67,6 +67,8 @@ export interface RegisterRequest {
   country?: string;
   /** The invite or creator code of the link they came from (one that can't be used is ignored). */
   ref?: string;
+  /** Ticked "Send me Orbit's weekly tips and offers" (unticked by default). */
+  newsletter?: boolean;
 }
 
 /**
@@ -1677,6 +1679,9 @@ export interface AdminConfig {
   /** The site-wide announcement banner ("" = none). */
   announcement?: string;
   announcement_tone?: "info" | "warning";
+  /** The note at the top of the weekly tips and offers email ("" = none), and where it links. */
+  newsletter_note?: string;
+  newsletter_link?: string;
 }
 
 /** Omit a field to leave it unchanged; send "" for a secret to clear it (revert to env). */
@@ -1692,6 +1697,17 @@ export interface AdminConfigUpdate {
   /** "" takes the banner down. */
   announcement?: string;
   announcement_tone?: "info" | "warning";
+  /** "" removes the weekly email's note (or link). The link is an Orbit path ("/billing") or an https:// address. */
+  newsletter_note?: string;
+  newsletter_link?: string;
+}
+
+/** GET /v1/admin/newsletter: the weekly tips and offers email's audience (opt-in). */
+export interface AdminNewsletterStats {
+  subscribed: number;
+  declined: number;
+  never_asked: number;
+  sent_last_week: number;
 }
 
 export type LatencyMetric =

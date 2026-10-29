@@ -1,0 +1,169 @@
+{
+  "slug": "mercari",
+  "name": "Mercari",
+  "aliases": [
+    "mercari inc",
+    "merpay"
+  ],
+  "group": "global-tech",
+  "market": "global",
+  "summary": "Mercari's careers site describes document screening, a technical assessment for some positions (often a take-home coding assignment of about a week), several interviews and an offer meeting with reference checks. It says interviews look at your enthusiasm for Mercari's mission, how you embody its values (Go Bold, All for One and Be a Pro) and culture fit. Candidates commonly report a manager interview and a final round with someone senior; Mercari India's engineering hiring has used online coding tests.",
+  "rounds": [
+    "Document screening: your CV and what you'd like to do at Mercari",
+    "Technical assessment for some positions: a take-home assignment or online coding test",
+    "Interviews with the team and a manager, often 30 to 60 minutes each",
+    "Final interview, often with a senior leader",
+    "Offer meeting, with reference checks"
+  ],
+  "looks_for": [
+    "Go Bold",
+    "All for One",
+    "Be a Pro",
+    "Enthusiasm for Mercari's mission",
+    "Clear STAR examples",
+    "Solid data structures and algorithms (engineering)"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about the boldest thing you've tried at work. What happened?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What you tried and why it was bold",
+        "How you managed the risk",
+        "The result, even if it failed"
+      ]
+    },
+    {
+      "text": "Tell me about a time you put the team's goal ahead of your own work.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The conflict between the two",
+        "What you chose and why",
+        "What it achieved for the team"
+      ]
+    },
+    {
+      "text": "Tell me about something you became an expert in. How did you get there?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The skill and why it mattered",
+        "How you learned and practised",
+        "How you use it now"
+      ]
+    },
+    {
+      "text": "Tell me about a time you shipped something quickly and improved it later.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Why speed mattered",
+        "The first version and its limits",
+        "What you improved and how you knew"
+      ]
+    },
+    {
+      "text": "How would you design a marketplace feature that suggests a price when someone lists an item?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Data: similar items, condition, recent sales",
+        "A simple first version and how it learns",
+        "Measuring whether items sell faster"
+      ]
+    },
+    {
+      "text": "How would you stop scams between buyers and sellers on a marketplace?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Common scam patterns",
+        "Holding payment until delivery, checks and reports",
+        "Balancing safety with a smooth experience"
+      ]
+    },
+    {
+      "text": "Walk me through the take-home: what trade-offs did you make, and what would you change with more time?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Your design and why",
+        "Testing and edge cases",
+        "What you'd improve"
+      ]
+    },
+    {
+      "text": "How would you make a mobile app's listing flow faster for first-time sellers?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Where they drop off today",
+        "Ideas such as photo-first listing and smart defaults",
+        "A test and the metric to watch"
+      ]
+    },
+    {
+      "text": "Given a list of item prices, how would you find two that add up to a target amount?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "A simple approach and its cost",
+        "A faster approach with a hash map",
+        "Edge cases and complexity"
+      ]
+    },
+    {
+      "text": "Which of Mercari's values do you relate to most, with an example?",
+      "type": "role",
+      "kind": "story",
+      "covers": [
+        "The value and why",
+        "A specific example",
+        "The result"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Mercari?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "What draws you to Mercari's mission of circulating value",
+        "How your skills fit the team",
+        "What you hope to achieve"
+      ]
+    },
+    {
+      "text": "What would you want to accomplish in your first year?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "A goal tied to the role",
+        "How you'd get there",
+        "How you'd know you'd succeeded"
+      ]
+    }
+  ],
+  "tips": [
+    "Prepare a STAR story for each of Mercari's values: Go Bold, All for One and Be a Pro.",
+    "In your documents, summarise past work, your role and results, and what you want to do at Mercari, as its careers site suggests.",
+    "For engineering, practise data structures and algorithms; some teams give a take-home of about a week.",
+    "Ask your recruiter or interviewer about the exact steps for your role; Mercari says they vary."
+  ],
+  "sources": [
+    {
+      "title": "Mercari Careers: Recruitment & Selection",
+      "url": "https://careers.mercari.com/en/recruitment-selection/"
+    },
+    {
+      "title": "Mercari Careers: Engineering",
+      "url": "https://careers.mercari.com/en/jobs/engineering/"
+    },
+    {
+      "title": "Mercari India: FAQs",
+      "url": "https://about.in.mercari.com/faqs/"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}

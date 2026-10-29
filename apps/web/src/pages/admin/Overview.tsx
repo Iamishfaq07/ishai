@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { AdminConfig, AdminStats } from "@orbit/types";
-import { Callout, ChevronDown, CountUp, Megaphone, buttonClass, cx, focusRing } from "@orbit/ui";
+import type { AdminConfig, AdminNewsletterStats, AdminStats } from "@orbit/types";
+import { Callout, ChevronDown, CountUp, Mail, Megaphone, buttonClass, cx, focusRing } from "@orbit/ui";
 import { ColumnChart } from "../../components/ColumnChart";
-import { Button, Input, Select } from "../../components/ui";
+import { Button, Input, Select, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { errorText } from "../../lib/format";
 import { useAsync } from "../../lib/useAsync";
@@ -94,6 +94,7 @@ export function AdminOverview({ version = 0 }: { version?: number }) {
       </div>
       <WorkflowHealth />
       <AnnouncementEditor />
+      <NewsletterEditor />
     </div>
   );
 }
@@ -238,6 +239,108 @@ function AnnouncementEditor() {
               {note}
             </p>
           )}
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The weekly tips and offers email (opt-in, newsletter.py): how many chose it, a note for the top of this week's
+ * email (an offer, news) with a link, and a preview sent to the admin's own inbox.
+ */
+function NewsletterEditor() {
+  const [open, setOpen] = useState(false);
+  const [stats, setStats] = useState<AdminNewsletterStats | null>(null);
+  const [cfg, setCfg] = useState<AdminConfig | null>(null);
+  const [text, setText] = useState("");
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    api.adminNewsletter().then(setStats, () => undefined);
+    api
+      .getAdminConfig()
+      .then((c) => {
+        setCfg(c);
+        setText(c.newsletter_note ?? "");
+        setLink(c.newsletter_link ?? "");
+      })
+      .catch(() => undefined);
+  }, []);
+  const save = async (nextText: string, nextLink: string) => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const c = await api.updateAdminConfig({ newsletter_note: nextText, newsletter_link: nextLink });
+      setCfg(c);
+      setText(c.newsletter_note ?? "");
+      setLink(c.newsletter_link ?? "");
+      setNote(c.newsletter_note ? "Saved. It goes at the top of the next weekly emails." : "Removed.");
+    } catch (err) {
+      setNote(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const preview = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      setNote(`Preview sent to ${(await api.previewNewsletter()).to}.`);
+    } catch (err) {
+      setNote(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const live = cfg?.newsletter_note ?? "";
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white/70 dark:border-white/10 dark:bg-white/[0.03]">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        className={cx("flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm", focusRing)}
+      >
+        <Mail className="h-4 w-4 text-zinc-500" aria-hidden />
+        <span className="font-medium">Weekly email</span>
+        <span className="min-w-0 flex-1 truncate text-xs text-zinc-500 dark:text-zinc-400">
+          {stats ? `${count(stats.subscribed)} subscribed · ${count(stats.sent_last_week)} sent this week` : ""}
+          {live ? ` · Note: ${live}` : ""}
+        </span>
+        <ChevronDown className={cx("h-4 w-4 text-zinc-400 transition-transform", open && "rotate-180")} aria-hidden />
+      </button>
+      {open && (
+        <form
+          className="space-y-2 border-t border-zinc-200 px-3 py-3 dark:border-white/10"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void save(text, link);
+          }}
+        >
+          {stats && (
+            <p className="text-xs text-zinc-600 dark:text-zinc-400">
+              Opt-in only: {count(stats.subscribed)} chose it, {count(stats.declined)} said no or stopped it, {count(stats.never_asked)} not asked yet (Today asks them once).
+            </p>
+          )}
+          <label className="block">
+            <span className="text-xs font-medium">Note at the top of the email (an offer, news)</span>
+            <Textarea value={text} maxLength={600} rows={3} onChange={(e) => setText(e.target.value)} placeholder="New this week: Plan my prep turns any company guide into a day-by-day plan." />
+          </label>
+          <label className="block">
+            <span className="text-xs font-medium">Link (an Orbit page like /billing, or an https:// address; optional)</span>
+            <Input value={link} maxLength={300} onChange={(e) => setLink(e.target.value)} placeholder="/interview-questions" />
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" type="submit" disabled={busy || !text.trim()}>Save note</Button>
+            {live && <Button size="sm" variant="ghost" disabled={busy} onClick={() => void save("", "")}>Remove note</Button>}
+            <Button size="sm" variant="secondary" disabled={busy} onClick={() => void preview()}>Send me a preview</Button>
+          </div>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Up to 600 characters, plain text. The rest of the email is built each week from what's true: two tools, new guides, FIRST10 for accounts that never paid, and their next interview.
+          </p>
+          {note && <p className="text-xs" role="status">{note}</p>}
         </form>
       )}
     </div>

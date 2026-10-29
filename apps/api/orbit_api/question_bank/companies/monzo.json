@@ -1,0 +1,169 @@
+{
+  "slug": "monzo",
+  "name": "Monzo",
+  "aliases": [
+    "monzo bank"
+  ],
+  "group": "finance",
+  "market": "global",
+  "summary": "Monzo explains its interviews on its own blog. For backend engineers it describes a recruiter call, an initial call, a take-home or pair-coding exercise, a systems design interview and a behavioural interview with two interviewers. In systems design it says it wants to hear your trade-offs, not neat diagrams, and in the behavioural round it wants to know which parts you led yourself. Data, machine learning and credit roles follow a similar shape with case studies or solution design in place of systems design.",
+  "rounds": [
+    "Recruiter call: an introduction to Monzo and the process",
+    "Initial call with someone from the team",
+    "Take-home task or pair-coding exercise (engineering); a take-home or case study for data and credit roles",
+    "Systems or solution design interview, talking through a problem with an engineer",
+    "Behavioural interview, often about an hour with two interviewers",
+    "Decision, with Monzo saying it tells candidates the outcome and next steps"
+  ],
+  "looks_for": [
+    "Clear reasoning about trade-offs",
+    "Being clear about what you did versus what the team did",
+    "Teamwork and collaboration",
+    "Delivering projects end to end",
+    "Care for customers",
+    "Clean, readable code in the practical task"
+  ],
+  "questions": [
+    {
+      "text": "Tell me about a project you led from start to finish. Which decisions were yours?",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "The goal and your role",
+        "Two or three decisions you made yourself",
+        "The outcome and what you'd change"
+      ]
+    },
+    {
+      "text": "Tell me about a time you had to deliver something with an unclear or changing scope.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "What was unclear and why",
+        "How you clarified or narrowed it",
+        "What you shipped and when"
+      ]
+    },
+    {
+      "text": "Tell me about a time you disagreed with a teammate about a technical approach.",
+      "type": "behavioral",
+      "kind": "story",
+      "covers": [
+        "Both approaches and their trade-offs",
+        "How you discussed it and decided",
+        "What happened and how the relationship held up"
+      ]
+    },
+    {
+      "text": "Tell me about a time something you built caused a problem for users. What did you do?",
+      "type": "behavioral",
+      "kind": "reflection",
+      "covers": [
+        "What went wrong and how you found out",
+        "How you fixed it and kept people informed",
+        "What you changed so it wouldn't happen again"
+      ]
+    },
+    {
+      "text": "How would you design a service that sends customers a notification for every card payment within seconds?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Events from the card processor to a queue to the notification sender",
+        "Handling retries and duplicates so nobody gets two alerts",
+        "What you'd monitor and what happens when a provider is down"
+      ]
+    },
+    {
+      "text": "How would you make a money transfer safe to retry if the network drops halfway?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Idempotency keys and how they're stored",
+        "Making the operation atomic or compensating",
+        "How the client knows what really happened"
+      ]
+    },
+    {
+      "text": "Walk me through the trade-offs between a few small services and one larger one for a new product.",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "What you gain and pay for with each",
+        "Team size, deployment and data ownership",
+        "Which you'd pick here and why"
+      ]
+    },
+    {
+      "text": "How would you spot unusual spending patterns that might mean a customer's card has been stolen?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "Signals: location, amount, merchant, timing",
+        "Rules first, then models, and the cost of false alarms",
+        "What the customer sees and how they confirm"
+      ]
+    },
+    {
+      "text": "Talk me through the code you wrote for the take-home: what would you do differently in production?",
+      "type": "role",
+      "kind": "case",
+      "covers": [
+        "The design you chose and why",
+        "Tests, error handling and logging you'd add",
+        "What you'd simplify or split"
+      ]
+    },
+    {
+      "text": "How do you explain a technical decision to someone in operations or customer support?",
+      "type": "role",
+      "kind": "knowledge",
+      "covers": [
+        "Starting from what they need to do differently",
+        "Plain words and one example",
+        "How you check it landed"
+      ]
+    },
+    {
+      "text": "Why do you want to work at Monzo?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Something specific about Monzo's product or approach you value",
+        "How your experience fits the role",
+        "What you'd like to work on"
+      ]
+    },
+    {
+      "text": "What would you want to learn in your first six months here?",
+      "type": "fit",
+      "kind": "motivation",
+      "covers": [
+        "Skills or areas you want to grow",
+        "How you'd get there with the team",
+        "How it helps Monzo too"
+      ]
+    }
+  ],
+  "tips": [
+    "Monzo's blog has a post on its process for many roles; read the one for yours before the recruiter call.",
+    "In systems design, explain your trade-offs out loud. Monzo says tidy diagrams earn no extra credit.",
+    "In the behavioural round, say 'I' for what you did and 'we' for the team, and be clear which is which.",
+    "Pick a non-trivial project for the behavioural round, with real decisions you can talk about in depth."
+  ],
+  "sources": [
+    {
+      "title": "Monzo: Demystifying the Backend Engineering interview process",
+      "url": "https://monzo.com/blog/demystifying-the-backend-engineering-interview-process"
+    },
+    {
+      "title": "Monzo: Interviewing for Data Science at Monzo",
+      "url": "https://monzo.com/blog/interviewing-for-data-science-at-monzo"
+    },
+    {
+      "title": "Monzo: Interviewing for Machine Learning at Monzo",
+      "url": "https://monzo.com/blog/interviewing-for-machine-learning-at-monzo"
+    }
+  ],
+  "reviewed": "2026-10-29"
+}
