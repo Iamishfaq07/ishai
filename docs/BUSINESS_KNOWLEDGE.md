@@ -7,6 +7,9 @@ procedures. It does not query applicant records or Orbit Personal data.
 [Policy review inbox](BUSINESS_KNOWLEDGE_REVIEWS.md) adds document responsibility, explicit confirmations,
 update-request warnings and opt-in internal reminders after publication.
 
+[Policy file import](BUSINESS_KNOWLEDGE_IMPORT.md) now adds PDF/DOCX/TXT/Markdown extraction previews,
+private source provenance, duplicate warnings and optional AI review before saving an unpublished draft.
+
 ## Author, publish and review
 
 Owners/admins can create a document from 50–20,000 characters of text. A private draft contains a title,

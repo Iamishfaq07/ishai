@@ -22,6 +22,6 @@ export function knowledgeAnswerText(question: string, answer: BizKnowledgeAnswer
 }
 
 export const KNOWLEDGE_ACTION_LABELS: Record<string, string> = {
-  publish: "Published", archive: "Archived", restore: "Restored as draft", review_confirm: "Review confirmed",
+  imported: "Imported as draft", publish: "Published", archive: "Archived", restore: "Restored as draft", review_confirm: "Review confirmed",
   review_owner: "Review owner updated", needs_update: "Updates requested",
 };

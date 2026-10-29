@@ -9,6 +9,7 @@ export interface BizKnowledgeSummary {
   archived: boolean; has_draft_changes: boolean; updated_at: string;
 }
 export interface BizKnowledgeDocument extends BizKnowledgeSummary {
+  import_source?: BizKnowledgeImportSource | null;
   data: BizKnowledgeContent; published: BizKnowledgeContent | null;
   history: Array<{ revision: number; actor: string; at: string }>; history_truncated?: boolean;
   events: Array<{ action: string; actor: string; revision: number; note: string; at: string }>; events_truncated?: boolean;
@@ -53,4 +54,17 @@ export interface BizKnowledgeReaders {
 export interface BizKnowledgeReadingGuide {
   tips: BizKnowledgeReviewBrief["tips"]; facts: BizKnowledgeReviewBrief["facts"]; source: "mock" | "ai";
   content_hash: string; published_revision: number; needs_update: boolean; review_overdue: boolean; excerpts_truncated: boolean;
+}
+
+export interface BizKnowledgeImportSource {
+  filename: string; format: "pdf" | "docx" | "txt" | "md"; bytes: number; file_sha256: string;
+  extracted_sha256: string; characters: number; pages: number | null; extracted_at: string;
+  saved_text_sha256?: string; edited_before_save?: boolean;
+}
+export interface BizKnowledgeImportPreview {
+  receipt: string; source: BizKnowledgeImportSource; text: string; suggested_title: string; limitations: string;
+  duplicates: Array<{ id: string; title: string; published: boolean }>;
+}
+export interface BizKnowledgeImportReview {
+  tips: BizKnowledgeReviewBrief["tips"]; facts: BizKnowledgeReviewBrief["facts"]; source: "mock" | "ai"; excerpts_truncated: boolean;
 }

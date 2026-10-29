@@ -5,6 +5,7 @@ import { Button, Callout, Field, Input, Select, Textarea, cx, focusRing } from "
 import { downloadText } from "../lib/format";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { knowledge } from "./knowledgeApi";
+import { KnowledgeImport } from "./KnowledgeImport";
 import { EMPTY_KNOWLEDGE, KNOWLEDGE_ACTION_LABELS, KNOWLEDGE_AUDIENCES, KNOWLEDGE_CATEGORIES, changedKnowledge, filterKnowledge, knowledgeAnswerText, questionKey } from "./knowledgeModel";
 import { LoadError, Loading, Panel, Stat, errorText } from "./ui";
 
@@ -12,6 +13,7 @@ export function KnowledgeStudio() {
   const { company } = useCompany();
   const [params, setParams] = useSearchParams();
   const selected = params.get("document");
+  const importing = params.get("import") === "1";
   const [library, setLibrary] = useState<BizKnowledgeLibrary | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [query, setQuery] = useState("");
@@ -30,6 +32,7 @@ export function KnowledgeStudio() {
     const pending = generation;
     return () => { live.current = false; pending.current++; };
   }, [refresh]);
+  if (importing) return <KnowledgeImport key={company.id} onBack={() => setParams({})} onCreated={id => setParams({ document: id })} />;
   if (selected || creating) return <DocumentEditor key={selected ?? "new"} id={selected} onBack={() => { setCreating(false); setParams({}); void refresh().catch((e: unknown) => setError(new Error(errorText(e)))); }} onCreated={id => { setCreating(false); setParams({ document: id }); }} />;
   if (!library) return error ? <LoadError error={error} onRetry={() => void refresh().catch((e: unknown) => setError(new Error(errorText(e))))} /> : <Loading label="Loading Business knowledge" />;
   const rows = filterKnowledge(library.items, query, status);
@@ -38,6 +41,7 @@ export function KnowledgeStudio() {
       <Link to={`/business/app/${company.id}/knowledge-reading`} className={cx("rounded-xl border border-zinc-200 px-3 py-2 text-sm font-medium dark:border-white/10", focusRing)}>Team reading</Link>
       {library?.can_manage && <Link to={`/business/app/${company.id}/knowledge-reviews`} className={cx("rounded-xl border border-zinc-200 px-3 py-2 text-sm font-medium dark:border-white/10", focusRing)}>Review inbox</Link>}
       <Button variant="secondary" onClick={() => void refresh().catch((e: unknown) => setError(new Error(errorText(e))))}>Refresh library</Button>
+      {library.can_manage && <Button variant="secondary" disabled={company.status !== "active"} onClick={() => setParams({ import: "1" })}>Import policy file</Button>}
       {library.can_manage && <Button disabled={company.status !== "active"} onClick={() => setCreating(true)}>Add document</Button>}
     </>} />
     <div className="rounded-2xl bg-zinc-950 p-5 text-white sm:p-7"><p className="text-xs font-medium uppercase tracking-wider text-indigo-300">Author → publish → cite → review</p><p className="mt-3 max-w-2xl text-xl font-semibold">Give your team answers they can check against the original policy.</p><p className="mt-3 max-w-2xl text-sm text-zinc-300">Publish the guidance your team uses. Ask a question or generate a checklist from the published library, with exact source quotes and version references.</p></div>
@@ -173,6 +177,7 @@ function DocumentEditor({ id, onBack, onCreated }: { id: string | null; onBack: 
     </>} />
     {error && <LoadError error={error} />}
     {dirty && <p role="status" className="text-sm text-amber-700 dark:text-amber-300">Unsaved draft. Save before publishing; download it if another editor changed the document.</p>}
+    {row?.import_source && canManage && <Panel title="Imported source" hint="Original extraction provenance; later draft edits and publications can differ from this source."><p className="break-words text-sm">{row.import_source.filename} · {row.import_source.format.toUpperCase()} · {row.import_source.characters.toLocaleString()} extracted characters</p><p className="mt-2 text-xs">{row.import_source.edited_before_save ? "Text was edited before the imported draft was saved." : "The initial saved text matched the extraction."} Original files are not retained.</p><details className="mt-3 text-xs"><summary>Source fingerprints</summary><p className="mt-2 break-all">File: {row.import_source.file_sha256}</p><p className="mt-2 break-all">Extraction: {row.import_source.extracted_sha256}</p><p className="mt-2 break-all">Initial saved text: {row.import_source.saved_text_sha256}</p></details></Panel>}
     {row?.needs_update && <Callout tone="warning">This published guidance has been flagged for updates. Review its current instructions before relying on it.</Callout>}
     {row?.archived && <Callout>This document is archived and excluded from readers and AI. Restore it as an unpublished draft before using it again.</Callout>}
     <Panel title={canManage ? "Document draft" : "Published guidance"}>
@@ -183,7 +188,7 @@ function DocumentEditor({ id, onBack, onCreated }: { id: string | null; onBack: 
           <Field label="Published audience" htmlFor="knowledge-audience"><Select id="knowledge-audience" value={draft.audience} onChange={e => set("audience", e.target.value as BizKnowledgeContent["audience"])}>{Object.entries(KNOWLEDGE_AUDIENCES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</Select></Field>
           <Field label="Review due date" htmlFor="knowledge-review"><Input id="knowledge-review" type="date" value={draft.review_due} onChange={e => set("review_due", e.target.value)} /></Field>
         </div>
-        <Field label="Reference text" htmlFor="knowledge-body" hint="50–20,000 characters of company policy or playbook text. This is a text library; files and external websites are not imported."><Textarea id="knowledge-body" rows={16} maxLength={20000} value={draft.body} onChange={e => set("body", e.target.value)} /></Field>
+        <Field label="Reference text" htmlFor="knowledge-body" hint="50–20,000 characters of company policy or playbook text. Use Import policy file to extract a source document; external websites are not imported."><Textarea id="knowledge-body" rows={16} maxLength={20000} value={draft.body} onChange={e => set("body", e.target.value)} /></Field>
       </fieldset> : <article className="space-y-4"><p className="text-xs text-zinc-500 dark:text-zinc-400">{KNOWLEDGE_CATEGORIES[draft.category]}{draft.review_due ? ` · Review due ${draft.review_due}` : ""}</p>{row?.review_overdue && <Callout tone="warning">This guidance is past its review date. Confirm it is current with the document owner.</Callout>}<p className="whitespace-pre-wrap break-words text-sm leading-7">{draft.body}</p></article>}
       {canManage && <Button className="mt-4" disabled={!editable || !dirty || draft.title.trim().length < 2 || draft.body.trim().length < 50} loading={busy} onClick={save}>{id ? "Save document draft" : "Create document draft"}</Button>}
     </Panel>
@@ -201,7 +206,7 @@ function DocumentEditor({ id, onBack, onCreated }: { id: string | null; onBack: 
       </Panel>
       <Panel title="Publication history" hint="Only owners/admins can inspect historical versions. Readers use the current published audience and guidance.">
         <ol className="space-y-3">{row.history.map(version => <li key={version.revision} className="rounded-xl border border-zinc-200 p-3 text-sm dark:border-white/10"><p className="font-medium">Version {version.revision} · {version.actor}</p><p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{new Date(version.at).toLocaleString()}</p><Button size="sm" className="mt-2" variant="ghost" onClick={() => void run(async () => { const data = await knowledge.version(company.id, row.id, version.revision); if (live.current) downloadText(`orbit-knowledge-v${version.revision}.json`, JSON.stringify(data, null, 2), "application/json"); })} disabled={busy}>Download version {version.revision}</Button></li>)}</ol>
-        {row.events.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold">Publication actions</h3><ol className="mt-3 space-y-3">{row.events.map(event => <li key={`${event.action}-${event.revision}`} className="text-sm"><p className="font-medium">{KNOWLEDGE_ACTION_LABELS[event.action] ?? event.action.replaceAll("_", " ")} · {event.actor} · revision {event.revision}</p><p className="mt-1 whitespace-pre-wrap break-words text-xs">{event.note}</p></li>)}</ol>{row.events_truncated && <p className="mt-2 text-xs">Showing the latest 50 actions.</p>}</div>}
+        {row.events.length > 0 && <div className="mt-5"><h3 className="text-sm font-semibold">Publication actions</h3><ol className="mt-3 space-y-3">{row.events.map(event => <li key={`${event.action}-${event.revision}`} className="text-sm"><p className="font-medium">{KNOWLEDGE_ACTION_LABELS[event.action] ?? event.action.replaceAll("_", " ")} · {event.actor} · revision {event.revision}</p><p className="mt-1 whitespace-pre-wrap break-words text-xs">{event.action === "imported" ? "Imported from a reviewed file preview. See original extraction details above." : event.note}</p></li>)}</ol>{row.events_truncated && <p className="mt-2 text-xs">Showing the latest 50 actions.</p>}</div>}
         {!row.history.length && <p className="text-sm">No published versions yet. Saving a draft does not publish it.</p>}
         {row.history_truncated && <p className="mt-3 text-xs">Showing the latest 20 publications. Older publications remain available by their version number.</p>}
       </Panel>

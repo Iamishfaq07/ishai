@@ -178,8 +178,13 @@ async def detail(db: AsyncSession, ctx: Ctx, row: BizKnowledgeDocument) -> dict[
         "published": row.published if ctx.can("manage_company") else None,
         "history": [],
         "events": [],
+        "import_source": None,
     }
     if ctx.can("manage_company"):
+        imported = await db.scalar(select(BizKnowledgeEvent.note).where(
+            BizKnowledgeEvent.document_id == row.id, BizKnowledgeEvent.action == "imported").limit(1))
+        if imported:
+            result["import_source"] = json.loads(imported)
         history = list(
             await db.scalars(
                 select(BizKnowledgePublication)
