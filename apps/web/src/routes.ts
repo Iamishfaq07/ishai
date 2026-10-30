@@ -7,6 +7,10 @@ import { isResumeAiHome } from "./pages/resume/paths";
  * session). Each loader is also a prefetch: `prefetchRoute("/sessions")` warms the chunk before the click (nav
  * hover/focus/touch) and `prefetchLikelyRoutes()` warms the daily pages once the browser is idle.
  */
+/** The Jobs section (its tabs and header); each Jobs page's own loader also starts it, so the two download together. */
+const jobsSection = () => import("./pages/jobs/JobsAiPages");
+const withJobsSection = <T,>(page: () => Promise<T>) => () => { void jobsSection().catch(() => undefined); return page(); };
+
 const loaders = {
   home: () => import("./pages/Home"),
   careerSpaces: () => import("./pages/CareerSpaces"),
@@ -41,7 +45,13 @@ const loaders = {
   resumes: () => import("./pages/resume/Resumes"),
   resumeEditor: () => import("./pages/resume/ResumeEditor"),
   resumeAiPublic: () => import("./pages/resume/ResumeAiPublic"),
-  jobs: () => import("./pages/jobs/JobsAiPages"),
+  jobs: jobsSection,
+  // Jobs' own pages, a chunk each: the Jobs home (Today) doesn't download Matches, the tracker or a listing.
+  jobsMatches: withJobsSection(() => import("./pages/jobs/Matches")),
+  jobsDetail: withJobsSection(() => import("./pages/jobs/JobDetail")),
+  jobsTracker: withJobsSection(() => import("./pages/jobs/Tracker")),
+  jobsOutreach: withJobsSection(() => import("./pages/jobs/Outreach")),
+  jobsProfile: withJobsSection(() => import("./pages/jobs/Profile")),
   jobsAiPublic: () => import("./pages/jobs/JobsAiPublic"),
   // Orbit Apply (D84): its setup and Applications, a chunk of their own so Jobs AI's other tabs don't carry them.
   autoApply: () => import("./pages/jobs/autoapply/AutoApplyPages"),
@@ -110,14 +120,14 @@ export const ResumeEditorPage = page(loaders.resumeEditor, (m) => m.ResumeEditor
 export const ResumeAiPublicPage = page(loaders.resumeAiPublic, (m) => m.ResumeAiPublicPage);
 export const JobsAiSection = page(loaders.jobs, (m) => m.JobsAiSection);
 export const JobsAiHomePage = page(loaders.jobs, (m) => m.JobsAiHomePage);
-export const JobMatchesPage = page(loaders.jobs, (m) => m.JobMatchesPage);
-export const JobDetailPage = page(loaders.jobs, (m) => m.JobDetailPage);
+export const JobMatchesPage = page(loaders.jobsMatches, (m) => m.JobMatchesPage);
+export const JobDetailPage = page(loaders.jobsDetail, (m) => m.JobDetailPage);
 export const JobMissionPage = page(loaders.jobs, (m) => m.JobMissionPage);
-export const JobTrackerPage = page(loaders.jobs, (m) => m.JobTrackerPage);
+export const JobTrackerPage = page(loaders.jobsTracker, (m) => m.JobTrackerPage);
 export const JobActionDeskPage = page(loaders.jobs, (m) => m.JobActionDeskPage);
 export const WeeklyStudioPage = page(loaders.jobs, (m) => m.WeeklyStudioPage);
 export const ApplyPriorityPage = page(loaders.jobs, (m) => m.ApplyPriorityPage);
-export const JobOutreachPage = page(loaders.jobs, (m) => m.JobOutreachPage);
+export const JobOutreachPage = page(loaders.jobsOutreach, (m) => m.JobOutreachPage);
 export const LearningPage = page(loaders.learn, (m) => m.LearningPage);
 export const AptitudePage = page(loaders.aptitude, (m) => m.AptitudePage);
 export const StarCheckPage = page(loaders.starCheck, (m) => m.StarCheckPage);
@@ -132,7 +142,7 @@ export const CodeProblemPage = page(loaders.code, (m) => m.CodeProblemPage);
 export const LinkedInPage = page(loaders.linkedin, (m) => m.LinkedInPage);
 export const OffersPage = page(loaders.offers, (m) => m.OffersPage);
 export const OfferDetailPage = page(loaders.offers, (m) => m.OfferDetailPage);
-export const JobProfilePage = page(loaders.jobs, (m) => m.JobProfilePage);
+export const JobProfilePage = page(loaders.jobsProfile, (m) => m.JobProfilePage);
 export const AutoApplySetupPage = page(loaders.autoApply, (m) => m.AutoApplySetupPage);
 export const CareerJourneyPage = page(loaders.autoApply, (m) => m.CareerJourneyPage);
 export const ApplicationsPage = page(loaders.autoApply, (m) => m.ApplicationsPage);
@@ -183,6 +193,11 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/documents/, "documents"],
   [/^\/resume-ai\/[^/]+/, "resumeEditor"],
   [/^\/resume-ai/, "resumes"],
+  [/^\/jobs\/matches\/?$/, "jobsMatches"],
+  [/^\/jobs\/listing\//, "jobsDetail"],
+  [/^\/jobs\/tracker\/?$/, "jobsTracker"],
+  [/^\/jobs\/outreach\/?$/, "jobsOutreach"],
+  [/^\/jobs\/profile\/?$/, "jobsProfile"],
   [/^\/jobs(\/|$)/, "jobs"],
   [/^\/mock/, "mock"],
   [/^\/offers(\/|$)/, "offers"],

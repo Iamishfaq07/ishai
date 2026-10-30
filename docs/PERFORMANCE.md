@@ -89,6 +89,15 @@ even when SQLite hides it.
   Resume AI 206 → 222 (218.4), the editor 255 → 276 (271.2), Jobs AI 280 → 300 (295.6), the tool explorer 187 → 195
   (192.2), CSS 32.6 → 35 (34.3). Next saving to try: load each scene drawing on its own, with its box reserved.
 
+  30 Oct 2026: Jobs AI's own pages became chunks of their own. The section chunk (`JobsAiPages`) statically carried
+  Matches, the listing page, the tracker, outreach and the profile, so every Jobs address, the Jobs home (Today)
+  included, downloaded all five: 295.6 kB. Each now has its own loader in `routes.ts`, which also starts the section,
+  so the two download in parallel (no extra round trip), and hover/idle prefetch warms both. Measured first loads:
+  the Jobs home 184.0 kB (section 182.4 plus Today), Matches 235.9, a listing 256.3, the tracker 226.2, outreach
+  211.7, the profile 198.5. The entry grew 0.6 kB (the five names in the preload map), to 171.0. Budgets: Jobs AI
+  300 → 186, and new lines (the page's chunk over the entry, plus ~1.5%): Matches 238, JobDetail 259, Tracker 228,
+  Outreach 214, Profile 200.
+
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
 - **INP** ≤ 200 ms at p75, and no task over 200 ms while a page opens (total blocking time ≤ 300 ms), under the same

@@ -14,16 +14,19 @@ describe("pageFor (what the nav warms before a click)", () => {
     expect(pageFor("/resume-ai/3f2a9c")).toBe("resumeEditor");
   });
 
-  it("warms Jobs for every one of its pages", () => {
-    for (const path of ["/jobs", "/jobs/", "/jobs/matches", "/jobs/listing/8c1d2e", "/jobs/tracker", "/jobs/outreach", "/jobs/profile"]) {
-      expect(pageFor(path)).toBe("jobs");
-    }
+  it("warms Jobs' own page where it has one, and the section otherwise", () => {
+    for (const path of ["/jobs", "/jobs/", "/jobs/mission/8c1d2e", "/jobs/weekly"]) expect(pageFor(path)).toBe("jobs");
+    expect(pageFor("/jobs/matches")).toBe("jobsMatches");
+    expect(pageFor("/jobs/listing/8c1d2e")).toBe("jobsDetail");
+    expect(pageFor("/jobs/tracker")).toBe("jobsTracker");
+    expect(pageFor("/jobs/outreach")).toBe("jobsOutreach");
+    expect(pageFor("/jobs/profile")).toBe("jobsProfile");
     expect(pageFor("/jobsearch")).toBeNull();
   });
 
   it("warms Jobs for Jobs' old addresses in Resume, never the resume editor", () => {
-    expect(pageFor("/resume-ai/jobs")).toBe("jobs");
-    expect(pageFor("/resume-ai/jobs/tracker")).toBe("jobs");
+    expect(pageFor("/resume-ai/jobs")).toBe("jobsMatches"); // it opens Matches
+    expect(pageFor("/resume-ai/jobs/tracker")).toBe("jobsTracker");
     expect(pageFor("/resume-ai/jobsearch")).toBe("resumeEditor");
   });
 
