@@ -38,7 +38,15 @@ export const BUDGETS = {
     Live: 252, // shared navigation/preload map only; agent and explorer remain lazy
     Resumes: 222,
     ResumeEditor: 276,
-    JobsAiPages: 300,
+    // 30 Oct 2026: Jobs AI's section, and its own pages as chunks of their own (Matches, a listing, the tracker,
+    // outreach, the profile), so the Jobs home no longer downloads all five. The section was 295.6 kB with them.
+    // Each page also loads the section (about 1.6 kB more) alongside; its line here is the page's chunk over the entry.
+    JobsAiPages: 186,
+    Matches: 238,
+    JobDetail: 259,
+    Tracker: 228,
+    Outreach: 214,
+    Profile: 200,
     // Orbit Apply's setup and Applications (D84), a lazy chunk of their own under Jobs AI's section.
     AutoApplyPages: 194, // 193.1 measured with captured posting and AI reviewer entry; see PERFORMANCE.md
     ToolExplorer: 195, // public feature catalog and interactive workflow, loaded on demand
