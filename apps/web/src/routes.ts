@@ -18,6 +18,9 @@ const loaders = {
   toolkit: () => import("./pages/tools/Toolkit"),
   landing: () => import("./pages/Landing"),
   welcome: () => import("./pages/Welcome"),
+  // Sign-in, sign-up, password reset, email confirmation and the one-click unsubscribes: someone signed in never needs
+  // them, so they're not in the entry.
+  auth: () => import("./pages/Auth"),
   // The warm-up, which can also open a company's or a role's questions (pages/bank/WarmupRoute.tsx).
   warmup: () => import("./pages/bank/WarmupRoute"),
   // The question bank's public pages: /companies, /roles and a guide per company and role.
@@ -91,6 +94,15 @@ export const LandingPage = page(loaders.landing, (m) => m.LandingPage);
 export const ToolExplorerPage = page(loaders.tools, (m) => m.ToolExplorerPage);
 export const ToolkitPage = page(loaders.toolkit, (m) => m.ToolkitPage);
 export const WelcomePage = page(loaders.welcome, (m) => m.WelcomePage);
+export const LoginPage = page(loaders.auth, (m) => m.LoginPage);
+export const RegisterPage = page(loaders.auth, (m) => m.RegisterPage);
+export const ForgotPasswordPage = page(loaders.auth, (m) => m.ForgotPasswordPage);
+export const ResetPasswordPage = page(loaders.auth, (m) => m.ResetPasswordPage);
+export const VerifyEmailPage = page(loaders.auth, (m) => m.VerifyEmailPage);
+export const ConfirmEmailChangePage = page(loaders.auth, (m) => m.ConfirmEmailChangePage);
+export const StopJobAlertsPage = page(loaders.auth, (m) => m.StopJobAlertsPage);
+export const StopWeeklyDigestPage = page(loaders.auth, (m) => m.StopWeeklyDigestPage);
+export const StopNewsletterPage = page(loaders.auth, (m) => m.StopNewsletterPage);
 export const WarmupPage = page(loaders.warmup, (m) => m.WarmupRoute);
 export const AtlasPage = page(loaders.atlas, (m) => m.AtlasPage);
 export const CompaniesPage = page(loaders.bank, (m) => m.CompaniesPage);
@@ -174,6 +186,8 @@ const BY_PATH: Array<[RegExp, PageKey | null]> = [
   [/^\/tools\/?$/, "tools"],
   [/^\/toolkit\/?$/, "toolkit"],
   [/^\/welcome\/?$/, "welcome"],
+  [/^\/(login|register|forgot-password|reset-password|verify-email|confirm-email-change|newsletter\/off)\/?$/, "auth"],
+  [/^\/jobs\/(alerts|digest)\/off\/?$/, "auth"],
   [/^\/warmup\/?$/, "warmup"],
   [/^\/(companies|roles)(\/|$)/, "bank"],
   [/^\/guides(\/|$)/, "guides"],
@@ -235,12 +249,12 @@ export function publicPageFor(pathname: string): "landing" | "resumeAiPublic" | 
 }
 
 /**
- * At startup, on an address with a public face: start its page's code at once, alongside the session check, rather
- * than after it (the front page's first paint waits on that chunk). Harmless for someone signed in: it's small and
- * cached.
+ * At startup, on an address with a public face or a sign-in/sign-up/email-link page: start its page's code at once,
+ * alongside the session check, rather than after it (the first paint waits on that chunk). Harmless for someone signed
+ * in: it's small and cached.
  */
 export function preloadPublicPage(pathname: string): void {
-  const key = publicPageFor(pathname);
+  const key = publicPageFor(pathname) ?? (pageFor(pathname) === "auth" ? "auth" : null);
   if (key) void loaders[key]().catch(() => undefined);
 }
 

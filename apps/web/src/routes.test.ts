@@ -30,6 +30,13 @@ describe("pageFor (what the nav warms before a click)", () => {
     expect(pageFor("/resume-ai/jobsearch")).toBe("resumeEditor");
   });
 
+  it("warms the sign-in pages' chunk for sign-in, sign-up and the email links", () => {
+    for (const path of ["/login", "/register", "/forgot-password", "/reset-password", "/verify-email", "/confirm-email-change", "/newsletter/off", "/jobs/alerts/off", "/jobs/digest/off"]) {
+      expect(pageFor(path)).toBe("auth");
+    }
+    expect(pageFor("/registered")).toBeNull();
+  });
+
   it("keeps Documents its own page", () => {
     expect(pageFor("/documents")).toBe("documents");
     expect(pageFor("/documents/stories")).toBe("stories");
