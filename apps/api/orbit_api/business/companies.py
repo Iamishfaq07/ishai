@@ -917,7 +917,8 @@ async def notifications(user: Annotated[User, Depends(current_user)],
         .join(BizMember, (BizMember.company_id == BizNotification.company_id) & (BizMember.user_id == user.id))
         .where(BizNotification.user_id == user.id).order_by(BizNotification.created_at.desc()).limit(100))).all()
     destinations = {"automation": "automations", "requisition": "requisitions",
-                    "knowledge_review": "knowledge-reviews", "capacity": "capacity"}
+                    "knowledge_review": "knowledge-reviews", "capacity": "capacity",
+                    "workflow_review": "workflow-reviews"}
     return [NotificationOut(id=n.id, company_id=n.company_id, company_name=cname, kind=n.kind, text=n.text,
                             link=f"/business/app/{n.company_id}/{destinations[n.kind]}" if n.kind in destinations else (
                                 f"/business/app/{n.company_id}/applications/{n.application_id}"

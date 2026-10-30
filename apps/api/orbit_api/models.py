@@ -2009,7 +2009,8 @@ class BizWorkflowRun(TimestampMixin, Base):
 
 class BizWorkflowReview(TimestampMixin, Base):
     __tablename__ = "biz_workflow_reviews"
-    __table_args__ = (Index("ix_biz_workflow_reviews_inbox", "company_id", "reviewer_id", "status", "created_at"),)
+    __table_args__ = (Index("ix_biz_workflow_reviews_inbox", "company_id", "reviewer_id", "status", "created_at"),
+        Index("ix_biz_workflow_reviews_followup", "reminders_enabled", "status", "due_date", "company_id"))
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
     run_id: Mapped[str] = mapped_column(ForeignKey("biz_workflow_runs.id", ondelete="CASCADE"), index=True)
@@ -2025,3 +2026,11 @@ class BizWorkflowReview(TimestampMixin, Base):
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     invalidation_reason: Mapped[str] = mapped_column(String(80), default="")
+
+    due_date: Mapped[str | None] = mapped_column(String(10))
+    reminders_enabled: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reminder_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    previous_review_id: Mapped[str | None] = mapped_column(String(36))
+    handoff_note: Mapped[str] = mapped_column(String(600), default="", server_default="")

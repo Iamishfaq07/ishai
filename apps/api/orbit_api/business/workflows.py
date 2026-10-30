@@ -499,6 +499,16 @@ async def run_data(db: AsyncSession, ctx: Ctx, jid: str, rid: str) -> dict[str, 
         "checkpoints": sum(s.approval for s in plan.steps),
         "pending": sum(r["status"] == "pending" and r["valid"] for r in reviews.values()),
         "changes_requested": sum(r["status"] == "changes_requested" and r["valid"] for r in reviews.values()),
+        "overdue": sum(r["overdue"] for r in reviews.values()),
+        "snoozed": sum(
+            bool(
+                r["status"] == "pending"
+                and r["valid"]
+                and r["snoozed_until"]
+                and aware(r["snoozed_until"]) > datetime.now(UTC)
+            )
+            for r in reviews.values()
+        ),
     }
     if review_counts["checkpoints"]:
         facts.insert(
@@ -507,7 +517,8 @@ async def run_data(db: AsyncSession, ctx: Ctx, jid: str, rid: str) -> dict[str, 
                 "id": "reviews",
                 "text": f"Workflow approval checkpoints: {review_counts['checkpoints']}; "
                 f"pending reviews: {review_counts['pending']}; "
-                f"changes requested: {review_counts['changes_requested']}.",
+                f"changes requested: {review_counts['changes_requested']}; "
+                f"overdue reviews: {review_counts['overdue']}; paused reminders: {review_counts['snoozed']}.",
             },
         )
     data = {

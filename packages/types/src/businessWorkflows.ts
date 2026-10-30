@@ -11,7 +11,7 @@ export interface BizWorkflowWorkspace {
 export interface BizWorkflowRun {
   id: string; job_id: string; title: string; revision: number; version: string; status: "active" | "completed" | "cancelled";
   start_date: string; plan_revision: number; owners: BizWorkflowWorkspace["owners"]; facts: BizWorkflowWorkspace["facts"];
-  reviews: { checkpoints: number; pending: number; changes_requested: number };
+  reviews: { checkpoints: number; pending: number; changes_requested: number; overdue: number; snoozed: number };
   counts: { total: number; done: number; ready: number; blocked: number; overdue: number; unassigned: number };
   steps: Array<BizWorkflowStep & { review: BizWorkflowReview | null; state: "pending" | "done"; owner_id: string | null; owner_current: boolean;
     completed_by: string | null; completed_at: string | null; note: string; blocked: boolean; due_date: string; overdue: boolean; path: string }>;
@@ -28,7 +28,9 @@ export interface BizWorkflowReview {
   requested_at: string; reviewed_at: string | null; requester_id: string | null; reviewer_id: string | null;
   requester_name: string; reviewer_name: string; reviewer_current: boolean;
   request_note: string; response_note: string; valid: boolean; invalidated_at: string | null;
-  invalidation_reason: string; can_decide: boolean; can_withdraw: boolean;
+  due_date: string | null; overdue: boolean; reminders_enabled: boolean; snoozed_until: string | null;
+  reminder_count: number; last_reminded_at: string | null; previous_review_id: string | null; handoff_note: string;
+  can_manage_followup: boolean; invalidation_reason: string; can_decide: boolean; can_withdraw: boolean;
 }
 export interface BizWorkflowReviewHistory extends BizWorkflowReview {
   evidence: { playbook_title: string; plan_revision: number; start_date: string; checkpoint: BizWorkflowStep;

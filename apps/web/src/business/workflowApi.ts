@@ -19,9 +19,17 @@ export const workflows = {
 
 const reviewRoot = (cid: string, jid: string, rid: string, sid: string) => `${run(cid, jid, rid)}/steps/${encodeURIComponent(sid)}/reviews`;
 export const workflowReviews = {
-  inbox: (cid: string) => api.call<{ items: Array<{ id: string; run_id: string; job_id: string; job_title: string; step_title: string; requested_at: string; path: string }>; truncated: boolean }>(`${root(cid)}/review-inbox/mine`),
+  inbox: (cid: string, view: "all" | "overdue" | "snoozed" = "all") => api.call<{ items: Array<{ id: string; run_id: string; job_id: string; job_title: string; step_title: string; requested_at: string; due_date: string | null; overdue: boolean; snoozed_until: string | null; path: string }>; truncated: boolean }>(`${root(cid)}/review-inbox/mine?${new URLSearchParams({ view })}`),
   request: (cid: string, jid: string, rid: string, sid: string, request_id: string, base_revision: number, reviewer_id: string, evidence_note: string) => api.call<BizWorkflowRun>(reviewRoot(cid, jid, rid, sid), json("POST", { request_id, base_revision, reviewer_id, evidence_note })),
   history: (cid: string, jid: string, rid: string, sid: string) => api.call<{ items: BizWorkflowReviewHistory[] }>(reviewRoot(cid, jid, rid, sid)),
   decide: (cid: string, jid: string, rid: string, sid: string, reviewId: string, base_revision: number, evidence_sha256: string, decision: "approved" | "changes_requested", note: string) => api.call<BizWorkflowRun>(`${reviewRoot(cid, jid, rid, sid)}/${encodeURIComponent(reviewId)}/decision`, json("POST", { base_revision, evidence_sha256, acknowledge: true, decision, note })),
   withdraw: (cid: string, jid: string, rid: string, sid: string, reviewId: string, base_revision: number, note: string) => api.call<BizWorkflowRun>(`${reviewRoot(cid, jid, rid, sid)}/${encodeURIComponent(reviewId)}/withdraw`, json("POST", { base_revision, note })),
+};
+
+const round = (cid: string, jid: string, rid: string, sid: string, reviewId: string) => `${reviewRoot(cid, jid, rid, sid)}/${encodeURIComponent(reviewId)}`;
+export const reviewFollowups = {
+  configure: (cid: string, jid: string, rid: string, sid: string, reviewId: string, base_revision: number, due_date: string | null, reminders_enabled: boolean) => api.call<BizWorkflowRun>(`${round(cid, jid, rid, sid, reviewId)}/followup`, json("POST", { base_revision, due_date, reminders_enabled })),
+  snooze: (cid: string, jid: string, rid: string, sid: string, reviewId: string, base_revision: number, until_date: string | null) => api.call<BizWorkflowRun>(`${round(cid, jid, rid, sid, reviewId)}/snooze`, json("POST", { base_revision, until_date })),
+  handoff: (cid: string, jid: string, rid: string, sid: string, reviewId: string, request_id: string, base_revision: number, reviewer_id: string, note: string) => api.call<BizWorkflowRun>(`${round(cid, jid, rid, sid, reviewId)}/handoff`, json("POST", { request_id, base_revision, reviewer_id, note })),
+  scan: (cid: string) => api.call<{ created: number }>(`${root(cid)}/review-inbox/reminders/run`, json("POST", {})),
 };

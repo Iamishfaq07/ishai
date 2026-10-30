@@ -69,13 +69,13 @@ from orbit_api.business.pipeline import router as business_pipeline_router
 from orbit_api.business.plan_assist import router as business_plan_assist_router
 from orbit_api.business.requisitions import router as business_requisitions_router
 from orbit_api.business.retention import running_sweeper as running_business_sweeper
+from orbit_api.business.review_followups import router as business_workflows_router
 from orbit_api.business.screening import public_router as business_screening_public_router
 from orbit_api.business.screening import router as business_screening_router
 from orbit_api.business.talent import public_router as business_talent_public_router
 from orbit_api.business.talent import router as business_talent_router
 from orbit_api.business.withdrawal import public_router as business_withdrawal_public_router
 from orbit_api.business.withdrawal import router as business_withdrawal_router
-from orbit_api.business.workflow_reviews import router as business_workflows_router
 from orbit_api.career.routes import router as career_router
 from orbit_api.career_workspace.checkpoints import router as transition_checkpoints_router
 from orbit_api.career_workspace.overview import router as career_overview_router

@@ -36,3 +36,6 @@ when an approved checkpoint is reopened. No external signing provider or autonom
 No code or dependencies from these repositories were vendored. Real GitHub approvals, hosted accounts, external
 messages and live model quality were not tested. Project-specific licenses and enterprise editions would need a
 separate adoption review before integrating their runtime or services.
+
+The [follow-up release](BUSINESS_REVIEW_FOLLOWUPS.md) delivers bounded in-app reminders, personal pausing and
+explicit reviewer handoff. Quorum, automatic delegation and external message delivery remain future work.

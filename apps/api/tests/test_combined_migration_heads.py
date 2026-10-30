@@ -21,6 +21,7 @@ import pytest
         "a3d5f7b9c1e2",
         "e1a5b7c9d4f6",
         "f2b6c8d0e5a7",
+        "a4c8d0e2f6b9",
     ],
 )
 def test_combined_upgrade_from_either_branch(tmp_path: Path, previous: str) -> None:

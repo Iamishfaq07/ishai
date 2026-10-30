@@ -101,6 +101,15 @@ def payload(review: BizWorkflowReview, row: BizWorkflowRun, ctx: Ctx, owners: di
             and ctx.user.id in owners
         ),
         "can_withdraw": bool(pending and can_withdraw(ctx, row, review)),
+        "can_manage_followup": bool(active and can_withdraw(ctx, row, review)),
+        "due_date": review.due_date,
+        "overdue": bool(active and review.due_date and review.due_date < datetime.now(UTC).date().isoformat()),
+        "reminders_enabled": review.reminders_enabled,
+        "snoozed_until": aware(review.snoozed_until) if review.snoozed_until else None,
+        "reminder_count": review.reminder_count,
+        "last_reminded_at": aware(review.last_reminded_at) if review.last_reminded_at else None,
+        "previous_review_id": review.previous_review_id,
+        "handoff_note": review.handoff_note,
     }
 
 
@@ -148,7 +157,7 @@ async def guard_dependents(db: AsyncSession, row: BizWorkflowRun, sid: str) -> N
 
 
 @router.get("/review-inbox/mine")
-async def inbox(ctx: CompanyCtx, db: Db) -> Any:
+async def inbox(ctx: CompanyCtx, db: Db, view: Literal["all", "overdue", "snoozed"] = "all") -> Any:
     ctx = await context(db, ctx)
     query = (
         select(BizWorkflowReview, BizWorkflowRun, BizJob)
@@ -163,13 +172,17 @@ async def inbox(ctx: CompanyCtx, db: Db) -> Any:
             BizJob.company_id == ctx.company.id,
             BizWorkflowRun.status == "active",
         )
-        .order_by(BizWorkflowReview.created_at, BizWorkflowReview.id)
+        .order_by(BizWorkflowReview.due_date.asc().nulls_last(), BizWorkflowReview.created_at, BizWorkflowReview.id)
     )
     items = []
     async for review, run, job in await db.stream(query):
         if not sees_job(ctx, job) or run.tasks.get(review.step_id, {}).get("review_id") != review.id:
             continue
         if not current(review, run):
+            continue
+        overdue = bool(review.due_date and review.due_date < datetime.now(UTC).date().isoformat())
+        snoozed = bool(review.snoozed_until and aware(review.snoozed_until) > datetime.now(UTC))
+        if (view == "overdue" and not overdue) or (view == "snoozed" and not snoozed):
             continue
         step = next(s for s in Plan.model_validate(run.content).steps if s.id == review.step_id)
         items.append(
@@ -180,6 +193,9 @@ async def inbox(ctx: CompanyCtx, db: Db) -> Any:
                 "job_title": job.title,
                 "step_title": step.title,
                 "requested_at": aware(review.created_at),
+                "due_date": review.due_date,
+                "overdue": overdue,
+                "snoozed_until": aware(review.snoozed_until) if review.snoozed_until else None,
                 "path": f"/business/app/{ctx.company.id}/workflow-studio?job={job.id}&run={run.id}",
             }
         )

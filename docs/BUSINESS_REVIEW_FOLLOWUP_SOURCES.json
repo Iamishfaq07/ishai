@@ -1,0 +1,30 @@
+[
+  {
+    "name": "novu",
+    "url": "https://raw.githubusercontent.com/novuhq/novu/next/README.md",
+    "sha256": "1e3f2e1690ac106e44b24f4adb74968e27ddba73c083003f1ae97c610448fe3d",
+    "bytes": 18452,
+    "retrieved_at": "2026-10-30T11:56:50.288862+00:00"
+  },
+  {
+    "name": "ntfy",
+    "url": "https://raw.githubusercontent.com/binwiederhier/ntfy/main/README.md",
+    "sha256": "21bf864495bb1ec5bd7c0bd6f48e95fb9f4f6dcbe2644e94197e53ab8ba4fc08",
+    "bytes": 34695,
+    "retrieved_at": "2026-10-30T11:56:50.513562+00:00"
+  },
+  {
+    "name": "prefect_events",
+    "url": "https://raw.githubusercontent.com/PrefectHQ/prefect/main/src/prefect/server/events/schemas/automations.py",
+    "sha256": "3ea0da01e70617f9cd2f3188742dc76c669d87d76300a59739d174cf594e505b",
+    "bytes": 29120,
+    "retrieved_at": "2026-10-30T11:56:50.775064+00:00"
+  },
+  {
+    "name": "argo_suspend",
+    "url": "https://raw.githubusercontent.com/argoproj/argo-workflows/main/examples/suspend-template.yaml",
+    "sha256": "aac1b03ae532e28d302b535ef5effd7adc248492e77f76ada0cd92583acecc7a",
+    "bytes": 1517,
+    "retrieved_at": "2026-10-30T11:56:50.994971+00:00"
+  }
+]

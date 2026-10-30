@@ -34,7 +34,7 @@ checkpoint owner, and all transitive prerequisite records (state, owner, last no
 It is hashed on the server. This hash binds the decision to the captured record; it is not a digital signature,
 identity verification or legal e-signature.
 
-**Review inbox** lists the named reviewer's pending requests across jobs they currently access, oldest first,
+**Review inbox** lists the named reviewer's pending requests across jobs they currently access, ordered by due date before undated requests,
 up to 50 at a time. Open a request to enter its exact run. The reviewer opens the evidence/history, writes a
 decision note, acknowledges the snapshot, then approves or requests changes. Only that named, currently eligible
 reviewer can decide. Clicking ordinary step completion cannot complete an approval checkpoint.
@@ -104,3 +104,6 @@ reduced-motion checks cover both inbox and evidence UI. Postgres feature coverag
 use SQLite. Apply the migration with the normal release process; this work does not run production migrations.
 
 See [the targeted research](BUSINESS_WORKFLOW_REVIEW_RESEARCH.md).
+
+The [follow-up extension](BUSINESS_REVIEW_FOLLOWUPS.md) adds explicit due dates, optional internal reminders,
+personal pauses and a new-reviewer handoff that preserves the evidence and prior-round history.
