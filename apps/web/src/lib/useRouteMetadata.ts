@@ -1,6 +1,5 @@
 import { useEffect } from "react";
-import { SITE } from "../../worker/site.js";
-import { publicPageHead } from "./publicPageHead";
+import { SITE } from "../../worker/origin.js";
 import type { Head } from "../prerender/seo";
 
 function meta(attribute: "name" | "property", key: string, value: string | null) {
@@ -52,7 +51,8 @@ export function useRouteMetadata(pathname: string, privateView: boolean) {
     let active = true;
     const preview = window.location.host !== new URL(SITE).host;
     if (privateView) { applyRouteMetadata(null, preview); return; }
-    void publicPageHead(pathname).then((head) => {
+    // The head's structured data, page descriptions and FAQs load after first paint, not in every page's entry.
+    void import("./publicPageHead").then(({ publicPageHead }) => publicPageHead(pathname)).then((head) => {
       if (active) applyRouteMetadata(head, preview);
     }).catch(() => {
       if (!active) return;

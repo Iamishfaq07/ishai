@@ -45,7 +45,7 @@ test("sign-up says why it can't go on yet instead of a silently disabled button"
   await expect(create).toBeEnabled();
   await create.click();
   await expect(page.getByText("Tick the box to agree to the terms.")).toBeVisible();
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: /I agree to the terms/ }).check();
   await expect(page.getByText("Tick the box to agree to the terms.")).toHaveCount(0);
 });
 

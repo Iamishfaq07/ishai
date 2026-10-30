@@ -948,6 +948,8 @@ class JobInterviewRound(TimestampMixin, Base):
     source_key: Mapped[str] = mapped_column(String(64))
     revision: Mapped[int] = mapped_column(Integer, default=1)
     history: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    # The table has it, NOT NULL (f73a9e1c462d); without it here, Postgres refused every new round.
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 class ResumeSnapshot(TimestampMixin, Base):
@@ -1593,7 +1595,7 @@ class BizEvent(TimestampMixin, Base):
     company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
     job_id: Mapped[str] = mapped_column(String(36), index=True)
     application_id: Mapped[str] = mapped_column(ForeignKey("biz_applications.id", ondelete="CASCADE"))
-    kind: Mapped[str] = mapped_column(String(24))
+    kind: Mapped[str] = mapped_column(String(48))  # "interview_change_requested" is 26 (a3d5f7b9c1e2)
     data: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     actor_id: Mapped[str | None] = mapped_column(String(36))
     actor_name: Mapped[str | None] = mapped_column(String(200))

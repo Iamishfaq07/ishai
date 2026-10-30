@@ -6,9 +6,9 @@
 // the pricing section on the front page is the source), and FAQ markup only next to a visible FAQ with the same words
 // (the product pages' questions live in faqs.js, which the pages draw their FAQ from too: D79).
 import { faqsFor } from "./faqs.js";
+import { SITE } from "./origin.js";
 
-/** The canonical origin. Links, canonicals and the sitemap always name it, whatever host served the request. */
-export const SITE = "https://orbitanswer.com";
+export { SITE };
 
 /** The name search results should show for the site (Google "site names": WebSite.name + og:site_name). */
 export const SITE_NAME = "Orbit AI";

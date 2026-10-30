@@ -75,6 +75,20 @@ even when SQLite hides it.
   chunk. Measured against an origin/main build: that is the whole cost. New budgets: the /business page 203, the
   careers and job pages 195.
 
+  29 Oct 2026, when CI ran again after weeks of failed billing: the entry had grown to 184.5 kB (budget 172) and 21
+  pages were over. Three causes in the entry, all fixed rather than budgeted: the route head (`publicPageHead`: every
+  page's structured data, descriptions and FAQs) was a static import, and is now loaded after first paint
+  (`useRouteMetadata`; the origin moved to `worker/origin.js` so the entry doesn't need `site.js`); and the app shell
+  took one constant each from the offer model, the LinkedIn model, the admin helpers and audio capture, which put
+  those whole modules in the entry (Rollup places a module in one chunk), so those constants now live in small
+  modules (`offers/paths.ts`, `linkedin/paths.ts`, `lib/announcement.ts`, `lib/platform.ts`). The entry measures
+  170.4 kB. What remained over is the pages' own growth since 20 Oct: the workspace tool catalog (`tools/homes.ts` and
+  `catalog.ts`, 8.9 kB, shared by Sessions, Resume AI, the editor, Jobs AI and the tool explorer for the workspace
+  switch), the empty states' scene drawings (6.0 kB, all 20 in one chunk), and Jobs AI's and the editor's own new
+  features. Budgets raised to the measured size plus about 1.5%: Sessions 187 → 204 (201.1), Live 249 → 252 (249.2),
+  Resume AI 206 → 222 (218.4), the editor 255 → 276 (271.2), Jobs AI 280 → 300 (295.6), the tool explorer 187 → 195
+  (192.2), CSS 32.6 → 35 (34.3). Next saving to try: load each scene drawing on its own, with its box reserved.
+
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
 - **INP** ≤ 200 ms at p75, and no task over 200 ms while a page opens (total blocking time ≤ 300 ms), under the same

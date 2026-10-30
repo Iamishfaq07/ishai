@@ -14,8 +14,8 @@ export const BUDGETS = {
   // +1 kB for D80: the API client's direct route; +1 kB for D84: Orbit Apply's chunk in the preload map, its two
   // routes and tab (its own calls stay in its chunk, through the client's generic `call`) (docs/PERFORMANCE.md).
   entry: 172,
-  // Shared workspace switch and interactive tool cards: 32.4 kB measured (docs/PERFORMANCE.md).
-  css: 32.6,
+  // Shared workspace switch and interactive tool cards: 32.4 kB measured; 34.3 kB on 29 Oct 2026 (docs/PERFORMANCE.md).
+  css: 35,
   pages: {
     // +1 kB each for D79 (docs/PERFORMANCE.md): the product pages' shared pieces became chunks of their own, and each
     // chunk's name is in the entry's preload map (+0.3 kB on every first load); Landing shares the live answer and
@@ -28,18 +28,20 @@ export const BUDGETS = {
     // The front page, signed out. +1 kB for SameBox (0.5 kB): its free line keeps its room until the server answers
     // (CLS 0; docs/PERFORMANCE.md).
     Landing: 208, // public workspace switch and tools navigation
-    Sessions: 187, // +1 kB for D80, through the entry; +1 kB for D82
+    // 29 Oct 2026: Sessions, Live, Resumes, the editor, Jobs AI and the tool explorer to their measured size plus ~1.5%,
+    // after the entry fell 14 kB (docs/PERFORMANCE.md: the workspace tool catalog and the empty-state scenes).
+    Sessions: 204, // +1 kB for D80, through the entry; +1 kB for D82
     SessionSetup: 201,
     Mock: 207,
     // The live copilot; the video room (D69, ~14 kB) loads only for a video interview (D73). +1 kB for D80 and D76's
     // natural voice that holds (the retry, sayNaturalLine, voiceSetup).
-    Live: 249, // shared navigation/preload map only; agent and explorer remain lazy
-    Resumes: 206,
-    ResumeEditor: 255,
-    JobsAiPages: 280,
+    Live: 252, // shared navigation/preload map only; agent and explorer remain lazy
+    Resumes: 222,
+    ResumeEditor: 276,
+    JobsAiPages: 300,
     // Orbit Apply's setup and Applications (D84), a lazy chunk of their own under Jobs AI's section.
     AutoApplyPages: 194, // 193.1 measured with captured posting and AI reviewer entry; see PERFORMANCE.md
-    ToolExplorer: 187, // public feature catalog and interactive workflow, loaded on demand
+    ToolExplorer: 195, // public feature catalog and interactive workflow, loaded on demand
     Journey: 210, // application agent controls and shortlist; loaded on demand
     // The public product pages (D79), signed out: the section kit and each page's own renders, lazy chunks.
     ResumeAiPublic: 226, // with the prices (PricingSection) and the real resume renderer

@@ -697,12 +697,8 @@
 			],
 			"action": "SCMP_ACT_ALLOW",
 			"args": [],
-			"comment": "",
-			"includes": {
-				"caps": [
-					"CAP_SYS_CHROOT"
-				]
-			},
+			"comment": "Orbit: allowed without CAP_SYS_CHROOT in the container (it drops every capability). Chromium's sandbox chroots inside the user namespace it creates, where the kernel still checks the capability; see docs/HOSTED_APPLY.md.",
+			"includes": {},
 			"excludes": {}
 		},
 		{

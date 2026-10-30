@@ -110,10 +110,7 @@ export function auditDetail(target: string | null, subjectId: string | null): st
   return text.replace(LEADING_ID, "");
 }
 
-/** A dismissed announcement stays dismissed until its text (and so its id) changes. */
-export function announcementVisible(id: string | null, text: string | null, dismissedId: string | null): boolean {
-  return Boolean(id && text && id !== dismissedId);
-}
+export { announcementVisible } from "../../lib/announcement";
 
 /** The CSV's file name for today. */
 export function exportFileName(now: Date = new Date()): string {

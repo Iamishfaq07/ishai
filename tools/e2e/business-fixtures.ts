@@ -64,6 +64,9 @@ export async function a11y(page: Page) {
   // Audit the foreground page after transient confirmations finish, not halfway through a toast's opacity fade.
   await page.bringToFront();
   await page.mouse.move(0, 0);
+  // From the top, the same each run: axe's target-size counts a control scrolled half under the sticky header as
+  // "partially obscured", so where the last click left the page decided the result.
+  await page.evaluate(() => window.scrollTo(0, 0));
   await expect(page.getByRole("region", { name: "Notifications", exact: true }).getByRole("listitem")).toHaveCount(0);
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`).join(", ")}`)).toEqual([]);
