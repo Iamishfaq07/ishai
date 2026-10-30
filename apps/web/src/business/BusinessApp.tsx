@@ -46,6 +46,7 @@ const KnowledgeReviewInbox = lazy(async () => ({ default: (await import("./Knowl
 const KnowledgeReadingDesk = lazy(async () => ({ default: (await import("./KnowledgeReadingDesk")).KnowledgeReadingDesk }));
 const KnowledgeStudio = lazy(async () => ({ default: (await import("./KnowledgeStudio")).KnowledgeStudio }));
 const RequisitionDesk = lazy(async () => ({ default: (await import("./RequisitionDesk")).RequisitionDesk }));
+const WorkflowReviewInbox = lazy(async () => ({ default: (await import("./WorkflowReviews")).WorkflowReviewInbox }));
 const WorkflowStudio = lazy(async () => ({ default: (await import("./WorkflowStudio")).WorkflowStudio }));
 const TalentCommunity = lazy(async () => ({ default: (await import("./TalentCommunity")).TalentCommunity }));
 const ExperienceHub = lazy(async () => ({ default: (await import("./ExperienceHub")).ExperienceHub }));
@@ -122,6 +123,7 @@ const NAV = [
   { to: "", label: "Dashboard", icon: Gauge, end: true },
   { to: "control-room", label: "Control room", icon: Gauge },
   { to: "jobs", label: "Jobs", icon: Briefcase },
+  { to: "workflow-reviews", label: "Review inbox", icon: ShieldCheck },
   { to: "workflow-studio", label: "Workflow Studio", icon: ScrollText },
   { to: "talent", label: "Talent communities", icon: Users },
   { to: "experience", label: "Candidate experience", icon: Users },
@@ -139,7 +141,7 @@ const NAV = [
 ] as const;
 
 function CompanyNav({ company, sidebar = false }: { company: BizCompany; sidebar?: boolean }) {
-  const items = NAV.filter((n) => n.to === "talent" ? company.permissions.all_jobs : n.to === "knowledge-reviews" ? company.permissions.manage_company : ((n.to === "control-room" || n.to === "requisitions" || n.to === "capacity") ? company.role !== "interviewer" : (n.to === "automations" || n.to === "experience" || n.to === "workflow-studio") ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
+  const items = NAV.filter((n) => n.to === "talent" ? company.permissions.all_jobs : n.to === "knowledge-reviews" ? company.permissions.manage_company : ((n.to === "control-room" || n.to === "requisitions" || n.to === "capacity") ? company.role !== "interviewer" : (n.to === "automations" || n.to === "experience" || n.to === "workflow-studio" || n.to === "workflow-reviews") ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
   return (
     <nav aria-label={`${company.name}`} className={sidebar ? "hidden w-60 shrink-0 space-y-6 border-r border-zinc-200 p-4 dark:border-white/10 lg:block" : "border-b border-zinc-200 dark:border-white/10 lg:hidden"}>
       {sidebar && <div className="space-y-3 rounded-xl bg-zinc-950 p-4 text-white"><p className="text-xsst text-indigo-300">Company workspace</p><p className="truncate font-semibold">{company.name}</p><p className="text-xs text-zinc-300">{ROLE_LABEL[company.role]} · {company.verified ? "Verified" : "Verification pending"}</p></div>}
@@ -262,6 +264,7 @@ function CompanyLayout() {
             <Route path="automations" element={<AutomationCenter />} />
             <Route path="control-room" element={<ControlRoom />} />
             <Route path="capacity" element={<HiringCapacity />} />
+            <Route path="workflow-reviews" element={<WorkflowReviewInbox />} />
             <Route path="workflow-studio" element={<WorkflowStudio />} />
             <Route path="talent" element={<TalentCommunity />} />
             <Route path="experience" element={<ExperienceHub />} />

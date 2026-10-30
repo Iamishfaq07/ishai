@@ -75,7 +75,7 @@ from orbit_api.business.talent import public_router as business_talent_public_ro
 from orbit_api.business.talent import router as business_talent_router
 from orbit_api.business.withdrawal import public_router as business_withdrawal_public_router
 from orbit_api.business.withdrawal import router as business_withdrawal_router
-from orbit_api.business.workflows import router as business_workflows_router
+from orbit_api.business.workflow_reviews import router as business_workflows_router
 from orbit_api.career.routes import router as career_router
 from orbit_api.career_workspace.checkpoints import router as transition_checkpoints_router
 from orbit_api.career_workspace.overview import router as career_overview_router

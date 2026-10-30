@@ -2005,3 +2005,23 @@ class BizWorkflowRun(TimestampMixin, Base):
     start_date: Mapped[str] = mapped_column(String(10))
     content: Mapped[dict[str, Any]] = mapped_column(JSON)
     tasks: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class BizWorkflowReview(TimestampMixin, Base):
+    __tablename__ = "biz_workflow_reviews"
+    __table_args__ = (Index("ix_biz_workflow_reviews_inbox", "company_id", "reviewer_id", "status", "created_at"),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("biz_workflow_runs.id", ondelete="CASCADE"), index=True)
+    step_id: Mapped[str] = mapped_column(String(40))
+    requester_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    reviewer_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    fingerprint: Mapped[str] = mapped_column(String(64))
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSON)
+    request_note: Mapped[str] = mapped_column(String(1200))
+    response_note: Mapped[str] = mapped_column(String(1200), default="")
+    status: Mapped[str] = mapped_column(String(24), default="pending")
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invalidation_reason: Mapped[str] = mapped_column(String(80), default="")

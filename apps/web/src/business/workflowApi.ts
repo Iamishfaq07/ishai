@@ -1,4 +1,4 @@
-import type { BizWorkflowBrief, BizWorkflowDraft, BizWorkflowPlan, BizWorkflowRun, BizWorkflowWorkspace } from "@orbit/types";
+import type { BizWorkflowBrief, BizWorkflowDraft, BizWorkflowPlan, BizWorkflowReviewHistory, BizWorkflowRun, BizWorkflowWorkspace } from "@orbit/types";
 import { api } from "../lib/api";
 const root = (cid: string) => `/v1/business/companies/${encodeURIComponent(cid)}/workflow-studio`;
 const job = (cid: string, jid: string) => `${root(cid)}/${encodeURIComponent(jid)}`;
@@ -15,4 +15,13 @@ export const workflows = {
   cancel: (cid: string, jid: string, rid: string, base_revision: number) => api.call<BizWorkflowRun>(`${run(cid, jid, rid)}/cancel`, json("POST", { base_revision })),
   remove: (cid: string, jid: string, rid: string) => api.call<void>(run(cid, jid, rid), { method: "DELETE" }),
   brief: (cid: string, jid: string, rid: string, version: string) => api.call<BizWorkflowBrief>(`${run(cid, jid, rid)}/brief`, { ...json("POST", { version }), timeoutMs: 90000 }),
+};
+
+const reviewRoot = (cid: string, jid: string, rid: string, sid: string) => `${run(cid, jid, rid)}/steps/${encodeURIComponent(sid)}/reviews`;
+export const workflowReviews = {
+  inbox: (cid: string) => api.call<{ items: Array<{ id: string; run_id: string; job_id: string; job_title: string; step_title: string; requested_at: string; path: string }>; truncated: boolean }>(`${root(cid)}/review-inbox/mine`),
+  request: (cid: string, jid: string, rid: string, sid: string, request_id: string, base_revision: number, reviewer_id: string, evidence_note: string) => api.call<BizWorkflowRun>(reviewRoot(cid, jid, rid, sid), json("POST", { request_id, base_revision, reviewer_id, evidence_note })),
+  history: (cid: string, jid: string, rid: string, sid: string) => api.call<{ items: BizWorkflowReviewHistory[] }>(reviewRoot(cid, jid, rid, sid)),
+  decide: (cid: string, jid: string, rid: string, sid: string, reviewId: string, base_revision: number, evidence_sha256: string, decision: "approved" | "changes_requested", note: string) => api.call<BizWorkflowRun>(`${reviewRoot(cid, jid, rid, sid)}/${encodeURIComponent(reviewId)}/decision`, json("POST", { base_revision, evidence_sha256, acknowledge: true, decision, note })),
+  withdraw: (cid: string, jid: string, rid: string, sid: string, reviewId: string, base_revision: number, note: string) => api.call<BizWorkflowRun>(`${reviewRoot(cid, jid, rid, sid)}/${encodeURIComponent(reviewId)}/withdraw`, json("POST", { base_revision, note })),
 };

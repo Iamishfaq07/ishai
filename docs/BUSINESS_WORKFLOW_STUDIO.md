@@ -22,7 +22,8 @@ can use it for jobs they currently access. Interviewers cannot access the studio
 membership changes and job-team removal are checked by the existing access layer; writes refresh those checks
 under the company lock.
 
-Three templates provide a starting point. Selecting a template or using an AI draft changes the local editor;
+Four templates provide a starting point, including an independent launch-review variant.
+See [independent checkpoints](BUSINESS_WORKFLOW_REVIEWS.md) for named reviewers, evidence snapshots and the personal inbox. Selecting a template or using an AI draft changes the local editor;
 **Save playbook** is a separate action. Step titles, instructions, day offsets, prerequisites and linked
 workspaces are editable. Deleting a local step removes its references from later local steps. Download a draft
 before refreshing if preserving unsaved edits matters. Changed saved role facts require reviewing the current
@@ -45,7 +46,7 @@ Arbitrary URLs, scripts, webhook targets and owner IDs from AI output are not ac
 - An unfinished step is blocked until all its prerequisites are complete. Completing, reopening and assigning
   require a 3–300 character note and the current run revision. Do not put candidate details in notes.
 - Reopening a prerequisite is refused while a direct dependent is complete; unwind completed downstream steps
-  first. Completing every step marks the run completed; reopening a completed leaf makes it active again.
+  first. Approval checkpoints require the named independent human decision described above. Completing every step marks the run completed; reopening a completed leaf makes it active again.
 - Cancellation freezes edits. Owners/admins can delete completed or cancelled runs. There are at most 20 active
   and 100 total runs per job. Reusing a start key after its run has been explicitly deleted can create a new run;
   the UUID is not a permanent tombstone or external exactly-once guarantee.
@@ -58,7 +59,7 @@ checklist; they are not candidate scores or employee performance ratings.
 
 ## AI boundaries
 
-**Draft playbook** sends the saved role title and at most six bounded must-have requirements. Every generated
+**Draft playbook** sends the saved role title and at most six bounded must-have requirements. AI cannot enable approval-checkpoint policy. Every generated
 step must cite an exact substring of a supplied fact. The graph and all field limits are validated. Citations
 are displayed with the proposed draft; manually edited saved plans are team-authored operational records,
 not an immutable AI citation ledger. Updating the job/team/plan during generation invalidates the response.
@@ -86,7 +87,7 @@ Root: `/v1/business/companies/{company_id}/workflow-studio`
 
 | Method/path | Behavior |
 | --- | --- |
-| GET / | Up to 200 visible jobs and the three templates |
+| GET / | Up to 200 visible jobs and the four templates |
 | GET /{job} | Current plan, requirements, eligible owners and up to 100 runs |
 | PUT /{job}/plan | Save with base revision and current role-reference version |
 | POST /{job}/draft | Cited AI draft; no save |

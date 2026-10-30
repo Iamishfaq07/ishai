@@ -62,3 +62,7 @@ provider accounting and audit conventions. It does not embed a general-purpose a
 Hosted editions, private vendor capabilities, model benchmarks, external account access and vendor licensing
 suitability were not verified by this review. The source hashes document what was inspected, rather than
 turning a marketing README into an independently measured capability claim.
+
+The subsequent [independent-review extension](BUSINESS_WORKFLOW_REVIEWS.md) implements one named independent
+reviewer, evidence snapshots, changes-requested rounds and a personal inbox. Quorum approvals, live-document
+binding, reminder delivery and external execution remain separate follow-up work.

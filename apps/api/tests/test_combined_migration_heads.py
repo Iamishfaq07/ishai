@@ -20,6 +20,7 @@ import pytest
         "d0f4a6b8c3e5",
         "a3d5f7b9c1e2",
         "e1a5b7c9d4f6",
+        "f2b6c8d0e5a7",
     ],
 )
 def test_combined_upgrade_from_either_branch(tmp_path: Path, previous: str) -> None:
@@ -39,7 +40,7 @@ engine = create_engine(os.environ['ORBIT_DATABASE_URL'].replace('+aiosqlite', ''
 assert 'gmail_artifacts' in inspect(engine).get_table_names()
 tables = set(inspect(engine).get_table_names())
 assert {'job_hidden', 'biz_knowledge_receipts', 'mentor_shares',
-        'biz_experience_responses', 'biz_talent_suggestions', 'biz_workflow_runs'} <= tables
+        'biz_experience_responses', 'biz_talent_suggestions', 'biz_workflow_runs', 'biz_workflow_reviews'} <= tables
 columns = {c['name'] for c in inspect(engine).get_columns('jobs')}
 assert {'lease_token', 'lease_until', 'rerun_requested'} <= columns
 with engine.connect() as db:

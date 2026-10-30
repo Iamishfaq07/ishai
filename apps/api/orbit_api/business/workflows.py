@@ -39,6 +39,7 @@ class Step(Contract):
     days: int = Field(0, ge=0, le=60, strict=True)
     depends_on: list[Id] = Field(default_factory=list, max_length=6)
     workspace: Workspace = "pipeline"
+    approval: bool = Field(False, strict=True)
 
 
 class Plan(Contract):
@@ -201,7 +202,7 @@ def templates() -> list[dict[str, Any]]:
             ],
         ),
     ]
-    return [
+    result: list[dict[str, Any]] = [
         {
             "id": key,
             "plan": Plan(
@@ -214,6 +215,11 @@ def templates() -> list[dict[str, Any]]:
         }
         for key, title, rows in definitions
     ]
+    checkpoint = copy.deepcopy(result[0]["plan"])
+    checkpoint["title"] = "Independent launch review"
+    checkpoint["steps"][-1]["approval"] = True
+    result.append({"id": "approval", "plan": checkpoint})
+    return result
 
 
 async def context(db: AsyncSession, ctx: Ctx, *, write: bool = False) -> Ctx:
@@ -323,6 +329,8 @@ async def draft(jid: str, body: AdviceIn, ctx: CompanyCtx, db: Db) -> Any:
         if not isinstance(raw, dict) or set(raw) != {"plan", "sources"}:
             raise ValueError("Use the workflow draft schema.")
         plan = Plan.model_validate(raw["plan"])
+        if any(s.approval for s in plan.steps):
+            raise ValueError("Approval policy must be chosen by the team, not an AI draft.")
         allowed = {f["id"]: f["text"] for f in current["facts"]}
         sources = raw["sources"]
         if not isinstance(sources, list) or len(sources) != len(plan.steps):
@@ -446,6 +454,9 @@ async def run_data(db: AsyncSession, ctx: Ctx, jid: str, rid: str) -> dict[str, 
     job = await job_for(db, ctx, jid)
     owners = await coordinators(db, job)
     plan = Plan.model_validate(row.content)
+    from orbit_api.business.workflow_reviews import payloads
+
+    reviews = await payloads(db, row, ctx, owners)
     today = datetime.now(UTC).date()
     steps = []
     for step in plan.steps:
@@ -468,6 +479,7 @@ async def run_data(db: AsyncSession, ctx: Ctx, jid: str, rid: str) -> dict[str, 
                 "overdue": task["state"] != "done" and due < today,
                 "owner_current": task["owner_id"] in owners,
                 "path": f"/business/app/{ctx.company.id}/{path}",
+                "review": reviews.get(step.id),
             }
         )
     counts = {
@@ -483,6 +495,21 @@ async def run_data(db: AsyncSession, ctx: Ctx, jid: str, rid: str) -> dict[str, 
         for key, value in counts.items()
         if key != "total"
     ]
+    review_counts = {
+        "checkpoints": sum(s.approval for s in plan.steps),
+        "pending": sum(r["status"] == "pending" and r["valid"] for r in reviews.values()),
+        "changes_requested": sum(r["status"] == "changes_requested" and r["valid"] for r in reviews.values()),
+    }
+    if review_counts["checkpoints"]:
+        facts.insert(
+            0,
+            {
+                "id": "reviews",
+                "text": f"Workflow approval checkpoints: {review_counts['checkpoints']}; "
+                f"pending reviews: {review_counts['pending']}; "
+                f"changes requested: {review_counts['changes_requested']}.",
+            },
+        )
     data = {
         "id": row.id,
         "job_id": jid,
@@ -493,6 +520,7 @@ async def run_data(db: AsyncSession, ctx: Ctx, jid: str, rid: str) -> dict[str, 
         "plan_revision": row.plan_revision,
         "steps": steps,
         "counts": counts,
+        "reviews": review_counts,
         "owners": [{"id": k, "name": v} for k, v in sorted(owners.items())],
         "facts": facts,
     }
@@ -517,6 +545,19 @@ async def action(jid: str, rid: str, sid: str, body: ActionIn, ctx: CompanyCtx, 
     step = next((s for s in plan.steps if s.id == sid), None)
     if step is None:
         raise HTTPException(404, "Step not found.")
+    from orbit_api.business.workflow_reviews import guard_dependents, invalidate
+
+    await guard_dependents(db, row, sid)
+    current_review = (await run_data(db, ctx, jid, rid))["steps"]
+    review = next(s["review"] for s in current_review if s["id"] == sid)
+    if step.approval and body.action == "done":
+        raise HTTPException(409, "This checkpoint requires an independent review decision.")
+    if (
+        step.approval
+        and body.action == "assign"
+        and (row.tasks[sid]["state"] == "done" or (review and review["status"] == "pending" and review["valid"]))
+    ):
+        raise HTTPException(409, "Withdraw or reopen the checkpoint before changing its owner.")
     tasks = copy.deepcopy(row.tasks)
     if body.action == "done":
         if tasks[sid]["state"] == "done":
@@ -529,6 +570,8 @@ async def action(jid: str, rid: str, sid: str, body: ActionIn, ctx: CompanyCtx, 
             raise HTTPException(409, "This step is already pending. Refresh the run.")
         if any(tasks[s.id]["state"] == "done" for s in plan.steps if sid in s.depends_on):
             raise HTTPException(409, "Reopen completed dependent steps first.")
+        if step.approval:
+            await invalidate(db, row, sid, "checkpoint_reopened")
         tasks[sid].update(state="pending", completed_at=None, completed_by=None)
     else:
         job = await job_for(db, ctx, jid)
@@ -548,6 +591,9 @@ async def cancel(jid: str, rid: str, body: RevisionIn, ctx: CompanyCtx, db: Db) 
     ctx = await context(db, ctx, write=True)
     row = await run_for(db, ctx, jid, rid)
     check(row.revision, body.base_revision)
+    from orbit_api.business.workflow_reviews import invalidate
+
+    await invalidate(db, row, None, "run_cancelled")
     row.status, row.revision = "cancelled", row.revision + 1
     audit(db, ctx.company.id, ctx.user, "workflow.cancelled", jid, run_id=rid)
     await db.commit()
@@ -576,7 +622,8 @@ async def brief(jid: str, rid: str, body: AdviceIn, ctx: CompanyCtx, db: Db) -> 
         ctx.user,
         "business_workflow_brief",
         INSTRUCTION
-        + "Review aggregate internal checklist progress only. Do not infer hiring quality or completed hiring actions.",
+        + "Review aggregate internal checklist progress only. Do not infer hiring quality or completed hiring actions. "
+        "Never approve or reject checkpoints or imply review authority; recommend human evidence review only.",
         json.dumps({"facts": current["facts"]}),
         lambda raw: validate_advice(raw, current["facts"]),
         ctx.company.id,

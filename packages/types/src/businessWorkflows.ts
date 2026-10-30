@@ -1,5 +1,5 @@
 export interface BizWorkflowStep {
-  id: string; title: string; instruction: string; days: number; depends_on: string[];
+  approval?: boolean; id: string; title: string; instruction: string; days: number; depends_on: string[];
   workspace: "pipeline" | "interview-plan" | "hiring-desk" | "capacity" | "experience";
 }
 export interface BizWorkflowPlan { title: string; steps: BizWorkflowStep[] }
@@ -11,8 +11,9 @@ export interface BizWorkflowWorkspace {
 export interface BizWorkflowRun {
   id: string; job_id: string; title: string; revision: number; version: string; status: "active" | "completed" | "cancelled";
   start_date: string; plan_revision: number; owners: BizWorkflowWorkspace["owners"]; facts: BizWorkflowWorkspace["facts"];
+  reviews: { checkpoints: number; pending: number; changes_requested: number };
   counts: { total: number; done: number; ready: number; blocked: number; overdue: number; unassigned: number };
-  steps: Array<BizWorkflowStep & { state: "pending" | "done"; owner_id: string | null; owner_current: boolean;
+  steps: Array<BizWorkflowStep & { review: BizWorkflowReview | null; state: "pending" | "done"; owner_id: string | null; owner_current: boolean;
     completed_by: string | null; completed_at: string | null; note: string; blocked: boolean; due_date: string; overdue: boolean; path: string }>;
 }
 export interface BizWorkflowDraft {
@@ -21,3 +22,16 @@ export interface BizWorkflowDraft {
 }
 export interface BizWorkflowBrief { version: string; source: "ai" | "mock";
   tips: Array<{ fact_id: string; source_quote: string; suggestion: string; success_check: string }> }
+
+export interface BizWorkflowReview {
+  id: string; fingerprint: string; status: "pending" | "approved" | "changes_requested";
+  requested_at: string; reviewed_at: string | null; requester_id: string | null; reviewer_id: string | null;
+  requester_name: string; reviewer_name: string; reviewer_current: boolean;
+  request_note: string; response_note: string; valid: boolean; invalidated_at: string | null;
+  invalidation_reason: string; can_decide: boolean; can_withdraw: boolean;
+}
+export interface BizWorkflowReviewHistory extends BizWorkflowReview {
+  evidence: { playbook_title: string; plan_revision: number; start_date: string; checkpoint: BizWorkflowStep;
+    checkpoint_owner_id: string | null; prerequisites: Array<{ step: BizWorkflowStep; record: { state: string;
+      owner_id: string | null; note: string; completed_at: string | null; completed_by: string | null } }> };
+}
