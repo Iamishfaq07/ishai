@@ -21,6 +21,10 @@ describe("read aloud text", () => {
     expect(speechText(answer(""))).toBe("");
   });
 
+  it("normalizes long whitespace runs without losing punctuation or code formatting", () => {
+    expect(speechText(answer(`Hello${" ".repeat(100_000)}, \`world\`!`))).toBe("Hello, world!");
+  });
+
   it("chunks by sentence, within the limit, without splitting words", () => {
     const long = "word ".repeat(80).trim() + ".";
     const chunks = speechChunks(`First sentence. Second one! ${long} Last?`, 60);
