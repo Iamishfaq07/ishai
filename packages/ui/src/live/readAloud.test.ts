@@ -17,6 +17,14 @@ describe("read aloud text", () => {
       .toBe("For nums [2, 7, 11, 15] and target 9, I return [0, 1].");
   });
 
+  it("normalizes whitespace before punctuation without leaving a space", () => {
+    expect(speechText(answer("Words      , separated\t\t!"))).toBe("Words, separated!");
+  });
+
+  it("normalizes long whitespace runs without losing punctuation or code formatting", () => {
+    expect(speechText(answer(`Hello${" ".repeat(100_000)}, \`world\`!`))).toBe("Hello, world!");
+  });
+
   it("is empty when there's nothing to say", () => {
     expect(speechText(answer(""))).toBe("");
   });

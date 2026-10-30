@@ -7,15 +7,31 @@ import { splitPlaceholders } from "./placeholders";
  */
 export function speechText(answer: AnswerView["answer"]): string {
   const spoken = (s: string) =>
-    splitPlaceholders(s)
-      .map((part) => (part.kind === "text" ? part.text : "…")) // a pause where they fill in their own detail
-      .join(" ")
-      .replace(/`/g, "")
-      .replace(/\s+/g, " ")
-      .replace(/ ([,.;:!?])/g, "$1")
-      .trim();
+    normalizeSpeech(
+      splitPlaceholders(s)
+        .map((part) => (part.kind === "text" ? part.text : "…")) // a pause where they fill in their own detail
+        .join(" "),
+    );
   const parts = [answer.direct_answer, ...answer.talking_points].map(spoken).filter(Boolean);
   return parts.map((p) => (/[.!?]$/.test(p) ? p : `${p}.`)).join(" ");
+}
+
+/** Backticks dropped, whitespace runs collapsed to one space, none before punctuation, trimmed: one pass, so a long
+ *  run of spaces in an answer costs linear time (code scanning flagged the regex chain this replaces). */
+function normalizeSpeech(text: string): string {
+  const out: string[] = [];
+  let pendingSpace = false;
+  for (const char of text) {
+    if (char === "`") continue;
+    if (char.trim() === "") {
+      pendingSpace = out.length > 0;
+      continue;
+    }
+    if (pendingSpace && !",.;:!?".includes(char)) out.push(" ");
+    out.push(char);
+    pendingSpace = false;
+  }
+  return out.join("");
 }
 
 /**
