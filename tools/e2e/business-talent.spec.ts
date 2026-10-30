@@ -5,7 +5,10 @@ import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 const API = process.env.ORBIT_TEST_API_URL ?? "http://127.0.0.1:8000";
 const OUTBOX = process.env.ORBIT_TEST_OUTBOX ?? "apps/api/e2e-outbox.txt";
-const ADMIN = process.env.ORBIT_TEST_ADMIN_EMAIL ?? "qa-admin@example.com";
+// The company's owner: a new address at the company's own domain each run. The run's one admin is registered by
+// other Business specs first, and can own only three companies.
+const DOMAIN = "orbit-talent-e2e.com";
+const OWNER = `owner-${crypto.randomUUID().slice(0, 8)}@${DOMAIN}`;
 async function mailToken(email: string, pattern: RegExp) {
   let result = "";
   await expect.poll(async () => { const text = (await readFile(OUTBOX, "utf8")).split("--- to=").filter(m => m.startsWith(email)).at(-1) ?? ""; result = pattern.exec(text)?.[1] ?? ""; return result.length; }).toBeGreaterThan(10);
@@ -13,11 +16,11 @@ async function mailToken(email: string, pattern: RegExp) {
 }
 test("Talent community: candidate consent, recruiter rediscovery, reviewed portal role and withdrawal", async ({ page, context, browser }, info) => {
   await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
-  const registered = await context.request.post(`${API}/v1/auth/register`, { data: { email: ADMIN, name: "Talent Owner", password: "correct horse battery" } });
+  const registered = await context.request.post(`${API}/v1/auth/register`, { data: { email: OWNER, name: "Talent Owner", password: "correct horse battery" } });
   expect(registered.status(), await registered.text()).toBe(201);
-  const verification = await mailToken(ADMIN, /verify-email\?token=([\w-]+)/);
+  const verification = await mailToken(OWNER, /verify-email\?token=([\w-]+)/);
   expect((await context.request.post(`${API}/v1/auth/verify-email/confirm`, { data: { token: verification } })).ok()).toBe(true);
-  const made = await context.request.post(`${API}/v1/business/companies`, { data: { name: "Talent Studio", website: `https://${ADMIN.split("@")[1]}`, size: "11-50", country: "IN" } });
+  const made = await context.request.post(`${API}/v1/business/companies`, { data: { name: "Talent Studio", website: `https://${DOMAIN}`, size: "11-50", country: "IN" } });
   expect(made.status(), await made.text()).toBe(201);
   const cid = (await made.json()).id as string; const base = `${API}/v1/business/companies/${cid}`;
   expect((await context.request.post(`${base}/verification/account`)).ok()).toBe(true);
