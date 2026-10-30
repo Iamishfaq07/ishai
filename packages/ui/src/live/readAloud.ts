@@ -16,8 +16,6 @@ export function speechText(answer: AnswerView["answer"]): string {
   return parts.map((p) => (/[.!?]$/.test(p) ? p : `${p}.`)).join(" ");
 }
 
-/** Backticks dropped, whitespace runs collapsed to one space, none before punctuation, trimmed: one pass, so a long
- *  run of spaces in an answer costs linear time (code scanning flagged the regex chain this replaces). */
 function normalizeSpeech(text: string): string {
   const out: string[] = [];
   let pendingSpace = false;

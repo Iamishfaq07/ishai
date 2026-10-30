@@ -21,12 +21,12 @@ describe("read aloud text", () => {
     expect(speechText(answer("Words      , separated\t\t!"))).toBe("Words, separated!");
   });
 
-  it("normalizes long whitespace runs without losing punctuation or code formatting", () => {
-    expect(speechText(answer(`Hello${" ".repeat(100_000)}, \`world\`!`))).toBe("Hello, world!");
-  });
-
   it("is empty when there's nothing to say", () => {
     expect(speechText(answer(""))).toBe("");
+  });
+
+  it("normalizes long whitespace runs without losing punctuation or code formatting", () => {
+    expect(speechText(answer(`Hello${" ".repeat(100_000)}, \`world\`!`))).toBe("Hello, world!");
   });
 
   it("chunks by sentence, within the limit, without splitting words", () => {
