@@ -119,7 +119,10 @@ There is no general purpose browser execution endpoint or LLM with unrestricted 
 The browser child process receives only an allowlist of OS paths and locale variables, never the parent worker's
 Orbit secret or provider credentials. The seccomp profile is from
 [Microsoft Playwright](https://github.com/microsoft/playwright/blob/ae935a43d9e376e4759548f6b3c6905c7b282333/utils/docker/seccomp_profile.json),
-under Apache-2.0; its license is included in `apps/apply-worker/LICENSE.seccomp`.
+under Apache-2.0; its license is included in `apps/apply-worker/LICENSE.seccomp`. One change from it: `chroot` is
+allowed without `CAP_SYS_CHROOT`. Playwright's profile assumes a container that keeps the default capabilities; this
+worker drops all of them, and Chromium's sandbox chroots inside the user namespace it creates, where the kernel still
+requires the capability. Without the change the sandbox can't start (`Check failed: sys_chroot("/proc/self/fdinfo/")`).
 
 ## Failure recovery and rollback
 
