@@ -69,10 +69,14 @@ export async function a11y(page: Page) {
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect(page.getByRole("region", { name: "Notifications", exact: true }).getByRole("listitem")).toHaveCount(0);
   // Entrance animations (a list's staggered route-rise, ~1 s for its eighth row) finished: mid-fade, axe measures the
-  // text's contrast at partial opacity. Endless ones (a spinner, a pulse) never finish, so they're left out.
-  await page.evaluate(() => Promise.all(document.getAnimations()
-    .filter((a) => a.effect?.getTiming().iterations !== Infinity)
-    .map((a) => a.finished.catch(() => undefined))));
+  // text's contrast at partial opacity. Only running, finite ones (a spinner or a pulse never ends, a paused one never
+  // resolves), and never more than 3 s.
+  await page.evaluate(() => Promise.race([
+    Promise.all(document.getAnimations()
+      .filter((a) => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity)
+      .map((a) => a.finished.catch(() => undefined))),
+    new Promise((done) => setTimeout(done, 3000)),
+  ]));
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`).join(", ")}`)).toEqual([]);
 }
