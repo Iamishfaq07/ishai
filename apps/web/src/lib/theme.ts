@@ -12,8 +12,8 @@ export function applyTheme(pref: ThemePref): void {
 }
 
 export function useTheme(): [ThemePref, (pref: ThemePref) => void] {
-  // Unset follows the system, as public/theme-init.js does before the first paint.
-  const [pref, setPref] = useState<ThemePref>(() => (safeLocal.getItem(KEY) as ThemePref | null) ?? "system");
+  // Unset is light, as public/theme-init.js applies before the first paint; dark and "system" are a person's choice.
+  const [pref, setPref] = useState<ThemePref>(() => (safeLocal.getItem(KEY) as ThemePref | null) ?? "light");
 
   useEffect(() => {
     safeLocal.setItem(KEY, pref);

@@ -12,7 +12,9 @@ export default defineConfig({
   workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],
-  use: { baseURL: "http://127.0.0.1:5173", trace: "retain-on-failure", screenshot: "only-on-failure" },
+  // Orbit opens light unless someone chooses otherwise; the tests choose "follow my device", so a test that emulates a
+  // dark device (colorScheme: "dark") audits dark mode as it always has.
+  use: { baseURL: "http://127.0.0.1:5173", storageState: { cookies: [], origins: [{ origin: "http://127.0.0.1:5173", localStorage: [{ name: "orbit.theme", value: "system" }] }] }, trace: "retain-on-failure", screenshot: "only-on-failure" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 } } }],
   webServer: [
     { command: "uv run uvicorn orbit_api.main:app --host 127.0.0.1 --port 8000", cwd: resolve("apps/api"),
