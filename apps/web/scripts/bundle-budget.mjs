@@ -37,7 +37,8 @@ export const BUDGETS = {
     // natural voice that holds (the retry, sayNaturalLine, voiceSetup).
     Live: 252, // shared navigation/preload map only; agent and explorer remain lazy
     Resumes: 222,
-    ResumeEditor: 276,
+    // 30 Oct 2026: 271.2 → 242.5 (scoreTone from ./product, not the Resume home page; Interview prep loads when opened).
+    ResumeEditor: 246,
     // 30 Oct 2026: Jobs AI's section, and its own pages as chunks of their own (Matches, a listing, the tracker,
     // outreach, the profile), so the Jobs home no longer downloads all five. The section was 295.6 kB with them.
     // Each page also loads the section (about 1.6 kB more) alongside; its line here is the page's chunk over the entry.

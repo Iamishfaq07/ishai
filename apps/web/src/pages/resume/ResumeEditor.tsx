@@ -71,16 +71,18 @@ import { drafts, type Draft } from "./saveQueue";
 import { useAuth } from "../../lib/auth";
 import { useCountry } from "../../lib/country";
 import { FixActions, FixResult, fixKind } from "./FixPanel";
-import { InterviewPrep, usePrepState } from "./InterviewPrep";
+import { usePrepState } from "./prepState";
 import { ACCENTS, FONTS, LINE_HEIGHTS, SPACING, addSkills, looksFor, templatesFor, applySuggestion, canApply, isSafeFix, newId, resumeToText, revertSuggestion, photoToDataUrl, suggestedSkills } from "./model";
 import { RESUME_AI_HOME, shouldFlushResume } from "./paths";
 import { LetterPreview, MM_TO_PX, PAGE_MM, ResumePreview, pageLayout } from "./ResumePreview";
-import { scoreTone } from "./Resumes";
+import { scoreTone } from "./product";
 import { scoreWord } from "./product";
 import { SaveToDocuments } from "./SaveToDocuments";
 import { ResumeCareerActions } from "./ResumeCareerActions";
 
 const Guided = lazy(() => import("./GuidedResume").then((m) => ({ default: m.GuidedResume })));
+// The Interview prep tab loads when it's opened; its results live in the editor (prepState.ts).
+const InterviewPrep = lazy(() => import("./InterviewPrep").then((m) => ({ default: m.InterviewPrep })));
 
 type Tab = "content" | "score" | "ai" | "design" | "letter" | "prep";
 
@@ -972,7 +974,7 @@ function ResumeEditor() {
               onPrint={() => printDoc("letter")}
             />
           )}
-          {tab === "prep" && <InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} />}
+          {tab === "prep" && <Suspense fallback={<p role="status">Opening interview prep…</p>}><InterviewPrep resume={resume} prep={prep} onShowJob={() => setTab("score")} /></Suspense>}
           </div>
         </div>
 
