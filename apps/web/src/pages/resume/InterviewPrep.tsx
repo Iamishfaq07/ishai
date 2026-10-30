@@ -1,6 +1,7 @@
 import { useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import type { PrepState } from "./prepState";
 import { Link, useNavigate } from "react-router-dom";
-import type { Resume, ResumeGapVerdict, ResumeInterviewQuestion, ResumePrepGroup, ResumeQuestionsResponse, ResumeSkillGapResponse } from "@orbit/types";
+import type { Resume, ResumeGapVerdict, ResumeInterviewQuestion, ResumePrepGroup, ResumeQuestionsResponse } from "@orbit/types";
 import {
   BookOpen,
   Check,
@@ -39,23 +40,9 @@ import { resumeToText } from "./model";
  * Interview prep that grows out of the resume: the questions an interviewer will ask about it (with outlines from
  * it and what to defend), the skill gap against the job post, and the step into Orbit's interview tools: practise the
  * questions with the AI interviewer, or save a behavioural answer to the story bank. Results stay while the editor
- * is open (the editor holds them: see usePrepState); nothing is stored on the server.
+ * is open (the editor holds them: see usePrepState in prepState.ts); nothing is stored on the server.
  */
-export interface PrepState {
-  questions: ResumeQuestionsResponse | null;
-  picked: string[];
-  gaps: ResumeSkillGapResponse | null;
-  /** What each result was made from (the resume and job post), to say when the resume changed since. */
-  questionsFor: string | null;
-  gapsFor: string | null;
-}
-
-const EMPTY: PrepState = { questions: null, picked: [], gaps: null, questionsFor: null, gapsFor: null };
-
-/** The tab's results, kept by the editor so they survive switching tabs. */
-export function usePrepState(): [PrepState, Dispatch<SetStateAction<PrepState>>] {
-  return useState<PrepState>(EMPTY);
-}
+export type { PrepState };
 
 const TYPE: Record<ResumeInterviewQuestion["type"], { label: string; tone: string }> = {
   behavioral: { label: "Behavioral", tone: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300" },

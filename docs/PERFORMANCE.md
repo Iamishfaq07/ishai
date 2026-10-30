@@ -98,6 +98,11 @@ even when SQLite hides it.
   300 → 186, and new lines (the page's chunk over the entry, plus ~1.5%): Matches 238, JobDetail 259, Tracker 228,
   Outreach 214, Profile 200.
 
+  30 Oct 2026, the resume editor: 271.2 → 242.5 kB. It imported `scoreTone` from `Resumes.tsx`, which only
+  re-exports it from `product.tsx`, so the Resume home page and everything it imports came with the editor; it now
+  imports from `./product`. And the Interview prep tab is lazy: its results stay in the editor through
+  `prepState.ts` (the type and the hook, no UI), so the tab's code loads when it's opened. Budget 276 → 246.
+
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
 - **INP** ≤ 200 ms at p75, and no task over 200 ms while a page opens (total blocking time ≤ 300 ms), under the same

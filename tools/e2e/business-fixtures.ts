@@ -67,16 +67,22 @@ export async function a11y(page: Page) {
   // From the top, the same each run: axe's target-size counts a control scrolled half under the sticky header as
   // "partially obscured", so where the last click left the page decided the result.
   await page.evaluate(() => window.scrollTo(0, 0));
-  await expect(page.getByRole("region", { name: "Notifications", exact: true }).getByRole("listitem")).toHaveCount(0);
+  // A toast stays 5 s, 7 s for an error and 8 s with an action (packages/ui Toast.tsx), then animates out.
+  await expect(page.getByRole("region", { name: "Notifications", exact: true }).getByRole("listitem")).toHaveCount(0, { timeout: 12_000 });
   // Entrance animations (a list's staggered route-rise, ~1 s for its eighth row) finished: mid-fade, axe measures the
-  // text's contrast at partial opacity. Only running, finite ones (a spinner or a pulse never ends, a paused one never
-  // resolves), and never more than 3 s.
-  await page.evaluate(() => Promise.race([
-    Promise.all(document.getAnimations()
-      .filter((a) => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity)
-      .map((a) => a.finished.catch(() => undefined))),
-    new Promise((done) => setTimeout(done, 3000)),
-  ]));
+  // text's contrast at partial opacity. Polled, so a list that renders a moment later and starts its own fade is waited
+  // for too. Only running, finite ones count (a spinner or a pulse never ends, a paused one never resolves); 5 s at most.
+  await page.evaluate(async () => {
+    const busy = () => document.getAnimations()
+      .some((a) => a.playState === "running" && a.effect?.getTiming().iterations !== Infinity);
+    const until = Date.now() + 5000;
+    // Two quiet frames in a row: one frame can fall between a list's render and its first animation.
+    let quiet = 0;
+    while (quiet < 2 && Date.now() < until) {
+      await new Promise((done) => requestAnimationFrame(() => setTimeout(done, 50)));
+      quiet = busy() ? 0 : quiet + 1;
+    }
+  });
   const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => `${n.target.join(" ")}: ${n.failureSummary}`).join(", ")}`)).toEqual([]);
 }
