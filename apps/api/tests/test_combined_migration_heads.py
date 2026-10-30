@@ -9,7 +9,17 @@ import pytest
 
 
 @pytest.mark.parametrize(
-    "previous", ["eb13c5d7f9a1", "ec24d6e8f0b2", "ef93a6c7d041", "a7c9e1b3d5f2", "c3e5a7b9d1f4", "c9e3f5a7b2d4"]
+    "previous",
+    [
+        "eb13c5d7f9a1",
+        "ec24d6e8f0b2",
+        "ef93a6c7d041",
+        "a7c9e1b3d5f2",
+        "c3e5a7b9d1f4",
+        "c9e3f5a7b2d4",
+        "d0f4a6b8c3e5",
+        "a3d5f7b9c1e2",
+    ],
 )
 def test_combined_upgrade_from_either_branch(tmp_path: Path, previous: str) -> None:
     code = """
