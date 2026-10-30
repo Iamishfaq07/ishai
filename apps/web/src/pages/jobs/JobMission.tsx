@@ -1,5 +1,6 @@
 import { GmailApply } from "./GmailApply";
 import { PrepareAll } from "./PrepareAll";
+import { BounceBack } from "./BounceBack";
 import { JobCoverLetter } from "./JobCoverLetter";
 import { GmailGate } from "../../components/GmailGate";
 import { SubmissionMaterials } from "./SubmissionMaterials";
@@ -157,6 +158,7 @@ export function JobMissionPage() {
                 mission.reload();
               }}
             />
+            {entry.status === "rejected" && <BounceBack key={`bounce:${entry.id}`} entry={entry} />}
             <PrepareAll key={`prepare-all:${entry.id}`} entry={entry} mission={m} onDone={() => { tracker.reload(); mission.reload(); }} onInterview={() => setTab("interview")} />
             <GmailGate><GmailApply key={`gmail:${entry.id}`} entryId={entry.id} /></GmailGate>
             {/* The sections come straight after the next step: on a phone the cards below used to push them a screen
