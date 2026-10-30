@@ -487,7 +487,8 @@ export function SupportChat() {
           "pointer-events-auto relative grid h-12 w-12 place-items-center rounded-full bg-indigo-600 text-white shadow-popover hover:bg-indigo-500",
           keyboard.inset > 0 && "hidden", // typing: the panel has its own close button, and needs the room
           "motion-safe:transition-[transform,opacity] motion-safe:duration-quick",
-          tucked && "pointer-events-none translate-y-16 opacity-0",
+          // Tucked all the way below the screen's edge: half-way down it sat, invisible, over the tab bar's "Me".
+          tucked && "pointer-events-none translate-y-[calc(7.5rem+env(safe-area-inset-bottom))] opacity-0",
           focusRing,
         )}
       >

@@ -1,8 +1,7 @@
 import type { CreateSessionRequest, JobOfferRecord, OfferInput } from "@orbit/types";
 import { INDIA, isIndia } from "@orbit/ui";
 
-export const OFFERS_HOME = "/offers";
-export const offerPath = (id: string) => `${OFFERS_HOME}/${encodeURIComponent(id)}`;
+export { OFFERS_HOME, offerPath } from "./paths";
 
 /**
  * What an offer's parts are called where the user applies: India's fixed pay, variable and joining bonus, or the base

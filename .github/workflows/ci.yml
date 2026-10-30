@@ -94,6 +94,11 @@ jobs:
         with: { python-version: "3.12", enable-cache: true }
       - run: uv sync --project apps/api --frozen
       - run: pnpm exec playwright install --with-deps chromium
+      # The runner (Ubuntu 23.10+) restricts unprivileged user namespaces through AppArmor, so Chromium's sandbox has
+      # none ("No usable sandbox!"). Lift it on this throwaway runner, as Chromium's apparmor-userns-restrictions doc
+      # describes; the worker's tests keep the sandbox on.
+      - name: Allow user namespaces for Chromium's sandbox (runner host)
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - name: Hosted personal apply worker in Chromium (local fixtures only)
         run: pnpm --filter @orbit/apply-worker test:browser
       - name: Browser autosave, mobile context and career flows

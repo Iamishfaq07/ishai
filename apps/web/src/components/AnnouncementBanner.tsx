@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Announcement } from "@orbit/types";
 import { Megaphone, X, cx, focusRing, safeLocal } from "@orbit/ui";
 import { api } from "../lib/api";
-import { announcementVisible } from "../pages/admin/logic";
+import { announcementVisible } from "../lib/announcement";
 
 const DISMISSED_KEY = "orbit.announcement.dismissed";
 const REFRESH_MS = 5 * 60_000;

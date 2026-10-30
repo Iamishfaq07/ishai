@@ -5,7 +5,9 @@ import { resolve } from "node:path";
 import { expect, test, type BrowserContext } from "@playwright/test";
 const API = process.env.ORBIT_TEST_API_URL ?? "http://127.0.0.1:8000";
 const OUTBOX = process.env.ORBIT_TEST_OUTBOX ?? "apps/api/e2e-outbox.txt";
-const ADMIN = process.env.ORBIT_TEST_ADMIN_EMAIL ?? "qa-admin@example.com";
+// The company's owner: a new address at the company's own domain each run (an account can own three companies).
+const DOMAIN = "orbit-experience-e2e.com";
+const OWNER = `owner-${crypto.randomUUID().slice(0, 8)}@${DOMAIN}`;
 async function mailToken(email: string, pattern: RegExp) {
   let result = "";
   await expect.poll(async () => {
@@ -22,8 +24,8 @@ async function register(context: BrowserContext, email: string) {
 }
 test("Candidate experience: opt-in portals, fixed reporting group, AI improvement plan and candidate withdrawal", async ({ page, context, browser }, info) => {
   await context.addInitScript(() => localStorage.setItem("orbit.cookies.v1", "1"));
-  await register(context, ADMIN);
-  const domain = ADMIN.split("@")[1]!;
+  await register(context, OWNER);
+  const domain = DOMAIN;
   const made = await context.request.post(`${API}/v1/business/companies`, { data: { name: "Experience Studio", website: `https://${domain}`, size: "11-50", country: "IN" } });
   expect(made.status(), await made.text()).toBe(201);
   const cid = (await made.json()).id as string;

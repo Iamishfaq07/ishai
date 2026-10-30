@@ -1,7 +1,7 @@
 import type { LinkedInCheck, LinkedInPart, LinkedInRead, LinkedInSectionScore, LinkedInState, LinkedInSuggestion, ResumeAiAllowance } from "@orbit/types";
 import { KIT_SHOWN_FIRST, shownFirst } from "@orbit/ui";
 
-export const LINKEDIN_HOME = "/linkedin";
+export { LINKEDIN_HOME } from "./paths";
 
 /** What a recruiter's search shows of the headline, and the About before "see more" (the server's audit uses these). */
 export const HEADLINE_SHOWN = KIT_SHOWN_FIRST.headline;

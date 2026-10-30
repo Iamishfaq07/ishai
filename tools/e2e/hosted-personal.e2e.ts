@@ -29,10 +29,11 @@ for (const mobile of [false, true]) test(`personal hosted setup, explicit consen
   await page.emulateMedia({ reducedMotion: "reduce" });
   await candidate(context);
   await page.goto("/jobs/auto-apply");
-  await expect(page.getByRole("heading", { name: "Set up Orbit Apply" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set up auto-apply" })).toBeVisible();
   await page.getByRole("button", { name: "Approve this resume", exact: true }).click();
+  // Hosted applying is the mode whenever the server has it on (no choice to make since the 21 Oct redesign).
+  await expect(page.getByText("Orbit sends your applications for you", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Mode and limits/ }).click();
-  await page.getByRole("radio", { name: /Hosted · continue when my browser is closed/ }).check();
   const accessibility = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(accessibility.violations).toEqual([]);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -46,14 +47,15 @@ for (const mobile of [false, true]) test(`personal hosted setup, explicit consen
     page.getByRole("button", { name: "Save and turn on", exact: true }).click(),
   ]);
   expect(saved.ok(), await saved.text()).toBe(true);
-  await expect(page.getByTestId("hosted-state")).toBeVisible();
+  // "is sending" when an earlier test's worker heartbeat (same server) is still within its 90 seconds.
+  await expect(page.getByText(/^Orbit (will send your applications shortly|is sending your applications)$/)).toBeVisible();
   const setup = await (await context.request.get(`${API}/v1/apply/setup`)).json();
   expect(setup.execution).toBe("hosted"); expect(setup.hosted_consent_at).toBeTruthy();
   const heartbeat = await context.request.post(`${API}/v1/internal/apply/heartbeat`, {
     headers: { "X-Orbit-Worker-Secret": "hosted-browser-tests-fixture-1234567890" }, data: { worker_id: `fixture-worker-${crypto.randomUUID()}` } });
   expect(heartbeat.ok(), await heartbeat.text()).toBe(true);
   await page.reload();
-  await expect(page.getByTestId("hosted-state")).toContainText("Hosted applying is ready");
+  await expect(page.getByText("Orbit is sending your applications", { exact: true })).toBeVisible();
   await page.goto("/jobs/journey");
   await expect(page.getByRole("heading", { name: "Agent mode", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Turn on agent mode", exact: true })).toBeEnabled();
@@ -67,6 +69,6 @@ for (const mobile of [false, true]) test(`personal hosted setup, explicit consen
   await page.getByRole("button", { name: "Turn off agent mode", exact: true }).click();
   await expect(page.getByRole("button", { name: "Turn on agent mode", exact: true })).toHaveAttribute("aria-pressed", "false");
   await page.getByText(/^Your full career journey ·/).click();
-  await expect(page.getByRole("heading", { name: "Choose where applications run" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Choose how applications are sent" })).toBeVisible();
   await expect(page.getByText("Hosted worker online · supported applications can continue with your browser closed.", { exact: true })).toBeVisible();
 });

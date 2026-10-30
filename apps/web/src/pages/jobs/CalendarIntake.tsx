@@ -31,6 +31,13 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
   const active = useRef(false);
   const busyRef = useRef(true);
   const heading = useRef<HTMLHeadingElement>(null);
+  // A new preview moves focus to its review once it has rendered (a frame callback could run before React commits).
+  const reviewFocus = useRef(false);
+  useEffect(() => {
+    if (!proposal || !reviewFocus.current) return;
+    reviewFocus.current = false;
+    heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: "start" });
+  }, [proposal]);
   const invalidate = () => { setProposal(null); setSelected(""); setConfirmed(false); setInterviewing(false); setUseForPrep(false); setSaved(false); };
   const refresh = useCallback(async () => {
     const request = ++seq.current; busyRef.current = true; setBusy("load"); setError(null); setProposal(null); setConfirmed(false);
@@ -66,7 +73,7 @@ export function CalendarIntake({ entryId, onSaved }: { entryId: string; onSaved:
       const next = await api.call<Preview>(`${base}/calendar-preview`, { method: "POST", body: JSON.stringify({ calendar, version: job.version }) });
       if (request !== seq.current) return;
       setProposal(next); if (next.events.length === 1) choose(next.events[0]!.id, next.events);
-      requestAnimationFrame(() => { if (active.current) { heading.current?.focus({ preventScroll: true }); heading.current?.scrollIntoView({ block: "start" }); } });
+      reviewFocus.current = true;
     } catch (e) { if (request === seq.current) setError(errorText(e)); }
     finally { if (request === seq.current) { busyRef.current = false; setBusy(null); } }
   };

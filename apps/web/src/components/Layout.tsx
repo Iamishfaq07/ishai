@@ -43,7 +43,7 @@ import {
   type LucideIcon,
 } from "@orbit/ui";
 import { api } from "../lib/api";
-import { isWindows } from "../lib/audio";
+import { isWindows } from "../lib/platform";
 import { useAuth } from "../lib/auth";
 import { trackAs, trackPage } from "../lib/activity";
 import { useCountry } from "../lib/country";
@@ -58,7 +58,7 @@ const ShortcutsSheet = lazy(() => import("./ShortcutsSheet").then((m) => ({ defa
 import { CODE_HOME } from "../pages/code/paths";
 import { JOBS_AI_HOME } from "../pages/jobs/paths";
 import { LEARN_HOME, kashsecUrl } from "../pages/learn/links";
-import { OFFERS_HOME } from "../pages/offers/model";
+import { OFFERS_HOME } from "../pages/offers/paths";
 import { RESUME_AI_HOME } from "../pages/resume/paths";
 import { prefetchRoute } from "../routes";
 import { AnnouncementBanner } from "./AnnouncementBanner";

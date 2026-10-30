@@ -8,9 +8,18 @@ from fastapi.testclient import TestClient
 
 from orbit_api.models import BizApplication, BizInterview, BizJob, BizMember
 from orbit_api.providers.llm.mock import MockLLMProvider
-from tests.business_helpers import auth, db_call, make_client, new_company, new_job, register, tag, uid
+from tests.business_helpers import auth, db_call, make_client, new_company, new_job, register, tag, uid, wait_ranked
 from tests.test_business_automations import age, config, queue, run
-from tests.test_business_hiring_studio import save_plan, setup
+from tests.test_business_hiring_studio import save_plan
+from tests.test_business_hiring_studio import setup as _setup
+
+
+def setup(client: TestClient) -> tuple[dict[str, str], str, dict[str, Any], str, str]:
+    # The application's AI ranking runs in the background after it's submitted; let it finish before these tests
+    # write rows directly, or on Postgres the two transactions can deadlock (CI, 1 run in many).
+    owner, cid, job, aid, token = _setup(client)
+    wait_ranked(client, owner, cid, aid)
+    return owner, cid, job, aid, token
 
 
 @pytest.fixture
