@@ -103,6 +103,13 @@ even when SQLite hides it.
   imports from `./product`. And the Interview prep tab is lazy: its results stay in the editor through
   `prepState.ts` (the type and the hook, no UI), so the tab's code loads when it's opened. Budget 276 → 246.
 
+  30 Oct 2026, the entry: 171.0 → 161.4 kB, so every page's first load is about 9.6 kB lighter. The sign-in pages
+  (`pages/Auth.tsx`: sign-in, sign-up, password reset, email confirmation and the one-click unsubscribes) were a
+  static import of `App.tsx`; they're now a lazy route chunk (`routes.ts`, `auth`). A visit straight to one of those
+  addresses starts the chunk at startup next to the session check (`preloadPublicPage`), and the nav's prefetch warms
+  it on hover. The QR encoder (`uqr`) also loads when a QR code is first shown (`QrCode`), not with Live, two-step
+  setup and UPI checkout: Live 249.2 → 237.1 together. Entry budget 172 → 164.
+
 - **LCP** ≤ 2.5 s on a phone: Lighthouse mobile for the public pages; for signed-in pages, a warm cache under slow 4G
   (1.6 Mbps, 150 ms RTT) and a 4x CPU slowdown (`perf/web/profile.mjs`).
 - **INP** ≤ 200 ms at p75, and no task over 200 ms while a page opens (total blocking time ≤ 300 ms), under the same

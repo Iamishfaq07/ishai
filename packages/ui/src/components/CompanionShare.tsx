@@ -1,5 +1,4 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { encode } from "uqr";
 import type { ApiClient } from "../api/client";
 import { Check, Copy, Smartphone, X } from "../icons";
 import { trimTrailingSlashes } from "../serverUrl";
@@ -13,18 +12,38 @@ export function companionLink(webUrl: string, code: string): string {
   return `${trimTrailingSlashes(webUrl)}/companion#${code}`;
 }
 
-/** A QR code as crisp SVG modules (dark on a white quiet zone, in both themes, so every phone camera reads it). */
+type Encode = typeof import("uqr").encode;
+let encoder: Encode | null = null;
+let loading: Promise<Encode> | null = null;
+/** The QR encoder (uqr, ~5 kB) loads when a code is first shown, not with every page that can show one. */
+function loadEncoder(): Promise<Encode> {
+  loading ??= import("uqr").then((m) => (encoder = m.encode));
+  return loading;
+}
+
+/**
+ * A QR code as crisp SVG modules (dark on a white quiet zone, in both themes, so every phone camera reads it). Until
+ * the encoder has loaded (a moment, the first time), the same white square holds its place.
+ */
 export function QrCode({ value, size = 176, label }: { value: string; size?: number; label: string }) {
-  const qr = useMemo(() => encode(value, { ecc: "M", border: 2 }), [value]);
+  const [encode, setEncode] = useState<Encode | null>(() => encoder);
+  useEffect(() => {
+    if (encode) return;
+    let live = true;
+    loadEncoder().then((e) => { if (live) setEncode(() => e); }, () => undefined);
+    return () => { live = false; };
+  }, [encode]);
+  const qr = useMemo(() => (encode ? encode(value, { ecc: "M", border: 2 }) : null), [encode, value]);
   const path = useMemo(() => {
     let d = "";
-    qr.data.forEach((row, y) =>
+    qr?.data.forEach((row, y) =>
       row.forEach((on, x) => {
         if (on) d += `M${x},${y}h1v1h-1z`;
       }),
     );
     return d;
   }, [qr]);
+  if (!qr) return <div role="img" aria-label={label} aria-busy="true" style={{ width: size, height: size }} className="rounded-xl bg-white" />;
   return (
     <svg
       role="img"

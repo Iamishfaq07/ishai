@@ -25,8 +25,6 @@ import {
   StopJobAlertsPage,
   StopNewsletterPage,
   StopWeeklyDigestPage,
-} from "./pages/Auth";
-import {
   BillingPage,
   CompanionPage,
   DocumentsPage,

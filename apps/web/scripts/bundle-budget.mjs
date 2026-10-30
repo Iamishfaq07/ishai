@@ -13,7 +13,8 @@ import { gzipSync } from "node:zlib";
 export const BUDGETS = {
   // +1 kB for D80: the API client's direct route; +1 kB for D84: Orbit Apply's chunk in the preload map, its two
   // routes and tab (its own calls stay in its chunk, through the client's generic `call`) (docs/PERFORMANCE.md).
-  entry: 172,
+  // 30 Oct 2026: 171.0 → 161.4, the sign-in pages (pages/Auth.tsx) out of the entry; nobody signed in needs them.
+  entry: 164,
   // Shared workspace switch and interactive tool cards: 32.4 kB measured; 34.3 kB on 29 Oct 2026 (docs/PERFORMANCE.md).
   css: 35,
   pages: {
