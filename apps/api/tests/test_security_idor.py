@@ -502,6 +502,11 @@ PUBLIC: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/v1/public/business/applications/{token}/experience"),
     ("POST", "/v1/public/business/applications/{token}/experience"),
     ("DELETE", "/v1/public/business/applications/{token}/experience"),
+    # Joining or leaving a company's talent community: the same application token.
+    ("GET", "/v1/public/business/applications/{token}/talent"),
+    ("PUT", "/v1/public/business/applications/{token}/talent/{pid}"),
+    ("DELETE", "/v1/public/business/applications/{token}/talent/{pid}"),
+    ("DELETE", "/v1/public/business/applications/{token}/talent/{pid}/suggestions/{jid}"),
     ("POST", "/v1/public/business/applications/{token}/withdraw"),
     ("GET", "/v1/public/business/applications/{token}/offer/history"),
     ("GET", "/v1/public/business/applications/{token}/handoff"),
