@@ -9,13 +9,13 @@ export function applyTheme(pref: ThemePref): void {
   document.documentElement.classList.toggle("dark", dark);
 }
 
-/** Applies the saved theme at startup (before React renders) so there's no flash. */
+/** Applies the saved theme at startup (before React renders) so there's no flash. Unset is light, as on the web. */
 export function initTheme(): void {
-  applyTheme((safeLocal.getItem(KEY) as ThemePref | null) ?? "dark");
+  applyTheme((safeLocal.getItem(KEY) as ThemePref | null) ?? "light");
 }
 
 export function useTheme(): [ThemePref, (pref: ThemePref) => void] {
-  const [pref, setPref] = useState<ThemePref>(() => (safeLocal.getItem(KEY) as ThemePref | null) ?? "dark");
+  const [pref, setPref] = useState<ThemePref>(() => (safeLocal.getItem(KEY) as ThemePref | null) ?? "light");
 
   useEffect(() => {
     safeLocal.setItem(KEY, pref);

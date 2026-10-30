@@ -1,5 +1,13 @@
 # Implementation log
 
+## Light by default (2026-10-30)
+
+- Orbit opens in the light theme for everyone who hasn't chosen one, on the web and in the desktop app (it followed the
+  device's setting on the web and was dark on desktop). Dark and "Use the device's theme" stay one choice away in
+  Settings, the footer and the command palette; a saved choice is kept. The first paint, the phone status bar and the
+  installed app's colours (`index.html`, `manifest.webmanifest`) match. The e2e configs choose "follow my device", so
+  the suites that emulate a dark device still audit dark mode.
+
 ## Personal Orbit V6: connected tools for one job (2026-10-21, unverified)
 
 - Keep the selected job and practice-plan return path across Learning, Coding, Stories, Evidence and completed-session review. Context is owner-checked; related tools are grouped in a quiet return banner.
