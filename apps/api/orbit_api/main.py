@@ -75,6 +75,7 @@ from orbit_api.business.talent import public_router as business_talent_public_ro
 from orbit_api.business.talent import router as business_talent_router
 from orbit_api.business.withdrawal import public_router as business_withdrawal_public_router
 from orbit_api.business.withdrawal import router as business_withdrawal_router
+from orbit_api.business.workflows import router as business_workflows_router
 from orbit_api.career.routes import router as career_router
 from orbit_api.career_workspace.checkpoints import router as transition_checkpoints_router
 from orbit_api.career_workspace.overview import router as career_overview_router
@@ -491,6 +492,7 @@ def create_app() -> FastAPI:
     app.include_router(career_progress_router)
     app.include_router(job_playbook_router)
     app.include_router(business_control_router)
+    app.include_router(business_workflows_router)
     app.include_router(business_talent_router)
     app.include_router(business_talent_public_router)
     app.include_router(business_capacity_router)

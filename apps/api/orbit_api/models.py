@@ -1984,3 +1984,24 @@ class BizTalentSuggestion(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     member_id: Mapped[str] = mapped_column(ForeignKey("biz_talent_members.id", ondelete="CASCADE"), index=True)
     job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), index=True)
+
+
+class BizWorkflowPlan(Base):
+    __tablename__ = "biz_workflow_plans"
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), primary_key=True)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    content: Mapped[dict[str, Any]] = mapped_column(JSON)
+
+
+class BizWorkflowRun(TimestampMixin, Base):
+    __tablename__ = "biz_workflow_runs"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    job_id: Mapped[str] = mapped_column(ForeignKey("biz_jobs.id", ondelete="CASCADE"), index=True)
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    plan_revision: Mapped[int] = mapped_column(Integer)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(16), default="active")
+    start_date: Mapped[str] = mapped_column(String(10))
+    content: Mapped[dict[str, Any]] = mapped_column(JSON)
+    tasks: Mapped[dict[str, Any]] = mapped_column(JSON)

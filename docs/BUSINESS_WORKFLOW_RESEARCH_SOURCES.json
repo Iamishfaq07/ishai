@@ -1,0 +1,86 @@
+[
+  {
+    "name": "kestra",
+    "url": "https://raw.githubusercontent.com/kestra-io/kestra/develop/README.md",
+    "sha256": "d8aa9a33dcf1ae132830f4041d17fafd58f0c37ea46047b6441d49775aec67e8",
+    "bytes": 22194,
+    "retrieved_at": "2026-10-30T06:30:12.045194+00:00"
+  },
+  {
+    "name": "windmill",
+    "url": "https://raw.githubusercontent.com/windmill-labs/windmill/main/README.md",
+    "sha256": "00250541779184e5b14b2554301bf73f41f004d1351ca8e822a5fe267012e7ef",
+    "bytes": 19493,
+    "retrieved_at": "2026-10-30T06:30:12.248111+00:00"
+  },
+  {
+    "name": "activepieces",
+    "url": "https://raw.githubusercontent.com/activepieces/activepieces/main/README.md",
+    "sha256": "b159d84d19ea2505143a1d369416b8f5ef63540e9530bd2f20f8bd0e3e0c70bf",
+    "bytes": 92212,
+    "retrieved_at": "2026-10-30T06:30:12.449668+00:00"
+  },
+  {
+    "name": "prefect",
+    "url": "https://raw.githubusercontent.com/PrefectHQ/prefect/main/README.md",
+    "sha256": "ea65184760f7e6d32def7fc740e6b1bebe31edae113323a891d80243d704795e",
+    "bytes": 9018,
+    "retrieved_at": "2026-10-30T06:30:12.670609+00:00"
+  },
+  {
+    "name": "xyflow",
+    "url": "https://raw.githubusercontent.com/xyflow/xyflow/main/README.md",
+    "sha256": "be7df4c1810d7c7d0e44e26d08404a97fa9ab62d3fdf3e5fd4c31f3070472d63",
+    "bytes": 5271,
+    "retrieved_at": "2026-10-30T06:30:12.867510+00:00"
+  },
+  {
+    "name": "motion",
+    "url": "https://raw.githubusercontent.com/motiondivision/motion/main/README.md",
+    "sha256": "08915bb5254a4bc1fd47e8d7ea8fff0dcb470461f6fd6b59fb6d2f0bef0400df",
+    "bytes": 7475,
+    "retrieved_at": "2026-10-30T06:30:13.066939+00:00"
+  },
+  {
+    "name": "carbon",
+    "url": "https://raw.githubusercontent.com/carbon-design-system/carbon/main/README.md",
+    "sha256": "1379b2bc49aae94c6dcd2b76cdb4f165a18220c2c613faf431fee74b18f3baa2",
+    "bytes": 9081,
+    "retrieved_at": "2026-10-30T06:30:13.286096+00:00"
+  },
+  {
+    "name": "promptfoo",
+    "url": "https://raw.githubusercontent.com/promptfoo/promptfoo/main/README.md",
+    "sha256": "7fd57809624e22da73bf6b6feb027c9e09aec74e0099bdea711fe2e276e87c4a",
+    "bytes": 4599,
+    "retrieved_at": "2026-10-30T06:30:13.497723+00:00"
+  },
+  {
+    "name": "kestra_flow_model",
+    "url": "https://raw.githubusercontent.com/kestra-io/kestra/develop/core/src/main/java/io/kestra/core/models/flows/Flow.java",
+    "sha256": "28cb5bb2d5f5a38af9c2b8b1febd53d289dd0d8217b71a3e0d451abf8e29851f",
+    "bytes": 10976,
+    "retrieved_at": "2026-10-30T06:48:19.280999+00:00"
+  },
+  {
+    "name": "prefect_flow_runtime",
+    "url": "https://raw.githubusercontent.com/PrefectHQ/prefect/main/src/prefect/flows.py",
+    "sha256": "7a7f06622491518fcde9f3e57387e7a13b44b7a24b6f8f5f062844fbbff568a5",
+    "bytes": 149115,
+    "retrieved_at": "2026-10-30T06:48:19.538287+00:00"
+  },
+  {
+    "name": "xyflow_node_accessibility",
+    "url": "https://raw.githubusercontent.com/xyflow/xyflow/main/packages/react/src/components/NodeWrapper/index.tsx",
+    "sha256": "fcd5d7a82118ab7f57136c0b04a55cbb5df9005d77776400eb122719e9eb6bab",
+    "bytes": 8118,
+    "retrieved_at": "2026-10-30T06:48:19.794421+00:00"
+  },
+  {
+    "name": "motion_reduced_motion",
+    "url": "https://raw.githubusercontent.com/motiondivision/motion/main/packages/framer-motion/src/utils/reduced-motion/use-reduced-motion.ts",
+    "sha256": "6fafd2528a370844c0647f27230a0381c47ded9713f28181c0ea97ef8636aa1f",
+    "bytes": 1655,
+    "retrieved_at": "2026-10-30T06:48:20.052346+00:00"
+  }
+]

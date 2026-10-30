@@ -482,11 +482,52 @@ class MockLLMProvider(LLMProvider):
             return json.dumps({"status": "answered", "points": [{"passage_id": p["id"],
                 "quote": p["text"][:300], "text": "[mock] Review this source passage before applying the policy."}
                 for p in data["passages"][:3]]})
+        if request.request_type == "business_workflow_draft":
+            body = request.messages[-1].content
+            data = json.loads(body[body.find("{") : body.rfind("}") + 1])
+            source = data["facts"][0]
+            return json.dumps(
+                {
+                    "plan": {
+                        "title": "[mock] Role readiness playbook",
+                        "steps": [
+                            {
+                                "id": "brief",
+                                "title": "Review the role brief",
+                                "instruction": "[mock] Review the saved role requirements with the team.",
+                                "days": 0,
+                                "depends_on": [],
+                                "workspace": "pipeline",
+                            },
+                            {
+                                "id": "criteria",
+                                "title": "Prepare consistent criteria",
+                                "instruction": "[mock] Agree job-related interview evidence and questions.",
+                                "days": 1,
+                                "depends_on": ["brief"],
+                                "workspace": "interview-plan",
+                            },
+                            {
+                                "id": "review",
+                                "title": "Review team readiness",
+                                "instruction": "[mock] Review ownership and decide the next preparation step.",
+                                "days": 2,
+                                "depends_on": ["criteria"],
+                                "workspace": "hiring-desk",
+                            },
+                        ],
+                    },
+                    "sources": [
+                        {"step_id": key, "fact_id": source["id"], "quote": source["text"]}
+                        for key in ("brief", "criteria", "review")
+                    ],
+                }
+            )
         if request.request_type in ("career_weekly_coach", "business_ops_brief", "application_second_reader",
                                    "career_next_step_plan", "opportunity_coach", "business_requisition_review",
                                    "business_knowledge_review", "business_knowledge_reading",
                                    "business_capacity_brief", "business_import_review",
-                                   "business_experience_brief"):
+                                   "business_experience_brief", "business_workflow_brief"):
             body = request.messages[-1].content
             data = json.loads(body[body.find("{"):body.rfind("}") + 1])
             return json.dumps({"tips": [{"fact_id": f["id"], "source_quote": f["text"][:300],

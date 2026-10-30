@@ -11,3 +11,4 @@ export * from "./businessKnowledge";
 
 export * from "./businessExperience";
 export * from "./businessTalent";
+export * from "./businessWorkflows";
