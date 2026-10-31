@@ -18,6 +18,9 @@ const HOW: Record<NonNullable<BillingQuote["checkout"]>, string> = {
   paypal: "You'll pay on PayPal's page, with your PayPal account or a card, and come back here.",
 };
 
+/** Razorpay outside India takes cards only (UPI and netbanking are Indian), charged in the order's US dollars. */
+const RAZORPAY_ABROAD = "Razorpay's secure window opens next: a debit or credit card, charged in US dollars.";
+
 type Checkout = NonNullable<BillingQuote["checkout"]>;
 const asCheckout = (c: string | null | undefined): Checkout | null => (c === "razorpay" || c === "upi" || c === "paypal" ? c : null);
 
@@ -81,7 +84,7 @@ export function Cart({ pack, onClose, onPay, busy, error }: {
       {checkout && (
         <p className="flex items-start gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
           <ShieldCheck className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden />
-          {HOW[checkout]} Nothing renews automatically.
+          {checkout === "razorpay" && q.currency === "USD" ? RAZORPAY_ABROAD : HOW[checkout]} Nothing renews automatically.
         </p>
       )}
     </div>

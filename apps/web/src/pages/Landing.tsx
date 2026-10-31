@@ -311,13 +311,27 @@ function HowItWorks() {
 
 // ─── Why Orbit ─────────────────────────────────────────────────────────────────────────────────────────────────
 
-function WhyOrbit({ india }: { india: boolean }) {
+/** "Priced for where you are", from the packs the server lists for this visitor: how buyers outside India pay is
+ *  whatever is switched on (PayPal, or Razorpay cards), never promised before it is. */
+function pricedLine(india: boolean, checkout: string | null | undefined, abroad: boolean, loaded: boolean): string {
+  if (india) {
+    return `Prices in rupees, paid with UPI, a card or netbanking. ${
+      !loaded ? "Outside India, prices are in US dollars." : abroad ? "Outside India, prices are in US dollars, paid by card." : "Outside India, prices are in US dollars; card payments from other countries are coming soon."}`;
+  }
+  if (checkout === "paypal") return "Prices in US dollars, paid through PayPal or a card where PayPal offers it. In India, prices are in rupees with UPI.";
+  if (abroad) return "Prices in US dollars, paid by debit or credit card through Razorpay. In India, prices are in rupees with UPI.";
+  return loaded
+    ? "Prices in US dollars. Card payments from outside India are coming soon; everything free works today."
+    : "Prices in US dollars. In India, prices are in rupees with UPI.";
+}
+
+function WhyOrbit({ india, checkout, abroad, loaded }: { india: boolean; checkout?: string | null; abroad: boolean; loaded: boolean }) {
   const reasons: Array<[typeof Layers, string, string]> = [
     [Layers, "One resume, every tool", "Add it once. Your practice answers, live answers, ATS score and job matches all work from the same resume, so nothing is typed twice."],
     [BadgeCheck, "Answers that show their sources", "A live answer lists the resume lines it used, and marks details that aren't in your documents so you check them before you say them."],
     [ShieldCheck, "Honest about where it's allowed", "Built for practice, and for interviews and calls where notes or AI help are allowed. Orbit doesn't claim to be undetectable, and isn't hidden from Task Manager or anyone who can see your screen."],
     [CalendarCheck, "Nothing to cancel", "Plans are paid once and never renew on their own. Credits never expire. If an AI action fails, its credit comes back."],
-    [Wallet, "Priced for where you are", india ? "Prices in rupees, paid with UPI, a card or netbanking. Outside India, prices are in US dollars through PayPal." : "Prices in US dollars, paid through PayPal or a card where PayPal offers it. In India, prices are in rupees with UPI."],
+    [Wallet, "Priced for where you are", pricedLine(india, checkout, abroad, loaded)],
     [MonitorSmartphone, "On your laptop and your phone", "Resume, Jobs and practice work in any browser. Live help works in Chrome and Edge, or in any call app with the Windows app (beta)."],
   ];
   const stages: Array<[string, string, string]> = [
@@ -707,7 +721,7 @@ export function LandingPage() {
       <MoreTools products={products} />
       <KashSecSection />
       <HowItWorks />
-      <WhyOrbit india={india} />
+      <WhyOrbit india={india} checkout={packs?.[0]?.checkout} abroad={!!packs?.[0]?.international} loaded={packs !== null} />
       <Security />
       <PricingSection packs={packs} monthly={monthly} welcome={welcome} stats={stats} />
       <Faq welcome={welcome} stats={stats} cards={packs?.[0]?.checkout === "razorpay"} abroad={!!packs?.[0]?.international}
