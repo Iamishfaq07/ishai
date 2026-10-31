@@ -533,6 +533,18 @@ async def razorpay_order(body: OrderIn, request: Request, user: Annotated[User, 
     try:
         order_id = await razorpay.create_order(cost.minor, reference, {"pack": pid, "orbit_ref": reference},
                                                currency=cost.currency)
+    except razorpay.RazorpayRefused as e:
+        if cost.currency == pricing.INR:
+            log.warning("razorpay order failed: %s", e)
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                                "Payments aren't reachable right now. Try again in a minute.") from e
+        # Reached Razorpay, which won't take this currency: international payments (or USD) aren't on for the
+        # account even though ORBIT_RAZORPAY_INTERNATIONAL says they are. Say so, not "try again in a minute".
+        log.warning("razorpay refused a %s order: %s (are international payments and %s enabled on the Razorpay "
+                    "account, in the same Test/Live mode as the keys?)", cost.currency, e, cost.currency)
+        raise HTTPException(status.HTTP_409_CONFLICT,
+                            "Card payments in US dollars aren't available right now. Write to us from Contact "
+                            "and we'll help you buy.") from e
     except razorpay.RazorpayError as e:
         log.warning("razorpay order failed: %s", e)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,

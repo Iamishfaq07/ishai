@@ -338,3 +338,27 @@ def test_a_dollar_order_is_refused_until_international_cards_are_on(
     india = {**h, "X-Orbit-Client-Country": "IN"}
     o = client.post("/v1/billing/razorpay/orders", headers=india, json={"pack": "starter"})
     assert o.status_code == 201 and o.json()["currency"] == "INR"
+
+
+def test_a_dollar_order_razorpay_refuses_says_so_not_try_again(
+        client: TestClient, rzp: list[httpx.Request], monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture) -> None:
+    from tests.test_credits import PROXY
+
+    monkeypatch.setattr(get_settings(), "razorpay_international", True)
+
+    def no_usd(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if body["currency"] != "INR":
+            return httpx.Response(400, json={"error": {"code": "BAD_REQUEST_ERROR",
+                                                       "description": "Currency is not supported"}})
+        return httpx.Response(200, json={"id": "order_inr000000001", "amount": body["amount"], "currency": "INR"})
+
+    monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(no_usd))
+    h = _signup(client, _new_ip())
+    us = {**h, "X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "US"}
+    r = client.post("/v1/billing/razorpay/orders", headers=us, json={"pack": "mini"})
+    assert r.status_code == 409 and "US dollars aren't available" in r.json()["detail"]
+    assert "international payments" in caplog.text and "Currency is not supported" in caplog.text
+    india = {**h, "X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "IN"}
+    assert client.post("/v1/billing/razorpay/orders", headers=india, json={"pack": "mini"}).status_code == 201
