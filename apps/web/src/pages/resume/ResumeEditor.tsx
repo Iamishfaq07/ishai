@@ -764,14 +764,15 @@ function ResumeEditor() {
               type="button"
               onClick={() => setTab("score")}
               className={cx("relative flex items-center gap-2 rounded-xl px-3 py-1.5 ring-1", scoreTone(report.score), focusRing)}
-              // The visible words first, in order (WCAG 2.5.3), so a voice command says what's on screen.
-              aria-label={`${report.score} ATS score ${scoreWord(report.score)}, out of 100. Show the fixes`}
             >
+              {/* Named by its own text, the visible words in order (WCAG 2.5.3): no aria-label to fall out of step
+                  with the number while it counts up to a new score. */}
               <ScoreCount score={report.score} className="font-display text-xl font-semibold" />{" "}
               <span className="text-left text-xs leading-tight">
                 ATS score{" "}
                 <br />
                 {scoreWord(report.score)}
+                <span className="sr-only">, out of 100. Show the fixes</span>
               </span>
             </button>
           )}

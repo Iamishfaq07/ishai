@@ -91,7 +91,8 @@ export function useCountUp(to: number, start: boolean, { from = 0, duration = 11
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
   }, [animate, start, from, to, duration]);
-  return value;
+  // Without motion the end value at once, not a render later (the state catches up in the effect above).
+  return animate ? value : to;
 }
 
 /**
