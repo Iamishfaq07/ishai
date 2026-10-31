@@ -30,7 +30,7 @@ from orbit_api import ratelimit
 from orbit_api.auth.captcha import require_captcha
 from orbit_api.auth.guards import require_verified_email
 from orbit_api.business import emails, rules
-from orbit_api.business.access import audit, delete_application_rows, timeline
+from orbit_api.business.access import audit, delete_application_rows, lock_company, timeline
 from orbit_api.business.companies import logo_url
 from orbit_api.business.jobs import json_ld, location_line, public_url
 from orbit_api.config import get_settings
@@ -347,8 +347,16 @@ async def _create(db: AsyncSession, *, job: BizJob, company: BizCompany, name: s
     one-click application is never replaced."""
     email = email.strip().lower()
     checked, fails = _check_answers(job, answers)
-    existing = await db.scalar(select(BizApplication).where(BizApplication.job_id == job.id,
-                                                            BizApplication.email == email))
+    same = select(BizApplication).where(BizApplication.job_id == job.id, BizApplication.email == email)
+    existing = await db.scalar(same)
+    if existing is not None:
+        if existing.user_id is not None or existing.email_confirmed_at is not None:
+            return None, ""
+        # Replacing it: the company's row, then the application's, locked in that order, the order ranking takes
+        # them in (Postgres would otherwise find a deadlock with a ranking of the old application, or with another
+        # apply from this address replacing it too). Read again under the lock: someone may have got there first.
+        await lock_company(db, company.id)
+        existing = await db.scalar(same.with_for_update().execution_options(populate_existing=True))
     if existing is not None:
         if existing.user_id is not None or existing.email_confirmed_at is not None:
             return None, ""
