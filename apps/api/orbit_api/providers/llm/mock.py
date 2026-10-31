@@ -587,6 +587,27 @@ class MockLLMProvider(LLMProvider):
                 "people": ["[mock] your manager", "[mock] the on-call lead"],
                 "questions": ["[mock] What does a great first quarter look like?"],
                 "early_win": "[mock] Improve one slow API, drawing on your PostgreSQL work."})
+        if request.request_type == "written_review":
+            body = request.messages[-1].content
+            answer = body.split("Candidate's answer:", 1)[-1].split("</reference_data>")[0].strip()
+            words = answer.split()
+            return json.dumps({"scores": {"content": 3, "organisation": 4, "language": 3, "tone": 4},
+                "summary": "[mock] Clear purpose; answer every point in the brief.",
+                "covered": ["[mock] the reason for writing"], "missed": ["[mock] a date to reply by"],
+                "fixes": [{"quote": " ".join(words[:4]), "issue": "[mock] Too informal.", "better": "[mock] Dear Sir"},
+                          {"quote": "words the candidate never wrote", "issue": "[mock] x", "better": "[mock] y"}],
+                "strengths": ["[mock] Polite sign-off."]})
+        if request.request_type == "guesstimate_review":
+            body = request.messages[-1].content
+            part = body.split("Assumptions:", 1)[-1].split("Calculation:")[0].strip()
+            return json.dumps({"scores": {"clarify": 3, "structure": 4, "assumptions": 3, "math": 5, "sanity": 2},
+                "summary": "[mock] Good structure; justify the share of tea drinkers.",
+                "assumptions": [{"quote": " ".join(part.split()[:4]), "verdict": "needs a reason",
+                                 "note": "[mock] Say why."},
+                                {"quote": "an assumption nobody wrote", "verdict": "too high", "note": "[mock] x"}],
+                "math_ok": True, "math_note": "[mock] The multiplication adds up.",
+                "missed": ["[mock] weekday vs weekend demand"],
+                "follow_ups": ["[mock] How would this change in winter?"]})
         if request.request_type == "first_look":
             return json.dumps({"impression": "[mock] Reads as a backend engineer; the job's main platform skill isn't "
                                "visible until the second role.",

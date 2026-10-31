@@ -72,6 +72,9 @@ import {
   StarCheckPage,
   BulletBuilderPage,
   GapExplainerPage,
+  CommunicationTestPage,
+  WrittenRoundPage,
+  GuesstimatePage,
   GroupDiscussionPage,
   GitHubProjectsPage,
   ReadinessPage,
@@ -370,6 +373,9 @@ export function App() {
         <Route path="career-gap" element={<GapExplainerPage />} />
         <Route path="group-discussion" element={<GroupDiscussionPage />} />
         <Route path="github-projects" element={<GitHubProjectsPage />} />
+        <Route path="communication-test" element={<CommunicationTestPage />} />
+        <Route path="written-round" element={<WrittenRoundPage />} />
+        <Route path="guesstimates" element={<GuesstimatePage />} />
         <Route path="readiness" element={<ReadinessPage />} />
         <Route path="campus" element={<CampusPage />} />
         <Route path="code" element={<CodeHomePage />} />
