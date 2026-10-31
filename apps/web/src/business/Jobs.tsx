@@ -1,4 +1,4 @@
-// Orbit for Business (D82): the company's jobs, and the job editor (description, place, pay, screening questions with
+// Orbit for Business (D82): the job editor (description, place, pay, screening questions with
 // knock-outs, stages, hiring team) with the Orbit assistant beside it (D85: a few words fill every field, short
 // instructions refine them, each AI-filled field marked with its own undo). Publishing needs a verified company and a
 // free job slot.
@@ -11,7 +11,6 @@ import type {
   BizJob,
   BizJobAssist,
   BizJobInput,
-  BizJobListItem,
   BizMember,
   BizQuestion,
   BizQuestionKind,
@@ -27,19 +26,13 @@ import {
   Callout,
   Checkbox,
   Dialog,
-  EmptyState,
   ExternalLink,
   Field,
   Input,
   Plus,
   Select,
   Sparkles,
-  Table,
-  THead,
-  Td,
   Textarea,
-  Th,
-  Tr,
   Trash2,
   buttonClass,
   confirmDialog,
@@ -48,7 +41,6 @@ import {
   toast,
   safeLocal,
   useMediaQuery,
-  Briefcase,
 } from "@orbit/ui";
 import { biz } from "./api";
 import { PageTitle, useCompany } from "./BusinessApp";
@@ -60,7 +52,6 @@ import {
   ROLE_LABEL,
   STAGE_KIND_LABEL,
   WORKPLACE_LABEL,
-  companyPath,
   describeKnockout,
   emptyJob,
   jobPath,
@@ -70,7 +61,6 @@ import {
   newId,
   newQuestion,
   questionProblems,
-  relTime,
   stageProblems,
   type KnockoutForm,
 } from "./model";
@@ -93,93 +83,6 @@ import {
 
 const JobAssistant = lazy(async () => ({ default: (await import("./JobAssistant")).JobAssistant }));
 import { JobStatusBadge, Loading, LoadError, Panel, errorCode, errorText } from "./ui";
-
-// ---- the list -----------------------------------------------------------------------------------------------------
-
-export function JobsList() {
-  const { company } = useCompany();
-  const [jobs, setJobs] = useState<BizJobListItem[] | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-  const [n, setN] = useState(0);
-  const [filter, setFilter] = useState<"all" | "open" | "draft" | "paused" | "closed">("all");
-  useEffect(() => {
-    biz.jobs(company.id).then(setJobs).catch((e: unknown) => setError(e instanceof Error ? e : new Error(String(e))));
-  }, [company.id, n]);
-  const shown = (jobs ?? []).filter((j) => filter === "all" || j.status === filter);
-  const id = useId();
-  return (
-    <div>
-      <PageTitle
-        title="Jobs"
-        subtitle="Open jobs are on your careers page and Google for Jobs."
-        actions={
-          company.permissions.manage_jobs ? (
-            <Link to={companyPath(company.id, "jobs/new")} className={buttonClass("primary")}>
-              <Plus className="h-4 w-4" aria-hidden /> New job
-            </Link>
-          ) : undefined
-        }
-      />
-      {error ? (
-        <LoadError error={error} onRetry={() => setN((x) => x + 1)} />
-      ) : !jobs ? (
-        <Loading />
-      ) : jobs.length === 0 ? (
-        <EmptyState icon={Briefcase} title="No jobs yet" body={company.permissions.manage_jobs ? "Write your first job, or let Orbit draft it from a short brief." : "When your team posts a job and adds you to its hiring team, it shows here."} />
-      ) : (
-        <>
-          <div className="mb-3 flex items-center gap-2">
-            <label htmlFor={`${id}-f`} className="text-sm text-zinc-600 dark:text-zinc-400">
-              Show
-            </label>
-            <Select id={`${id}-f`} className="!w-auto" value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
-              <option value="all">All jobs</option>
-              <option value="open">Open</option>
-              <option value="draft">Drafts</option>
-              <option value="paused">Paused</option>
-              <option value="closed">Closed</option>
-            </Select>
-          </div>
-          <Table label="Jobs" dense stack>
-            <THead>
-              <tr>
-                <Th>Job</Th>
-                <Th>Status</Th>
-                <Th>Where</Th>
-                <Th align="right">Applicants</Th>
-                <Th align="right">New</Th>
-                <Th>Updated</Th>
-              </tr>
-            </THead>
-            <tbody>
-              {shown.map((j) => (
-                <Tr key={j.id}>
-                  <Td primary>
-                    <Link to={jobPath(company.id, j.id)} className={cx("rounded font-medium hover:underline", focusRing)}>
-                      {j.title}
-                    </Link>
-                    {j.department && <span className="block text-xs text-zinc-500 dark:text-zinc-400">{j.department}</span>}
-                  </Td>
-                  <Td label="Status">
-                    <JobStatusBadge status={j.status} />
-                  </Td>
-                  <Td label="Where">{[j.locations.slice(0, 2).join(", "), WORKPLACE_LABEL[j.workplace]].filter(Boolean).join(" · ")}</Td>
-                  <Td label="Applicants" align="right" className="tabular-nums">
-                    {j.applicants}
-                  </Td>
-                  <Td label="New" align="right" className="tabular-nums">
-                    {j.new_applicants || ""}
-                  </Td>
-                  <Td label="Updated">{relTime(j.updated_at)}</Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
-        </>
-      )}
-    </div>
-  );
-}
 
 // ---- the rich text editor -----------------------------------------------------------------------------------------
 

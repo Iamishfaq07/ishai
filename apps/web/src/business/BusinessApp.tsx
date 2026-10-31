@@ -33,7 +33,7 @@ import { Loading, LoadError, PLAN_LABEL, Panel, RoleBadge, errorText } from "./u
 const Dashboard = lazy(async () => ({ default: (await import("./Dashboard")).Dashboard }));
 const BusinessLaunchpad = lazy(async () => ({ default: (await import("./BusinessLaunchpad")).BusinessLaunchpad }));
 const Verification = lazy(async () => ({ default: (await import("./Verification")).Verification }));
-const JobsList = lazy(async () => ({ default: (await import("./Jobs")).JobsList }));
+const JobsList = lazy(async () => ({ default: (await import("./JobsList")).JobsList }));
 const JobEditor = lazy(async () => ({ default: (await import("./Jobs")).JobEditor }));
 const Pipeline = lazy(async () => ({ default: (await import("./Pipeline")).Pipeline }));
 const Candidate = lazy(async () => ({ default: (await import("./Candidate")).Candidate }));

@@ -1,5 +1,10 @@
 # Implementation log
 
+## Business jobs workspace (2026-10-31)
+
+- Add role search, status counts, new-applicant filtering, stable sorting and card/table views with reload and browser-history continuity.
+- Separate the list's lazy route from the job editor and fix refresh errors that remained visible after successful retries. Add illustrated empty states and direct pipeline/editor links. See [Business jobs workspace](BUSINESS_JOBS_WORKSPACE.md).
+
 ## Business workspace design (2026-10-31)
 
 - Group the 19 Business destinations by purpose, add workspace search and replace mobile horizontal tabs with a vertical disclosure menu with Escape and focus handling.
