@@ -51,6 +51,11 @@ export function Cart({ pack, onClose, onPay, busy, error }: {
   const methods = (q?.methods ?? []).map(asCheckout).filter((m): m is Checkout => m !== null);
   const [chosen, setChosen] = useState<Checkout | null>(null);
   const checkout = chosen && methods.includes(chosen) ? chosen : q?.checkout ?? (pack.buyable ? asCheckout(pack.checkout) : null);
+  // A card payment that didn't go through can switch to PayPal in one tap; the old error goes with it.
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const shownError = error && error !== dismissed ? error : null;
+  const paypalInstead = Boolean(shownError) && checkout === "razorpay" && methods.includes("paypal");
+  const pick = (m: Checkout) => { setChosen(m); setDismissed(error); };
 
   // Returns whether the code was applied, so the box keeps what was typed when it wasn't.
   const apply = async (raw: string): Promise<boolean> => {
@@ -79,7 +84,12 @@ export function Cart({ pack, onClose, onPay, busy, error }: {
 
   const footer = q ? (
     <div className="space-y-2">
-      {error && <p role="alert" className="text-sm text-rose-700 dark:text-rose-300">{error}</p>}
+      {shownError && <p role="alert" className="text-sm text-rose-700 dark:text-rose-300">{shownError}</p>}
+      {paypalInstead && (
+        <Button className="w-full" variant="secondary" disabled={busy} onClick={() => pick("paypal")}>
+          Pay with PayPal instead
+        </Button>
+      )}
       <Button className="w-full" size="lg" loading={busy} disabled={!checkout || codeBusy || quote.loading}
               onClick={() => { if (checkout) onPay(applied || undefined, checkout); }}>
         {checkout ? PAY_LABEL[checkout](q.total_text) : "Can't be bought here right now"}
@@ -124,7 +134,7 @@ export function Cart({ pack, onClose, onPay, busy, error }: {
                 <dd className="tabular-nums">{q.total_text}</dd>
               </div>
             </dl>
-            {methods.length > 1 && checkout && <PayWith methods={methods} value={checkout} disabled={busy} onChange={setChosen} />}
+            {methods.length > 1 && checkout && <PayWith methods={methods} value={checkout} disabled={busy} onChange={pick} />}
             {quote.error && !priced && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Couldn't load the cart's details just now. You can still pay the listed price; a code is checked again when you pay.

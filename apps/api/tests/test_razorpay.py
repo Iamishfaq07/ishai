@@ -359,6 +359,15 @@ def test_a_dollar_order_razorpay_refuses_says_so_not_try_again(
     us = {**h, "X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "US"}
     r = client.post("/v1/billing/razorpay/orders", headers=us, json={"pack": "mini"})
     assert r.status_code == 409 and "US dollars aren't available" in r.json()["detail"]
+    from orbit_api.billing import paypal
+
+    # With PayPal set up, the refusal points to it; without, to Contact.
+    monkeypatch.setattr(paypal, "configured", lambda: True)
+    r = client.post("/v1/billing/razorpay/orders", headers=us, json={"pack": "mini"})
+    assert r.status_code == 409 and "Pay with PayPal instead" in r.json()["detail"]
+    monkeypatch.setattr(paypal, "configured", lambda: False)
+    r = client.post("/v1/billing/razorpay/orders", headers=us, json={"pack": "mini"})
+    assert r.status_code == 409 and "Write to us from Contact" in r.json()["detail"]
     assert "international payments" in caplog.text and "Currency is not supported" in caplog.text
     india = {**h, "X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "IN"}
     assert client.post("/v1/billing/razorpay/orders", headers=india, json={"pack": "mini"}).status_code == 201
