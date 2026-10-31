@@ -183,12 +183,14 @@ export function BillingPage() {
   }, [wanted, packs.data, monthly.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Back from PayPal: ?paypal=return&token=<order id> after approving (the server takes the money and adds what was
-  // bought, on PayPal's word), ?paypal=cancel after backing out. Either way the address is cleaned up.
+  // bought, on PayPal's word), ?paypal=cancel&pack=<id> after backing out. Either way the address is cleaned up; a
+  // pack in it is left for the effect above, which reopens that cart (to try again, or pay by card instead).
   const paypalBack = params.get("paypal");
   const paypalOrder = params.get("token");
   useEffect(() => {
     if (paypalBack === null) return;
-    setParams({}, { replace: true });
+    const again = paypalBack === "cancel" ? params.get("pack") : null;
+    setParams(again ? { pack: again } : {}, { replace: true });
     if (paypalBack === "cancel") {
       setNotice("You left PayPal before paying, so nothing was charged.");
       return;

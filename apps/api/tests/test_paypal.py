@@ -138,6 +138,7 @@ def test_buyers_abroad_pay_by_paypal_and_are_credited_once_on_their_return(
     assert unit["invoice_id"] == unit["custom_id"] == reference  # PayPal won't take a second order for it
     ctx = json.loads(made.content)["payment_source"]["paypal"]["experience_context"]
     assert ctx["return_url"].endswith("/billing?paypal=return") and ctx["shipping_preference"] == "NO_SHIPPING"
+    assert ctx["cancel_url"].endswith("/billing?paypal=cancel&pack=starter")  # backing out reopens this cart
     assert made.headers["paypal-request-id"] == f"order-{reference}"
 
     # Back before approving (or by hand): nothing is taken and nothing is added.

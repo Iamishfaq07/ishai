@@ -16,7 +16,7 @@ import json
 import time
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -133,11 +133,12 @@ async def _call(method: str, path: str, *, json_body: Any = None, content: bytes
 
 
 async def create_order(amount_minor: int, currency: str, reference: str, label: str,
-                       request_id: str) -> tuple[str, str]:
+                       request_id: str, item: str = "") -> tuple[str, str]:
     """A PayPal order for `amount_minor` cents; returns (its id, the link that sends the buyer to approve it).
     `reference` is our Payment.reference: PayPal refuses a second order with the same invoice id, so one Orbit order
-    can't be paid twice."""
+    can't be paid twice. `item` (the pack or plan id) rides the cancel link, so backing out reopens that cart."""
     web = get_settings().web_url.rstrip("/")
+    cancel = f"{web}/billing?paypal=cancel" + (f"&pack={quote(item, safe='')}" if item else "")
     order = await _call("POST", "/v2/checkout/orders", request_id=request_id, json_body={
         "intent": "CAPTURE",
         "purchase_units": [{"reference_id": reference, "custom_id": reference, "invoice_id": reference,
@@ -145,7 +146,7 @@ async def create_order(amount_minor: int, currency: str, reference: str, label: 
                             "amount": {"currency_code": currency, "value": money(amount_minor)}}],
         "payment_source": {"paypal": {"experience_context": {
             "brand_name": "Orbit", "user_action": "PAY_NOW", "shipping_preference": "NO_SHIPPING",
-            "return_url": f"{web}/billing?paypal=return", "cancel_url": f"{web}/billing?paypal=cancel"}}},
+            "return_url": f"{web}/billing?paypal=return", "cancel_url": cancel}}},
     })
     order_id = order.get("id")
     approve = approval_url(order)
