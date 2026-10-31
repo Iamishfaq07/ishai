@@ -35,7 +35,8 @@ export function HiringLoopGraphic() {
 /** A zero-baseline daily chart; the adjacent table remains the exact-value alternative. */
 export function ApplicationsChart({ days }: { days: Array<{ day: string; count: number }> }) {
   const id = useId();
-  const max = Math.max(1, ...days.map((d) => d.count));
+  // An even integer ceiling keeps the midpoint distinct from both ends, including charts with just one applicant.
+  const max = Math.max(2, Math.ceil(Math.max(1, ...days.map((d) => d.count)) / 2) * 2);
   const width = 560 / Math.max(days.length, 1);
   return <div>
     <svg viewBox="0 0 600 180" role="img" aria-labelledby={id} className="w-full">

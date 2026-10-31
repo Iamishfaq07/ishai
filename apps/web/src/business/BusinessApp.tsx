@@ -2,27 +2,21 @@
 // header and navigation, the same Orbit sign-in). Lazy-loaded as its own chunks: nothing here is in a candidate's
 // first download.
 import { Suspense, createContext, lazy, useContext, useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
-import { Link, NavLink, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import type { BizCompany, BizCompanySize, BizMe, BizNotification } from "@orbit/types";
 import {
   ArrowRight,
   Bell,
-  Briefcase,
   Building2,
   Button,
   COUNTRIES,
   Callout,
-  CreditCard,
   EmptyState,
   Field,
   Input,
-  Gauge,
-  ScrollText,
   Select,
-  SettingsIcon,
   ShieldCheck,
   Textarea,
-  Users,
   buttonClass,
   cx,
   focusRing,
@@ -31,6 +25,7 @@ import {
 import { useAuth } from "../lib/auth";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { biz } from "./api";
+import { BusinessNavigation } from "./BusinessNavigation";
 import { APP_HOME, ROLE_LABEL, companyPath, domainOf, relTime } from "./model";
 import { requestedBusinessTool } from "./productCatalog";
 import { Loading, LoadError, PLAN_LABEL, Panel, RoleBadge, errorText } from "./ui";
@@ -92,7 +87,7 @@ function Header({ company }: { company?: BizCompany | undefined }) {
     <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-white/10 dark:bg-zinc-950/90">
       <div className="mx-auto flex h-14 w-full max-w-7xl items-center gap-3 px-4 sm:px-6">
         <Link to={APP_HOME} className={cx("flex shrink-0 items-center gap-2 rounded font-semibold", focusRing)}>
-          <span aria-hidden="true" className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-sm text-white">O</span>
+          <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-white"><svg viewBox="0 0 32 32" className="h-6 w-6" fill="none"><circle cx="16" cy="16" r="8" stroke="currentColor" strokeWidth="1.8" /><ellipse cx="16" cy="16" rx="13" ry="4.5" transform="rotate(-35 16 16)" stroke="currentColor" strokeWidth="1.5" /></svg></span>
           <span className="sr-only sm:not-sr-only">
             Orbit <span className="font-normal text-zinc-500 dark:text-zinc-400">for Business</span>
           </span>
@@ -121,59 +116,8 @@ function Header({ company }: { company?: BizCompany | undefined }) {
   );
 }
 
-const NAV = [
-  { to: "", label: "Dashboard", icon: Gauge, end: true },
-  { to: "launchpad", label: "Business launchpad", icon: Building2 },
-  { to: "control-room", label: "Control room", icon: Gauge },
-  { to: "jobs", label: "Jobs", icon: Briefcase },
-  { to: "workflow-reviews", label: "Review inbox", icon: ShieldCheck },
-  { to: "workflow-studio", label: "Workflow Studio", icon: ScrollText },
-  { to: "talent", label: "Talent communities", icon: Users },
-  { to: "experience", label: "Candidate experience", icon: Users },
-  { to: "capacity", label: "Hiring capacity", icon: Gauge },
-  { to: "requisitions", label: "Hiring requests", icon: ScrollText },
-  { to: "knowledge", label: "Knowledge studio", icon: ScrollText },
-  { to: "knowledge-reading", label: "Team reading", icon: ScrollText },
-  { to: "knowledge-reviews", label: "Policy reviews", icon: ScrollText },
-  { to: "hiring-desk", label: "Hiring desk", icon: Users },
-  { to: "automations", label: "Automations", icon: Gauge },
-  { to: "team", label: "Team", icon: Users },
-  { to: "settings", label: "Settings", icon: SettingsIcon },
-  { to: "plan", label: "Plan", icon: CreditCard },
-  { to: "audit", label: "Audit log", icon: ScrollText },
-] as const;
-
-function CompanyNav({ company, sidebar = false }: { company: BizCompany; sidebar?: boolean }) {
-  const items = NAV.filter((n) => n.to === "talent" ? company.permissions.all_jobs : n.to === "knowledge-reviews" ? company.permissions.manage_company : ((n.to === "control-room" || n.to === "requisitions" || n.to === "capacity") ? company.role !== "interviewer" : (n.to === "automations" || n.to === "experience" || n.to === "workflow-studio" || n.to === "workflow-reviews") ? company.permissions.move_applicants : n.to === "audit" ? company.permissions.view_audit : n.to === "plan" ? company.role === "owner" || company.role === "admin" : n.to === "settings" ? company.permissions.manage_company : true));
-  return (
-    <nav aria-label={`${company.name}`} className={sidebar ? "hidden w-60 shrink-0 space-y-6 border-r border-zinc-200 p-4 dark:border-white/10 lg:block" : "border-b border-zinc-200 dark:border-white/10 lg:hidden"}>
-      {sidebar && <div className="space-y-3 rounded-xl bg-zinc-950 p-4 text-white"><p className="text-xsst text-indigo-300">Company workspace</p><p className="truncate font-semibold">{company.name}</p><p className="text-xs text-zinc-300">{ROLE_LABEL[company.role]} · {company.verified ? "Verified" : "Verification pending"}</p></div>}
-      <ul className={sidebar ? "space-y-1" : "mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-4 sm:px-6"}>
-        {items.map((n) => (
-          <li key={n.to}>
-            <NavLink
-              to={companyPath(company.id, n.to)}
-              end={"end" in n ? n.end : false}
-              className={({ isActive }) =>
-                cx(
-                  sidebar ? "flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm transition-colors motion-reduce:transition-none" : "inline-flex h-11 items-center gap-1.5 whitespace-nowrap border-b-2 px-2.5 text-sm",
-                  isActive ? sidebar ? "bg-indigo-50 font-semibold text-indigo-700 dark:bg-white/10 dark:text-indigo-300" : "border-indigo-600 font-medium text-zinc-900 dark:text-white" : "border-transparent text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white",
-                  focusRing,
-                )
-              }
-            >
-              <n.icon className="h-4 w-4" aria-hidden /> {n.label}
-            </NavLink>
-          </li>
-        ))}
-      </ul>
-      {sidebar && <div className="rounded-xl border border-zinc-200 p-4 text-xs text-zinc-600 dark:border-white/10 dark:text-zinc-400"><p className="font-semibold">Keep the loop moving</p><p className="mt-2">Prepare roles, coordinate interviews and review evidence in one workspace.</p><Link to="/jobs/weekly" className={cx("mt-3 inline-block rounded font-medium hover:underline", focusRing)}>Your personal weekly studio →</Link></div>}
-    </nav>
-  );
-}
-
 function Page({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
-  return <main id="main" className={cx("mx-auto w-full px-4 py-6 sm:px-6", wide ? "max-w-7xl" : "max-w-5xl")}>{children}</main>;
+  return <main id="main" tabIndex={-1} className={cx("mx-auto w-full px-4 py-6 sm:px-6", wide ? "max-w-7xl" : "max-w-5xl")}>{children}</main>;
 }
 
 export function PageTitle({ title, subtitle, actions }: { title: string; subtitle?: ReactNode; actions?: ReactNode }) {
@@ -181,8 +125,8 @@ export function PageTitle({ title, subtitle, actions }: { title: string; subtitl
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{subtitle}</p>}
+        <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">{title}</h1>
+        {subtitle && <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -249,9 +193,9 @@ function CompanyLayout() {
   return (
     <Ctx.Provider key={company.id} value={{ company, reload, setCompany }}>
       <Header company={company} />
-      <CompanyNav company={company} />
+      <BusinessNavigation company={company} />
       <div className="mx-auto flex w-full max-w-7xl">
-      <CompanyNav company={company} sidebar />
+      <BusinessNavigation company={company} sidebar />
       <div className="min-w-0 flex-1">
       <Page wide>
         <Banners company={company} />

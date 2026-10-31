@@ -1,5 +1,11 @@
 # Implementation log
 
+## Business workspace design (2026-10-31)
+
+- Group the 19 Business destinations by purpose, add workspace search and replace mobile horizontal tabs with a vertical disclosure menu with Escape and focus handling.
+- Improve the dashboard and launchpad with original vector graphics, role-aware shortcuts, clearer empty states and visual source/funnel summaries that retain exact values.
+- Skip company analytics for interviewers and show their interview workspace instead of a forbidden-request error. See [Business workspace design](BUSINESS_WORKSPACE_DESIGN.md).
+
 ## Business shared talent searches (2026-10-31)
 
 - Save up to 20 named skills/interests searches per community for the recruiting team. Replays read current consented profiles without retaining candidate result snapshots.

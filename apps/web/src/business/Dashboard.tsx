@@ -9,6 +9,7 @@ import { PageTitle, useCompany } from "./BusinessApp";
 import { ApplicationsChart } from "./HiringGraphics";
 import { companyPath, jobPath } from "./model";
 import { Loading, LoadError, Panel, Stat } from "./ui";
+import { BusinessWorkspaceHero, BusinessWorkspaceShortcuts } from "./WorkspaceIllustration";
 
 const SOURCE_LABEL: Record<string, string> = {
   careers: "Careers page",
@@ -47,7 +48,7 @@ export function SourceTable({ bySource, total }: { bySource: Record<string, numb
       <tbody>
         {rows.map(([source, n]) => (
           <Tr key={source}>
-            <Td>{SOURCE_LABEL[source] ?? source}</Td>
+            <Td><span className="block">{SOURCE_LABEL[source] ?? source}</span><div aria-hidden="true" className="mt-2 h-1.5 w-28 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/10"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${total > 0 ? Math.min(100, n / total * 100) : 0}%` }} /></div></Td>
             <Td className="text-right tabular-nums">{n}</Td>
             <Td className="text-right tabular-nums">{total ? Math.round((n / total) * 100) : 0}%</Td>
           </Tr>
@@ -64,10 +65,11 @@ export function Dashboard() {
   const [n, setN] = useState(0);
   useEffect(() => {
     let live = true;
+    if (company.role === "interviewer") return;
     setData(null); setError(null);
     biz.analytics(company.id).then((d) => { if (live) setData(d); }).catch((e: unknown) => { if (live) setError(e instanceof Error ? e : new Error(String(e))); });
     return () => { live = false; };
-  }, [company.id, n]);
+  }, [company.id, company.role, n]);
   const actions = company.permissions.manage_jobs ? (
     <Link to={companyPath(company.id, "jobs/new")} className={buttonClass("primary")}>
       <Plus className="h-4 w-4" aria-hidden /> New job
@@ -76,20 +78,21 @@ export function Dashboard() {
   return (
     <div className="space-y-5">
       <PageTitle title="Dashboard" subtitle={`${company.name}'s hiring at a glance.`} actions={actions} />
-      {error ? (
+      <BusinessWorkspaceHero />
+      {company.role === "interviewer" ? <Panel title="Your interview workspace" hint="Company-wide analytics are available to recruiting coordinators. Open your assigned interview work to review evidence and record scorecards."><Link to={companyPath(company.id, "hiring-desk")} className={buttonClass("secondary")}>Open assigned interview work</Link></Panel> : error ? (
         <LoadError error={error} onRetry={() => setN((x) => x + 1)} />
       ) : !data ? (
         <Loading />
       ) : (
         <>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+            <section aria-label="Hiring metrics" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
             <Stat label="Open jobs" value={data.open_jobs} />
             <Stat label="Applicants" value={data.applicants_total} />
             <Stat label="Last 30 days" value={data.applicants_30d} />
             <Stat label="Hired" value={data.hired} />
               <Stat label="Withdrawn" value={data.withdrawn} />
-            <Stat label="Time to first reply" value={hours(data.median_first_response_hours)} detail="Median, from applying to the team's first move" />
-          </div>
+            <Stat label="Time to first reply" value={<span className="text-base">{hours(data.median_first_response_hours)}</span>} detail="Median, from applying to the team's first move" />
+          </section>
           <div className="grid gap-5 lg:grid-cols-2">
             <Panel title="Where applicants come from">
               <SourceTable bySource={data.by_source} total={data.applicants_total} />
@@ -122,9 +125,11 @@ export function Dashboard() {
           </div>
           <Panel title="Jobs" hint="How far applicants get in each job's stages.">
             {data.jobs.length === 0 ? (
-              <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
-                <Briefcase className="h-4 w-4" aria-hidden /> No jobs yet.
-                {actions}
+              <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-white/20 dark:bg-white/[0.02] sm:p-9">
+                <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-indigo-700 dark:border-white/10 dark:bg-zinc-900 dark:text-indigo-300"><Briefcase className="h-7 w-7" aria-hidden="true" /></span>
+                <h3 className="mt-4 text-lg font-semibold">Your next role starts here.</h3>
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{company.permissions.manage_jobs ? "Draft a role, agree on the requirements and bring your team into the process. Your pipeline will appear here when a job is created." : "Jobs you can access will appear here. Ask your recruiting team to assign you to the relevant work."}</p>
+                {actions && <div className="mt-5 flex justify-center">{actions}</div>}
               </div>
             ) : (
               <div className="space-y-4">
@@ -138,10 +143,10 @@ export function Dashboard() {
                         {j.applicants} {j.applicants === 1 ? "applicant" : "applicants"}{j.applicants > 0 ? firstReply(j.median_first_response_hours) : ""}
                       </span>
                     </div>
-                    <ol className="mt-2 flex flex-wrap gap-2 text-xs" aria-label={`${j.title}: applicants who reached each stage`}>
+                    <ol className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-3" aria-label={`${j.title}: applicants who reached each stage`}>
                       {j.funnel.map((f) => (
-                        <li key={f.stage_id} className="rounded-lg bg-zinc-100 px-2 py-1 tabular-nums dark:bg-white/5">
-                          {f.name}: <strong>{f.reached}</strong> ({Math.round(f.rate * 100)}%)
+                        <li key={f.stage_id} className="rounded-xl bg-zinc-50 p-3 tabular-nums dark:bg-white/5">
+                          <div className="flex flex-wrap items-baseline justify-between gap-2"><span className="font-medium">{f.name}</span><span><strong>{f.reached}</strong> ({Math.round(f.rate * 100)}%)</span></div><div aria-hidden="true" className="mt-3 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.max(0, Math.min(100, f.rate * 100))}%` }} /></div>
                         </li>
                       ))}
                     </ol>
@@ -152,6 +157,7 @@ export function Dashboard() {
           </Panel>
         </>
       )}
+      <BusinessWorkspaceShortcuts />
     </div>
   );
 }
