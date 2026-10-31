@@ -1,5 +1,11 @@
 # Implementation log
 
+## Business automation playbook drafts (2026-10-31)
+
+- Add disabled starting templates for candidate response, panel readiness and offer coordination, with validated editable thresholds and draft downloads.
+- Preserve unsaved work across newer saved revisions, require save/discard before manual runs, show unavailable owners and allow disabling an enabled playbook on a paused role.
+- Prevent old pagination responses from entering a newly filtered task queue. See [Automation playbook drafts](BUSINESS_AUTOMATION_PLAYBOOKS.md).
+
 ## Business reading workspace (2026-10-31)
 
 - Add direct published-document links, larger text, an expanded reading area, source-preserving passage navigation and a transparent fixed-rate reading estimate.
