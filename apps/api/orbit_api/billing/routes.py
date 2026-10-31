@@ -756,7 +756,7 @@ async def paypal_order(body: OrderIn, request: Request, user: Annotated[User, De
     reference = upi.new_reference()
     try:
         order_id, approve = await paypal.create_order(cost.minor, cost.currency, reference, label,
-                                                      request_id=f"order-{reference}")
+                                                      request_id=f"order-{reference}", item=body.pack)
     except paypal.PayPalError as e:
         log.warning("paypal order failed: %s", e)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
