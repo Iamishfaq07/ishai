@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import type { BizKnowledgeCoverage, BizKnowledgeReadingDocument, BizKnowledgeReadingGuide, BizKnowledgeReadingList, BizKnowledgeReaders } from "@orbit/types";
 import { Button, Callout, Input, Select, buttonClass, focusRing } from "@orbit/ui";
 import { downloadText } from "../lib/format";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { knowledgeReading } from "./knowledgeReadingApi";
-import { filterReading, readingStatus } from "./knowledgeReadingModel";
+import { filterReading, readingDocumentId, readingStatus } from "./knowledgeReadingModel";
+import { PublishedReadingText, ReadingIntro } from "./ReadingPresentation";
 import { ROLE_LABEL } from "./model";
 import { LoadError, Loading, Panel, Stat, errorText } from "./ui";
 
@@ -14,7 +15,7 @@ const saveJson = (name: string, data: unknown) => downloadText(name, JSON.string
 export function KnowledgeReadingDesk() {
   const { company } = useCompany();
   // Scope all local state and in-flight work to this company.
-  return <ReadingWorkspace key={company.id} />;
+  return <ReadingWorkspace key={`${company.id}:${company.role}`} />;
 }
 
 function ReadingWorkspace() {
@@ -24,30 +25,36 @@ function ReadingWorkspace() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("remaining");
   const [tab, setTab] = useState("mine");
-  const [selected, setSelected] = useState<string | null>(null);
+  const [params, setParams] = useSearchParams();
+  const selected = readingDocumentId(params.get("document"));
+  const activeTab = selected ? "mine" : tab;
+  const selectDocument = (id: string | null) => { const next = new URLSearchParams(params); if (id) next.set("document", id); else next.delete("document"); setParams(next); };
   const generation = useRef(0);
   const refresh = useCallback(async () => {
     const request = ++generation.current;
-    const next = await knowledgeReading.list(company.id);
-    if (request === generation.current) { setData(next); setError(null); }
+    try {
+      const next = await knowledgeReading.list(company.id);
+      if (request === generation.current) { setData(next); setError(null); }
+    } catch (e) { if (request === generation.current) setError(new Error(errorText(e))); }
   }, [company.id]);
   useEffect(() => {
-    void refresh().catch((e: unknown) => setError(new Error(errorText(e))));
+    void refresh();
     const pending = generation; return () => { pending.current++; };
   }, [refresh]);
-  const reload = () => void refresh().catch((e: unknown) => setError(new Error(errorText(e))));
+  const reload = () => void refresh();
   if (!data) return error ? <LoadError error={error} onRetry={reload} /> : <Loading label="Loading reading desk" />;
   const shown = filterReading(data.items, query, status);
   return <div className="space-y-6">
     <PageTitle title="Team reading desk" subtitle="Read published guidance, record your acknowledgement and revisit changed instructions." actions={<Link to={`/business/app/${company.id}/knowledge`} className={buttonClass("secondary")}>Knowledge library</Link>} />
-    {!selected && tab === "mine" && <details className="text-sm text-zinc-600 dark:text-zinc-400"><summary className="font-medium">About reading acknowledgements</summary><p className="mt-2">An acknowledgement records that you say you read the published text. Reading and AI help never record one automatically. These optional receipts do not assess understanding or gate hiring actions.</p></details>}
-    {data.can_manage && <div className="flex flex-wrap gap-2" aria-label="Reading desk views"><Button variant={tab === "mine" ? "primary" : "secondary"} aria-pressed={tab === "mine"} onClick={() => setTab("mine")}>My reading</Button><Button variant={tab === "team" ? "primary" : "secondary"} aria-pressed={tab === "team"} onClick={() => setTab("team")}>Team coverage</Button></div>}
-    {tab === "team" && data.can_manage ? <CoverageView key={company.id} /> : <>
+    {params.has("document") && !selected && <Callout tone="warning">This document link is invalid. Choose published guidance from the reading list.</Callout>}
+    {!selected && activeTab === "mine" && <><ReadingIntro /><details className="text-sm text-zinc-600 dark:text-zinc-400"><summary className="font-medium">About reading acknowledgements</summary><p className="mt-2">An acknowledgement records that you say you read the published text. Reading and AI help never record one automatically. These optional receipts do not assess understanding or gate hiring actions.</p></details></>}
+    {data.can_manage && <div className="flex flex-wrap gap-2" aria-label="Reading desk views"><Button variant={activeTab === "mine" ? "primary" : "secondary"} aria-pressed={activeTab === "mine"} onClick={() => { setTab("mine"); selectDocument(null); }}>My reading</Button><Button variant={activeTab === "team" ? "primary" : "secondary"} aria-pressed={activeTab === "team"} onClick={() => { setTab("team"); selectDocument(null); }}>Team coverage</Button></div>}
+    {activeTab === "team" && data.can_manage ? <CoverageView key={company.id} /> : <>
       {!selected && <div className="grid gap-3 sm:grid-cols-3"><Stat label="Available to read" value={data.items.length} detail="Published documents your role can access" /><Stat label="Current acknowledgements" value={data.items.filter(r => r.acknowledged).length} detail="Matches the currently published wording" /><Stat label="Not yet current" value={data.items.filter(r => !r.acknowledged).length} detail="New or changed guidance, optional to acknowledge" /></div>}
       {error && <LoadError error={error} />}
-      {selected ? <ReadingDocument key={selected} id={selected} onBack={() => { setSelected(null); reload(); }} onChanged={refresh} /> : <Panel title="My reading list" hint="Private drafts never appear here, including for document authors.">
+      {selected ? <ReadingDocument key={selected} id={selected} onBack={() => { selectDocument(null); setTab("mine"); reload(); }} onChanged={refresh} /> : <Panel title="My reading list" hint="Private drafts never appear here, including for document authors.">
         <div className="mb-4 flex flex-wrap gap-3"><Input className="sm:max-w-sm" aria-label="Search reading list" placeholder="Find guidance" value={query} onChange={e => setQuery(e.target.value)} /><Select className="sm:max-w-xs" aria-label="Reading status" value={status} onChange={e => setStatus(e.target.value)}><option value="remaining">Not yet current</option><option value="current">Acknowledged current text</option><option value="all">All available guidance</option></Select><Button variant="ghost" onClick={reload}>Refresh reading list</Button></div>
-        <ul className="space-y-3">{shown.map(row => <li key={row.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-4 dark:border-white/10"><div className="min-w-0"><h2 className="break-words font-semibold">{row.title}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{readingStatus(row)} · published version {row.published_revision}</p>{row.needs_update && <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">Owner has requested updates to this guidance.</p>}</div><Button variant="secondary" onClick={() => setSelected(row.id)} aria-label={`Read ${row.title}`}>Read guidance</Button></li>)}</ul>
+        <ul className="space-y-3">{shown.map(row => <li key={row.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-white/10 dark:bg-zinc-900/60"><div className="min-w-0"><h2 className="break-words font-semibold">{row.title}</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{readingStatus(row)} · published version {row.published_revision}</p>{row.needs_update && <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">Owner has requested updates to this guidance.</p>}</div><Button variant="secondary" onClick={() => selectDocument(row.id)} aria-label={`Read ${row.title}`}>Read guidance</Button></li>)}</ul>
         {!shown.length && <p className="text-sm text-zinc-600 dark:text-zinc-400">No guidance matches this view. Choose all available guidance or ask a company owner to publish a reference.</p>}
       </Panel>}
     </>}
@@ -63,14 +70,18 @@ function ReadingDocument({ id, onBack, onChanged }: { id: string; onBack: () => 
   const [error, setError] = useState<Error | null>(null);
   const live = useRef(true);
   const locked = useRef(false);
+  const generation = useRef(0);
   const refresh = useCallback(async () => {
-    const next = await knowledgeReading.read(company.id, id);
-    if (live.current) { setDoc(next); setConfirmed(false); setGuide(null); setError(null); }
+    const request = ++generation.current;
+    try {
+      const next = await knowledgeReading.read(company.id, id);
+      if (live.current && request === generation.current) { setDoc(next); setConfirmed(false); setGuide(null); setError(null); }
+    } catch (e) { if (live.current && request === generation.current) { setError(new Error(errorText(e))); setConfirmed(false); setGuide(null); } }
   }, [company.id, id]);
   useEffect(() => {
     live.current = true;
-    void refresh().catch((e: unknown) => { if (live.current) setError(new Error(errorText(e))); });
-    return () => { live.current = false; };
+    void refresh();
+    const pending = generation; return () => { live.current = false; pending.current++; };
   }, [refresh]);
   const run = async (action: "acknowledge" | "withdraw" | "guide" | "reload") => {
     if (locked.current || !doc) return;
@@ -87,13 +98,13 @@ function ReadingDocument({ id, onBack, onChanged }: { id: string; onBack: () => 
     } catch (e) { if (live.current) { setError(new Error(errorText(e))); setConfirmed(false); setGuide(null); } }
     finally { locked.current = false; if (live.current) setBusy(false); }
   };
-  if (!doc) return <div className="space-y-3"><Button variant="ghost" onClick={onBack}>Back to reading list</Button>{error ? <LoadError error={error} onRetry={() => void refresh().catch((e: unknown) => setError(new Error(errorText(e))))} /> : <Loading label="Loading published guidance" />}</div>;
+  if (!doc) return <div className="space-y-3"><Button variant="ghost" onClick={onBack}>Back to reading list</Button>{error ? <LoadError error={error} onRetry={() => void refresh()} /> : <Loading label="Loading published guidance" />}</div>;
   const disabled = busy || company.status !== "active";
   return <div className="space-y-4">
     <div className="flex flex-wrap gap-2"><Button variant="ghost" disabled={busy} onClick={onBack}>Back to reading list</Button><Button variant="secondary" disabled={busy} onClick={() => void run("reload")}>Reload published text</Button></div>
     <Panel title={doc.title} hint={`Published version ${doc.published_revision} · ${readingStatus(doc)}`}>
       {(doc.needs_update || doc.review_overdue) && <Callout tone="warning" className="mb-4">{doc.needs_update ? "The owner has requested updates. " : ""}{doc.review_overdue ? "The review date has passed. " : ""}Check uncertain instructions with the document owner.</Callout>}
-      <div data-testid="published-reading-text" className="max-h-[60vh] overflow-auto whitespace-pre-wrap break-words rounded-xl bg-zinc-50 p-4 text-sm leading-relaxed dark:bg-white/5" tabIndex={0} role="region" aria-label="Full published guidance">{doc.data.body}</div>
+      <PublishedReadingText documentId={id} body={doc.data.body} />
       {doc.acknowledged_at && <p className="mt-4 text-sm">Your latest acknowledgement: {new Date(doc.acknowledged_at).toLocaleString()} · version {doc.acknowledged_revision}{!doc.acknowledged ? " · older wording" : ""}</p>}
       {error && <div className="mt-4"><LoadError error={error} /></div>}
       {!doc.acknowledged && <label className="mt-4 flex min-h-11 items-start gap-3 text-sm"><input type="checkbox" className={`mt-1 ${focusRing}`} checked={confirmed} disabled={disabled} onChange={e => setConfirmed(e.target.checked)} />I personally read the full published text shown above.</label>}
@@ -123,14 +134,16 @@ function CoverageView() {
   const generation = useRef(0);
   const refresh = useCallback(async () => {
     const request = ++generation.current;
-    const next = await knowledgeReading.coverage(company.id);
-    if (request === generation.current) { setData(next); setError(null); }
+    try {
+      const next = await knowledgeReading.coverage(company.id);
+      if (request === generation.current) { setData(next); setError(null); }
+    } catch (e) { if (request === generation.current) setError(new Error(errorText(e))); }
   }, [company.id]);
   useEffect(() => {
-    void refresh().catch((e: unknown) => setError(new Error(errorText(e))));
+    void refresh();
     const pending = generation; return () => { pending.current++; };
   }, [refresh]);
-  const reload = () => void refresh().catch((e: unknown) => setError(new Error(errorText(e))));
+  const reload = () => void refresh();
   if (!data) return error ? <LoadError error={error} onRetry={reload} /> : <Loading label="Loading team reading coverage" />;
   return <div className="space-y-4">
     <Panel title="Current-member reading coverage" hint="Eligible means a current, active member whose role can read this publication. These are available references, not mandatory assignments.">

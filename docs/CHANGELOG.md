@@ -1,5 +1,10 @@
 # Implementation log
 
+## Business reading workspace (2026-10-31)
+
+- Add direct published-document links, larger text, an expanded reading area, source-preserving passage navigation and a transparent fixed-rate reading estimate.
+- Refresh reading-list graphics and cards; prevent older list, coverage and document-read failures from overwriting newer state. Explicit acknowledgement and publication-hash checks remain in place. See [Business reading workspace](BUSINESS_READING_WORKSPACE.md).
+
 ## Business review inbox design (2026-10-31)
 
 - Fix dropped filter loads and out-of-order review-inbox responses. Keep reminder scans independent from queue refreshes and offer retry recovery without older results beneath an error.
