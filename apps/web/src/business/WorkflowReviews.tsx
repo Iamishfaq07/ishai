@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import type { BizWorkflowReviewHistory, BizWorkflowRun } from "@orbit/types";
-import { Button, Callout, Check, Field, Select, ShieldCheck, Textarea, buttonClass, focusRing } from "@orbit/ui";
+import { Button, Callout, Check, Field, Select, ShieldCheck, Textarea, focusRing } from "@orbit/ui";
 import { useAuth } from "../lib/auth";
 import { downloadText } from "../lib/format";
-import { PageTitle, useCompany } from "./BusinessApp";
-import { LoadError, Loading, Panel, errorText } from "./ui";
-import { reviewFollowups, workflowReviews } from "./workflowApi";
+import { useCompany } from "./BusinessApp";
+import { LoadError, errorText } from "./ui";
+import { workflowReviews } from "./workflowApi";
 import { ReviewFollowupControls } from "./ReviewFollowups";
 function useReviewAction() {
   const [busy, setBusy] = useState(false); const [error, setError] = useState<Error | null>(null);
@@ -14,15 +13,6 @@ function useReviewAction() {
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
   const perform = useCallback(async (fn: () => Promise<void>) => { if (locked.current) return; locked.current = true; setBusy(true); setError(null); try { await fn(); } catch (e) { if (live.current) setError(new Error(errorText(e))); } finally { locked.current = false; if (live.current) setBusy(false); } }, []);
   return { busy, error, perform, live };
-}
-export function WorkflowReviewInbox() { const { company } = useCompany(); return <Inbox key={company.id} />; }
-function Inbox() {
-  const { company } = useCompany(); const [view, setView] = useState<"all" | "overdue" | "snoozed">("all"); const [notice, setNotice] = useState(""); const [data, setData] = useState<Awaited<ReturnType<typeof workflowReviews.inbox>> | null>(null); const action = useReviewAction();
-  const load = useCallback(async () => { const next = await workflowReviews.inbox(company.id, view); if (action.live.current) setData(next); }, [company.id, view, action.live]);
-  const perform = action.perform;
-  useEffect(() => { if (company.permissions.move_applicants) void perform(load); }, [company.permissions.move_applicants, perform, load]);
-  if (!company.permissions.move_applicants) return <Callout>Workflow reviews are available to coordinators and assigned hiring managers.</Callout>;
-  return <div className="space-y-5"><PageTitle title="Workflow review inbox" subtitle="Independent checkpoints assigned to you, across roles you currently access." /><div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-400/20 dark:bg-indigo-950/20"><ShieldCheck className="mb-3 h-7 w-7 text-indigo-700 dark:text-indigo-300" /><h2 className="font-semibold">Review the evidence before the workflow moves on</h2><p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Your decision records a review of the frozen checklist evidence. Publishing jobs and making hiring decisions still happen in their linked workspaces.</p></div><Field label="Review inbox filter" htmlFor="review-inbox-filter"><Select id="review-inbox-filter" value={view} onChange={e => setView(e.target.value as typeof view)}><option value="all">All pending reviews</option><option value="overdue">Overdue reviews</option><option value="snoozed">Paused reminders</option></Select></Field><div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={action.busy} onClick={() => void perform(load)}>Refresh review inbox</Button>{company.permissions.manage_company && <Button variant="ghost" disabled={action.busy} onClick={() => void perform(async () => { const result = await reviewFollowups.scan(company.id); if (action.live.current) setNotice(`${result.created} due internal reminders prepared.`); await load(); })}>Check due review reminders</Button>}</div>{notice && <p role="status" className="text-sm">{notice}</p>}{action.error && <LoadError error={action.error} />}{!data ? !action.error && <Loading label="Loading your review requests" /> : <Panel title="Awaiting your review">{!data.items.length ? <p className="text-sm">No current checkpoint reviews are assigned to you.</p> : <ul className="space-y-3">{data.items.map(r => <li key={r.id} className="rounded-xl border border-zinc-200 p-4 dark:border-white/10"><h3 className="break-words font-semibold">{r.step_title}</h3><p className="mt-1 text-sm">{r.job_title}</p><p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400">Requested {new Date(r.requested_at).toLocaleString()}</p>{r.due_date && <p className="mt-2 text-sm">Due {r.due_date} UTC{r.overdue ? " · Overdue" : ""}</p>}{r.snoozed_until && <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">Reminders paused until {new Date(r.snoozed_until).toLocaleDateString()}</p>}<Link className={buttonClass("secondary", "sm", "mt-3")} to={r.path}>Open checkpoint review</Link></li>)}</ul>}{data.truncated && <Callout>Showing the first 50 current requests, ordered by due date before undated requests. Resolve these and refresh for the next requests.</Callout>}</Panel>}</div>;
 }
 export function WorkflowReviewPanel({ step, index, data, onSaved }: { step: BizWorkflowRun["steps"][number]; index: number; data: BizWorkflowRun; onSaved: (data: BizWorkflowRun) => void }) {
   const { company } = useCompany(); const { user } = useAuth(); const action = useReviewAction();

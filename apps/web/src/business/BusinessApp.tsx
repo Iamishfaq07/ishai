@@ -43,7 +43,7 @@ const KnowledgeReviewInbox = lazy(async () => ({ default: (await import("./Knowl
 const KnowledgeReadingDesk = lazy(async () => ({ default: (await import("./KnowledgeReadingDesk")).KnowledgeReadingDesk }));
 const KnowledgeStudio = lazy(async () => ({ default: (await import("./KnowledgeStudio")).KnowledgeStudio }));
 const RequisitionDesk = lazy(async () => ({ default: (await import("./RequisitionDesk")).RequisitionDesk }));
-const WorkflowReviewInbox = lazy(async () => ({ default: (await import("./WorkflowReviews")).WorkflowReviewInbox }));
+const WorkflowReviewInbox = lazy(async () => ({ default: (await import("./WorkflowReviewInbox")).WorkflowReviewInbox }));
 const WorkflowStudio = lazy(async () => ({ default: (await import("./WorkflowStudio")).WorkflowStudio }));
 const TalentCommunity = lazy(async () => ({ default: (await import("./TalentCommunity")).TalentCommunity }));
 const ExperienceHub = lazy(async () => ({ default: (await import("./ExperienceHub")).ExperienceHub }));

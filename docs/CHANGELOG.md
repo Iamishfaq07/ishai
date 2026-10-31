@@ -1,5 +1,10 @@
 # Implementation log
 
+## Business review inbox design (2026-10-31)
+
+- Fix dropped filter loads and out-of-order review-inbox responses. Keep reminder scans independent from queue refreshes and offer retry recovery without older results beneath an error.
+- Add role/search discovery, due/request/title ordering, page-scoped summaries and clearer overdue/paused review cards with an original vector graphic. See [Review inbox design](BUSINESS_REVIEW_INBOX_DESIGN.md).
+
 ## Business jobs workspace (2026-10-31)
 
 - Add role search, status counts, new-applicant filtering, stable sorting and card/table views with reload and browser-history continuity.

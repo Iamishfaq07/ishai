@@ -18,8 +18,14 @@ export const workflows = {
 };
 
 const reviewRoot = (cid: string, jid: string, rid: string, sid: string) => `${run(cid, jid, rid)}/steps/${encodeURIComponent(sid)}/reviews`;
+export type WorkflowInboxView = "all" | "overdue" | "snoozed";
+export interface WorkflowInboxItem {
+  id: string; run_id: string; job_id: string; job_title: string; step_title: string; requested_at: string;
+  due_date: string | null; overdue: boolean; snoozed_until: string | null; path: string;
+}
+export interface WorkflowInboxData { items: WorkflowInboxItem[]; truncated: boolean }
 export const workflowReviews = {
-  inbox: (cid: string, view: "all" | "overdue" | "snoozed" = "all") => api.call<{ items: Array<{ id: string; run_id: string; job_id: string; job_title: string; step_title: string; requested_at: string; due_date: string | null; overdue: boolean; snoozed_until: string | null; path: string }>; truncated: boolean }>(`${root(cid)}/review-inbox/mine?${new URLSearchParams({ view })}`),
+  inbox: (cid: string, view: WorkflowInboxView = "all") => api.call<WorkflowInboxData>(`${root(cid)}/review-inbox/mine?${new URLSearchParams({ view })}`),
   request: (cid: string, jid: string, rid: string, sid: string, request_id: string, base_revision: number, reviewer_id: string, evidence_note: string) => api.call<BizWorkflowRun>(reviewRoot(cid, jid, rid, sid), json("POST", { request_id, base_revision, reviewer_id, evidence_note })),
   history: (cid: string, jid: string, rid: string, sid: string) => api.call<{ items: BizWorkflowReviewHistory[] }>(reviewRoot(cid, jid, rid, sid)),
   decide: (cid: string, jid: string, rid: string, sid: string, reviewId: string, base_revision: number, evidence_sha256: string, decision: "approved" | "changes_requested", note: string) => api.call<BizWorkflowRun>(`${reviewRoot(cid, jid, rid, sid)}/${encodeURIComponent(reviewId)}/decision`, json("POST", { base_revision, evidence_sha256, acknowledge: true, decision, note })),
