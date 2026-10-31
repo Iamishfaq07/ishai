@@ -65,8 +65,10 @@ order already made: an order opened at an old price is still paid and settled at
   - Without that header (the desktop app, a direct caller) it uses the account's saved country, then India.
   - A VPN into India shows rupees, but those orders are then paid with Indian methods.
 - **Payments:**
-  - Dollar orders go through **PayPal** when it's set up (below), else through Razorpay in USD. `payments.currency`
-    is "USD", `amount_minor` holds cents, and `amount_inr` is the rupee equivalent for reports.
+  - Dollar orders go through **PayPal** when it's set up (below), and through Razorpay in USD once it takes cards
+    from abroad (`ORBIT_RAZORPAY_INTERNATIONAL`). With both on, the buyer picks in the cart ("Pay with": PayPal, the
+    default, or "Debit or credit card", no PayPal account needed); each price lists its `methods`, `checkout` first.
+    `payments.currency` is "USD", `amount_minor` holds cents, and `amount_inr` is the rupee equivalent for reports.
   - UPI is rupees only, so it is refused for buyers outside India. PayPal is dollars only, so it is refused for
     buyers in India (a PayPal India account can't take payments from India anyway).
 - **Turning on dollar checkout (OWNER ACTION REQUIRED):**

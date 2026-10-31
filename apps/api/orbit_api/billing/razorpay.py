@@ -28,6 +28,15 @@ class RazorpayError(Exception):
     pass
 
 
+class RazorpayRefused(RazorpayError):
+    """Razorpay answered and said no (a 4xx): the request reached it, so it isn't an outage. For a dollar order this
+    is the account not taking that currency or international cards (yet)."""
+
+    def __init__(self, message: str, status: int) -> None:
+        super().__init__(message)
+        self.status = status
+
+
 def configured() -> bool:
     s = get_settings()
     return bool(s.razorpay_key_id and s.razorpay_key_secret)
@@ -45,6 +54,8 @@ async def create_order(amount_minor: int, receipt: str, notes: dict[str, str], c
                                       "notes": notes})
         except httpx.HTTPError as e:
             raise RazorpayError(f"couldn't reach Razorpay: {type(e).__name__}") from e
+    if 400 <= r.status_code < 500:
+        raise RazorpayRefused(f"Razorpay said {r.status_code}{_why(r)}", r.status_code)
     if r.status_code != 200:
         raise RazorpayError(f"Razorpay said {r.status_code}{_why(r)}")
     data = r.json()

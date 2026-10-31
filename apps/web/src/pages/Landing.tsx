@@ -313,25 +313,32 @@ function HowItWorks() {
 
 /** "Priced for where you are", from the packs the server lists for this visitor: how buyers outside India pay is
  *  whatever is switched on (PayPal, or Razorpay cards), never promised before it is. */
-function pricedLine(india: boolean, checkout: string | null | undefined, abroad: boolean, loaded: boolean): string {
+function pricedLine(india: boolean, checkout: string | null | undefined, abroad: boolean, loaded: boolean,
+                    card = false): string {
   if (india) {
     return `Prices in rupees, paid with UPI, a card or netbanking. ${
       !loaded ? "Outside India, prices are in US dollars." : abroad ? "Outside India, prices are in US dollars, paid by card." : "Outside India, prices are in US dollars; card payments from other countries are coming soon."}`;
   }
-  if (checkout === "paypal") return "Prices in US dollars, paid through PayPal or a card where PayPal offers it. In India, prices are in rupees with UPI.";
+  if (checkout === "paypal") {
+    return card
+      ? "Prices in US dollars, paid with PayPal or any debit or credit card. In India, prices are in rupees with UPI."
+      : "Prices in US dollars, paid through PayPal or a card where PayPal offers it. In India, prices are in rupees with UPI.";
+  }
   if (abroad) return "Prices in US dollars, paid by debit or credit card through Razorpay. In India, prices are in rupees with UPI.";
   return loaded
     ? "Prices in US dollars. Card payments from outside India are coming soon; everything free works today."
     : "Prices in US dollars. In India, prices are in rupees with UPI.";
 }
 
-function WhyOrbit({ india, checkout, abroad, loaded }: { india: boolean; checkout?: string | null; abroad: boolean; loaded: boolean }) {
+function WhyOrbit({ india, checkout, abroad, loaded, card }: {
+  india: boolean; checkout?: string | null; abroad: boolean; loaded: boolean; card: boolean;
+}) {
   const reasons: Array<[typeof Layers, string, string]> = [
     [Layers, "One resume, every tool", "Add it once. Your practice answers, live answers, ATS score and job matches all work from the same resume, so nothing is typed twice."],
     [BadgeCheck, "Answers that show their sources", "A live answer lists the resume lines it used, and marks details that aren't in your documents so you check them before you say them."],
     [ShieldCheck, "Honest about where it's allowed", "Built for practice, and for interviews and calls where notes or AI help are allowed. Orbit doesn't claim to be undetectable, and isn't hidden from Task Manager or anyone who can see your screen."],
     [CalendarCheck, "Nothing to cancel", "Plans are paid once and never renew on their own. Credits never expire. If an AI action fails, its credit comes back."],
-    [Wallet, "Priced for where you are", pricedLine(india, checkout, abroad, loaded)],
+    [Wallet, "Priced for where you are", pricedLine(india, checkout, abroad, loaded, card)],
     [MonitorSmartphone, "On your laptop and your phone", "Resume, Jobs and practice work in any browser. Live help works in Chrome and Edge, or in any call app with the Windows app (beta)."],
   ];
   const stages: Array<[string, string, string]> = [
@@ -433,8 +440,8 @@ function Security() {
 
 // ─── Questions ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-function Faq({ welcome, stats, cards = false, abroad = false, paypal = false, loaded = true }: {
-  welcome: WelcomeGrant | null; stats: JobStats | null; cards?: boolean; abroad?: boolean; paypal?: boolean;
+function Faq({ welcome, stats, cards = false, abroad = false, paypal = false, loaded = true, card = false }: {
+  welcome: WelcomeGrant | null; stats: JobStats | null; cards?: boolean; abroad?: boolean; paypal?: boolean; card?: boolean;
   /** The packs (and so how they're paid) have arrived: until then nothing is said about payment methods abroad. */
   loaded?: boolean;
 }) {
@@ -475,8 +482,9 @@ function Faq({ welcome, stats, cards = false, abroad = false, paypal = false, lo
       paypal ? (
         <p>
           There's no subscription. Outside India, plans and packs are priced in US dollars and paid through PayPal: with
-          your PayPal account, or a debit or credit card where PayPal offers it. What you bought is added as soon as
-          PayPal confirms the payment, usually within seconds. Nothing renews, and credits never expire.
+          your PayPal account, or a debit or credit card{card ? " (or any card directly, no PayPal account needed: you choose in the cart)" : " where PayPal offers it"}.
+          What you bought is added as soon as the payment is confirmed, usually within seconds. Nothing renews, and
+          credits never expire.
         </p>
       ) : cards ? (
         <p>
@@ -721,11 +729,12 @@ export function LandingPage() {
       <MoreTools products={products} />
       <KashSecSection />
       <HowItWorks />
-      <WhyOrbit india={india} checkout={packs?.[0]?.checkout} abroad={!!packs?.[0]?.international} loaded={packs !== null} />
+      <WhyOrbit india={india} checkout={packs?.[0]?.checkout} abroad={!!packs?.[0]?.international} loaded={packs !== null}
+        card={!!packs?.[0]?.methods?.includes("razorpay")} />
       <Security />
       <PricingSection packs={packs} monthly={monthly} welcome={welcome} stats={stats} />
       <Faq welcome={welcome} stats={stats} cards={packs?.[0]?.checkout === "razorpay"} abroad={!!packs?.[0]?.international}
-        paypal={packs?.[0]?.checkout === "paypal"} loaded={packs !== null} />
+        paypal={packs?.[0]?.checkout === "paypal"} loaded={packs !== null} card={!!packs?.[0]?.methods?.includes("razorpay")} />
       <FinalCta freeLine={freeLine} innerRef={finalCta} />
       <StickyCta after={heroCtas} before={finalCta} line={welcome ? "Free to start. No card." : "Free to start."} />
     </PublicLayout>

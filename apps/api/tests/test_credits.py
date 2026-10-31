@@ -215,11 +215,12 @@ def test_packs_are_listed_and_need_a_upi_id(client: TestClient, monkeypatch: pyt
     assert packs["starter"] == {"id": "starter", "label": "3 credits", "price_inr": 2599, "resume_credits": 30,
                                 "interview_minutes": 180, "bonus_minutes": 0, "total_minutes": 180, "badge": None,
                                 "buyable": False, "checkout": None, "international": False,
-                                "currency": "INR", "price": 2599.0, "price_text": "₹2,599"}
+                                "currency": "INR", "price": 2599.0, "price_text": "₹2,599",
+                                "methods": []}
     assert packs["mini"] == {"id": "mini", "label": "AI credits", "price_inr": 499, "resume_credits": 25,
                              "interview_minutes": 0, "bonus_minutes": 0, "total_minutes": 0, "badge": None,
                              "buyable": False, "checkout": None, "international": False,
-                             "currency": "INR", "price": 499.0, "price_text": "₹499"}
+                             "currency": "INR", "price": 499.0, "price_text": "₹499", "methods": []}
     assert (packs["plus"]["total_minutes"], packs["plus"]["badge"]) == (480, "Most popular")  # 6 credits + 2 free
     assert (packs["pro"]["total_minutes"], packs["pro"]["badge"]) == (900, "Best value")  # 9 credits + 6 free
     assert list(packs) == ["mini", "single", "starter", "plus", "pro"]

@@ -47,7 +47,10 @@ export function Cart({ pack, onClose, onPay, busy, error }: {
     checkout: pack.buyable ? asCheckout(pack.checkout) : null, coupons: true,
   } : null;
   const q = priced ?? quote.data ?? (quote.error ? listed : null);
-  const checkout = q?.checkout ?? (pack.buyable ? asCheckout(pack.checkout) : null);
+  // Outside India there can be two ways to pay (PayPal, or a card through Razorpay): the server's first is the default.
+  const methods = (q?.methods ?? []).map(asCheckout).filter((m): m is Checkout => m !== null);
+  const [chosen, setChosen] = useState<Checkout | null>(null);
+  const checkout = chosen && methods.includes(chosen) ? chosen : q?.checkout ?? (pack.buyable ? asCheckout(pack.checkout) : null);
 
   // Returns whether the code was applied, so the box keeps what was typed when it wasn't.
   const apply = async (raw: string): Promise<boolean> => {
@@ -121,6 +124,7 @@ export function Cart({ pack, onClose, onPay, busy, error }: {
                 <dd className="tabular-nums">{q.total_text}</dd>
               </div>
             </dl>
+            {methods.length > 1 && checkout && <PayWith methods={methods} value={checkout} disabled={busy} onChange={setChosen} />}
             {quote.error && !priced && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
                 Couldn't load the cart's details just now. You can still pay the listed price; a code is checked again when you pay.
@@ -133,6 +137,37 @@ export function Cart({ pack, onClose, onPay, busy, error }: {
         )}
       </div>
     </Sheet>
+  );
+}
+
+const METHOD: Partial<Record<Checkout, [string, string]>> = {
+  paypal: ["PayPal", "Your PayPal account, or a card on PayPal's page"],
+  razorpay: ["Debit or credit card", "Any card, through Razorpay. No account needed"],
+};
+
+/** How to pay, when there's a choice: one tap, the server's default picked. */
+function PayWith({ methods, value, disabled, onChange }: {
+  methods: Checkout[]; value: Checkout; disabled: boolean; onChange: (m: Checkout) => void;
+}) {
+  return (
+    <fieldset className="space-y-2">
+      <legend className="mb-2 text-sm font-medium">Pay with</legend>
+      {methods.map((m) => {
+        const [title, hint] = METHOD[m] ?? [m, ""];
+        return (
+          <label key={m} className={cx("flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm",
+            value === m ? "border-indigo-500 bg-indigo-500/5 dark:border-indigo-400" : "border-zinc-200 hover:border-zinc-300 dark:border-white/10",
+            "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-indigo-500")}>
+            <input type="radio" name="cart-method" value={m} checked={value === m} disabled={disabled}
+                   onChange={() => onChange(m)} className="mt-0.5 h-4 w-4 accent-indigo-600" />
+            <span className="min-w-0">
+              <span className="block font-medium text-zinc-900 dark:text-white">{title}</span>
+              {hint && <span className="block text-zinc-600 dark:text-zinc-400">{hint}</span>}
+            </span>
+          </label>
+        );
+      })}
+    </fieldset>
   );
 }
 
