@@ -1,6 +1,5 @@
-// /business: Orbit for Business for companies (D82), built from the product pages' section kit (D79): a careers page
-// Google for Jobs reads, one-click applications from Orbit's job seekers, ranking that shows its evidence while a
-// person decides, a shared pipeline, and the plans. Built as HTML too (src/prerender).
+// /business: the connected company workspace, its workflow tours, tool directory and rollout planner. Built from
+// the product pages' section kit (D79, D82), with the same content rendered as HTML and Markdown (src/prerender).
 import { useRef } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Briefcase, Building2, ChartColumn, ScrollText, ShieldCheck, Sparkles, Users, buttonClass } from "@orbit/ui";
@@ -10,6 +9,7 @@ import { PublicLayout } from "../marketing/PublicLayout";
 import { Section, SectionIntro } from "../marketing/primitives";
 import { StickyCta } from "../marketing/StickyCta";
 import { APP_HOME } from "./model";
+import { BusinessProductShowcase, BusinessSystemArt } from "./BusinessShowcase";
 
 const TO_APP = { from: APP_HOME };
 
@@ -85,17 +85,15 @@ export function BusinessLandingPage() {
     <PublicLayout authState={TO_APP} context="For Business">
       <HeroShowcase
         product={{ id: "business", name: "for Business", icon: Building2 }}
-        title={["Hire from a careers page", "that Google reads."]}
-        lead="Post a job once: it gets its own page with Google for Jobs markup, a widget for your own site, and one-click applications from people already on Orbit. Orbit ranks each applicant against your must-haves and shows the evidence; your team decides."
+        title={["Your hiring team.", "One connected orbit."]}
+        lead="Plan a role, build a talent community, coordinate reviews and put team knowledge to work. Orbit connects your hiring tools with AI drafts, visible evidence and workflows your team controls."
         ctas={heroCtas}
         actions={
           <>
             <Link to={APP_HOME} className={buttonClass("primary", "lg", "min-h-12 px-6")}>
               Start hiring free <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
-            <Link to="/register" state={TO_APP} className={buttonClass("secondary", "lg", "min-h-12 px-6")}>
-              Create an account
-            </Link>
+            <a href="#business-tour" className={buttonClass("secondary", "lg", "min-h-12 px-6")}>Explore the product</a>
           </>
         }
         note={
@@ -105,8 +103,12 @@ export function BusinessLandingPage() {
           </p>
         }
         honest="No automatic rejections: knock-out answers are flagged, and a person clicks Reject. Names and photos are never inputs to the ranking."
-        visual={<PipelineArt />}
+        visual={<BusinessSystemArt />}
       />
+
+      <nav aria-label="On this Business page" className="mx-auto flex max-w-6xl flex-wrap justify-center gap-x-6 gap-y-2 px-5 pb-8 text-sm font-medium text-indigo-700 dark:text-indigo-300">
+        {[["business-tour", "Product tour"], ["business-ai", "AI assistance"], ["business-tools", "All tools"], ["business-rollout", "Rollout planner"], ["plans-title", "Plans"]].map(([id, label]) => <a key={id} href={`#${id}`} className={buttonClass("ghost", "sm")}>{label}</a>)}
+      </nav>
 
       <FactsBand
         label="Orbit for Business in numbers"
@@ -117,6 +119,8 @@ export function BusinessLandingPage() {
           { value: 5, label: "roles, from Owner to Interviewer" },
         ]}
       />
+
+      <BusinessProductShowcase />
 
       <StepsWithUI
         id="steps-title"
@@ -132,12 +136,12 @@ export function BusinessLandingPage() {
       <ToolkitGrid
         id="toolkit-title"
         eyebrow="The toolkit"
-        title="A calm, complete applicant tracker."
+        title="The hiring essentials, connected."
         band
         tools={[
           { title: "Ranking that shows its work", icon: Sparkles, text: "\"Matches 6 of 8 must-haves\", each with the line from the resume that shows it. It sorts; it never decides.", widget: <EvidenceArt />, wide: true },
           { title: "Careers page and Google for Jobs", icon: Briefcase, text: "Each open job is a page with JobPosting markup, in Orbit's sitemap, and taken out when the job closes.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">orbitanswer.com/company/acme</p> },
-          { title: "Board and list", icon: ChartColumn, text: "Drag or use the keyboard to move applicants, select many to move or reject at once, tag and search.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">Applied · Screen · Interview · Offer · Hired</p> },
+          { title: "Board and list", icon: ChartColumn, text: "Drag or use the keyboard to move applicants, select many to move or reject at once, tag and search.", widget: <PipelineArt />, wide: true },
           { title: "Team, scorecards and scheduling", icon: Users, text: "Five roles, a 1-4 rubric per stage with hire or no hire, and interview times the applicant picks, with a calendar invite.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">Owner · Admin · Recruiter · Hiring manager · Interviewer</p> },
           { title: "Data controls and audit log", icon: ScrollText, text: "Retention you set, delete on request, CSV export, and a log of every move and every ranking's model version.", widget: <p aria-hidden="true" className="text-xs text-zinc-600 dark:text-zinc-400">Rejected: deleted after 12 months</p> },
         ]}
@@ -197,7 +201,7 @@ export function BusinessLandingPage() {
         secondary={{ to: "/register", label: "Create an account", state: TO_APP }}
         footnote="The ranking reads professional information only. Rejecting always takes a person's click."
       />
-      <StickyCta after={heroCtas} before={finalCta} line="Hire from a careers page Google reads." />
+      <StickyCta after={heroCtas} before={finalCta} line="Your hiring team. One connected orbit." />
     </PublicLayout>
   );
 }

@@ -1,5 +1,11 @@
 # Implementation log
 
+## Business product showcase and launchpad (2026-10-31)
+
+- Rebuild the Business introduction around its connected hiring tools, with original vector graphics, four interactive workflow tours, AI feature explanations and motion that follows accessibility preferences.
+- Add a searchable 15-tool directory and a four-goal rollout planner with suggested owners, readiness criteria and Markdown downloads, both publicly and in the company launchpad. Checkmarks stay session-local and do not verify or change company setup.
+- Connect every cataloged tool through the company chooser's allowlist. Update Business metadata and FAQ content to describe the shipped workspace. See [Business product showcase](BUSINESS_PRODUCT_SHOWCASE.md).
+
 ## Light by default (2026-10-30)
 
 - Orbit opens in the light theme for everyone who hasn't chosen one, on the web and in the desktop app (it followed the

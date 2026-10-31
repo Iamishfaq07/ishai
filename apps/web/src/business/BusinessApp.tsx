@@ -32,9 +32,11 @@ import { useAuth } from "../lib/auth";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { biz } from "./api";
 import { APP_HOME, ROLE_LABEL, companyPath, domainOf, relTime } from "./model";
+import { requestedBusinessTool } from "./productCatalog";
 import { Loading, LoadError, PLAN_LABEL, Panel, RoleBadge, errorText } from "./ui";
 
 const Dashboard = lazy(async () => ({ default: (await import("./Dashboard")).Dashboard }));
+const BusinessLaunchpad = lazy(async () => ({ default: (await import("./BusinessLaunchpad")).BusinessLaunchpad }));
 const Verification = lazy(async () => ({ default: (await import("./Verification")).Verification }));
 const JobsList = lazy(async () => ({ default: (await import("./Jobs")).JobsList }));
 const JobEditor = lazy(async () => ({ default: (await import("./Jobs")).JobEditor }));
@@ -121,6 +123,7 @@ function Header({ company }: { company?: BizCompany | undefined }) {
 
 const NAV = [
   { to: "", label: "Dashboard", icon: Gauge, end: true },
+  { to: "launchpad", label: "Business launchpad", icon: Building2 },
   { to: "control-room", label: "Control room", icon: Gauge },
   { to: "jobs", label: "Jobs", icon: Briefcase },
   { to: "workflow-reviews", label: "Review inbox", icon: ShieldCheck },
@@ -255,6 +258,7 @@ function CompanyLayout() {
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route index element={<Dashboard />} />
+            <Route path="launchpad" element={<BusinessLaunchpad />} />
             <Route path="verify" element={<Verification />} />
             <Route path="jobs" element={<JobsList />} />
             <Route path="jobs/new" element={<JobEditor />} />
@@ -294,8 +298,7 @@ function CompanyLayout() {
 
 function CompaniesHome() {
   const [search] = useSearchParams();
-  const wanted = search.get("tool") ?? "";
-  const tool = ["jobs", "jobs/new", "hiring-desk", "control-room", "requisitions", "knowledge", "automations", "team"].includes(wanted) ? wanted : "";
+  const tool = requestedBusinessTool(search.get("tool"));
   const [me, setMe] = useState<BizMe | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [n, setN] = useState(0);

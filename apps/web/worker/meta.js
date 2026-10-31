@@ -69,9 +69,9 @@ export const PAGE_META = {
       "Practise out loud with an AI interviewer: HR, technical, panel, salary and video rounds that follow up on what you said, then score every answer.",
   },
   "/business": {
-    title: "Careers page, AI ranking and hiring pipeline | Orbit",
+    title: "Hiring tools, AI workflows and team knowledge | Orbit Business",
     description:
-      "Post jobs on a careers page Google for Jobs reads, get one-click applications, see AI ranking with its reasons while your team decides. Free to start.",
+      "Connect hiring requests, talent communities, reviewed AI workflows and cited team knowledge. Explore Orbit Business tools and build your rollout plan. Start free.",
   },
 };
 

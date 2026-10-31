@@ -219,7 +219,7 @@ PRODUCT_PAGES["/business"] = {
     id: "business",
     name: "Orbit for Business",
     description:
-      "Hiring software for companies: a careers page with Google for Jobs markup, one-click applications from Orbit job seekers, AI ranking that shows its evidence while a person decides, a shared pipeline, scorecards and data controls.",
+      "A connected hiring workspace with careers pages, evidence-based applicant ranking, hiring requests, Workflow Studio, independent reviews, opt-in talent communities and cited team knowledge. Explore the tools and build a rollout plan; your team makes the decisions.",
     category: "BusinessApplication",
   },
 };

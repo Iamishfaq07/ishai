@@ -1,8 +1,20 @@
 // /business: Orbit for Business's questions and answers, as the page shows them and its FAQPage markup states them
-// (faqs.js, D79, D82). Only what Phase 1 really does.
+// (faqs.js, D79, D82). Describes shipped features only.
 
 /** @type {ReadonlyArray<readonly [string, string]>} */
 export const BUSINESS_FAQ = [
+  [
+    "What tools does Orbit for Business include?",
+    "Alongside jobs and the shared applicant pipeline, Orbit includes hiring requests, hiring capacity, Workflow Studio, an independent review inbox, opt-in talent communities, Knowledge Studio, team reading, policy reviews, internal automation follow-ups and optional candidate process feedback. Your company role, plan and configured services determine availability.",
+  ],
+  [
+    "Can I plan a rollout before creating an account?",
+    "Yes. The Business page includes a rollout planner with four goals, suggested owners and completion criteria. Download a checklist without signing in. Checkmarks are session-only planning notes; they do not verify setup or change approvals. Signed-in teams can use the same planner from their company Business launchpad.",
+  ],
+  [
+    "What can the Business AI tools help with?",
+    "Depending on your configured provider and permissions, AI can draft jobs and workflow playbooks, prepare progress and capacity summaries, summarize qualifying process-feedback groups, and answer knowledge questions with exact source quotes. Outputs need human review. The rollout planner uses curated checklists and does not call a model.",
+  ],
   [
     "How do you stop fake employers and job scams?",
     "A company can draft jobs right away, but it can publish them only after proving its domain: a work email at the company's own website, or a DNS record on it. Free email addresses can't verify a company. Anyone can report a job, and the Orbit team reviews reports and can take a job or a company down.",
