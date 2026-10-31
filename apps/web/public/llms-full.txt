@@ -64,7 +64,7 @@ Orbit is built for practice, and for interviews and calls where notes or AI help
 - Always free: building and editing a resume, its ATS score, Word and PDF downloads, job matches, the tracker, a few AI fit checks a day, and practice questions without an account.
 - Paid: credit packs (interview minutes and AI credits) and plans for a fixed time (a week, a month or a year). Each is paid once. Nothing renews, and what you buy never expires.
 - Prices are shown in Indian rupees (INR) in India and in US dollars (USD) elsewhere, in the "Pricing" section of https://orbitanswer.com/. Prices change from time to time, so that page is the source.
-- In India, payment by UPI, debit or credit card, netbanking or wallet. Outside India, in US dollars (the terms of use say how: https://orbitanswer.com/terms).
+- In India, payment by UPI, debit or credit card, netbanking or wallet. Outside India, in US dollars: through PayPal (a PayPal account, or a card on PayPal's page) or with a debit or credit card, chosen in the cart (the terms of use say how: https://orbitanswer.com/terms).
 - Refunds for a pack that hasn't been used and for payments that went wrong: https://orbitanswer.com/refund.
 
 ## Privacy and data
