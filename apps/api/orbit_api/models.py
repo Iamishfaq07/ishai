@@ -1960,6 +1960,19 @@ class BizTalentPool(TimestampMixin, Base):
     terms_revision: Mapped[int] = mapped_column(Integer, default=1)
 
 
+class BizTalentSearch(TimestampMixin, Base):
+    __tablename__ = "biz_talent_searches"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    company_id: Mapped[str] = mapped_column(ForeignKey("biz_companies.id", ondelete="CASCADE"), index=True)
+    pool_id: Mapped[str] = mapped_column(ForeignKey("biz_talent_pools.id", ondelete="CASCADE"), index=True)
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    name: Mapped[str] = mapped_column(String(80))
+    query: Mapped[str] = mapped_column(String(80))
+    terms_revision: Mapped[int] = mapped_column(Integer)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    request_sha256: Mapped[str] = mapped_column(String(64))
+
+
 class BizTalentMember(TimestampMixin, Base):
     __tablename__ = "biz_talent_members"
     __table_args__ = (UniqueConstraint("pool_id", "application_id", name="uq_biz_talent_pool_application"),

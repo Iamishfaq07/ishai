@@ -3,6 +3,9 @@
 A voluntary future-opportunity workflow linked to a candidate's existing Business application. It does not
 reuse Orbit Personal profiles, infer consent from applying, or turn experience feedback into a recruiting signal.
 
+[Shared saved searches](BUSINESS_TALENT_SEARCHES.md) extend recruiter discovery with reusable team criteria,
+current-result replay and explicit review after consent terms change.
+
 ## Workflow
 
 ```mermaid

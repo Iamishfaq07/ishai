@@ -1,5 +1,10 @@
 # Implementation log
 
+## Business shared talent searches (2026-10-31)
+
+- Save up to 20 named skills/interests searches per community for the recruiting team. Replays read current consented profiles without retaining candidate result snapshots.
+- Add creator/admin edit controls, revision-safe pagination, retry-safe creation, and explicit criteria review after community consent terms change. See [Shared talent searches](BUSINESS_TALENT_SEARCHES.md).
+
 ## Business product showcase and launchpad (2026-10-31)
 
 - Rebuild the Business introduction around its connected hiring tools, with original vector graphics, four interactive workflow tours, AI feature explanations and motion that follows accessibility preferences.

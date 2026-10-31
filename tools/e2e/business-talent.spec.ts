@@ -54,6 +54,17 @@ test("Talent community: candidate consent, recruiter rediscovery, reviewed porta
   await page.getByLabel("Search skills or interests", { exact: true }).fill("Python");
   await page.getByRole("button", { name: "Search community", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Taylor Candidate", exact: true })).toBeVisible();
+  await page.getByLabel("Saved search name", { exact: true }).fill("Backend talent");
+  await page.getByRole("button", { name: "Use current discovery query", exact: true }).click();
+  await expect(page.getByLabel("Saved skills or interests query", { exact: true })).toHaveValue("Python");
+  await page.getByRole("button", { name: "Save shared search", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Backend talent", exact: true })).toBeVisible();
+  await page.getByLabel("Search skills or interests", { exact: true }).fill("No match");
+  await page.getByRole("button", { name: "Search community", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Taylor Candidate", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Run Backend talent", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Taylor Candidate", exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Current results for saved search" })).toBeVisible();
   const original = await page.getByRole("link", { name: "Review original application", exact: true }).getAttribute("href");
   expect(original).toContain("/applications/");
   await page.getByLabel("Suggest a published role for Taylor Candidate", { exact: true }).selectOption(jid);
@@ -73,6 +84,7 @@ test("Talent community: candidate consent, recruiter rediscovery, reviewed porta
     const violations = (await new AxeBuilder({ page: screen }).withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze()).violations;
     expect(violations).toEqual([]); await screen.screenshot({ path: info.outputPath(filename), fullPage: true });
   }
+  await page.getByRole("region", { name: "Shared saved searches", exact: true }).screenshot({ path: info.outputPath("shared-talent-searches-mobile.png") });
   await candidatePage.getByRole("button", { name: "Dismiss suggestion for Backend systems engineer", exact: true }).click();
   await expect(candidatePage.getByRole("link", { name: "Review Backend systems engineer", exact: true })).toHaveCount(0);
   await expect(candidatePage.getByRole("status").filter({ hasText: "Membership active" })).toBeVisible();
@@ -81,6 +93,18 @@ test("Talent community: candidate consent, recruiter rediscovery, reviewed porta
   await expect(candidatePage.getByRole("button", { name: "Join talent community", exact: true })).toBeVisible();
   await expect(candidatePage.getByRole("link", { name: "Review Backend systems engineer", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Search community", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Taylor Candidate", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Run Backend talent", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Taylor Candidate", exact: true })).toHaveCount(0);
+  await page.getByLabel("Purpose shown to candidates", { exact: true }).fill("A reviewed community purpose for future backend operations and engineering opportunities.");
+  page.once("dialog", dialog => dialog.accept());
+  await page.getByRole("button", { name: "Save community settings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Run Backend talent", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Edit Backend talent", exact: true }).click();
+  await expect(page.getByText(/Saving confirms these criteria against consent terms 2/)).toBeVisible();
+  await page.getByRole("button", { name: "Save reviewed search", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Run Backend talent", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Run Backend talent", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Taylor Candidate", exact: true })).toHaveCount(0);
   const applications = await (await context.request.get(`${base}/jobs/${jid}/applications`)).json();
   expect(applications.items).toHaveLength(1); expect(applications.items[0].status).toBe("active");

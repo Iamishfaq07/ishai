@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { BizJobListItem, BizTalentMember, BizTalentPool, BizTalentSuggestion } from "@orbit/types";
+import type { BizJobListItem, BizTalentMember, BizTalentPool, BizTalentSearch, BizTalentSuggestion } from "@orbit/types";
 import { Button, Callout, Field, Input, Select, Textarea, buttonClass, focusRing } from "@orbit/ui";
 import { downloadText } from "../lib/format";
 import { PageTitle, useCompany } from "./BusinessApp";
 import { biz } from "./api";
-import { talent, type TalentPoolDraft } from "./talentApi";
+import { talent, talentSearches, type TalentPoolDraft } from "./talentApi";
+import { TalentSavedSearches } from "./TalentSavedSearches";
 import { LoadError, Loading, Panel, errorText } from "./ui";
 
 export function TalentCommunity() { const { company } = useCompany(); return <Workspace key={company.id} />; }
@@ -54,22 +55,25 @@ function PoolEditor({ pool, onSaved, onCancel }: { pool?: BizTalentPool; onSaved
 function Directory({ pool }: { pool: BizTalentPool }) {
   const { company } = useCompany();
   const [query, setQuery] = useState(""); const [applied, setApplied] = useState("");
+  const [appliedSaved, setAppliedSaved] = useState<BizTalentSearch | null>(null);
   const [items, setItems] = useState<BizTalentMember[]>([]); const [cursor, setCursor] = useState<string | null>(null);
   const [ready, setReady] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState<Error | null>(null);
   const [jobs, setJobs] = useState<BizJobListItem[]>([]);
   const live = useRef(true); const locked = useRef(false);
   useEffect(() => { live.current = true; return () => { live.current = false; }; }, []);
-  const search = useCallback(async (q: string, after = "") => {
+  const search = useCallback(async (q: string, after = "", saved?: BizTalentSearch) => {
     if (locked.current) return; locked.current = true; setBusy(true); setError(null);
-    try { const next = await talent.members(company.id, pool.id, q, after); if (live.current) { setItems(old => after ? [...old, ...next.items] : next.items); setCursor(next.next_cursor); setApplied(q); setReady(true); } } catch (e) { if (live.current) setError(new Error(errorText(e))); } finally { locked.current = false; if (live.current) setBusy(false); }
+    try { const next = saved ? await talentSearches.run(company.id, pool.id, saved, after) : await talent.members(company.id, pool.id, q, after); if (live.current) { setItems(old => after ? [...old, ...next.items] : next.items); setCursor(next.next_cursor); setApplied(q); setAppliedSaved(saved ?? null); setReady(true); } } catch (e) { if (live.current) { setError(new Error(errorText(e))); setItems([]); setCursor(null); setAppliedSaved(null); setReady(false); } } finally { locked.current = false; if (live.current) setBusy(false); }
   }, [company.id, pool.id]);
   useEffect(() => { void search(""); let active = true; void biz.jobs(company.id).then(next => { if (active) setJobs(next.filter(j => j.status === "open")); }).catch((e: unknown) => { if (active) setError(new Error(errorText(e))); }); return () => { active = false; }; }, [company.id, search]);
   return <Panel title="Candidate discovery" hint="Current, confirmed, consented profiles only. Search matches candidate-provided skills and interests, with no AI ranking or demographic filters.">
     {!pool.enabled && <Callout>This community is paused. Profiles are hidden; existing consent still expires on its original date.</Callout>}
     <form className="mb-4 mt-3 flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); void search(query); }}><div className="min-w-0 flex-1"><Field label="Search skills or interests" htmlFor="talent-search"><Input id="talent-search" value={query} maxLength={80} onChange={e => setQuery(e.target.value)} /></Field></div><Button type="submit" disabled={busy}>Search community</Button></form>
+    <TalentSavedSearches pool={pool} query={query} disabled={busy} onRun={saved => { setQuery(saved.query); void search(saved.query, "", saved); }} />
+    {ready && <p role="status" className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">{appliedSaved ? `Current results for saved search “${appliedSaved.name}” (revision ${appliedSaved.revision})` : applied ? `Current results for “${applied}”` : "Current community profiles"}. Run the search again to refresh consent and availability.</p>}
     {error && <LoadError error={error} />}{!ready && !error && <Loading label="Loading consented profiles" />}{ready && !items.length && <p className="text-sm">No current profiles match this search. Candidates join voluntarily from their application status page.</p>}
     <div className="space-y-4">{items.map(m => <Member key={m.id} member={m} pool={pool} jobs={jobs} />)}</div>
-    {cursor && <Button className="mt-4" disabled={busy} variant="secondary" onClick={() => void search(applied, cursor)}>Load more profiles</Button>}
+    {cursor && <Button className="mt-4" disabled={busy} variant="secondary" onClick={() => void search(applied, cursor, appliedSaved ?? undefined)}>Load more profiles</Button>}
   </Panel>;
 }
 function Member({ member, pool, jobs }: { member: BizTalentMember; pool: BizTalentPool; jobs: BizJobListItem[] }) {

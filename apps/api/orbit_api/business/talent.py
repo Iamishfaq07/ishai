@@ -1,11 +1,14 @@
 """Explicit, application-linked talent consent and reviewed portal role suggestions."""
 
+import hashlib
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import Field, field_validator
 from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from orbit_api.business import rules
@@ -15,7 +18,15 @@ from orbit_api.business.hiring import aware
 from orbit_api.business.hiring_schema import Contract, RequestId
 from orbit_api.business.knowledge import fresh_context
 from orbit_api.db import get_db, sessionmaker
-from orbit_api.models import BizApplication, BizCompany, BizJob, BizTalentMember, BizTalentPool, BizTalentSuggestion
+from orbit_api.models import (
+    BizApplication,
+    BizCompany,
+    BizJob,
+    BizTalentMember,
+    BizTalentPool,
+    BizTalentSearch,
+    BizTalentSuggestion,
+)
 from orbit_api.ratelimit import limit_user
 
 router = APIRouter(
@@ -63,6 +74,17 @@ class JoinIn(Contract):
 
 class SuggestIn(Contract):
     job_id: str = Field(min_length=1, max_length=36)
+
+
+class SearchIn(Contract):
+    name: str = Field(min_length=3, max_length=80)
+    query: str = Field(min_length=1, max_length=80)
+    terms_revision: int = Field(ge=1, strict=True)
+    base_revision: int = Field(ge=0, strict=True)
+
+
+class SearchCreateIn(SearchIn):
+    request_id: RequestId
 
 
 def pool_data(pool: BizTalentPool) -> dict[str, Any]:
@@ -195,6 +217,129 @@ async def members(
         ],
         "next_cursor": rows[49][0].id if len(rows) > 50 else None,
     }
+
+
+def saved_search_data(row: BizTalentSearch, pool: BizTalentPool, ctx: Ctx) -> dict[str, Any]:
+    return {
+        "id": row.id, "name": row.name, "query": row.query, "revision": row.revision,
+        "terms_revision": row.terms_revision, "stale": row.terms_revision != pool.terms_revision,
+        "can_manage": row.created_by == ctx.user.id or ctx.can("manage_company"),
+    }
+
+
+async def search_for(db: AsyncSession, ctx: Ctx, pid: str, sid: str) -> BizTalentSearch:
+    row = await db.get(BizTalentSearch, sid, populate_existing=True)
+    if row is None or row.company_id != ctx.company.id or row.pool_id != pid:
+        raise HTTPException(404, "Saved search not found.")
+    return row
+
+
+def search_terms(pool: BizTalentPool, revision: int) -> None:
+    if pool.terms_revision != revision:
+        raise HTTPException(
+            409, "Consent terms changed. Review the current community purpose before using this search."
+        )
+
+
+def manage_search(row: BizTalentSearch, ctx: Ctx, revision: int) -> None:
+    if row.created_by != ctx.user.id and not ctx.can("manage_company"):
+        raise HTTPException(403, "Only this search's creator or a company owner or admin can change it.")
+    if row.revision != revision:
+        raise HTTPException(409, "Saved search changed. Refresh before changing it.")
+
+
+@router.get("/{pid}/searches")
+async def saved_searches(pid: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)]) -> Any:
+    ctx = await staff(db, ctx)
+    pool = await pool_for(db, ctx.company.id, pid)
+    rows = await db.scalars(select(BizTalentSearch).where(
+        BizTalentSearch.company_id == ctx.company.id, BizTalentSearch.pool_id == pid,
+    ).order_by(BizTalentSearch.created_at, BizTalentSearch.id).limit(20))
+    return {"items": [saved_search_data(row, pool, ctx) for row in rows]}
+
+
+@router.post("/{pid}/searches", status_code=201)
+async def create_search(
+    pid: str, body: SearchCreateIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)],
+) -> Any:
+    ctx = await staff(db, ctx, write=True)
+    pool = await pool_for(db, ctx.company.id, pid)
+    search_terms(pool, body.terms_revision)
+    if body.base_revision != 0:
+        raise HTTPException(409, "A new saved search starts at revision zero.")
+    fingerprint = hashlib.sha256(json.dumps({
+        "company": ctx.company.id, "pool": pid, "creator": ctx.user.id,
+        **body.model_dump(exclude={"request_id"}),
+    }, sort_keys=True).encode()).hexdigest()
+    existing = await db.get(BizTalentSearch, body.request_id, populate_existing=True)
+    if existing is not None:
+        if existing.company_id != ctx.company.id or existing.pool_id != pid:
+            raise HTTPException(404, "Saved search not found.")
+        if existing.request_sha256 != fingerprint:
+            raise HTTPException(409, "This request ID was used for different search criteria.")
+        return saved_search_data(existing, pool, ctx)
+    count = await db.scalar(select(func.count()).select_from(BizTalentSearch).where(BizTalentSearch.pool_id == pid))
+    if (count or 0) >= 20:
+        raise HTTPException(409, "Remove an older saved search before adding another (maximum 20 per community).")
+    row = BizTalentSearch(id=body.request_id, company_id=ctx.company.id, pool_id=pid, created_by=ctx.user.id,
+                          name=body.name, query=body.query, terms_revision=body.terms_revision,
+                          revision=1, request_sha256=fingerprint)
+    try:
+        async with db.begin_nested():
+            db.add(row)
+            await db.flush()
+    except IntegrityError as exc:
+        raise HTTPException(409, "This request ID is unavailable. Refresh and try again.") from exc
+    audit(db, ctx.company.id, ctx.user, "talent.search_created", row.id)
+    await db.commit()
+    return saved_search_data(row, pool, ctx)
+
+
+@router.put("/{pid}/searches/{sid}")
+async def update_search(
+    pid: str, sid: str, body: SearchIn, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)],
+) -> Any:
+    ctx = await staff(db, ctx, write=True)
+    pool = await pool_for(db, ctx.company.id, pid)
+    row = await search_for(db, ctx, pid, sid)
+    manage_search(row, ctx, body.base_revision)
+    search_terms(pool, body.terms_revision)
+    row.name, row.query, row.terms_revision = body.name, body.query, body.terms_revision
+    row.revision += 1
+    audit(db, ctx.company.id, ctx.user, "talent.search_updated", row.id, revision=row.revision)
+    await db.commit()
+    return saved_search_data(row, pool, ctx)
+
+
+@router.delete("/{pid}/searches/{sid}", status_code=204)
+async def delete_search(
+    pid: str, sid: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)],
+    base_revision: Annotated[int, Query(ge=1)],
+) -> None:
+    ctx = await staff(db, ctx, write=True)
+    await pool_for(db, ctx.company.id, pid)
+    row = await search_for(db, ctx, pid, sid)
+    manage_search(row, ctx, base_revision)
+    await db.delete(row)
+    audit(db, ctx.company.id, ctx.user, "talent.search_deleted", sid)
+    await db.commit()
+
+
+@router.get("/{pid}/searches/{sid}/members")
+async def run_search(
+    pid: str, sid: str, ctx: CompanyCtx, db: Annotated[AsyncSession, Depends(get_db)],
+    base_revision: Annotated[int, Query(ge=1)],
+    after: Annotated[str, Query(max_length=36)] = "",
+) -> Any:
+    # Serialize with edits, membership/consent changes and role revocation; never retain a result snapshot.
+    ctx = await staff(db, ctx, write=True)
+    pool = await pool_for(db, ctx.company.id, pid)
+    row = await search_for(db, ctx, pid, sid)
+    if row.revision != base_revision:
+        raise HTTPException(409, "Saved search changed. Refresh before running it.")
+    search_terms(pool, row.terms_revision)
+    result = await members(pid, ctx, db, q=row.query, after=after)
+    return {**result, "search": saved_search_data(row, pool, ctx)}
 
 
 async def member_for(db: AsyncSession, ctx: Ctx, pid: str, mid: str) -> BizTalentMember:
