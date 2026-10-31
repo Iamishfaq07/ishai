@@ -140,6 +140,7 @@ from orbit_api.newsletter import router as newsletter_router
 from orbit_api.notices import router as notices_router
 from orbit_api.observability import configure_logging, crash_middleware, init_sentry, request_id_middleware
 from orbit_api.offers.routes import router as offers_router
+from orbit_api.practice_kit import router as practice_kit_router
 from orbit_api.preflight import router as preflight_router
 from orbit_api.prep.company_guides import router as company_guides_router
 from orbit_api.prep.routes import router as prep_router
@@ -463,6 +464,7 @@ def create_app() -> FastAPI:
     app.include_router(resume_performance_router)
     app.include_router(commitments_router)
     app.include_router(pitch_router)
+    app.include_router(practice_kit_router)
     app.include_router(references_router)
     app.include_router(devices_router)
     app.include_router(two_factor_router)
