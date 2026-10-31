@@ -121,7 +121,6 @@ from orbit_api.job_portal.message_updates import router as message_updates_route
 from orbit_api.job_portal.mission import router as job_mission_router
 from orbit_api.job_portal.opportunity_coach import router as opportunity_coach_router
 from orbit_api.job_portal.pitch import router as pitch_router
-from orbit_api.practice_kit import router as practice_kit_router
 from orbit_api.job_portal.plan import router as job_plan_router
 from orbit_api.job_portal.playbooks import router as job_playbook_router
 from orbit_api.job_portal.posting_history import router as posting_history_router
@@ -141,6 +140,7 @@ from orbit_api.newsletter import router as newsletter_router
 from orbit_api.notices import router as notices_router
 from orbit_api.observability import configure_logging, crash_middleware, init_sentry, request_id_middleware
 from orbit_api.offers.routes import router as offers_router
+from orbit_api.practice_kit import router as practice_kit_router
 from orbit_api.preflight import router as preflight_router
 from orbit_api.prep.company_guides import router as company_guides_router
 from orbit_api.prep.routes import router as prep_router
