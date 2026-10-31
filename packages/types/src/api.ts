@@ -868,6 +868,8 @@ export interface MonthlyPlan {
   resume_ai: boolean;
   buyable: boolean;
   checkout?: CheckoutMethod | null;
+  /** Every way this buyer can pay, `checkout` first (outside India: PayPal and a card through Razorpay). */
+  methods?: CheckoutMethod[];
   international?: boolean;
 }
 
@@ -898,6 +900,8 @@ export interface CreditPack {
   buyable: boolean;
   /** How: Razorpay's checkout (cards, UPI, netbanking), PayPal (outside India), UPI with a UTR, or not at all. */
   checkout?: CheckoutMethod | null;
+  /** Every way this buyer can pay, `checkout` first (outside India: PayPal and a card through Razorpay). */
+  methods?: CheckoutMethod[];
   /** Buyers outside India can pay: PayPal is set up, or Razorpay takes their cards (ORBIT_RAZORPAY_INTERNATIONAL). */
   international?: boolean;
 }
@@ -1050,6 +1054,8 @@ export interface BillingQuote {
   total_text: string;
   /** How it's paid; null when it can't be bought from here right now. */
   checkout: "razorpay" | "upi" | "paypal" | null;
+  /** Every way this buyer can pay, `checkout` first; the cart lets them pick when there's more than one. */
+  methods?: Array<"razorpay" | "upi" | "paypal">;
   /** A coupon code can still be entered. */
   coupons: boolean;
 }

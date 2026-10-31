@@ -348,7 +348,9 @@ export function BillingPage() {
               and we'll help.
             </>
           ) : list[0]?.checkout === "paypal"
-            ? "Prices outside India are in US dollars, paid through PayPal: with your PayPal account, or a card where PayPal offers it. Nothing renews, and what you bought is added as soon as PayPal confirms the payment, usually within seconds."
+            ? list[0]?.methods?.includes("razorpay")
+              ? "Prices outside India are in US dollars. Pay with PayPal, or with any debit or credit card (no PayPal account needed): you choose in the cart. Nothing renews, and what you bought is added as soon as the payment is confirmed, usually within seconds."
+              : "Prices outside India are in US dollars, paid through PayPal: with your PayPal account, or a card where PayPal offers it. Nothing renews, and what you bought is added as soon as PayPal confirms the payment, usually within seconds."
             : list[0]?.checkout === "razorpay"
             ? `${
                 list[0]?.currency === "USD"

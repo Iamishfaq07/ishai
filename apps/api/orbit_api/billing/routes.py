@@ -104,11 +104,17 @@ def _priced(items: list[dict[str, Any]], currency: str,
         if offer is not None and offer.percent > 0:
             paid, _ = referrals.discounted(cost, offer.percent)
             extra |= {"offer_price": paid.major, "offer_price_text": paid.text(), "offer_percent": offer.percent}
-        if cost.currency != pricing.INR and paypal.configured():  # dollars: PayPal (an account, or a card)
-            extra |= {"checkout": "paypal", "buyable": True, "international": True}
-        elif cost.currency != pricing.INR:  # or by card through Razorpay, once it takes cards from abroad
-            extra["buyable"] = bool(item.get("buyable") and item.get("checkout") == "razorpay"
-                                    and item.get("international"))
+        if cost.currency != pricing.INR:
+            # Dollars: PayPal (an account, or a card on PayPal's page) and, once Razorpay takes cards from abroad,
+            # a card through Razorpay too. Both on: the buyer picks in the cart; PayPal stays the default.
+            card = bool(item.get("buyable") and item.get("checkout") == "razorpay"
+                        and get_settings().razorpay_international)
+            methods = (["paypal"] if paypal.configured() else []) + (["razorpay"] if card else [])
+            extra |= {"methods": methods, "buyable": bool(methods)}
+            if methods:
+                extra |= {"checkout": methods[0], "international": True}
+        else:
+            extra["methods"] = [item["checkout"]] if item.get("buyable") and item.get("checkout") else []
         if "days" in item:
             per = round(paid.minor * 30 / item["days"])
             extra |= {"per_month": per / 100, "per_month_text": pricing.money(cost.currency, per)}
@@ -124,7 +130,7 @@ def _shown_in(items: list[dict[str, Any]], currency: str) -> list[dict[str, Any]
     """The price list in `currency`, as the pricing page shows it to anyone, anywhere: list prices (no first-purchase
     discount) and nothing buyable from it. What an order charges still follows the country the website's edge saw
     (the order endpoints and `priced_by_the_edge`), never this."""
-    return [{**item, "buyable": False} for item in _priced(items, currency)]
+    return [{**item, "buyable": False, "methods": []} for item in _priced(items, currency)]
 
 
 @router.get("/billing/monthly")
@@ -164,6 +170,8 @@ class QuoteOut(BaseModel):
     total: float
     total_text: str
     checkout: Literal["razorpay", "upi", "paypal"] | None  # none: can't be bought from here right now
+    # Every way this buyer can pay, `checkout` first (outside India: PayPal, and a Razorpay card when both are on)
+    methods: list[Literal["razorpay", "upi", "paypal"]] = []
     coupons: bool  # a code can still be entered (codes are on and nothing's been paid yet)
 
 
@@ -211,6 +219,7 @@ async def quote(pack: Annotated[str, Query(min_length=1, max_length=32)], reques
                     discount_reason=_reason(offer) if offer is not None and off else "",
                     total=total.major, total_text=total.text(),
                     checkout=shown.get("checkout") if shown.get("buyable") else None,
+                    methods=shown.get("methods", []) if shown.get("buyable") else [],
                     coupons=(get_settings().first_purchase_percent > 0 or referrals.enabled()) and not paid)
 
 

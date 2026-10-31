@@ -256,3 +256,40 @@ def test_only_paypal_pages_are_followed_and_amounts_are_exact() -> None:
     assert paypal.cents({"currency_code": "USD", "value": "53.99"}) == 5399
     assert paypal.cents({"value": "53.995"}) is None and paypal.cents({"value": "x"}) is None
     assert paypal.money(5399) == "53.99" and paypal.money(100) == "1.00"
+
+
+def test_outside_india_both_paypal_and_a_card_are_offered_paypal_first(
+        client: TestClient, pp: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
+    from orbit_api.billing import razorpay
+    from tests.test_credits import PROXY
+
+    s = get_settings()
+    monkeypatch.setattr(s, "razorpay_key_id", "rzp_test_key")
+    monkeypatch.setattr(s, "razorpay_key_secret", SecretStr("rzp-secret"))
+    monkeypatch.setattr(s, "razorpay_international", True)
+
+    def card(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        return httpx.Response(200, json={"id": f"order_{uuid.uuid4().hex[:14]}", "amount": body["amount"],
+                                         "currency": body["currency"], "status": "created"})
+
+    monkeypatch.setattr(razorpay, "transport", httpx.MockTransport(card))
+    us = {**_signup(client, _new_ip()), "X-Orbit-Proxy-Secret": PROXY, "X-Orbit-Client-Country": "US"}
+    pack = next(p for p in client.get("/v1/billing/packs", headers=us).json() if p["id"] == "mini")
+    assert (pack["currency"], pack["checkout"], pack["methods"]) == ("USD", "paypal", ["paypal", "razorpay"])
+    q = client.get("/v1/billing/quote", headers=us, params={"pack": "mini"}).json()
+    assert (q["checkout"], q["methods"]) == ("paypal", ["paypal", "razorpay"])
+    # Either way works: a card through Razorpay is a USD order there.
+    o = client.post("/v1/billing/razorpay/orders", headers=us, json={"pack": "mini"})
+    assert o.status_code == 201 and o.json()["currency"] == "USD"
+    # Razorpay without cards from abroad: PayPal alone.
+    monkeypatch.setattr(s, "razorpay_international", False)
+    again = next(p for p in client.get("/v1/billing/packs", headers=us).json() if p["id"] == "mini")
+    assert again["methods"] == ["paypal"]
+    # In India: Razorpay alone, never PayPal.
+    india = {**us, "X-Orbit-Client-Country": "IN"}
+    inr = next(p for p in client.get("/v1/billing/packs", headers=india).json() if p["id"] == "mini")
+    assert (inr["currency"], inr["methods"]) == ("INR", ["razorpay"])
+    # The pricing page's read-only list sells nothing.
+    shown = next(p for p in client.get("/v1/billing/packs", params={"currency": "USD"}).json() if p["id"] == "mini")
+    assert shown["methods"] == [] and shown["buyable"] is False
