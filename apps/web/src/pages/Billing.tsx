@@ -350,12 +350,12 @@ export function BillingPage() {
           ) : list[0]?.checkout === "paypal"
             ? "Prices outside India are in US dollars, paid through PayPal: with your PayPal account, or a card where PayPal offers it. Nothing renews, and what you bought is added as soon as PayPal confirms the payment, usually within seconds."
             : list[0]?.checkout === "razorpay"
-            ? `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
-                list[0]?.international
-                  ? list[0]?.currency === "USD"
-                    ? "Prices outside India are in US dollars, charged by card."
-                    : "Buyers outside India pay in US dollars."
-                  : "Cards issued outside India can't be used yet; that's coming soon."
+            ? `${
+                list[0]?.currency === "USD"
+                  // Outside India Razorpay takes cards only: UPI, netbanking and wallets are Indian.
+                  ? "Pay once by debit or credit card through Razorpay, in US dollars."
+                  : `Pay once by card, UPI, netbanking or wallet, through Razorpay. ${
+                      list[0]?.international ? "Buyers outside India pay in US dollars, by card." : "Cards issued outside India can't be used yet; that's coming soon."}`
               } Nothing renews, and what you bought is added as soon as Razorpay confirms the payment, usually within seconds.`
             : "Pay once over UPI (Google Pay, PhonePe, Paytm or any bank app). Nothing renews or is charged automatically, and what you bought is added as soon as your payment is checked."}
         </p>
