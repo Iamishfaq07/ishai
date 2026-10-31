@@ -376,12 +376,14 @@ async def _create(db: AsyncSession, *, job: BizJob, company: BizCompany, name: s
     try:
         # A savepoint: when the same email applies at the same moment, only this insert is undone. A full rollback
         # would expire the job, company and user the caller still reads (an async lazy load is a MissingGreenlet).
+        # The "applied" event goes in with it: on SQLite a savepoint with nothing written before it is the whole
+        # transaction, so its release commits, and a concurrent apply may replace the row before a later insert.
         async with db.begin_nested():
             db.add(app)
+            timeline(db, app, "applied", None, source=app.source, via_orbit=user is not None)
             await db.flush()
     except IntegrityError:
         return None, ""
-    timeline(db, app, "applied", None, source=app.source, via_orbit=user is not None)
     await job_queue.enqueue(db, RANK_KIND, {"application_id": app.id}, dedupe_key=f"{RANK_KIND}:{app.id}")
     return app, raw
 
